@@ -36,5 +36,6 @@ id_ed25519
 Thumbs.db
 .vscode/
 
+# Downloaded bundled runtimes (never commit binaries)
 mongodb/bin/
 nodejs/
