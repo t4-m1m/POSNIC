@@ -2,7 +2,6 @@ const jwt = require('jsonwebtoken');
 const { clientIp } = require('../utils/client-ip');
 const { promisify } = require('util');
 const { authCookieOptions } = require('../utils/auth-cookie');
-const { logger } = require('../utils/logger');
 const authVersion = require('../utils/auth-version');
 /* Per request. A signing key read once at module load is the process's key,
    and in a process serving several shops that is some other customer's. */
@@ -75,51 +74,16 @@ const getTokenFromRequest = (req) => {
 };
 
 const createAndSendToken = async (user, statusCode, res, req) => {
-  // 🔍 SIMPLE DEBUG - Check if this function is called
-  
-  
-  
-  
-
   const token = signToken(user._id, authVersion.version(user));
   authVersion.stampSession(req, user);
 
-  // 🔍 SESSION CREATION DEBUG - ADD THIS
-  
-
-  // 1. Check user authentication
-  
-  
-  
-  if (user) {
-    
-    
-    
-  } else {
-  }
-
-  // 2. Check permission
-  
+  const hasPermission =
   const hasPermission = !!(
     user &&
     user.access &&
     user.access.sales &&
     user.access.sales.session_filter === true
   );
-  
-
-  if (!hasPermission) {
-    
-
-
-
-
-  }
-
-  // 3. Check database connection
-  
-  
-  
 
   let db = req?.db;
   if (!db && req?.app?.locals?.mongoClient) {
@@ -128,14 +92,8 @@ const createAndSendToken = async (user, statusCode, res, req) => {
     db = mongoClient.db(dbName);
   }
 
-  if (!db) {
-    
-  }
-
   // 4. Try session creation (only if has permission and database available)
   if (hasPermission && db) {
-    
-
     try {
       const { ObjectId } = require('mongodb');
       const loginTime = new Date();
@@ -155,17 +113,13 @@ const createAndSendToken = async (user, statusCode, res, req) => {
         created_date: loginTime,
       };
 
-      
-
       const userSessionsCollection = db.collection('user_sessions');
 
       // Mark previous sessions inactive
-      const updateResult = await userSessionsCollection.updateMany(
+      await userSessionsCollection.updateMany(
         { user_id: sessionData.user_id, is_active: true },
         { $set: { is_active: false } }
       );
-      
-
       // Check existing session
       const existingSession = await userSessionsCollection.findOne({
         user_id: sessionData.user_id,
@@ -213,29 +167,10 @@ const createAndSendToken = async (user, statusCode, res, req) => {
         }
       }
 
-      // Verify record
-      const createdRecord = await userSessionsCollection.findOne({
-        _id: sessionRecordId,
-      });
-
-      if (createdRecord) {
-        
-      } else {
-      }
-
-      
     } catch (error) {
-      logger.warn('Could not persist the login session record.', { error: error.message });
-    }
-  } else {
-    
-    if (!hasPermission) {
-    }
-    if (!db) {
+      process.emitWarning(`Could not persist the login session record: ${error.message}`);
     }
   }
-
-  
 
   // Set cookie
   const cookieOptions = authCookieOptions({
