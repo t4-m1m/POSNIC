@@ -12,6 +12,7 @@ const { ObjectId } = require('mongodb');
 require('../utils/appError');
 const { formatDate } = require('../utils/helpers');
 const config = require('../config/config');
+const { calculatePurchaseCost } = require('../utils/purchase-cost');
 
 const extractNumericValue = (value) => {
   if (value === null || typeof value === 'undefined') {
@@ -1928,45 +1929,58 @@ class ReceivingsController extends BaseController {
   async companyPriceUpdate(req, res) {
     try {
       const userAccess = req.user?.access?.receiving?.write;
-      if (userAccess !== true) {
-        return this.error(res, 'Unauthorized', 403);
-      }
-
-      const { item_id, item_price } = req.body;
-
+      if (userAccess !== true) return this.error(res, 'Unauthorized', 403);
+      const { item_id, item_price, item_price_eur } = req.body;
       if (!item_id || !mongoose.Types.ObjectId.isValid(item_id)) {
         return this.error(res, 'Valid item_id is required', 400);
       }
-
-      if (!item_price || item_price.toString().trim() === '') {
-        return this.error(res, 'item_price is required', 400);
-      }
-
-      const price = parseFloat(item_price);
-      if (isNaN(price) || price < 0) {
-        return this.error(res, 'item_price must be a valid positive number', 400);
-      }
-
+      const usesEur = item_price_eur !== undefined && item_price_eur !== null && String(item_price_eur).trim() !== '';
+      let price;
+      let purchaseCost = null;
       const db = currentConnection(mongoose.connection).db;
-      const itemsCollection = db.collection('items');
-
-      const result = await itemsCollection.updateOne(
-        {
-          _id: new mongoose.Types.ObjectId(item_id),
-          license: req.user.license,
-        },
-        {
-          $set: {
-            company_price: price,
-          },
+      if (usesEur) {
+        const eur = Number(item_price_eur);
+        if (!Number.isFinite(eur) || eur < 0) {
+          return this.error(res, 'item_price_eur must be a finite non-negative number', 400);
         }
-      );
-
-      if (result.matchedCount === 0) {
-        return this.error(res, 'Item not found', 404);
+        const branchId = req.tenantContext?.branchId || BaseModel.currentBranch;
+        let settings = {};
+        if (branchId && mongoose.Types.ObjectId.isValid(String(branchId))) {
+          const branch = await db.collection('branches').findOne({
+            _id: new mongoose.Types.ObjectId(String(branchId)),
+            license: req.user.license,
+          }, { projection: { purchase_exchange_rate: 1, purchase_vat_rate: 1 } });
+          if (branch) settings = branch;
+        }
+        purchaseCost = calculatePurchaseCost(eur, settings);
+        price = purchaseCost.purchase_cost_dzd;
+      } else {
+        if (item_price === undefined || item_price === null || String(item_price).trim() === '') {
+          return this.error(res, 'item_price or item_price_eur is required', 400);
+        }
+        price = Number(item_price);
+        if (!Number.isFinite(price) || price < 0) {
+          return this.error(res, 'item_price must be a finite non-negative number', 400);
+        }
       }
-
-      return this.success(res, null, 'Item company price updated successfully');
+      const itemsCollection = db.collection('items');
+      const set = { company_price: price };
+      if (purchaseCost) {
+        Object.assign(set, {
+          purchase_price_eur: purchaseCost.purchase_price_eur,
+          purchase_exchange_rate: purchaseCost.purchase_exchange_rate,
+          purchase_vat_rate: purchaseCost.purchase_vat_rate,
+          purchase_base_dzd: purchaseCost.purchase_base_dzd,
+          purchase_vat_dzd: purchaseCost.purchase_vat_dzd,
+          purchase_cost_dzd: purchaseCost.purchase_cost_dzd,
+        });
+      }
+      const result = await itemsCollection.updateOne(
+        { _id: new mongoose.Types.ObjectId(item_id), license: req.user.license },
+        { $set: set }
+      );
+      if (result.matchedCount === 0) return this.error(res, 'Item not found', 404);
+      return this.success(res, purchaseCost, 'Item purchase cost updated successfully');
     } catch (error) {
       console.error('Error in companyPriceUpdate:', error);
       return this.error(res, error.message, 500);
