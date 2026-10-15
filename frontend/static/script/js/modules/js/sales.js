@@ -499,6 +499,7 @@ PosnicPro.sales = {
         $('#view_sales_per_page').closest('.form-group').show();
         $('.card.m-b-30.sales_header .ecommerce-pagination').closest('.card.m-b-30').show();
         PosnicPro.sales.mountHistoryFilters();
+        PosnicPro.sales.mountSalesCalendar();
         PosnicPro.sales.mountRestaurantHistory();
         PosnicPro.sales.closeDoc();
         PosnicPro.sales.loadHistory(1);
@@ -523,6 +524,83 @@ PosnicPro.sales = {
      * a different key - two things called mountFilters on one namespace is a
      * coin toss for whoever reads it next.
      */
+    mountSalesCalendar: function () {
+        var $calendar = $('#sales_history_calendar');
+        if (!$calendar.length) return;
+        var $month = $('#sales_calendar_month');
+        if (!$month.val()) {
+            var now = new Date();
+            $month.val(now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0'));
+        }
+        function render() {
+            var value = $month.val();
+            var parts = /^([0-9]{4})-([0-9]{2})$/.exec(value || '');
+            if (!parts) return;
+            var year = Number(parts[1]), month = Number(parts[2]);
+            if (month < 1 || month > 12) return;
+            var first = new Date(year, month - 1, 1);
+            var days = new Date(year, month, 0).getDate();
+            var offset = first.getDay();
+            var today = new Date();
+            var current = PosnicPro.listFilter && PosnicPro.listFilter._mounted && PosnicPro.listFilter._mounted.sales
+                ? PosnicPro.listFilter._mounted.sales.state : null;
+            var selectedDay = current && current.preset === 'custom' && current.from && current.to
+                && current.from.getFullYear() === current.to.getFullYear()
+                && current.from.getMonth() === current.to.getMonth()
+                && current.from.getDate() === current.to.getDate()
+                ? current.from.getDate() : 0;
+            $('#sales_calendar_heading').text(first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }));
+            var $grid = $('#sales_calendar_grid').empty();
+            ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(function (day) {
+                $grid.append($('<div class="shc-weekday" role="columnheader">').text(day));
+            });
+            for (var blank = 0; blank < offset; blank++) $grid.append($('<span aria-hidden="true">'));
+            for (var day = 1; day <= days; day++) {
+                var date = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                var button = $('<button type="button" role="gridcell" class="shc-day">').attr('data-sales-calendar-day', date).text(day);
+                if (day === today.getDate() && month - 1 === today.getMonth() && year === today.getFullYear()) button.addClass('is-today');
+                if (day === selectedDay) button.addClass('is-selected').attr('aria-pressed', 'true');
+                else button.attr('aria-pressed', 'false');
+                button.attr('aria-label', new Date(year, month - 1, day).toLocaleDateString());
+                $grid.append(button);
+            }
+        }
+        $calendar.off('.salesCalendar');
+        $calendar.on('change.salesCalendar', '#sales_calendar_month', render);
+        $calendar.on('click.salesCalendar', '[data-sales-calendar-nav]', function () {
+            var parts = /^([0-9]{4})-([0-9]{2})$/.exec($month.val() || '');
+            if (!parts) return;
+            var date = new Date(Number(parts[1]), Number(parts[2]) - 1 + Number($(this).attr('data-sales-calendar-nav')), 1);
+            $month.val(date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0'));
+            render();
+        });
+        $calendar.on('click.salesCalendar', '[data-sales-calendar-day]', function () {
+            var selected = $(this).attr('data-sales-calendar-day').split('-').map(Number);
+            var from = new Date(selected[0], selected[1] - 1, selected[2], 0, 0, 0, 0);
+            var to = new Date(selected[0], selected[1] - 1, selected[2], 23, 59, 59, 999);
+            var listFilter = PosnicPro.listFilter;
+            var mounted = listFilter && listFilter._mounted && listFilter._mounted.sales;
+            if (!mounted) return;
+            mounted.state.preset = 'custom';
+            mounted.state.from = from;
+            mounted.state.to = to;
+            listFilter.render('sales');
+            listFilter._changed('sales');
+            render();
+        });
+        $calendar.on('click.salesCalendar', '#sales_calendar_clear', function () {
+            var listFilter = PosnicPro.listFilter;
+            var mounted = listFilter && listFilter._mounted && listFilter._mounted.sales;
+            if (!mounted) return;
+            mounted.state.preset = 'all';
+            mounted.state.from = null;
+            mounted.state.to = null;
+            listFilter.render('sales');
+            listFilter._changed('sales');
+            render();
+        });
+        render();
+    },
     mountHistoryFilters: function () {
         if (!$('#sales_filter_panel').length) { return; }
         PosnicPro.listFilter.mount({
