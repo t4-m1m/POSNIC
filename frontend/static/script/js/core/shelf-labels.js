@@ -84,7 +84,8 @@
             var d = DEFAULT_ELEMENT_LAYOUT[key], v = saved[key] || {};
             function n(name) { var value = Number(v[name]); return Number.isFinite(value) ? value : d[name]; }
             var w = Math.max(5, Math.min(100, n('w'))), h = Math.max(5, Math.min(100, n('h')));
-            var rotation = ((n('rotation') % 360) + 360) % 360;
+            var rawRotation = n('rotation');
+            var rotation = Number.isFinite(rawRotation) ? ((rawRotation % 360) + 360) % 360 : 0;
             result[key] = { x: Math.max(0, Math.min(100 - w, n('x'))), y: Math.max(0, Math.min(100 - h, n('y'))), w: w, h: h, rotation: rotation };
         });
         return result;
