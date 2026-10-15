@@ -134,11 +134,12 @@
             card.querySelectorAll('[data-field]').forEach(function (input) { variants[i][input.dataset.field] = input.value; });
         });
     }
-    function variantSignature() { return JSON.stringify([val('axis1'),val('values1'),val('axis2'),val('values2')]); }
+    function variantSignature() { return JSON.stringify([val('axis1'),selectedValues('values1'),val('axis2'),selectedValues('values2')]); }
     function generate() {
-        var names = combinations(val('values1'), val('axis2') ? val('values2') : '');
-        if (!val('axis1') || names.length < 2 || names.length > 50 || (val('axis2') && !list(val('values2')).length)) {
-            report('Enter a variant name and comma-separated values. Create between 2 and 50 combinations.'); return;
+        var firstValues = selectedValues('values1').join(','), secondValues = selectedValues('values2').join(',');
+        var names = combinations(firstValues, val('axis2') ? secondValues : '');
+        if (!val('axis1') || names.length < 2 || names.length > 50 || (val('axis2') && !selectedValues('values2').length)) {
+            report('Choose an existing POSNIC variant and at least two of its predefined values. Create between 2 and 50 combinations.'); return;
         }
         captureVariants(); var previous = new Map(variants.map(function (r) { return [r.variant_value, r]; }));
         variants = names.map(function (name) { return previous.get(name) || { variant_value: name, selling_price: val('price'), available_quantity: '0', company_price: val('cost'), mrp_price: val('mrp'), position: val('position'), discount_amount: val('discount-type') === 'amount' ? val('discount') : '', discount_percentage: val('discount-type') === 'percentage' ? val('discount') : '' }; });
@@ -228,7 +229,7 @@
         return out;
     }
     function family(shared) {
-        captureVariants(); return { variant_axis: [val('axis1'),val('axis2')].filter(Boolean).join(' / '), variant_parent_name: shared.name, items: variants.map(function (row) {
+        captureVariants(); return { variant_axis: [axisLabel('axis1'),axisLabel('axis2')].filter(Boolean).join(' / '), variant_parent_name: shared.name, items: variants.map(function (row) {
             var image=photos.find(function (p) {return p.name===row.photo;});
             var r=Object.assign({},shared,row,{name:shared.name+' / '+row.variant_value,barcodes:[],plu_code:'',sku_id:row.sku_id||'',barcode_id:row.barcode_id||'',gtin:row.gtin||'',available_quantity:shared.inventory?Number(row.available_quantity):0});
             var unitOption=Array.from(el('unit').options).find(function(o){return o.value===row.unit_id;});
@@ -278,6 +279,9 @@
         var palette=document.createElement('div');palette.className='iv2-icon-palette';
         ['📦','👕','👟','👜','📱','📚','🧴','✂️','🔧','☕','🍵','🍛','🍜','🍕','🥪','🥗','🍰','🍨','🥤','💧'].forEach(function(icon){var pick=button(icon,function(){el('icon').value=icon;notify();});pick.setAttribute('aria-label',icon);palette.appendChild(pick);});el('icon').after(palette);
         el('form').addEventListener('click',function(e){var target=e.target.closest('[data-iv2-advanced]');if(target&&target.dataset.iv2Advanced==='generate')generate();});
+        el('axis1').addEventListener('change',function(){fillVariantValues('axis1','values1');if(variants.length)generate();});
+        el('axis2').addEventListener('change',function(){fillVariantValues('axis2','values2');if(variants.length)generate();});
+        loadVariantDefinitions();
         requestOptions('unit','setting/getUnitAjaxList',function(r){return {id:r.unit_id,name:r.unit_name,unit:r.unit_value};});
         requestOptions('supplier','suppliers/getSuppliersAjaxList',function(r){return {id:r.id,name:r.name};});
         requestOptions('goes-with','items',function(r){return {id:r.id||r._id,name:r.name||r.value};});
