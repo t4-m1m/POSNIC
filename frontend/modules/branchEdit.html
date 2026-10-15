@@ -197,6 +197,20 @@
                                     </select>
                                 </div>
                             </div>
+                            <fieldset class="col-12 form-group border p-3 mt-2">
+                                <legend class="w-auto px-2">Purchase cost (EUR → DZD)</legend>
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label for="purchase_exchange_rate">Exchange rate (1 EUR = DZD)</label>
+                                        <input type="number" class="form-control border-control" name="purchase_exchange_rate" id="purchase_exchange_rate" min="0.000001" max="1000000000" step="any" value="280" required>
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        <label for="purchase_vat_rate">Purchase TVA (%)</label>
+                                        <input type="number" class="form-control border-control" name="purchase_vat_rate" id="purchase_vat_rate" min="0" max="100" step="any" value="9" required>
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted">TVA is added after converting the EUR price to DZD. Selling prices remain manual.</small>
+                            </fieldset>
                             <div class="form-row">
                                 <div class="form-group col-md-6">
                                     <label for="time_zone">
