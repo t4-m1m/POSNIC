@@ -178,9 +178,14 @@
             report('Choose an existing POSNIC variant and at least two of its predefined values. Create between 2 and 50 combinations.'); return;
         }
         captureVariants(); var previous = new Map(variants.map(function (r) { return [r.variant_value, r]; }));
-        var usedCodes = new Set([val('barcode')].concat(variants.map(function (r) { return r.barcode_id; })).filter(Boolean));
+        var usedCodes = new Set([val('barcode')].filter(Boolean));
         variants = names.map(function (name) {
-            if (previous.has(name)) return previous.get(name);
+            if (previous.has(name)) {
+                var prior = previous.get(name);
+                if (!prior.barcode_id || usedCodes.has(prior.barcode_id)) prior.barcode_id = makeInternalBarcode(Array.from(usedCodes));
+                usedCodes.add(prior.barcode_id);
+                return prior;
+            }
             var code = makeInternalBarcode(Array.from(usedCodes)); usedCodes.add(code);
             return { variant_value: name, selling_price: val('price'), available_quantity: '0', company_price: val('cost'), mrp_price: val('mrp'), position: val('position'), barcode_id: code, sku_id: '', gtin: '', discount_amount: val('discount-type') === 'amount' ? val('discount') : '', discount_percentage: val('discount-type') === 'percentage' ? val('discount') : '' };
         });
