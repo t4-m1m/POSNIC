@@ -486,6 +486,23 @@ class ItemService {
       }
     }
 
+    // Preflight supplied identifiers against the existing branch catalogue before
+    // creating any children. Individual upserts still recheck conflicts, which
+    // protects the write path if another request races this preflight.
+    const candidateCodes = [...new Set(rows.flatMap((row) => itemBarcodes.codes(row)))];
+    if (candidateCodes.length && branchId && licenseId && typeof this.repository.getCollection === 'function') {
+      const collection = await this.repository.getCollection(this.repository.collectionName || 'items');
+      const branchScope = ObjectId.isValid(String(branchId)) ? new ObjectId(String(branchId)) : branchId;
+      const licenseScope = ObjectId.isValid(String(licenseId)) ? new ObjectId(String(licenseId)) : licenseId;
+      const conflict = await itemBarcodes.findConflict(collection, candidateCodes, {
+        branchId: branchScope,
+        licenseId: licenseScope,
+      });
+      if (conflict) {
+        return { status: false, data: null, message: conflict.message };
+      }
+    }
+
     // ---- create, with a compensating rollback ----
     const groupId = new ObjectId();
     const created = [];
