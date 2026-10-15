@@ -712,39 +712,51 @@ PosnicPro.receivings = {
     },
     editItemCompanyPriceReceiving: function (index) {
         var id = $(index).data('id');
+        var saved = {};
+        try { saved = JSON.parse(PosnicPro.local.get('general_settings') || '{}') || {}; } catch (_) {}
+        var exchangeRate = Number(saved.purchase_exchange_rate) > 0 ? Number(saved.purchase_exchange_rate) : 280;
+        var vatRate = Number.isFinite(Number(saved.purchase_vat_rate)) && Number(saved.purchase_vat_rate) >= 0 ? Number(saved.purchase_vat_rate) : 9;
+        var currentDzd = Number($('#addpurchasePrice_' + id).text()) || 0;
+        var currentEur = currentDzd / (exchangeRate * (1 + vatRate / 100));
         $('#addReceivingLineItemPrice_' + id).editable({
             type: 'text',
             pk: 1,
-            title: PosnicPro.i18n.t('lang_edit_cost', 'Edit cost'),
+            value: currentEur.toFixed(2),
+            title: PosnicPro.i18n.t('lang_edit_cost', 'Purchase price (EUR)'),
             inputclass: 'form-control form-control-sm',
-            tpl: '<input size="4"></input>',
+            tpl: '<input size="7" inputmode="decimal"></input>',
             validate: function (value) {
-                let regex = /^\s*?((\d+(\.\d+)?)|(\.\d+))\s*$/;
-                if (!regex.test(value)) {
-                    return 'Enter a valid amount!';
-                }
+                var amount = Number(String(value).trim());
+                if (!String(value).trim() || !Number.isFinite(amount) || amount < 0) return 'Enter a valid non-negative EUR amount.';
             },
             success: function (k, val) {
-                $('#addpurchasePrice_' + id + '').text(val);
-                $('#addReceivingLineItemPrice_' + id).replaceWith('<td id=addReceivingLineItemPrice_' + id + ' class="text-center font_size14">' + parseFloat(val).toFixed(2) + '&nbsp;&nbsp;<span class="receving-return-hide"><i class="feather icon-edit-1 text-success" onclick="return PosnicPro.receivings.editItemCompanyPriceReceiving(this);"  data-id="' + id + '" data-toggle="tooltip" title="Edit item price" data-t-title="lang_edit_item_price" style="cursor:pointer;"></i></span></td>');
-                let taxValue = $('#addReceivingLineItemTax_' + id + '').text();
-                let excvalue = (val / 100) * parseFloat(taxValue);
-                let lineTotal = parseFloat(val) + parseFloat(excvalue);
-                $('#addReceivingLineItemTotal_' + id + '').text(lineTotal.toFixed(2));
+                var eur = Number(val);
+                var baseDzd = Math.round(eur * exchangeRate * 100) / 100;
+                var vatDzd = Math.round(baseDzd * vatRate) / 100;
+                var grossDzd = Math.round((baseDzd + vatDzd) * 100) / 100;
+                // The purchase TVA is included in landed cost. Avoid applying
+                // the item's selling-tax rate a second time to the purchase.
+                $('#addpurchasePrice_' + id).text(grossDzd.toFixed(2));
+                $('#addReceivingLineItemTax_' + id).text('0');
+                $('#addReceivingItemTax_' + id).text('0');
+                $('#addReceivingGstTax_' + id).text('0');
                 $('#addReceivingLineTaxtype_' + id).text(PosnicPro.i18n.t('lang_exc', 'Exc'));
+                $('#addReceivingLineItemPrice_' + id).replaceWith('<td id="addReceivingLineItemPrice_' + id + '" class="text-center font_size14">' + grossDzd.toFixed(2) + '&nbsp;&nbsp;<span class="receving-return-hide"><i class="feather icon-edit-1 text-success" onclick="return PosnicPro.receivings.editItemCompanyPriceReceiving(this);" data-id="' + id + '" data-toggle="tooltip" title="Edit purchase price in EUR" style="cursor:pointer;"></i></span></td>');
+                $('#addReceivingLineItemTotal_' + id).text(grossDzd.toFixed(2));
+                if (PosnicPro.receiving_lineitems[id]) {
+                    PosnicPro.receiving_lineitems[id].item_price = grossDzd;
+                    PosnicPro.receiving_lineitems[id].tax = 0;
+                    PosnicPro.receiving_lineitems[id].tax_percentage = 0;
+                }
                 PosnicPro.receivings.addLineReceivingChangeQty(id);
-                let params = {
+                var params = {
                     method: 'PUT',
                     url: 'receivings/companyPriceUpdate',
-                    data: JSON.stringify({
-                        item_id: id,
-                        item_price: val
-                    })
+                    data: JSON.stringify({ item_id: id, item_price_eur: eur })
                 };
                 PosnicPro.request(params, function (response) {
-                    if (response.type === 'success') {
-                        PosnicPro.alert(response.type, response.message);
-                    }
+                    if (response.type === 'success') PosnicPro.alert(response.type, response.message);
+                    else PosnicPro.alert(response.type || 'error', response.message || 'Could not update purchase cost.');
                 });
             }
         });
