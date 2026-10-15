@@ -49,37 +49,73 @@
             'html,body{margin:0;padding:0}*{box-sizing:border-box}.sl-sheet{width:' + g.width + 'mm;height:' + g.height + 'mm;' +
             'padding:' + (s.paper === 'a4' ? s.margin : 0) + 'mm;display:grid;grid-template-columns:repeat(' + g.columns + ',' + s.width + 'mm);' +
             'grid-template-rows:repeat(' + g.rows + ',' + s.height + 'mm);gap:' + (s.paper === 'a4' ? s.gap : 0) + 'mm;break-after:page;overflow:hidden}' +
-            '.sl-sheet:last-child{break-after:auto}.sl-label{width:' + s.width + 'mm;height:' + s.height + 'mm;padding:1mm;overflow:hidden;' +
-            'display:flex;flex-direction:column;justify-content:center;gap:1px;border:' + (s.guides ? '.15mm dashed #aaa' : 'none') + ';font-family:' + s.font + ';font-size:' + s.fontSize + 'px;text-align:' + s.align +
+            '.sl-sheet:last-child{break-after:auto}.sl-label{position:relative;width:' + s.width + 'mm;height:' + s.height + 'mm;padding:0;overflow:hidden;' +
+            'display:block;border:' + (s.guides ? '.15mm dashed #aaa' : 'none') + ';font-family:' + s.font + ';font-size:' + s.fontSize + 'px;text-align:' + s.align +
             ';font-weight:' + (s.fontOptions?.includes('bold') ? '700' : '400') + ';font-style:' + (s.fontOptions?.includes('italic') ? 'italic' : 'normal') +
             ';color:' + s.ink + ';background:' + s.background + ';print-color-adjust:exact;-webkit-print-color-adjust:exact}' +
-            '.sl-label p{margin:0;line-height:1.15;overflow-wrap:anywhere}.sl-name{font-weight:600;font-size:115%}.sl-price{font-weight:700;font-size:220%}.sl-barcode{display:block;max-width:100%;max-height:45%;' +
-            'margin-left:' + (s.align === 'left' ? '0' : 'auto') + ';margin-right:' + (s.align === 'right' ? '0' : 'auto') + '}.sl-foot{font-size:75%}';
+            '.sl-label .sl-element{position:absolute;margin:0;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center;line-height:1.15;overflow-wrap:anywhere}' +
+            '.sl-name{font-weight:600}.sl-price{font-weight:700;font-size:220%}.sl-barcode{display:block;max-width:100%;max-height:100%;}' +
+            '.sl-foot{font-size:75%;white-space:pre-line}.sl-design-editable .sl-element{outline:1px dashed #2563eb;cursor:move;touch-action:none}' +
+            '.sl-design-editable .sl-element.sl-selected{outline:2px solid #ef4444;z-index:20;overflow:visible}' +
+            '.sl-resize-handle{position:absolute;right:-3px;bottom:-3px;width:12px;height:12px;border:2px solid white;border-radius:2px;background:#2563eb;cursor:nwse-resize;z-index:21}';
     }
     function validateDesign(s) {
         if (!/^[a-zA-Z ,\-]+$/.test(s.font) || !['left', 'center', 'right'].includes(s.align) || !/^#[a-f\d]{6}$/i.test(s.background) || !/^#[a-f\d]{6}$/i.test(s.ink)) throw Error('Invalid label design.');
         if (!Number.isFinite(s.fontSize) || s.fontSize < 3 || s.fontSize > 36) throw Error('Choose a font size between 3 and 36.');
     }
+    var DEFAULT_ELEMENT_LAYOUT = {
+        name: { x: 5, y: 4, w: 90, h: 18 },
+        barcode: { x: 10, y: 24, w: 80, h: 38 },
+        price: { x: 5, y: 65, w: 90, h: 23 },
+        details: { x: 5, y: 89, w: 90, h: 10 }
+    };
+    function readElementLayout() {
+        var saved = {};
+        try { saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-elements') || '{}') || {}; } catch (_) {}
+        var result = {};
+        Object.keys(DEFAULT_ELEMENT_LAYOUT).forEach(function (key) {
+            var d = DEFAULT_ELEMENT_LAYOUT[key], v = saved[key] || {};
+            function n(name) { var value = Number(v[name]); return Number.isFinite(value) ? value : d[name]; }
+            var w = Math.max(5, Math.min(100, n('w'))), h = Math.max(5, Math.min(100, n('h')));
+            result[key] = { x: Math.max(0, Math.min(100 - w, n('x'))), y: Math.max(0, Math.min(100 - h, n('y'))), w: w, h: h };
+        });
+        return result;
+    }
+    function applyElementLayout(node, key, s) {
+        var layout = (s.elementLayout || DEFAULT_ELEMENT_LAYOUT)[key] || DEFAULT_ELEMENT_LAYOUT[key];
+        node.classList.add('sl-element');
+        node.dataset.slElement = key;
+        node.style.left = layout.x + '%';
+        node.style.top = layout.y + '%';
+        node.style.width = layout.w + '%';
+        node.style.height = layout.h + '%';
+    }
     function label(doc, item, s, barcode) {
         if (!Number.isFinite(item.label_price)) throw Error(item.name + ': ' + (item.label_price_error || 'A fixed price is required.'));
         if (s.barcode !== false && !item.barcode_id) throw Error(item.name + ': ' + t('lang_sl_barcode_missing', 'No barcode. Switch off Show barcode to print a price label.'));
         var div = doc.createElement('div'); div.className = 'sl-label';
-        function text(value, cls) { var p = doc.createElement('p'); p.className = cls || ''; p.textContent = value; div.appendChild(p); }
-        text(item.name, 'sl-name');
+        function text(value, cls, key) {
+            var p = doc.createElement('p'); p.className = (cls || '') + ' sl-element'; p.textContent = value;
+            applyElementLayout(p, key, s); div.appendChild(p); return p;
+        }
+        text(item.name, 'sl-name', 'name');
         if (s.barcode !== false) {
-            var svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('sl-barcode'); div.appendChild(svg);
+            var svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('sl-barcode');
+            applyElementLayout(svg, 'barcode', s); div.appendChild(svg);
             barcode(svg, String(item.barcode_id), { format: s.format, width: s.barWidth, height: s.barHeight, margin: s.barMargin,
             marginTop: s.top, marginBottom: s.bottom, marginLeft: s.left, marginRight: s.right,
             displayValue: s.barText, textMargin: s.textMargin, font: s.font, fontSize: s.fontSize,
             textAlign: s.align, fontOptions: s.fontOptions || '', lineColor: s.ink, background: s.background });
         }
-        text(s.currency + ' ' + item.label_price.toFixed(item.label_currency_digits ?? 2), 'sl-price');
-        if (s.mrp && Number(item.mrp_price) > 0) text('MRP ' + s.currency + ' ' + Number(item.mrp_price).toFixed(item.label_currency_digits ?? 2), 'sl-foot');
-        if (s.mfg && item.items_mfg_date) text('MFG ' + String(item.items_mfg_date).split(' ')[0], 'sl-foot');
-        if (s.exp && item.items_expiry_date) text('EXP ' + String(item.items_expiry_date).split(' ')[0], 'sl-foot');
-        if (s.shop) text(s.shop, 'sl-foot');
-        if (s.address) text(s.address, 'sl-foot');
-        if (s.date) text(s.printedDate, 'sl-foot');
+        text(s.currency + ' ' + item.label_price.toFixed(item.label_currency_digits ?? 2), 'sl-price', 'price');
+        var details = [];
+        if (s.mrp && Number(item.mrp_price) > 0) details.push('MRP ' + s.currency + ' ' + Number(item.mrp_price).toFixed(item.label_currency_digits ?? 2));
+        if (s.mfg && item.items_mfg_date) details.push('MFG ' + String(item.items_mfg_date).split(' ')[0]);
+        if (s.exp && item.items_expiry_date) details.push('EXP ' + String(item.items_expiry_date).split(' ')[0]);
+        if (s.shop) details.push(s.shop);
+        if (s.address) details.push(s.address);
+        if (s.date) details.push(s.printedDate);
+        if (details.length) text(details.join('\\n'), 'sl-foot', 'details');
         return div;
     }
     function sheet(doc, cells, s, barcode) {
@@ -88,6 +124,8 @@
         return page;
     }
     var state = { entries: [], byId: new Map(), viewIds: [], filters: {}, step: 0, furthestStep: 0, page: 0, productPage: 1, totalPages: 1, total: 0, loading: false, bulkLoading: false, token: 0, loadError: null, completeKey: null };
+    state.elementLayout = readElementLayout();
+    var editorDrag = null;
     var searchTimer;
     function $() { return root.jQuery.apply(null, arguments); }
     function t(key, fallback) { return root.PosnicPro?.i18n?.t(key, fallback) || fallback; }
@@ -104,6 +142,7 @@
     }
     function settings() {
         var s = {
+            elementLayout: state.elementLayout || readElementLayout(),
             paper: $('#sl-paper').val(), width: Number($('#sl-width').val()), height: Number($('#sl-height').val()),
             margin: Number($('#sl-margin').val()), gap: Number($('#sl-gap').val()), start: Number($('#sl-start').val()), guides: $('#sl-guides').is(':checked'),
             font: $('#font').val(), fontSize: Number($('#bar-fontSize').val()), align: $('#view_print_lable .text-align.btn-primary').val() || 'center',
@@ -143,6 +182,17 @@
         // Scope preview rules: printing's html/body and @page rules never affect the application.
         style.textContent = allCss.slice(allCss.indexOf('.sl-sheet')).replace(/(^|})(\.sl-[^{]+)/g, '$1' + host + ' $2');
         var $host = $(host).empty().append(style, page);
+        if (host === '#sl-sample') {
+            page.querySelectorAll('.sl-label').forEach(function (label) {
+                label.classList.add('sl-design-editable');
+                label.querySelectorAll('[data-sl-element]').forEach(function (element) {
+                    var handle = doc.createElement('span');
+                    handle.className = 'sl-resize-handle';
+                    handle.setAttribute('aria-hidden', 'true');
+                    element.appendChild(handle);
+                });
+            });
+        }
         var available = $host.parent().width() || 400;
         var scale = Math.min(1.4, available / (g.width * 96 / 25.4));
         if (s.paper === 'a4' && host !== '#sl-sample') {
@@ -295,6 +345,7 @@
         state.total = 0; state.totalPages = 1; state.productPage = 1;
         // The wizard owns its visible search/category filters. Tenant scope remains enforced by the Items API.
         state.filters = {};
+        state.elementLayout = readElementLayout();
         $('#sl-search').val(''); $('#sl-category').val(''); $('#sl-from').val(1); $('#sl-batch').val(2000); $('#sl-copies').val(1);
         $('#sl-width').val(Math.round(Number($('#document_width').val()) * 25.4 * 10) / 10); $('#sl-height').val(Math.round(Number($('#document_height').val()) * 25.4 * 10) / 10);
         try {
@@ -376,6 +427,10 @@
         }
         function applyTemplate(saved) {
             if (!saved || typeof saved !== 'object') return;
+            if (saved.elementLayout && typeof saved.elementLayout === 'object') {
+                state.elementLayout = saved.elementLayout;
+                try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(saved.elementLayout)); } catch (_) {}
+            }
             if (['a4', 'roll'].includes(saved.paper)) $('#sl-paper').val(saved.paper);
             ['width', 'height', 'margin', 'gap', 'start'].forEach(function (key) {
                 if (Number.isFinite(saved[key])) $('#sl-' + key).val(saved[key]);
@@ -434,7 +489,52 @@
             renderTemplates();
             $('#sl-status').text('Template deleted.');
         });
-        $(root.document).on('shown.bs.modal', '#view_print_lable', function () { renderTemplates(); refresh(); });
+        $(root.document).on('pointerdown', '#sl-sample .sl-element', function (e) {
+            if (e.target.closest('.sl-resize-handle')) return;
+            var key = this.dataset.slElement, label = this.closest('.sl-label');
+            if (!key || !label) return;
+            e.preventDefault();
+            $('#sl-sample .sl-element').removeClass('sl-selected');
+            $(this).addClass('sl-selected');
+            var rect = label.getBoundingClientRect(), layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key];
+            editorDrag = { key: key, mode: 'move', startX: e.clientX, startY: e.clientY, rect: rect, initial: Object.assign({}, layout) };
+            if (this.setPointerCapture && e.pointerId !== undefined) { try { this.setPointerCapture(e.pointerId); } catch (_) {} }
+        });
+        $(root.document).on('pointerdown', '#sl-sample .sl-resize-handle', function (e) {
+            var element = this.closest('[data-sl-element]'), label = this.closest('.sl-label'), key = element && element.dataset.slElement;
+            if (!key || !label) return;
+            e.preventDefault(); e.stopPropagation();
+            $('#sl-sample .sl-element').removeClass('sl-selected');
+            $(element).addClass('sl-selected');
+            var layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key];
+            editorDrag = { key: key, mode: 'resize', startX: e.clientX, startY: e.clientY, rect: label.getBoundingClientRect(), initial: Object.assign({}, layout) };
+        });
+        $(root.document).on('pointermove', function (e) {
+            if (!editorDrag) return;
+            var drag = editorDrag, dx = (e.clientX - drag.startX) / Math.max(1, drag.rect.width) * 100;
+            var dy = (e.clientY - drag.startY) / Math.max(1, drag.rect.height) * 100;
+            var next = Object.assign({}, drag.initial);
+            if (drag.mode === 'move') {
+                next.x = Math.max(0, Math.min(100 - next.w, drag.initial.x + dx));
+                next.y = Math.max(0, Math.min(100 - next.h, drag.initial.y + dy));
+            } else {
+                next.w = Math.max(5, Math.min(100 - next.x, drag.initial.w + dx));
+                next.h = Math.max(5, Math.min(100 - next.y, drag.initial.h + dy));
+            }
+            state.elementLayout[drag.key] = next;
+            var element = document.querySelector('#sl-sample [data-sl-element="' + drag.key + '"]');
+            if (element) {
+                element.style.left = next.x + '%'; element.style.top = next.y + '%';
+                element.style.width = next.w + '%'; element.style.height = next.h + '%';
+            }
+        });
+        $(root.document).on('pointerup pointercancel', function () {
+            if (!editorDrag) return;
+            editorDrag = null;
+            try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
+            refresh();
+        });
+                $(root.document).on('shown.bs.modal', '#view_print_lable', function () { renderTemplates(); refresh(); });
         $(root.document).on('hidden.bs.modal', '#view_print_lable', function () { state.token++; state.loading = false; state.bulkLoading = false; clearTimeout(searchTimer); });
         $(root.document).on('change', '#sl-all', function () { if (this.checked) loadAll(); else clear(); });
         $(root.document).on('change', '#sl-page-all', function () { cancelBulk(); var selected = this.checked; state.entries.forEach(function (e) { if (state.viewIds.includes(String(e.item._id))) e.selected = selected; }); state.furthestStep = 0; renderRows(); });
