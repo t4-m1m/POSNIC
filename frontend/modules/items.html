@@ -125,6 +125,7 @@
 #view_print_lable .modal-dialog{width:calc(100% - 32px);max-width:1080px;margin:24px auto}
 #view_print_lable .sl-wizard{font:14px/1.5 var(--theme-font-family, system-ui),sans-serif;color:var(--theme-text-primary, #263347);background:var(--theme-body-bg, #f5f7fb);border-radius:10px;overflow:hidden;border:1px solid var(--theme-border-color, #dce3ec);display:flex;flex-direction:column;max-height:calc(100vh - 48px)}
 #view_print_lable .sl-wizard *{box-sizing:border-box}
+#view_print_lable .sl-template-tools{margin:14px 0;padding:12px;border:1px solid var(--theme-border-color, #dce3ec);border-radius:8px;background:var(--theme-card-bg, white)}#view_print_lable .sl-template-tools .sl-field{max-width:100%;margin-bottom:8px}#view_print_lable .sl-template-tools .sl-row{display:flex;gap:8px;flex-wrap:wrap}#view_print_lable .sl-template-tools .sl-row .sl-button{flex:1 1 145px}
 #view_print_lable .sl-header{display:flex;justify-content:space-between;align-items:start;gap:16px;padding:20px 24px;background:var(--theme-card-bg, white);border-bottom:1px solid var(--theme-border-color, #dce3ec)}
 #view_print_lable h2{font-size:23px;font-weight:600;margin:0 0 4px;color:var(--theme-text-primary, #263347)}#view_print_lable h3{font-size:18px;font-weight:600;margin:0 0 18px;color:var(--theme-text-primary, #263347)}
 #view_print_lable .sl-muted{color:var(--theme-text-muted, #62728a);font-size:13px;margin:0}#view_print_lable .sl-close{border:0;background:transparent;color:var(--theme-text-muted, #62728a);font-size:25px;line-height:1;padding:5px;cursor:pointer}
@@ -216,6 +217,17 @@
      <label class="sl-field"><lang class="lang_top_margin">Top margin</lang><input id="margin_top" class="sl-input" type="number" value="0" min="0"></label><label class="sl-field"><lang class="lang_bottom_margin">Bottom margin</lang><input id="margin_bottom" class="sl-input" type="number" value="0" min="0"></label><label class="sl-field"><lang class="lang_left_margin">Left margin</lang><input id="margin_left" class="sl-input" type="number" value="0" min="0"></label><label class="sl-field"><lang class="lang_right_margin">Right margin</lang><input id="margin_right" class="sl-input" type="number" value="0" min="0"></label>
      <label class="sl-check"><input id="mfg_checkbox" type="checkbox" ><lang class="lang_manufacturing_date">Manufacturing date</lang></label><label class="sl-check"><input id="exp_checkbox" type="checkbox" ><lang class="lang_expiry_date_2">Expiry date</lang></label><label class="sl-field"><lang class="lang_address_title">Address</lang><textarea id="address-value" class="sl-input" rows="2"></textarea></label>
     </div></details>
+    <div class="sl-template-tools" aria-label="Reusable label templates">
+     <label class="sl-field" for="sl-template-list">Saved label templates
+      <select id="sl-template-list" class="sl-input"><option value="">Choose a saved template…</option></select>
+     </label>
+     <div class="sl-row">
+      <button type="button" class="sl-button" id="sl-template-save">Save current as template</button>
+      <button type="button" class="sl-button" id="sl-template-load">Load template</button>
+      <button type="button" class="sl-button" id="sl-template-delete">Delete template</button>
+     </div>
+     <p class="sl-muted">Templates are saved in this browser for this POS installation.</p>
+    </div>
     <p class="sl-muted"><lang class="lang_match_these_dimensions_to_your_label_stock">Match these dimensions to your label stock before printing.</lang></p>
    </div><div><h3><lang class="lang_sample_label">Sample label</lang></h3><div class="sl-sample-area"><div id="sl-sample" class="sl-preview-host"></div></div><div id="sl-dimensions" class="sl-dimensions"></div></div></div></section>
    <section class="sl-panel" data-sl-panel="2" hidden><h3><lang class="lang_check_before_printing">Check before printing</lang></h3><div class="sl-row"><strong id="sl-layout-summary"></strong><div><select id="sl-preview-zoom" class="sl-input" aria-label="Preview zoom" data-t-aria-label="lang_rd_preview_zoom" style="width:auto;display:inline-block;margin-right:8px"><option value="fit"><lang class="lang_fit_whole_page">Fit whole page</lang></option><option value="actual"><lang class="lang_actual_size">Actual size</lang></option></select><button type="button" class="sl-button" id="sl-prev"><lang class="lang_previous_page">Previous page</lang></button> <span id="sl-page"></span> <button type="button" class="sl-button" id="sl-next"><lang class="lang_next_page">Next page</lang></button></div></div><p id="sl-summary" class="sl-muted" style="margin-bottom:14px"></p><div class="sl-page-area"><div id="sl-preview" class="sl-preview-host"></div></div></section>
