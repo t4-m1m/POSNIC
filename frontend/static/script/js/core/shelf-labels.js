@@ -86,7 +86,14 @@
             var w = Math.max(5, Math.min(100, n('w'))), h = Math.max(5, Math.min(100, n('h')));
             var rawRotation = n('rotation');
             var rotation = Number.isFinite(rawRotation) ? ((rawRotation % 360) + 360) % 360 : 0;
-            result[key] = { x: Math.max(0, Math.min(100 - w, n('x'))), y: Math.max(0, Math.min(100 - h, n('y'))), w: w, h: h, rotation: rotation, group_id: typeof v.group_id === 'string' && v.group_id.length <= 80 ? v.group_id : '' };
+            var defaultFontSize = key === 'price' ? 220 : key === 'details' ? 75 : 100;
+            var fontSize = Number(v.font_size);
+            if (!Number.isFinite(fontSize)) fontSize = defaultFontSize;
+            fontSize = Math.max(40, Math.min(400, fontSize));
+            var fontWeight = v.font_weight === 'bold' ? 'bold' : (v.font_weight === 'normal' ? 'normal' : (key === 'name' || key === 'price' ? 'bold' : 'normal'));
+            var textAlign = ['left', 'center', 'right'].indexOf(v.text_align) >= 0 ? v.text_align : 'center';
+            var color = /^#[0-9a-f]{6}$/i.test(String(v.color || '')) ? v.color : '#000000';
+            result[key] = { x: Math.max(0, Math.min(100 - w, n('x'))), y: Math.max(0, Math.min(100 - h, n('y'))), w: w, h: h, rotation: rotation, group_id: typeof v.group_id === 'string' && v.group_id.length <= 80 ? v.group_id : '', font_size: fontSize, font_weight: fontWeight, text_align: textAlign, color: color };
         });
         return result;
     }
@@ -100,6 +107,11 @@
         node.style.height = layout.h + '%';
         node.style.transform = 'rotate(' + (Number(layout.rotation) || 0) + 'deg)';
         node.style.transformOrigin = 'center center';
+        node.style.fontSize = (Number(layout.font_size) || 100) + '%';
+        node.style.fontWeight = layout.font_weight || 'normal';
+        node.style.textAlign = layout.text_align || 'center';
+        node.style.color = layout.color || '#000000';
+        node.style.justifyContent = layout.text_align === 'left' ? 'flex-start' : layout.text_align === 'right' ? 'flex-end' : 'center';
     }
     function label(doc, item, s, barcode) {
         if (!Number.isFinite(item.label_price)) throw Error(item.name + ': ' + (item.label_price_error || 'A fixed price is required.'));
@@ -584,7 +596,33 @@
             $('#sl-ungroup-elements').prop('disabled', !selected.toArray().some(function (node) {
                 var layout = state.elementLayout[node.dataset.slElement]; return layout && layout.group_id;
             }));
+            $('#sl-apply-element-style').prop('disabled', selected.length === 0);
+            if (selected.length === 1) {
+                var current = state.elementLayout[selected[0].dataset.slElement] || {};
+                $('#sl-element-font-size').val(current.font_size || (selected[0].dataset.slElement === 'price' ? 220 : selected[0].dataset.slElement === 'details' ? 75 : 100));
+                $('#sl-element-font-weight').val(current.font_weight || 'normal');
+                $('#sl-element-text-align').val(current.text_align || 'center');
+                $('#sl-element-color').val(current.color || '#000000');
+            }
         }
+        $(root.document).on('click', '#sl-apply-element-style', function () {
+            var nodes = $('#sl-sample .sl-element.sl-selected').toArray();
+            if (!nodes.length) return;
+            var fontSize = Number($('#sl-element-font-size').val());
+            if (!Number.isFinite(fontSize) || fontSize < 40 || fontSize > 400) { error('Element font size must be between 40% and 400%.'); return; }
+            var fontWeight = $('#sl-element-font-weight').val() === 'bold' ? 'bold' : 'normal';
+            var textAlign = ['left','center','right'].indexOf($('#sl-element-text-align').val()) >= 0 ? $('#sl-element-text-align').val() : 'center';
+            var color = /^#[0-9a-f]{6}$/i.test($('#sl-element-color').val()) ? $('#sl-element-color').val() : '#000000';
+            nodes.forEach(function (node) {
+                var key = node.dataset.slElement, current = state.elementLayout[key] || {};
+                state.elementLayout[key] = Object.assign({}, current, { font_size: fontSize, font_weight: fontWeight, text_align: textAlign, color: color });
+            });
+            try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
+            var keys = nodes.map(function (node) { return node.dataset.slElement; });
+            refresh();
+            keys.forEach(function (key) { var node = document.querySelector('#sl-sample .sl-element[data-sl-element="' + key + '"]'); if (node) node.classList.add('sl-selected'); });
+            syncSelectionControls();
+        });
         $(root.document).on('click', '#sl-group-elements', function () {
             var keys = $('#sl-sample .sl-element.sl-selected').toArray().map(function (node) { return node.dataset.slElement; }).filter(Boolean);
             if (keys.length < 2) return;
