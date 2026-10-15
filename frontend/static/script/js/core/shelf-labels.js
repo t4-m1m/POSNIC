@@ -124,7 +124,15 @@
             var p = doc.createElement('p'); p.className = (cls || '') + ' sl-element'; p.textContent = value;
             applyElementLayout(p, key, s); div.appendChild(p); return p;
         }
-        if (s.logoData) {
+        if (s.samarina) {
+            var wordmark = doc.createElement('div');
+            wordmark.className = 'sl-logo sl-element sl-samarina-wordmark';
+            wordmark.dataset.slElement = 'logo';
+            wordmark.innerHTML = '<span>SAMA</span><i>life</i><span>RIMA</span>';
+            wordmark.style.cssText = 'position:absolute;left:5%;top:3%;width:90%;height:17%;display:flex;align-items:center;justify-content:center;gap:2%;font-family:Georgia,serif;font-size:17px;font-weight:700;letter-spacing:-1px;color:#000;white-space:nowrap';
+            wordmark.querySelector('i').style.cssText = 'font-family:cursive;font-size:12px;font-weight:400;margin:0 -2px;transform:rotate(-12deg)';
+            div.appendChild(wordmark);
+        } else if (s.logoData) {
             var logo = doc.createElement('img'); logo.className = 'sl-logo sl-element'; logo.alt = 'Store logo';
             logo.src = s.logoData; applyElementLayout(logo, 'logo', s); div.appendChild(logo);
         }
