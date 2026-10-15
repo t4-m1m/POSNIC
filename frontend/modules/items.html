@@ -1,0 +1,729 @@
+<div class="vertical-layout page_loader" id="items" style="display: none">
+    <!-- Start Containerbar -->
+    <div id="containerbar">
+        <div class="breadcrumbbar crumbbar_padding">
+            <div class="row align-items-center row_filter">
+                <div class="col-auto">
+                    <h4 class="page-title break_title mb-0"> <lang class="lang_item_master_title">Item List</lang></h4>
+                </div>
+                <div class="col">
+                    <div id="items_filter_panel" class="lf-panel" style="display:none;"></div>
+                </div>
+                <!--
+                    The shared filter bar (list-filter.js) owns search, dates
+                    and fields; its button carries the active count so a
+                    narrowed list can never masquerade as an empty one. The
+                    old ids are removed rather than hidden - a selector that
+                    still reads from an input nobody can see is how the
+                    quotes search bug worked.
+                -->
+                <div class="col-auto text-right">
+                    <div class="widgetbar">
+                        <button type="button" class="btn btn-outline-primary" onclick="PosnicShelfLabels.open();"><i class="feather icon-printer mr-2"></i><lang class="lang_print_shelf_labels">Print shelf labels</lang></button>
+                        <a class="btn btn-outline-primary" href="#/itemsettings"><i class="feather icon-settings mr-2"></i><lang class="lang_item_settings">Item settings</lang></a>
+                        <a data-module="item" data-access="write" href="#/items" class="btn btn-primary-rgba"
+                            onclick="PosnicPro.importTableFile('items'); return false;"
+                            data-toggle="tooltip" title="Import from CSV/Excel" data-t-title="lang_import_from_csv_excel" aria-label="Import items" data-t-aria-label="lang_import_items">
+                            <i class="feather icon-download"></i>
+                        </a>
+                        <div class="btn-group">
+                        <button type="button" class="btn btn-primary-rgba dropdown-toggle" data-toggle="dropdown"
+                            aria-haspopup="true" aria-expanded="false" title="Export CSV" data-t-title="lang_export_csv" aria-label="Export CSV" data-t-aria-label="lang_export_csv">
+                            <i class="feather icon-share"></i>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <a class="dropdown-item" href="javascript:void(0)" onclick="PosnicPro.items.exportCsv(); return false;"><lang class="lang_this_page_what_is_shown">This page (what is shown)</lang></a>
+                            <a class="dropdown-item" href="javascript:void(0)" onclick="PosnicPro.items.exportAllCsv(); return false;"><lang class="lang_everything_matching_the_filter">Everything matching the filter</lang></a>
+                        </div>
+                        </div>
+                        <!-- The catalogue levers that used to hide across
+                             pages: price and stock in bulk, in one place. -->
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-primary-rgba dropdown-toggle" data-toggle="dropdown"
+                                aria-haspopup="true" aria-expanded="false" data-module="item" data-access="write"
+                                title="Catalogue tools" data-t-title="lang_catalogue_tools">
+                                <i class="feather icon-tool mr-2"></i><lang class="lang_tools">Tools</lang>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-right">
+                                <a class="dropdown-item" href="javascript:void(0)" onclick="PosnicPro.items.openBulkPrice(); return false;"><i class="feather icon-trending-up mr-2"></i><lang class="lang_bulk_price_update">Bulk price update</lang></a>
+                                <a class="dropdown-item" href="javascript:void(0)" onclick="PosnicPro.items.openStockAdjustment(); return false;"><i class="feather icon-sliders mr-2"></i><lang class="lang_stock_adjust_title">Stock adjustment</lang></a>
+                                <a class="dropdown-item" href="javascript:void(0)" onclick="PosnicPro.items.openBulkStock(); return false;"><i class="feather icon-layers mr-2"></i><lang class="lang_bulk_stock_update">Bulk stock update</lang></a>
+                                <!-- Restaurant only. The tick is per dish
+                                     because only the kitchen knows which ones
+                                     it can cook to order, but "per dish" is
+                                     not "one dish at a time": a menu of 272
+                                     is a wall nobody climbs. -->
+                                <a class="dropdown-item restaurant-only" href="javascript:void(0)"
+                                   onclick="PosnicPro.items.openPrepMinutes(); return false;"><i class="feather icon-clock mr-2"></i><lang class="lang_prep_tool">How long a section takes</lang></a>
+                                <a class="dropdown-item restaurant-only" href="javascript:void(0)"
+                                   onclick="PosnicPro.items.openSpiceChoice(); return false;"><i class="feather icon-thermometer mr-2"></i><lang class="lang_spice_choice_tool">Who may choose how hot</lang></a>
+                                <!-- Restaurant only, and hidden again unless
+                                     the shop has an AI key: it spends their
+                                     own balance, one call per dish. -->
+                                <a class="dropdown-item restaurant-only" id="item_nutrition_pass_open" href="javascript:void(0)"
+                                   onclick="PosnicPro.nutritionPass.open(); return false;"><i class="feather icon-zap mr-2"></i><lang class="lang_fill_in_nutrition">Fill in nutrition</lang></a>
+                                <!-- The other half. Estimating a menu is now
+                                     cheap; publishing it still needed a
+                                     person, one dish at a time. -->
+                                <a class="dropdown-item restaurant-only" id="item_nutrition_review_open" href="javascript:void(0)"
+                                   onclick="PosnicPro.nutritionPass.review(); return false;"><i class="feather icon-check-square mr-2"></i><lang class="lang_check_the_estimates">Check the estimates</lang></a>
+                            </div>
+                        </div>
+                        <span id="items_sort_host"></span>
+                        <button type="button" id="items_filter_btn" class="btn btn-primary-rgba lf-btn"
+                                data-toggle="tooltip" title="Filter items" data-t-title="lang_filter_items">
+                            <i class="feather icon-filter mr-2"></i><lang class="lang_filter">Filter</lang>
+                        </button>
+                        <!-- The hub's three add doors in ONE dropdown (owner-
+                             approved regroup) - and gated by the ITEM acl,
+                             which the old button was not (it said category). -->
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-primary-rgba dropdown-toggle" data-toggle="dropdown"
+                                aria-haspopup="true" aria-expanded="false" data-module="item" data-access="write"
+                                title="Add items" data-t-title="lang_add_items">
+                                <i class="feather icon-plus mr-2"></i><lang class="lang_addvariant_title">New</lang>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-right">
+                                <a class="dropdown-item" href="#/items/new" onclick="PosnicPro.items.addItemButton();"><i class="feather icon-box mr-2"></i><lang class="lang_standard_item">Standard item</lang></a>
+                                <a class="dropdown-item" href="#/quickitems"><i class="feather icon-zap mr-2"></i><lang class="lang_quick_add">Quick add</lang></a>
+                                <a class="dropdown-item" href="#/bulkitems"><i class="feather icon-layers mr-2"></i><lang class="lang_bulk_add">Bulk add</lang></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--
+                The "you are filtering by X" badges are gone with the controls
+                that fed them. PosnicPro.search was the only thing that ever
+                wrote them, and the bar states the same fact better: the count
+                on the Filter button is visible whether or not the panel is
+                open, which is exactly when it matters.
+            -->
+        </div>
+    </div>
+
+    <div class="contentbar">
+        <div id="items_split">
+            <div class="card m-b-30 md-rail" id="items_list_card">
+                <div class="card-body">
+                    <div id="items_list_rows" class="md-rail-rows text-muted"><lang class="lang_loading_items">Loading items ...</lang></div>
+                    <div class="q-pager" id="items_list_paging"></div>
+                </div>
+            </div>
+            <div class="card m-b-30 md-detail" id="items_detail_card" style="display:none;">
+                <div id="items_doc"></div>
+            </div>
+        </div>
+    </div>
+    <!-- End Contentbar -->
+</div>
+<!-- Barcode label printing uses the vendored copy so tills do not need internet access. -->
+<script src="script/vendor/print-js/print.min.js"></script>
+<link rel="stylesheet" href="script/vendor/print-js/print.min.css">
+
+<style>
+#view_print_lable .modal-dialog{width:calc(100% - 32px);max-width:1080px;margin:24px auto}
+#view_print_lable .sl-wizard{font:14px/1.5 var(--theme-font-family, system-ui),sans-serif;color:var(--theme-text-primary, #263347);background:var(--theme-body-bg, #f5f7fb);border-radius:10px;overflow:hidden;border:1px solid var(--theme-border-color, #dce3ec);display:flex;flex-direction:column;max-height:calc(100vh - 48px)}
+#view_print_lable .sl-wizard *{box-sizing:border-box}
+#view_print_lable .sl-header{display:flex;justify-content:space-between;align-items:start;gap:16px;padding:20px 24px;background:var(--theme-card-bg, white);border-bottom:1px solid var(--theme-border-color, #dce3ec)}
+#view_print_lable h2{font-size:23px;font-weight:600;margin:0 0 4px;color:var(--theme-text-primary, #263347)}#view_print_lable h3{font-size:18px;font-weight:600;margin:0 0 18px;color:var(--theme-text-primary, #263347)}
+#view_print_lable .sl-muted{color:var(--theme-text-muted, #62728a);font-size:13px;margin:0}#view_print_lable .sl-close{border:0;background:transparent;color:var(--theme-text-muted, #62728a);font-size:25px;line-height:1;padding:5px;cursor:pointer}
+#view_print_lable .sl-steps{display:flex;gap:8px;padding:18px 24px 0;flex-wrap:wrap}
+#view_print_lable .sl-button{font:inherit;line-height:1.4;min-height:40px;padding:9px 15px;border:1px solid var(--theme-border-color, #dce3ec);border-radius:6px;background:var(--theme-card-bg, white);color:var(--theme-text-primary, #263347);cursor:pointer;box-shadow:none;white-space:normal}
+#view_print_lable .sl-button:hover{border-color:var(--theme-primary-color, #2563b7);background:var(--theme-table-row-hover, #f1f6ff)}#view_print_lable .sl-button:focus-visible,#view_print_lable .sl-input:focus-visible{outline:2px solid var(--theme-primary-color, #2563b7);outline-offset:2px}
+#view_print_lable .sl-button:disabled{opacity:1;cursor:not-allowed;color:var(--theme-text-muted, #62728a);background:var(--theme-body-bg, #f5f7fb)}#view_print_lable .sl-primary{background:var(--theme-primary-color, #2563b7);border-color:var(--theme-primary-color, #2563b7);color:var(--theme-btn-primary-text, white)}#view_print_lable .sl-primary:hover{background:var(--theme-primary-hover, #1d4f91);color:var(--theme-btn-primary-text, white)}
+#view_print_lable .sl-step[aria-current=step]{background:var(--theme-table-row-hover, #e9f1ff);color:var(--theme-primary-color, #2563b7);border-color:var(--theme-primary-color, #2563b7)}#view_print_lable .sl-step span{display:inline-block;border:1px solid currentColor;border-radius:50%;width:23px;height:23px;margin-right:7px;text-align:center;font-size:12px;line-height:21px}
+#view_print_lable .sl-body{padding:20px 24px;max-height:calc(100vh - 255px);overflow:auto;min-height:180px;flex:1 1 auto}
+#view_print_lable .sl-panel{padding:20px;background:var(--theme-card-bg, white);border:1px solid var(--theme-border-color, #dce3ec);border-radius:8px}#view_print_lable [hidden]{display:none!important}
+#view_print_lable .sl-two-col{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px}#view_print_lable .sl-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px}
+#view_print_lable .sl-field{display:flex;flex-direction:column;gap:6px;font-weight:400;margin:0;min-width:0;color:var(--theme-text-primary, #263347)}#view_print_lable .sl-input{font:inherit;color:var(--theme-text-primary, #263347);background:var(--theme-card-bg, white);border:1px solid var(--theme-border-color, #dce3ec);border-radius:5px;padding:9px;width:100%;min-width:0;min-height:40px}
+#view_print_lable .sl-check{display:flex;align-items:center;gap:8px;font-weight:400;margin:0;cursor:pointer}#view_print_lable input[type=checkbox]{width:17px;height:17px;accent-color:var(--theme-primary-color, #2563b7);flex-shrink:0;cursor:pointer}
+#view_print_lable .sl-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}#view_print_lable .sl-copies-tools{display:flex;align-items:end;gap:10px;margin-bottom:18px}#view_print_lable .sl-copies-tools .sl-field{max-width:260px}
+#view_print_lable .sl-product-list{border:1px solid var(--theme-border-color, #dce3ec);border-radius:6px;overflow:auto;max-height:280px}#view_print_lable .sl-product-row{display:grid;grid-template-columns:20px minmax(0,1fr) 90px 80px;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--theme-border-color, #e9edf3);background:var(--theme-card-bg, white)}
+#view_print_lable .sl-product-row:last-child{border-bottom:0}#view_print_lable .sl-product-row small{display:block;color:var(--theme-text-muted, #62728a);overflow-wrap:anywhere}#view_print_lable .sl-product-head{position:sticky;top:0;z-index:1;background:var(--theme-table-header-bg, #f8fafc);color:var(--theme-text-muted, #62728a);font-size:12px}#view_print_lable .sl-product-row .sl-input{min-height:34px;padding:6px}#view_print_lable .sl-product-price{font-weight:600;text-align:right}
+#view_print_lable .sl-product-pagination{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px}#view_print_lable .sl-empty{padding:25px;text-align:center;color:var(--theme-text-muted, #62728a)}
+#view_print_lable .sl-options{display:grid;gap:12px}#view_print_lable .sl-sample-area,#view_print_lable .sl-page-area{background:var(--theme-body-bg, #f5f7fb);border:1px dashed var(--theme-border-color, #dce3ec);padding:20px 12px;border-radius:6px;overflow:hidden;min-height:190px}
+#view_print_lable .sl-sample-area{display:flex;align-items:start;justify-content:center}#view_print_lable .sl-sheet{box-shadow:0 2px 8px #0002;background:white;flex-shrink:0}
+#view_print_lable .sl-preview-host{position:relative;overflow:hidden;width:100%;margin:auto}#view_print_lable .sl-dimensions{text-align:center;font-size:13px;color:var(--theme-text-muted, #62728a);margin-top:12px}
+#view_print_lable details{margin-top:20px;border-top:1px solid var(--theme-border-color, #dce3ec);padding-top:14px}#view_print_lable summary{font-weight:600;cursor:pointer;color:var(--theme-primary-color, #2563b7);margin-bottom:14px}#view_print_lable .sl-align{display:flex;gap:6px}#view_print_lable .sl-align .btn-primary{background:var(--theme-table-row-hover, #e9f1ff);color:var(--theme-primary-color, #2563b7);border-color:var(--theme-primary-color, #2563b7)}
+#view_print_lable .sl-job{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}#view_print_lable .sl-job strong{text-align:right}#view_print_lable .sl-footer{padding:16px 24px;display:flex;justify-content:space-between;align-items:center;gap:16px;background:var(--theme-card-bg, white);border-top:1px solid var(--theme-border-color, #dce3ec)}#view_print_lable .sl-footer-actions{display:flex;gap:10px}
+#view_print_lable .sl-header,#view_print_lable .sl-steps,#view_print_lable .sl-footer,#view_print_lable .sl-status{flex-shrink:0}#view_print_lable .sl-status{padding:0 24px 12px;color:var(--theme-danger-color, #b02424);font-size:13px}#view_print_lable .sl-status:empty{display:none}
+@media(max-width:700px){#view_print_lable .modal-dialog{width:calc(100% - 16px);margin:8px auto}#view_print_lable .sl-wizard{max-height:calc(100vh - 16px)}#view_print_lable .sl-header,#view_print_lable .sl-body,#view_print_lable .sl-footer{padding:16px}#view_print_lable .sl-steps{padding:14px 16px 0;gap:5px}#view_print_lable .sl-step{padding:7px 8px;font-size:12px}#view_print_lable .sl-step span{margin-right:3px}#view_print_lable .sl-two-col{grid-template-columns:1fr}#view_print_lable .sl-panel{padding:14px}#view_print_lable .sl-product-row{grid-template-columns:18px minmax(0,1fr) 60px 58px;gap:8px;padding:10px}#view_print_lable .sl-body{max-height:calc(100vh - 250px)}#view_print_lable .sl-footer{flex-wrap:wrap}}
+
+/* Keep controls legible against global theme overrides. Paper colours belong to the label design. */
+#view_print_lable .sl-input::placeholder{color:var(--theme-text-muted, #62728a)!important;opacity:1}
+#view_print_lable .sl-input:disabled{color:var(--theme-text-secondary, #3a4459)!important;background:var(--theme-body-bg, #f5f7fb)!important;opacity:1}
+#view_print_lable .sl-button:disabled{border-color:var(--theme-border-color, #dce3ec)}
+#view_print_lable .sl-primary:not(:disabled){background:var(--theme-btn-primary-bg, #2563b7);color:var(--theme-btn-primary-text, white)!important}
+#view_print_lable .sl-label p{color:inherit!important}
+</style>
+<div class="modal fade close_on_esc" id="view_print_lable" tabindex="-1" role="dialog" aria-labelledby="sl-title" aria-hidden="true">
+ <div class="modal-dialog" role="document"><div class="modal-content sl-wizard">
+  <header class="sl-header"><div><h2 id="sl-title"><lang class="lang_shelf_label_printing">Shelf label printing</lang></h2><p class="sl-muted"><lang class="lang_select_products_check_the_labels_then_prin">Select products, check the labels, then print.</lang></p></div><button type="button" class="sl-close" data-dismiss="modal" aria-label="Close" data-t-aria-label="lang_close_title">×</button></header>
+  <nav class="sl-steps" aria-label="Print flow" data-t-aria-label="lang_print_flow"><button type="button" class="sl-button sl-step" data-sl-step="0" aria-current="step"><span>1</span><lang class="lang_products">Products</lang></button><button type="button" class="sl-button sl-step" data-sl-step="1" ><span>2</span><lang class="lang_layout">Layout</lang></button><button type="button" class="sl-button sl-step" data-sl-step="2" ><span>3</span><lang class="lang_preview">Preview</lang></button><button type="button" class="sl-button sl-step" data-sl-step="3" ><span>4</span><lang class="lang_printed">Print</lang></button></nav>
+  <div class="sl-body">
+   <section class="sl-panel" data-sl-panel="0"><h3><lang class="lang_select_products">Select products</lang></h3>
+    <div class="sl-fields"><label class="sl-field"><lang class="lang_search_or_scan_barcode">Search or scan barcode</lang><input id="sl-search" class="sl-input" type="search" placeholder="Product name or barcode" data-t-placeholder="lang_product_name_or_barcode"></label><label class="sl-field"><lang class="lang_newcategory_title">Category</lang><select id="sl-category" class="sl-input"><option value=""><lang class="lang_all_categories">All categories</lang></option></select></label></div>
+    <div class="sl-row"><label class="sl-check"><input id="sl-all" type="checkbox" ><lang class="lang_select_all_matching_products">Select all matching products</lang></label><button type="button" class="sl-button" id="sl-clear"><lang class="lang_pm_none">Clear selection</lang></button></div>
+    <div class="sl-copies-tools"><label class="sl-field"><lang class="lang_copies_for_selected_products">Copies for selected products</lang><input id="sl-copies" class="sl-input" type="number" value="1" min="1" max="999"></label><button type="button" class="sl-button" id="sl-apply-copies"><lang class="lang_apply_copies">Apply copies</lang></button></div>
+    <div class="sl-product-list"><div class="sl-product-row sl-product-head"><label class="sl-check"><input id="sl-page-all" type="checkbox" aria-label="Select products on this page" data-t-aria-label="lang_select_products_on_this_page"></label><span><lang class="lang_product">Product</lang></span><span style="text-align:right"><lang class="lang_price_title">Price</lang></span><span><lang class="lang_print_copies">Copies</lang></span></div><div id="sl-products"></div></div>
+    <div class="sl-product-pagination"><button type="button" class="sl-button" id="sl-product-prev"><lang class="lang_previous">Previous</lang></button><span id="sl-listed" class="sl-muted"></span><button type="button" class="sl-button" id="sl-product-next"><lang class="lang_next">Next</lang></button></div>
+    <p id="sl-product-note" class="sl-muted" style="margin-top:12px"></p>
+   </section>
+   <section class="sl-panel" data-sl-panel="1" hidden><h3><lang class="lang_choose_label_layout">Choose label layout</lang></h3><div class="sl-two-col"><div class="sl-options">
+    <label class="sl-field"><lang class="lang_paper_format">Paper format</lang><select id="sl-paper" class="sl-input"><option value="a4"><lang class="lang_a4_sheet_multiple_labels">A4 sheet · multiple labels</lang></option><option value="roll"><lang class="lang_label_roll_one_label_per_page">Label roll · one label per page</lang></option></select></label>
+    <div class="sl-fields"><label class="sl-field"><lang class="lang_label_width_mm">Label width (mm)</lang><input id="sl-width" class="sl-input" type="number" value="63" min="15" max="210" step="0.1"></label><label class="sl-field"><lang class="lang_label_height_mm">Label height (mm)</lang><input id="sl-height" class="sl-input" type="number" value="33" min="15" max="297" step="0.1"></label></div>
+    <div id="sl-a4-settings" class="sl-fields"><label class="sl-field"><lang class="lang_sheet_margin_mm">Sheet margin (mm)</lang><input id="sl-margin" class="sl-input" type="number" value="5" min="0" step="0.5"></label><label class="sl-field"><lang class="lang_gap_between_labels_mm">Gap between labels (mm)</lang><input id="sl-gap" class="sl-input" type="number" value="2" min="0" step="0.5"></label><label class="sl-field"><lang class="lang_start_at_label_position">Start at label position</lang><input id="sl-start" class="sl-input" type="number" value="1" min="1"></label></div>
+    <label class="sl-field"><lang class="lang_price_on_label">Price on label</lang><select class="sl-input" disabled><option><lang class="lang_current_price_including_vat_after_item_dis">Current price including VAT (after item discount)</lang></option></select></label>
+    <label class="sl-check"><input id="sl-guides" type="checkbox" ><lang class="lang_show_cutting_guides">Show cutting guides</lang></label><label class="sl-check"><input id="sl-show-barcode" type="checkbox" checked><lang class="lang_show_barcode">Show barcode</lang></label><label class="sl-check"><input id="sl-bar-text" type="checkbox" checked><lang class="lang_barcode_number">Barcode number</lang></label><label class="sl-check"><input id="sl-shop" type="checkbox" checked><lang class="lang_shop_name">Shop name</lang></label><label class="sl-check"><input id="sl-date" type="checkbox" ><lang class="lang_printed_date">Printed date</lang></label><label class="sl-check"><input id="sl-mrp" type="checkbox" ><lang class="lang_mrp_from_item_record">MRP from item record</lang></label>
+    <details id="sl-design"><summary><lang class="lang_font_colour_and_barcode_settings">Font, colour and barcode settings</lang></summary><div id="barcode-container" class="sl-fields">
+     <label class="sl-field"><lang class="lang_font">Font</lang><select id="font" class="sl-input">
+                                                                <option value="monospace" style="font-family: monospace" selected="selected"><lang class="lang_monospace">Monospace</lang></option>
+                                                                <option value="sans-serif" style="font-family: sans-serif"><lang class="lang_sans_serif">Sans-serif</lang></option>
+                                                                <option value="serif" style="font-family: serif"><lang class="lang_serif">Serif</lang></option>
+                                                                <option value="fantasy" style="font-family: fantasy"><lang class="lang_fantasy">Fantasy</lang></option>
+                                                                <option value="cursive" style="font-family: cursive"><lang class="lang_cursive">Cursive</lang></option>
+                                                                <option value="Arial" style="font-family: Arial"><lang class="lang_arial">Arial</lang></option>
+                                                                <option value="Georgia" style="font-family: Georgia"><lang class="lang_georgia">Georgia</lang></option>
+                                                                <option value="Times New Roman" style="font-family: 'Times New Roman'"><lang class="lang_times_new_roman">Times New Roman</lang></option>
+                                                                <option value="Verdana" style="font-family: Verdana"><lang class="lang_verdana">Verdana</lang></option>
+                                                                <option value="Tahoma" style="font-family: Tahoma"><lang class="lang_tahoma">Tahoma</lang></option>
+                                                                <option value="Courier New" style="font-family: 'Courier New'"><lang class="lang_courier_new">Courier New</lang></option>
+                                                                <option value="Trebuchet MS" style="font-family: 'Trebuchet MS'"><lang class="lang_trebuchet_ms">Trebuchet MS</lang></option>
+                                                                <option value="Impact" style="font-family: Impact"><lang class="lang_impact">Impact</lang></option>
+                                                            </select></label><label class="sl-field"><lang class="lang_font_size">Font size</lang><input id="bar-fontSize" class="sl-input" type="number" value="12" min="3" max="36"></label>
+     <label class="sl-field"><lang class="lang_text_colour">Text colour</lang><input id="line-color" class="sl-input" type="color" value="#000000"></label><label class="sl-field"><lang class="lang_background_colour">Background colour</lang><input id="background-color" class="sl-input" type="color" value="#ffffff"></label>
+     <div class="sl-field"><lang class="lang_rd_alignment">Alignment</lang><div class="sl-align"><button type="button" class="sl-button text-align "  value="left"><lang class="lang_align_left">Left</lang></button><button type="button" class="sl-button text-align btn-primary"  value="center"><lang class="lang_center">Center</lang></button><button type="button" class="sl-button text-align "  value="right"><lang class="lang_right">Right</lang></button></div></div>
+     <div class="sl-field"><lang class="lang_text_style">Text style</lang><div class="sl-align"><button type="button" class="sl-button font-option"  value="bold"><lang class="lang_bold">Bold</lang></button><button type="button" class="sl-button font-option"  value="italic"><lang class="lang_italic">Italic</lang></button></div></div>
+     <label class="sl-field"><lang class="lang_barcode_format">Barcode format</lang><select id="barcodeLabelType" class="sl-input">
+                                            <option value="CODE128"><lang class="lang_code128_auto">CODE128 auto</lang></option>
+                                            <option value="CODE128A"><lang class="lang_code128_a">CODE128 A</lang></option>
+                                            <option value="CODE128B"><lang class="lang_code128_b">CODE128 B</lang></option>
+                                            <option value="CODE128C"><lang class="lang_code128_c">CODE128 C</lang></option>
+                                            <option value="EAN13"><lang class="lang_ean13">EAN13</lang></option>
+                                            <option value="EAN8"><lang class="lang_ean8">EAN8</lang></option>
+                                            <option value="UPC"><lang class="lang_upc">UPC</lang></option>
+                                            <option value="CODE39"><lang class="lang_code39">CODE39</lang></option>
+                                            <option value="ITF14"><lang class="lang_itf14">ITF14</lang></option>
+                                            <option value="ITF"><lang class="lang_itf">ITF</lang></option>
+                                            <option value="MSI"><lang class="lang_msi">MSI</lang></option>
+                                            <option value="MSI10"><lang class="lang_msi10">MSI10</lang></option>
+                                            <option value="MSI11"><lang class="lang_msi11">MSI11</lang></option>
+                                            <option value="MSI1010"><lang class="lang_msi1010">MSI1010</lang></option>
+                                            <option value="MSI1110"><lang class="lang_msi1110">MSI1110</lang></option>
+                                            <option value="pharmacode"><lang class="lang_pharmacode">Pharmacode</lang></option>
+                                        </select></label><label class="sl-field"><lang class="lang_bar_width">Bar width</lang><input id="bar-width" class="sl-input" type="number" value="1" min="0.5" max="5" step="0.1"></label><label class="sl-field"><lang class="lang_bar_height">Bar height</lang><input id="bar-height" class="sl-input" type="number" value="30" min="5" max="150"></label><label class="sl-field"><lang class="lang_barcode_margin">Barcode margin</lang><input id="bar-margin" class="sl-input" type="number" value="0" min="0" max="50"></label><label class="sl-field"><lang class="lang_number_spacing">Number spacing</lang><input id="bar-text-margin" class="sl-input" type="number" value="2" min="0" max="30"></label>
+     <label class="sl-field"><lang class="lang_top_margin">Top margin</lang><input id="margin_top" class="sl-input" type="number" value="0" min="0"></label><label class="sl-field"><lang class="lang_bottom_margin">Bottom margin</lang><input id="margin_bottom" class="sl-input" type="number" value="0" min="0"></label><label class="sl-field"><lang class="lang_left_margin">Left margin</lang><input id="margin_left" class="sl-input" type="number" value="0" min="0"></label><label class="sl-field"><lang class="lang_right_margin">Right margin</lang><input id="margin_right" class="sl-input" type="number" value="0" min="0"></label>
+     <label class="sl-check"><input id="mfg_checkbox" type="checkbox" ><lang class="lang_manufacturing_date">Manufacturing date</lang></label><label class="sl-check"><input id="exp_checkbox" type="checkbox" ><lang class="lang_expiry_date_2">Expiry date</lang></label><label class="sl-field"><lang class="lang_address_title">Address</lang><textarea id="address-value" class="sl-input" rows="2"></textarea></label>
+    </div></details>
+    <p class="sl-muted"><lang class="lang_match_these_dimensions_to_your_label_stock">Match these dimensions to your label stock before printing.</lang></p>
+   </div><div><h3><lang class="lang_sample_label">Sample label</lang></h3><div class="sl-sample-area"><div id="sl-sample" class="sl-preview-host"></div></div><div id="sl-dimensions" class="sl-dimensions"></div></div></div></section>
+   <section class="sl-panel" data-sl-panel="2" hidden><h3><lang class="lang_check_before_printing">Check before printing</lang></h3><div class="sl-row"><strong id="sl-layout-summary"></strong><div><select id="sl-preview-zoom" class="sl-input" aria-label="Preview zoom" data-t-aria-label="lang_rd_preview_zoom" style="width:auto;display:inline-block;margin-right:8px"><option value="fit"><lang class="lang_fit_whole_page">Fit whole page</lang></option><option value="actual"><lang class="lang_actual_size">Actual size</lang></option></select><button type="button" class="sl-button" id="sl-prev"><lang class="lang_previous_page">Previous page</lang></button> <span id="sl-page"></span> <button type="button" class="sl-button" id="sl-next"><lang class="lang_next_page">Next page</lang></button></div></div><p id="sl-summary" class="sl-muted" style="margin-bottom:14px"></p><div class="sl-page-area"><div id="sl-preview" class="sl-preview-host"></div></div></section>
+   <section class="sl-panel" data-sl-panel="3" hidden><h3><lang class="lang_print_shelf_labels">Print shelf labels</lang></h3><div class="sl-two-col"><div><div class="sl-job"><span><lang class="lang_desktop_paper">Paper</lang></span><strong id="sl-job-paper"></strong><span><lang class="lang_total_labels">Total labels</lang></span><strong id="sl-job-total"></strong><span><lang class="lang_pages_in_this_batch">Pages in this batch</lang></span><strong id="sl-job-pages"></strong><span><lang class="lang_scale">Scale</lang></span><strong><lang class="lang_actual_size_100">Actual size · 100%</lang></strong></div>
+    <p class="sl-muted" style="margin-bottom:18px"><lang class="lang_choose_the_printer_in_the_browser_print_di">Choose the printer in the browser print dialog. Use matching paper, 100% scale, no browser margins and no headers or footers.</lang></p><div class="sl-fields"><label class="sl-field"><lang class="lang_from_label">From label</lang><input id="sl-from" class="sl-input" type="number" value="1" min="1"></label><label class="sl-field"><lang class="lang_labels_in_this_batch">Labels in this batch</lang><input id="sl-batch" class="sl-input" type="number" value="2000" min="1" max="2000"></label></div>
+    <button type="button" class="sl-button" id="sl-test"><lang class="lang_print_one_test_label">Print one test label</lang></button><p class="sl-muted" style="margin-top:14px"><lang class="lang_large_selections_can_be_printed_in_batches">Large selections can be printed in batches of up to 2,000 labels.</lang></p></div><div class="sl-page-area"><div id="sl-print-sample" class="sl-preview-host"></div></div></div></section>
+  </div><div id="sl-status" class="sl-status" role="status" aria-live="polite"></div>
+  <footer class="sl-footer"><span id="sl-selection-count" class="sl-muted" aria-live="polite"></span><div class="sl-footer-actions"><button type="button" class="sl-button" id="sl-back" hidden><lang class="lang_back_title">Back</lang></button><button type="button" class="sl-button sl-primary" id="sl-next-step" ><lang class="lang_sl_choose_layout">Choose layout →</lang></button><button type="button" id="sl-print" class="sl-button sl-primary" hidden><lang class="lang_print_2">Print…</lang></button></div></footer>
+  <div hidden><input type="hidden" id="document_width" value="2.4803149606299213"><input type="hidden" id="document_height" value="1.299212598425197"><input type="hidden" id="userInput"><input type="hidden" id="branch-value"><input type="hidden" id="price-value"><input type="hidden" id="mrp-price-value"><input type="hidden" id="mfg-date-value"><input type="hidden" id="exp-date-value"><span id="bar-width-display"></span><span id="bar-height-display"></span><span id="bar-fontSize-display"></span><span id="bar-margin-display"></span><span id="bar-text-margin-display"></span></div>
+ </div></div>
+</div>
+
+
+<!-- Bulk price update -->
+<div class="modal fade close_on_esc" id="bulk_price_modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="feather icon-trending-up mr-2"></i><lang class="lang_bulk_price_update">Bulk price update</lang></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" data-t-aria-label="lang_close_title">
+                    <span aria-hidden="true"><lang class="lang_text">&times;</lang></span>
+                </button>
+            </div>
+            <form onsubmit="return PosnicPro.items.submitBulkPrice();">
+                <div class="modal-body">
+                    <p class="text-muted" style="font-size:13px; margin-bottom:14px;">
+                        <lang class="lang_raise_or_lower_prices_for_many_items_at_on">Raise or lower prices for many items at once. Every change is kept in each item's price history.</lang>
+                    </p>
+
+                    <div class="form-group">
+                        <label class="f-w-6"><lang class="lang_which_items">Which items</lang></label>
+                        <div>
+                            <label class="mr-4" style="font-weight:normal;">
+                                <input type="radio" name="bulk_price_scope" value="all" checked onclick="PosnicPro.items.toggleBulkCategory();"> <lang class="lang_all_items">All items</lang>
+                            </label>
+                            <label style="font-weight:normal;">
+                                <input type="radio" name="bulk_price_scope" value="category" onclick="PosnicPro.items.toggleBulkCategory();"> <lang class="lang_one_category">One category</lang>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group bulk-price-category-row" style="display:none;">
+                        <label class="f-w-6"><lang class="lang_newcategory_title">Category</lang></label>
+                        <select class="form-control" id="bulk_price_category" style="width:100%;" aria-label="Bulk price category" data-t-aria-label="lang_bulk_price_category"></select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="f-w-6"><lang class="lang_price_to_change">Price to change</lang></label>
+                        <select class="form-control" id="bulk_price_field" aria-label="Bulk price field" data-t-aria-label="lang_bulk_price_field">
+                            <option value="selling_price" selected><lang class="lang_selling_price">Selling Price</lang></option>
+                            <option value="mrp_price"><lang class="lang_mrp_price_2">MRP price</lang></option>
+                            <option value="company_price"><lang class="lang_company_price">Company price</lang></option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="f-w-6"><lang class="lang_change_by">Change by</lang></label>
+                        <div class="row">
+                            <div class="col-4">
+                                <select class="form-control" id="bulk_price_direction" aria-label="Bulk price direction" data-t-aria-label="lang_bulk_price_direction">
+                                    <option value="increase" selected><lang class="lang_increase">Increase</lang></option>
+                                    <option value="decrease"><lang class="lang_decrease">Decrease</lang></option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <select class="form-control" id="bulk_price_op" onchange="PosnicPro.items.bulkPriceOpChanged();" aria-label="Bulk price op" data-t-aria-label="lang_bulk_price_op">
+                                    <option value="percent" selected><lang class="lang_by_2">by %</lang></option>
+                                    <option value="amount"><lang class="lang_by_amount">by amount</lang></option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bulk-price-unit">%</span>
+                                    </div>
+                                    <input type="number" min="0" step="0.01" class="form-control" id="bulk_price_value" placeholder="0" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:10px;">
+                        <label style="font-weight:normal; font-size:13px; display:flex; align-items:center; gap:8px; cursor:pointer;">
+                            <input type="checkbox" id="bulk_price_skip" checked style="width:auto; margin:0;">
+                            <lang class="lang_skip_items_that_would_end_up_above_mrp_or">Skip items that would end up above MRP or below cost</lang>
+                        </label>
+                    </div>
+
+                    <!-- Filled by "Check feasibility" - what the change would do before it is applied. -->
+                    <div id="bulk_price_check_result" style="display:none; margin-bottom:10px;"></div>
+
+                    <div class="alert alert-warning" style="font-size:12px; padding:8px 12px; margin-bottom:0;">
+                        <lang class="lang_this_changes_every_matching_item_and_is_no">This changes every matching item and is not undone in one click. Prices never drop below zero.</lang>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-dismiss="modal">
+                        <i class="feather icon-x-circle mr-2"></i><lang class="lang_cancel_title">Cancel</lang>
+                    </button>
+                    <button type="button" id="bulk_price_check" class="btn btn-outline-secondary" onclick="PosnicPro.items.checkBulkPrice();">
+                        <i class="feather icon-search mr-2"></i><lang class="lang_check_feasibility">Check feasibility</lang>
+                    </button>
+                    <button type="submit" id="bulk_price_submit" class="btn btn-outline-primary">
+                        <i class="feather icon-check-circle mr-2"></i><lang class="lang_update_prices">Update prices</lang>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- end Bulk price update -->
+
+<!-- Bulk stock update -->
+<!--
+    FILLING IN A MENU'S NUTRITION.
+
+    Owner asked for nutrition on every dish and an assistant to fill it in
+    "if user lazy to do". The single-dish button does exactly that, one press
+    at a time - which on a menu of two hundred and seventy-two dishes is two
+    hundred and seventy-two presses, so the panel stays empty everywhere and
+    the whole feature may as well not exist.
+
+    THREE THINGS THIS SCREEN HAS TO BE HONEST ABOUT.
+
+    WHAT IT COSTS. One call to the shop's own AI provider per dish. The count
+    is read before anything runs and stated in the button, because "run this
+    over your menu" with no number in front of it is not a choice anybody can
+    make.
+
+    THAT IT IS A GUESS. Everything it writes is stored as an estimate, and
+    utils/dish-facts.js publishes nothing derived from an estimate - no
+    badges, not even the calorie figure - until a person confirms the dish.
+    A machine guessing its way onto a live menu is the same harm as a tick box
+    for "Heart healthy", arriving by a door that is harder to see.
+
+    THAT IT CAN BE STOPPED. It walks the list from the browser, one dish at a
+    time, so Stop means stop and closing the window means stop. A job on the
+    server could do neither.
+-->
+<!--
+    CHECKING WHAT A MACHINE GUESSED, BEFORE ANY OF IT IS PUBLISHED.
+
+    The pass made estimating a whole menu cheap and left confirming it at one
+    dish at a time - which on 272 dishes is the same 272 presses, moved one
+    step along. This is the other half.
+
+    WHAT THE ROWS SHOW IS THE POINT. A shop scanning calorie figures is being
+    asked to check arithmetic it has no way to check. A shop reading "Grilled
+    Chicken - High protein, Heart healthy" is being asked the question it can
+    actually answer: is that sentence true of my food? Those badges are
+    exactly what confirming publishes, so they are what the screen leads with.
+
+    Confirming changes no number. It records that a person stands behind the
+    ones already there, which is the only thing that lets dish-facts publish
+    them. Anything that needs correcting is opened and edited on the item
+    screen, where there is one way for a figure to be typed.
+-->
+<div class="modal fade close_on_esc" id="nutrition_review_modal" tabindex="-1" role="dialog" aria-labelledby="nutrition_review_title">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="nutrition_review_title"><lang class="lang_check_the_estimates">Check the estimates</lang></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" data-t-aria-label="lang_close_title"><span aria-hidden="true"><lang class="lang_text">&times;</lang></span></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">
+                    <lang class="lang_review_what">These were estimated from the dish name and are on no menu yet. Confirming one publishes the badges shown beside it. Nothing here changes a number: open the dish to correct anything.</lang>
+                </p>
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="nutrition_review_category"><lang class="lang_which_dishes">Which dishes</lang></label>
+                        <select class="form-control border-control" id="nutrition_review_category"></select>
+                    </div>
+                </div>
+                <div class="nutrition-review-state" id="nutrition_review_state"></div>
+                <div class="nutrition-review-rows" id="nutrition_review_rows"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-dismiss="modal"><lang class="lang_close_title">Close</lang></button>
+                <button type="button" class="btn btn-primary" id="nutrition_review_confirm" disabled><lang class="lang_confirm_checked">Confirm the ticked dishes</lang></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade close_on_esc" id="nutrition_pass_modal" tabindex="-1" role="dialog" aria-labelledby="nutrition_pass_title">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="nutrition_pass_title"><lang class="lang_fill_in_nutrition">Fill in nutrition</lang></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" data-t-aria-label="lang_close_title"><span aria-hidden="true"><lang class="lang_text">&times;</lang></span></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">
+                    <lang class="lang_nutrition_pass_what">The assistant estimates the calories and macros of each dish from its name, and stores them as estimates. Nothing it writes appears on your menu until you confirm the dish.</lang>
+                </p>
+                <p class="text-muted">
+                    <lang class="lang_nutrition_pass_cost">This asks your own AI provider once per dish, so it costs what that provider charges. Dishes you have already filled in by hand are skipped.</lang>
+                </p>
+
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="nutrition_pass_category"><lang class="lang_which_dishes">Which dishes</lang></label>
+                        <select class="form-control border-control" id="nutrition_pass_category"></select>
+                    </div>
+                </div>
+
+                <div class="nutrition-pass-state" id="nutrition_pass_state"></div>
+
+                <div class="progress" id="nutrition_pass_bar_wrap" style="display:none;">
+                    <div class="progress-bar" id="nutrition_pass_bar" role="progressbar" style="width:0%;"></div>
+                </div>
+                <ul class="nutrition-pass-log" id="nutrition_pass_log"></ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-dismiss="modal"><lang class="lang_close_title">Close</lang></button>
+                <button type="button" class="btn btn-danger" id="nutrition_pass_stop" style="display:none;"><lang class="lang_stop">Stop</lang></button>
+                <button type="button" class="btn btn-primary" id="nutrition_pass_go" disabled><lang class="lang_start">Start</lang></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- How long a section takes -->
+<div class="modal fade close_on_esc" id="prep_minutes_modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="feather icon-clock mr-2"></i><lang class="lang_prep_tool">How long a section takes</lang></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" data-t-aria-label="lang_close_title">
+                    <span aria-hidden="true"><lang class="lang_text">&times;</lang></span>
+                </button>
+            </div>
+            <form onsubmit="return PosnicPro.items.submitPrepMinutes();">
+                <div class="modal-body">
+                    <p class="text-muted" style="font-size:13px; margin-bottom:14px;">
+                        <lang class="lang_prep_tool_help">A customer ordering online sees this on the dish, and it is what tells them the kitchen is running twenty minutes behind rather than just 'busy'. Breads come off the tawa in minutes and a biryani does not, so set it a section at a time.</lang>
+                    </p>
+
+                    <div class="form-group">
+                        <label class="f-w-6"><lang class="lang_which_items">Which items</lang></label>
+                        <div>
+                            <label class="mr-4" style="font-weight:normal;">
+                                <input type="radio" name="prep_minutes_scope" value="all" checked onclick="PosnicPro.items.togglePrepMinutesCategory();"> <lang class="lang_all_items">All items</lang>
+                            </label>
+                            <label style="font-weight:normal;">
+                                <input type="radio" name="prep_minutes_scope" value="category" onclick="PosnicPro.items.togglePrepMinutesCategory();"> <lang class="lang_one_category">One category</lang>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group prep-minutes-category-row" style="display:none;">
+                        <label class="f-w-6"><lang class="lang_newcategory_title">Category</lang></label>
+                        <select class="form-control" id="prep_minutes_category" style="width:100%;" aria-label="Category" data-t-aria-label="lang_newcategory_title"></select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="f-w-6" for="prep_minutes_value"><lang class="lang_prep_how_long">How long, in minutes</lang></label>
+                        <input type="number" min="0" max="1440" step="1" class="form-control" id="prep_minutes_value" placeholder="20" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight:normal;">
+                            <input type="checkbox" id="prep_minutes_only_empty" checked>
+                            <lang class="lang_prep_only_empty">Only dishes that do not say yet</lang>
+                        </label>
+                        <small class="form-text text-muted mt-0">
+                            <lang class="lang_prep_only_empty_help">Leave this ticked to keep the times you have already set by hand. Untick it to rewrite every dish in the scope.</lang>
+                        </small>
+                    </div>
+
+                    <!-- Filled by "Check" - how many dishes would actually change. -->
+                    <div id="prep_minutes_check_result" style="display:none; margin-bottom:10px;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-dismiss="modal">
+                        <i class="feather icon-x-circle mr-2"></i><lang class="lang_cancel_title">Cancel</lang>
+                    </button>
+                    <button type="button" id="prep_minutes_check" class="btn btn-outline-secondary" onclick="PosnicPro.items.checkPrepMinutes();">
+                        <i class="feather icon-search mr-2"></i><lang class="lang_check">Check</lang>
+                    </button>
+                    <button type="submit" id="prep_minutes_submit" class="btn btn-outline-primary">
+                        <i class="feather icon-check-circle mr-2"></i><lang class="lang_prep_apply">Set the time</lang>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- end How long a section takes -->
+
+<!-- Who may choose how hot -->
+<div class="modal fade close_on_esc" id="spice_choice_modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="feather icon-thermometer mr-2"></i><lang class="lang_spice_choice_tool">Who may choose how hot</lang></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" data-t-aria-label="lang_close_title">
+                    <span aria-hidden="true"><lang class="lang_text">&times;</lang></span>
+                </button>
+            </div>
+            <form onsubmit="return PosnicPro.items.submitSpiceChoice();">
+                <div class="modal-body">
+                    <p class="text-muted" style="font-size:13px; margin-bottom:14px;">
+                        <lang class="lang_spice_choice_tool_help">A customer ordering online can tap mild, medium or spicy on the dishes you allow it for, and the level prints on the kitchen ticket. Turn it on for the sections your kitchen cooks to order, then correct the exceptions on the dish itself.</lang>
+                    </p>
+
+                    <div class="form-group">
+                        <label class="f-w-6"><lang class="lang_which_items">Which items</lang></label>
+                        <div>
+                            <label class="mr-4" style="font-weight:normal;">
+                                <input type="radio" name="spice_choice_scope" value="all" checked onclick="PosnicPro.items.toggleSpiceChoiceCategory();"> <lang class="lang_all_items">All items</lang>
+                            </label>
+                            <label style="font-weight:normal;">
+                                <input type="radio" name="spice_choice_scope" value="category" onclick="PosnicPro.items.toggleSpiceChoiceCategory();"> <lang class="lang_one_category">One category</lang>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group spice-choice-category-row" style="display:none;">
+                        <label class="f-w-6"><lang class="lang_newcategory_title">Category</lang></label>
+                        <select class="form-control" id="spice_choice_category" style="width:100%;" aria-label="Category" data-t-aria-label="lang_newcategory_title"></select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="f-w-6"><lang class="lang_spice_choice_do_what">Do what</lang></label>
+                        <select class="form-control" id="spice_choice_offer" aria-label="Do what" data-t-aria-label="lang_spice_choice_do_what">
+                            <option value="yes" selected><lang class="lang_spice_choice_offer_yes">Let customers choose how hot</lang></option>
+                            <option value="no"><lang class="lang_spice_choice_offer_no">Stop offering the choice</lang></option>
+                        </select>
+                    </div>
+
+                    <!-- Filled by "Check" - how many dishes would actually change. -->
+                    <div id="spice_choice_check_result" style="display:none; margin-bottom:10px;"></div>
+
+                    <div class="alert alert-warning" style="font-size:12px; padding:8px 12px; margin-bottom:0;">
+                        <lang class="lang_spice_choice_warning">Only offer it where the kitchen can really cook to order. A customer who asks for mild and gets hot is worse off than one who never asked.</lang>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-dismiss="modal">
+                        <i class="feather icon-x-circle mr-2"></i><lang class="lang_cancel_title">Cancel</lang>
+                    </button>
+                    <button type="button" id="spice_choice_check" class="btn btn-outline-secondary" onclick="PosnicPro.items.checkSpiceChoice();">
+                        <i class="feather icon-search mr-2"></i><lang class="lang_check">Check</lang>
+                    </button>
+                    <button type="submit" id="spice_choice_submit" class="btn btn-outline-primary">
+                        <i class="feather icon-check-circle mr-2"></i><lang class="lang_spice_choice_apply">Update dishes</lang>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- end Who may choose how hot -->
+
+<div class="modal fade close_on_esc" id="bulk_stock_modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="feather icon-layers mr-2"></i><lang class="lang_bulk_stock_update">Bulk stock update</lang></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" data-t-aria-label="lang_close_title">
+                    <span aria-hidden="true"><lang class="lang_text">&times;</lang></span>
+                </button>
+            </div>
+            <form onsubmit="return PosnicPro.items.submitBulkStock();">
+                <div class="modal-body">
+                    <p class="text-muted" style="font-size:13px; margin-bottom:14px;">
+                        <lang class="lang_add_to_or_remove_from_stock_for_many_items">Add to or remove from stock for many items at once. Every change to a stock-tracked item is kept in its stock log, along with your note.</lang>
+                    </p>
+
+                    <div class="form-group">
+                        <label class="f-w-6"><lang class="lang_which_items">Which items</lang></label>
+                        <div>
+                            <label class="mr-4" style="font-weight:normal;">
+                                <input type="radio" name="bulk_stock_scope" value="all" checked onclick="PosnicPro.items.toggleBulkStockCategory();"> <lang class="lang_all_items">All items</lang>
+                            </label>
+                            <label style="font-weight:normal;">
+                                <input type="radio" name="bulk_stock_scope" value="category" onclick="PosnicPro.items.toggleBulkStockCategory();"> <lang class="lang_one_category">One category</lang>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group bulk-stock-category-row" style="display:none;">
+                        <label class="f-w-6"><lang class="lang_newcategory_title">Category</lang></label>
+                        <select class="form-control" id="bulk_stock_category" style="width:100%;" aria-label="Bulk stock category" data-t-aria-label="lang_bulk_stock_category"></select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="f-w-6"><lang class="lang_change_by">Change by</lang></label>
+                        <div class="row">
+                            <div class="col-4">
+                                <select class="form-control" id="bulk_stock_direction" aria-label="Bulk stock direction" data-t-aria-label="lang_bulk_stock_direction">
+                                    <option value="increase" selected><lang class="lang_nav_add">Add</lang></option>
+                                    <option value="decrease"><lang class="lang_remove">Remove</lang></option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <select class="form-control" id="bulk_stock_op" onchange="PosnicPro.items.bulkStockOpChanged();" aria-label="Bulk stock op" data-t-aria-label="lang_bulk_stock_op">
+                                    <option value="amount" selected><lang class="lang_by_quantity">by quantity</lang></option>
+                                    <option value="percent"><lang class="lang_by_2">by %</lang></option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text bulk-stock-unit"><lang class="lang_qty_title">Qty</lang></span>
+                                    </div>
+                                    <input type="number" min="0" step="0.01" class="form-control" id="bulk_stock_value" placeholder="0" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="f-w-6"><lang class="lang_note_reason">Note / reason</lang> <span class="text-muted" style="font-weight:normal;"><lang class="lang_optional">(optional)</lang></span></label>
+                        <textarea class="form-control" id="bulk_stock_note" rows="2" maxlength="500" placeholder="e.g. New delivery from supplier, invoice #1234 - shown in the stock history"></textarea>
+                    </div>
+
+                    <!-- Filled by "Check" - how many items would change before it is applied. -->
+                    <div id="bulk_stock_check_result" style="display:none; margin-bottom:10px;"></div>
+
+                    <div class="alert alert-warning" style="font-size:12px; padding:8px 12px; margin-bottom:0;">
+                        <lang class="lang_this_changes_every_matching_item_and_is_no_2">This changes every matching item and is not undone in one click. Stock never drops below zero.</lang>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-dismiss="modal">
+                        <i class="feather icon-x-circle mr-2"></i><lang class="lang_cancel_title">Cancel</lang>
+                    </button>
+                    <button type="button" id="bulk_stock_check" class="btn btn-outline-secondary" onclick="PosnicPro.items.checkBulkStock();">
+                        <i class="feather icon-search mr-2"></i><lang class="lang_check">Check</lang>
+                    </button>
+                    <button type="submit" id="bulk_stock_submit" class="btn btn-outline-primary">
+                        <i class="feather icon-check-circle mr-2"></i><lang class="lang_update_stock">Update stock</lang>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- end Bulk stock update -->
+
+<!-- Stock adjustment with reasons (Loyverse study L2): count sets,
+     loss/damage subtract; every change is a logged movement. -->
+<div class="modal fade close_on_esc" id="stock_adjust_modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="feather icon-sliders mr-2"></i><lang class="lang_stock_adjust_title">Stock adjustment</lang></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" data-t-aria-label="lang_close_title"><span aria-hidden="true"><lang class="lang_text">&times;</lang></span></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        <label for="stock_adjust_reason"><lang class="lang_stock_adjust_reason">Reason</lang></label>
+                        <select class="form-control" id="stock_adjust_reason" onchange="PosnicPro.items.adjReasonChanged();">
+                            <option value="Inventory count"><lang class="lang_inventory_count">Inventory count</lang></option>
+                            <option value="Loss"><lang class="lang_loss">Loss</lang></option>
+                            <option value="Damage"><lang class="lang_damage">Damage</lang></option>
+                            <option value="Stock found"><lang class="lang_stock_found">Stock found</lang></option>
+                            <option value="__custom__"><lang class="lang_custom_reason">Custom reason…</lang></option>
+                        </select>
+                        <div id="stock_adjust_custom_wrap" style="display:none;" class="mt-1">
+                            <input type="text" class="form-control form-control-sm mb-1" id="stock_adjust_custom"
+                                maxlength="60" placeholder="Reason (e.g. Theft, Expiry)" data-t-placeholder="lang_reason_e_g_theft_expiry" autocomplete="off">
+                            <select class="form-control form-control-sm" id="stock_adjust_mode" onchange="PosnicPro.items.renderAdjRows();" aria-label="Stock adjust mode" data-t-aria-label="lang_stock_adjust_mode">
+                                <option value="subtract"><lang class="lang_removes_stock">Removes stock</lang></option>
+                                <option value="add"><lang class="lang_adds_stock">Adds stock</lang></option>
+                                <option value="set"><lang class="lang_sets_stock_to_the_count">Sets stock to the count</lang></option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group col-md-8">
+                        <label for="stock_adjust_note"><lang class="lang_stock_adjust_note">Note (optional)</lang></label>
+                        <input type="text" class="form-control" id="stock_adjust_note" maxlength="500"
+                            placeholder="e.g. monthly stock take" autocomplete="off">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <input type="text" class="form-control" id="stock_adjust_search"
+                        placeholder="Search item by name, SKU or barcode" data-t-placeholder="lang_search_item_by_name_sku_or_barcode" autocomplete="off">
+                </div>
+                <div class="tablewrap" style="overflow-x:auto;">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th><lang class="lang_item_title">Item</lang></th>
+                                <th class="text-right"><lang class="lang_instock_title">In stock</lang></th>
+                                <th class="text-right" style="width:120px;" id="stock_adjust_qty_head"><lang class="lang_counted">Counted</lang></th>
+                                <th class="text-right"><lang class="lang_stockafter_title">Stock after</lang></th>
+                                <th style="width:36px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock_adjust_rows">
+                            <tr><td colspan="5" class="text-center text-muted"><lang class="lang_search_and_pick_items_to_adjust">Search and pick items to adjust.</lang></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal"><lang class="lang_cancel_title">Cancel</lang></button>
+                <button type="button" class="btn btn-outline-primary" id="stock_adjust_submit"
+                    onclick="PosnicPro.items.submitStockAdjustment();">
+                    <i class="feather icon-check-circle mr-2"></i><lang class="lang_stock_adjust_do">Adjust</lang>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- end Stock adjustment -->
