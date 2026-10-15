@@ -1,7 +1,7 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { calculatePurchaseCost, purchaseSettings } = require('../../src/utils/purchase-cost');
+const { calculatePurchaseCost, purchaseSettings } = require('../../../src/utils/purchase-cost');
 
 test('purchase cost converts EUR to DZD and adds VAT on top', () => {
   assert.deepEqual(calculatePurchaseCost(10), {
