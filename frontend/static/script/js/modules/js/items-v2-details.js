@@ -207,6 +207,8 @@
         if (invalid) return { error: invalid.validationMessage, field: invalid.id };
         if (reading) return error('Wait for the selected photos to finish loading.', 'photos');
         if (!P.itemTranslationsV2.ready()) return error(label('lang_item_ai_finish', 'Wait for the suggestion, then keep or cancel it before saving.'), 'item_translation_ai');
+        if (val('cost-eur') !== '' && (!(Number(val('exchange-rate')) > 0) || !Number.isFinite(Number(val('exchange-rate'))))) return error('Exchange rate must be greater than zero.', 'exchange-rate');
+        if (val('cost-eur') !== '' && (!Number.isFinite(Number(val('purchase-vat'))) || Number(val('purchase-vat')) < 0 || Number(val('purchase-vat')) > 100)) return error('Purchase TVA must be between 0 and 100%.', 'purchase-vat');
         if (val('pack-size') && !(Number(val('pack-size')) > 0)) return error('Units per pack must be greater than zero.', 'pack-size');
         if (val('expiry') && val('mfg') && val('expiry') < val('mfg')) return error('Expiry date must not be earlier than manufacture date.', 'expiry');
         if (!validGtin(val('gtin')) && !isFamily()) return error('Enter a valid GTIN with a matching check digit.', 'gtin');
@@ -294,7 +296,15 @@
         preview.textContent=val('icon')||'▦';
         preview.style.background=checked('auto-tile')&&P.autoTile?P.autoTile(val('name')).color:val('tile-color');preview.style.color='white';
     }
-    function reset() {generation++;reading=0;photos=[];variants=[];signature='';el('variant-rows').replaceChildren();el('auto-tile').checked=true;photoPicker();P.itemTranslationsV2.reset();}
+    function reset() {
+        generation++; reading=0; photos=[]; variants=[]; signature='';
+        el('variant-rows').replaceChildren(); el('auto-tile').checked=true;
+        el('type-name').value=''; el('brand-abbr').value=''; el('reference').value='';
+        el('reference-date').value=currentYYMM(); el('name').value='';
+        el('type-name').required=true; el('brand-abbr').required=true; el('reference').required=true;
+        el('cost-eur').value=''; el('exchange-rate').value='280'; el('purchase-vat').value='9';
+        updatePurchaseCost(); photoPicker(); P.itemTranslationsV2.reset();
+    }
     function currentYYMM() { var d = new Date(); return String(d.getFullYear()).slice(-2) + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
     function syncComposedName() {
         var type = el('type-name').value.trim(), brand = el('brand-abbr').value.trim(), ref = el('reference').value.trim(), date = el('reference-date').value || currentYYMM();
@@ -383,15 +393,19 @@
             el('brand-abbr').value = '';
             el('reference-date').value = '';
             el('reference').value = '';
+            el('type-name').required = false; el('brand-abbr').required = false; el('reference').required = false;
         }
         var mapping = {mrp:'mrp_price',reorder:'reorder_point',plu:'plu_code',gtin:'gtin','purchase-unit':'purchase_unit','pack-size':'conversion_factor',brand:'brand',position:'sort_order',icon:'icon','tile-color':'tile_color','tile-shape':'tile_shape','service-unit':'service_unit','hsn':'hsncode','hsn-description':'hsndescription','hsn-rate':'tax','prep-note':'prep_note','prep-minutes':'prep_minutes'};
         Object.keys(mapping).forEach(function(id){if(item[mapping[id]] != null) el(id).value=item[mapping[id]];});
-        if (item.purchase_price_eur != null) el('cost-eur').value = item.purchase_price_eur;
-        if (item.purchase_exchange_rate != null) el('exchange-rate').value = item.purchase_exchange_rate;
-        if (item.purchase_vat_rate != null) el('purchase-vat').value = item.purchase_vat_rate;
-        if (item.purchase_cost_dzd != null) el('cost').value = item.purchase_cost_dzd;
+        if (item.purchase_price_eur != null) {
+            el('cost-eur').value = item.purchase_price_eur;
+            if (item.purchase_exchange_rate != null) el('exchange-rate').value = item.purchase_exchange_rate;
+            if (item.purchase_vat_rate != null) el('purchase-vat').value = item.purchase_vat_rate;
+            updatePurchaseCost();
+        } else {
+            el('cost').value = item.purchase_cost_dzd != null ? item.purchase_cost_dzd : (item.company_price != null ? item.company_price : '');
+        }
         if (itemName) el('name').value = itemName;
-        updatePurchaseCost();
         ['mfg','expiry'].forEach(function(id){var v=item[id==='mfg'?'items_mfg_date':'items_expiry_date'];el(id).value=v?String(v).slice(0,10):'';});
         el('tags').value=(item.tags||[]).join(', '); el('alt-barcodes').value=(item.barcodes||[]).join(', ');
         el('discount-type').value=Number(item.discount_percentage)?'percentage':'amount';el('discount').value=item.discount_percentage||item.discount_amount||0;
