@@ -69,6 +69,8 @@ PosnicPro.branches = {
             $('#pincode').val(d.pincode);
             $('#website').val(d.website);
             $('#branch_gstin_number').val(d.branch_gstin_number);
+            $('#purchase_exchange_rate').val(d.purchase_exchange_rate ?? 280);
+            $('#purchase_vat_rate').val(d.purchase_vat_rate ?? 9);
             // Selects fill after their (async) option lists land.
             setTimeout(function () {
                 $('#setting_country').val(d.country).trigger('change.select2');
