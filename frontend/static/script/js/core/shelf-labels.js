@@ -780,6 +780,21 @@
         $(root.document).on('click', '#sl-test', function () { print(true); });
         $(root.document).on('click', '#sl-print', function () { print(false); });
         $(root.document).on('change', '#sl-paper', function () { $('#sl-start').val(1); refresh(); });
+        $(root.document).on('change', '#sl-samarina-mode', function () {
+            if (this.checked) {
+                $('#sl-paper').val('roll'); $('#sl-width').val(30); $('#sl-height').val(45);
+                $('#sl-show-barcode,#sl-bar-text').prop('checked', true);
+                $('#sl-shop,#sl-date,#sl-mrp,#mfg_checkbox,#exp_checkbox').prop('checked', false);
+                state.elementLayout = Object.assign({}, state.elementLayout, {
+                    name: { x: 4, y: 42, w: 92, h: 13, font_size: 85, font_weight: 'bold', text_align: 'center', color: '#000000' },
+                    barcode: { x: 7, y: 68, w: 86, h: 25, font_size: 75, font_weight: 'normal', text_align: 'center', color: '#000000' },
+                    details: { x: 4, y: 56, w: 92, h: 10, font_size: 70, font_weight: 'normal', text_align: 'center', color: '#000000' },
+                    variant_values: { x: 3, y: 23, w: 94, h: 18, font_size: 100, font_weight: 'normal', text_align: 'center', color: '#000000' }
+                });
+            }
+            state.furthestStep = Math.min(state.furthestStep, 1);
+            refresh();
+        });
         $(root).on('resize', function () { if (state.step > 0) refresh(); });
     }
     init();
