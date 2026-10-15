@@ -2,7 +2,7 @@
     'use strict';
     function list(value) { return Array.from(new Set(String(value || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean))); }
     function combinations(first, second) {
-        var a = list(first), b = list(second);
+        var a = Array.isArray(first) ? first.slice() : list(first), b = Array.isArray(second) ? second.slice() : list(second);
         return b.length ? a.flatMap(function (x) { return b.map(function (y) { return x + ' / ' + y; }); }) : a;
     }
     function makeInternalBarcode(existing) {
@@ -32,7 +32,7 @@
     var marks = ['signature', 'chefs_pick', 'house_special', 'new'];
     function el(id) { return document.getElementById('iv2-' + id); }
     function val(id) { return el(id).value.trim(); }
-    function selectedValues(id) { return Array.from(el(id).selectedOptions).map(function (o) { return o.value; }).filter(Boolean); }
+    function selectedValues(id) { return Array.from(el(id).querySelectorAll('input[type="checkbox"]:checked')).map(function (o) { return o.value; }).filter(Boolean); }
     function axisLabel(id) { var o = option(id); return o && o.value ? o.textContent.trim() : ''; }
     function fillVariantValues(axisId, valuesId) {
         var axis = option(axisId), target = el(valuesId), previous = new Set(selectedValues(valuesId));
@@ -40,16 +40,20 @@
         var fields = [];
         try { fields = JSON.parse(axis && axis.dataset.variantFields || '[]') || []; } catch (_) {}
         var seen = new Set();
-        fields.forEach(function (field) {
+        fields.forEach(function (field, index) {
             var name = String(field && field.name != null ? field.name : '').trim(), key = name.toLocaleLowerCase();
             if (!name || seen.has(key)) return;
             seen.add(key);
-            var opt = document.createElement('option'); opt.value = name; opt.textContent = name; opt.selected = previous.has(name); target.appendChild(opt);
+            var labelNode = document.createElement('label'); labelNode.className = 'iv2-check iv2-variant-value';
+            var input = document.createElement('input'); input.type = 'checkbox'; input.value = name;
+            input.id = 'iv2-' + valuesId + '-' + index; input.checked = previous.has(name);
+            var textNode = document.createElement('span'); textNode.textContent = name;
+            labelNode.append(input, textNode); target.appendChild(labelNode);
         });
     }
     function loadVariantDefinitions() {
         P.get({ url: 'variants/getVariantsAjaxList', data: 'query=' }, function (response) {
-            var rows = response && Array.isArray(response.suggestions) ? response.suggestions : [];
+            var rows = response && Array.isArray(response.suggestions) ? response.suggestions : response && response.data && Array.isArray(response.data.suggestions) ? response.data.suggestions : [];
             ['axis1', 'axis2'].forEach(function (id) {
                 var select = el(id), prior = select.value; select.replaceChildren();
                 var empty = document.createElement('option'); empty.value = ''; empty.textContent = id === 'axis2' ? 'No second variant' : 'Choose a predefined variant'; select.appendChild(empty);
@@ -159,7 +163,7 @@
         }); event.target.value = '';
     }
     function variantFields() {
-        return [['selling_price','Selling price','number'],['available_quantity','Opening stock','number'],['sku_id','SKU','text'],['barcode_id','Barcode','text'],['gtin','GTIN / EAN','text'],['company_price','Cost price','number'],['mrp_price','M.R.P','number'],['position','Item Position','number'],['discount_amount','Discount amount','number'],['discount_percentage','Discount percentage','number']];
+        return [['available_quantity','Opening stock','number'],['barcode_id','Generated barcode','text']];
     }
     function captureVariants() {
         document.querySelectorAll('#iv2-variant-rows .iv2-variant').forEach(function (card, i) {
@@ -168,13 +172,18 @@
     }
     function variantSignature() { return JSON.stringify([val('axis1'),selectedValues('values1'),val('axis2'),selectedValues('values2')]); }
     function generate() {
-        var firstValues = selectedValues('values1').join(','), secondValues = selectedValues('values2').join(',');
-        var names = combinations(firstValues, val('axis2') ? secondValues : '');
-        if (!val('axis1') || names.length < 2 || names.length > 50 || (val('axis2') && !selectedValues('values2').length)) {
+        var firstValues = selectedValues('values1'), secondValues = selectedValues('values2');
+        var names = combinations(firstValues, val('axis2') ? secondValues : []);
+        if (!val('axis1') || firstValues.length === 0 || names.length < 2 || names.length > 50 || (val('axis2') && secondValues.length === 0)) {
             report('Choose an existing POSNIC variant and at least two of its predefined values. Create between 2 and 50 combinations.'); return;
         }
         captureVariants(); var previous = new Map(variants.map(function (r) { return [r.variant_value, r]; }));
-        variants = names.map(function (name) { return previous.get(name) || { variant_value: name, selling_price: val('price'), available_quantity: '0', company_price: val('cost'), mrp_price: val('mrp'), position: val('position'), discount_amount: val('discount-type') === 'amount' ? val('discount') : '', discount_percentage: val('discount-type') === 'percentage' ? val('discount') : '' }; });
+        var usedCodes = new Set([val('barcode')].concat(variants.map(function (r) { return r.barcode_id; })).filter(Boolean));
+        variants = names.map(function (name) {
+            if (previous.has(name)) return previous.get(name);
+            var code = makeInternalBarcode(Array.from(usedCodes)); usedCodes.add(code);
+            return { variant_value: name, selling_price: val('price'), available_quantity: '0', company_price: val('cost'), mrp_price: val('mrp'), position: val('position'), barcode_id: code, sku_id: '', gtin: '', discount_amount: val('discount-type') === 'amount' ? val('discount') : '', discount_percentage: val('discount-type') === 'percentage' ? val('discount') : '' };
+        });
         signature = variantSignature(); var box = el('variant-rows'); box.replaceChildren();
         variants.forEach(function (row, i) {
             var card = document.createElement('div'); card.className = 'iv2-variant'; var heading = document.createElement('h3'); heading.textContent = row.variant_value; card.appendChild(heading);
@@ -184,28 +193,11 @@
                 input.id = 'iv2-variant-' + i + '-' + spec[0]; lab.htmlFor = input.id; lab.textContent = spec[1]; input.dataset.field = spec[0]; input.type = spec[2];
                 if (spec[2] === 'number') { input.min = '0'; input.step = 'any'; }
                 if (spec[0] === 'discount_percentage') input.max = '100';
-                input.value = row[spec[0]] || ''; wrap.append(lab, input);
-                if (spec[0] === 'barcode_id') {
-                    var generateCode = document.createElement('button');
-                    generateCode.type = 'button'; generateCode.className = 'iv2-secondary'; generateCode.textContent = 'Generate barcode';
-                    generateCode.addEventListener('click', function () {
-                        try {
-                            var used = Array.from(document.querySelectorAll('#iv2-variant-rows [data-field="barcode_id"]')).filter(function (field) { return field !== input; }).map(function (field) { return field.value; });
-                            input.value = makeInternalBarcode(used); notify();
-                        } catch (e) { report(e.message); }
-                    });
-                    wrap.appendChild(generateCode);
-                }
+                input.value = row[spec[0]] || ''; if (spec[0] === 'barcode_id') input.readOnly = true; wrap.append(lab, input);
                 grid.appendChild(wrap);
             });
-            var unitWrap=document.createElement('div'), unitLabel=document.createElement('label'), unitPick=el('unit').cloneNode(true);
-            unitPick.id='iv2-variant-'+i+'-unit';unitPick.dataset.field='unit_id';unitPick.disabled=false;unitPick.value=row.unit_id||val('unit');unitLabel.htmlFor=unitPick.id;unitLabel.textContent=label('lang_item_units','Item Units');unitWrap.append(unitLabel,unitPick);grid.appendChild(unitWrap);
-            var photoWrap=document.createElement('div');
-            var lab = document.createElement('label'); lab.textContent = label('lang_photos', 'Photos');
-            var pick = document.createElement('select'); pick.dataset.field = 'photo'; pick.id = 'iv2-variant-' + i + '-photo'; lab.htmlFor = pick.id; photoWrap.append(lab,pick);grid.appendChild(photoWrap);
             card.appendChild(grid); box.appendChild(card);
-        }); photoPicker();
-        document.querySelectorAll('#iv2-variant-rows [data-field="photo"]').forEach(function(pick,i){pick.value=variants[i].photo||'';}); notify();
+        }); notify();
     }
     function isFamily() { return checked('has-variants') && document.querySelector('#items_v2 [name="iv2-kind"]:checked').value !== 'service'; }
     function validate() {
