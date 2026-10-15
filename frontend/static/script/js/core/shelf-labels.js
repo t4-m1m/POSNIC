@@ -64,11 +64,11 @@
         if (!Number.isFinite(s.fontSize) || s.fontSize < 3 || s.fontSize > 36) throw Error('Choose a font size between 3 and 36.');
     }
     var DEFAULT_ELEMENT_LAYOUT = {
-        name: { x: 4, y: 4, w: 70, h: 18 },
-        logo: { x: 76, y: 2, w: 20, h: 20 },
-        barcode: { x: 10, y: 24, w: 80, h: 38 },
-        price: { x: 5, y: 65, w: 90, h: 23 },
-        details: { x: 5, y: 89, w: 90, h: 10 }
+        name: { x: 4, y: 3, w: 70, h: 17 },
+        logo: { x: 76, y: 2, w: 20, h: 18 },
+        barcode: { x: 10, y: 22, w: 80, h: 37 },
+        price: { x: 5, y: 60, w: 90, h: 23 },
+        details: { x: 5, y: 84, w: 90, h: 14 }
     };
     function readLogoData() {
         try {
