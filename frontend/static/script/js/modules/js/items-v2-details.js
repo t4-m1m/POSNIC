@@ -267,7 +267,7 @@
     function family(shared) {
         captureVariants(); return { variant_axis: [axisLabel('axis1'),axisLabel('axis2')].filter(Boolean).join(' / '), variant_parent_name: shared.name, items: variants.map(function (row) {
             var image=photos.find(function (p) {return p.name===row.photo;});
-            var r=Object.assign({},shared,row,{name:shared.name+' / '+row.variant_value,barcodes:[],plu_code:'',sku_id:row.sku_id||'',barcode_id:row.barcode_id||'',gtin:row.gtin||'',available_quantity:shared.inventory?Number(row.available_quantity):0});
+            var r=Object.assign({},shared,row,{name:shared.name+' / '+row.variant_value,barcodes:[],plu_code:'',sku_id:'',barcode_id:row.barcode_id||'',gtin:'',selling_price:shared.selling_price,company_price:shared.company_price,mrp_price:shared.mrp_price,available_quantity:shared.inventory?Number(row.available_quantity):0});
             var unitOption=Array.from(el('unit').options).find(function(o){return o.value===row.unit_id;});
             r.unit_id=row.unit_id==='qty'?'':row.unit_id||shared.unit_id;r.unit=unitOption&&unitOption.dataset.unit||shared.unit;
             r.translations=(shared.translations||[]).map(function (t) {return Object.assign({},t,{name:t.name?t.name+' / '+row.variant_value:''});});
