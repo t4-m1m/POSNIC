@@ -127,7 +127,7 @@
         if (s.shop) details.push(s.shop);
         if (s.address) details.push(s.address);
         if (s.date) details.push(s.printedDate);
-        if (details.length) text(details.join('\\n'), 'sl-foot', 'details');
+        if (details.length) text(details.join('\n'), 'sl-foot', 'details');
         return div;
     }
     function sheet(doc, cells, s, barcode) {
