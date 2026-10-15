@@ -1277,6 +1277,15 @@ class SettingModel extends BaseModel {
         throw new Error('Branch context is required (branchId, licenseId, user._id)');
       }
 
+      // Preserve the persisted purchase-cost preferences when unrelated settings
+      // (including receipt layouts) are saved. This value must be in this method's
+      // scope; the similarly named variable in updateGeneralSetting is local there.
+      const purchaseSettingsBranch = await this.getCollection('branches');
+      const persistedPurchaseSettings = await purchaseSettingsBranch.findOne(
+        { _id: this.normalizeId(this.branchId), license: this.normalizeId(this.licenseId) },
+        { projection: { purchase_exchange_rate: 1, purchase_vat_rate: 1 } }
+      ) || {};
+
       /*
        * Module On/Off for ANOTHER branch (M4): a multi-branch admin picks a
        * branch on the Modules tab and flips ITS switches without switching
