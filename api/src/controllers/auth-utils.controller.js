@@ -159,7 +159,6 @@ const createAndSendToken = async (user, statusCode, res, req) => {
           };
         }
       }
-
     } catch (error) {
       process.emitWarning(`Could not persist the login session record: ${error.message}`);
     }

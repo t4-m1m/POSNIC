@@ -489,9 +489,7 @@ class ItemService {
     // Preflight supplied identifiers against the existing branch catalogue before
     // creating any children. Individual upserts still recheck conflicts, which
     // protects the write path if another request races this preflight.
-    const candidateCodes = [
-      ...new Set(rows.flatMap((row) => itemBarcodes.codes(row))),
-    ];
+    const candidateCodes = [...new Set(rows.flatMap((row) => itemBarcodes.codes(row)))];
     if (
       candidateCodes.length &&
       branchId &&

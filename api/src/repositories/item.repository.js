@@ -1751,7 +1751,7 @@ class ItemRepository extends BaseModel {
           data: null,
         };
       }
-      
+
       // Generate an internal Code 128 barcode for new items when none was supplied.
       // Existing/manual barcodes and barcodes on item edits are preserved.
       if (!id && !itemBarcodes.normalize(data.barcode_id)) {
@@ -1766,14 +1766,10 @@ class ItemRepository extends BaseModel {
             Date.now().toString(36).toUpperCase() +
             randomBytes(4).toString('hex').toUpperCase();
 
-          const conflict = await itemBarcodes.findConflict(
-            collection,
-            [candidate],
-            {
-              branchId: branchObjectId,
-              licenseId: licenseObjectId,
-            }
-          );
+          const conflict = await itemBarcodes.findConflict(collection, [candidate], {
+            branchId: branchObjectId,
+            licenseId: licenseObjectId,
+          });
 
           if (!conflict) {
             generatedBarcode = candidate;
@@ -1791,7 +1787,6 @@ class ItemRepository extends BaseModel {
 
         data = { ...data, barcode_id: generatedBarcode };
       }
-
 
       // Check for existing item with same details
       const existingFilter = {

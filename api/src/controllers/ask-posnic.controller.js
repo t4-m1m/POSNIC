@@ -370,7 +370,11 @@ class AskPosnicController {
       if (intent === 'unknown' || help) {
         await require('../services/ask-posnic-knowledge-sync.service')
           .sync(req)
-          .catch((error) => process.emitWarning(`[ask-posnic] published knowledge sync unavailable: ${error.message}`));
+          .catch((error) =>
+            process.emitWarning(
+              `[ask-posnic] published knowledge sync unavailable: ${error.message}`
+            )
+          );
         let matches = await platform.retrieve(req, question);
         let answer;
         let reason;

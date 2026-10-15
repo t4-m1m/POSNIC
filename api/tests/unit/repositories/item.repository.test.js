@@ -391,35 +391,35 @@ describe('ItemRepository', () => {
       expect('open_price' in col.insertOne.mock.calls[0][0]).toBe(false);
     });
 
- test('blank barcodes are automatically generated and checked for uniqueness', async () => {
-  const noBarcode = { ...data, barcode_id: '' };
+    test('blank barcodes are automatically generated and checked for uniqueness', async () => {
+      const noBarcode = { ...data, barcode_id: '' };
 
-  col.findOne.mockResolvedValue(null);
+      col.findOne.mockResolvedValue(null);
 
-  const r = await repo.upsertItem(noBarcode, '', ctx);
+      const r = await repo.upsertItem(noBarcode, '', ctx);
 
-  expect(r.status).toBe(true);
+      expect(r.status).toBe(true);
 
-  const inserted = col.insertOne.mock.calls[0][0];
+      const inserted = col.insertOne.mock.calls[0][0];
 
-  expect(inserted.barcode_id).toMatch(/^P[A-Z0-9]+$/);
-  expect(inserted.barcode_id).not.toBe('');
+      expect(inserted.barcode_id).toMatch(/^P[A-Z0-9]+$/);
+      expect(inserted.barcode_id).not.toBe('');
 
-  // The generated barcode must be checked for collisions.
-  const barcodeQueries = col.findOne.mock.calls.filter(
-    ([filter]) =>
-      filter &&
-      filter.$or &&
-      filter.$or.some(
-        (condition) =>
-          condition.barcode_id &&
-          Array.isArray(condition.barcode_id.$in) &&
-          condition.barcode_id.$in.includes(inserted.barcode_id)
-      )
-  );
+      // The generated barcode must be checked for collisions.
+      const barcodeQueries = col.findOne.mock.calls.filter(
+        ([filter]) =>
+          filter &&
+          filter.$or &&
+          filter.$or.some(
+            (condition) =>
+              condition.barcode_id &&
+              Array.isArray(condition.barcode_id.$in) &&
+              condition.barcode_id.$in.includes(inserted.barcode_id)
+          )
+      );
 
-  expect(barcodeQueries.length).toBeGreaterThan(0);
-});
+      expect(barcodeQueries.length).toBeGreaterThan(0);
+    });
   });
 
   describe('deleteItems', () => {
