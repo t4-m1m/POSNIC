@@ -1,0 +1,67 @@
+name: Quick Windows EXE (no tests)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/quick-windows-exe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    name: Build Windows installer without running tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install API dependencies
+        working-directory: api
+        run: npm ci
+
+      - name: Fetch bundled MongoDB
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -oE 'set MONGODB_VERSION=[0-9.]+' src/download-mongodb.bat | cut -d= -f2)
+          curl -fsSL -o mongodb.zip "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-${VERSION}.zip"
+          7z x -bso0 mongodb.zip -omongodb-temp
+          mkdir -p mongodb/bin
+          cp "mongodb-temp/mongodb-win32-x86_64-windows-${VERSION}/bin/mongod.exe" mongodb/bin/
+          for dll in msvcp140.dll vcruntime140.dll vcruntime140_1.dll; do
+            cp "/c/Windows/System32/$dll" mongodb/bin/
+          done
+          rm -rf mongodb.zip mongodb-temp
+          node scripts/check-mongodb-binaries.js
+
+      - name: Prepare bundled app resources
+        run: npm run prepare:bundle
+
+      - name: Build Windows installer
+        run: npx electron-builder --win --x64 --publish never --config.win.verifyUpdateCodeSignature=false
+
+      - name: Upload EXE installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: Posnic-Windows-EXE
+          path: |
+            dist/*.exe
+            dist/*.yml
+            dist/*.blockmap
+          if-no-files-found: error
+          retention-days: 7
