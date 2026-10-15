@@ -3,9 +3,19 @@ name: Quick Windows EXE (no tests)
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, feat/article-cost-label-designer-sales-calendar]
     paths:
       - ".github/workflows/quick-windows-exe.yml"
+      - "frontend/modules/items.html"
+      - "frontend/modules/items_v2.html"
+      - "frontend/modules/sales_read.html"
+      - "frontend/static/script/js/core/shelf-labels.js"
+      - "frontend/static/script/js/modules/js/items-v2-details.js"
+      - "frontend/static/script/js/modules/js/receiving_add.js"
+      - "frontend/static/script/js/modules/js/sales.js"
+      - "api/src/controllers/receivings.controller.js"
+      - "api/src/models/setting.model.js"
+      - "api/src/utils/purchase-cost.js"
 
 permissions:
   contents: read
