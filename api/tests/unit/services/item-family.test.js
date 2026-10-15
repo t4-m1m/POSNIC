@@ -71,7 +71,9 @@ describe('validation happens before creation', () => {
     expect(svc.calls).toHaveLength(0);
   });
 
-  test('a barcode already used by an existing item is refused before any family child is created', async () => {
+  test(
+    'a barcode already used by an existing item is refused before any family child is created',
+    async () => {
     const svc = makeService();
     svc.repository.getCollection = async () => ({
       findOne: async () => ({ name: 'Existing shirt', barcode_id: 'EXT-123' }),
