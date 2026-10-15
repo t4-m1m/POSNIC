@@ -77,7 +77,6 @@ const createAndSendToken = async (user, statusCode, res, req) => {
   const token = signToken(user._id, authVersion.version(user));
   authVersion.stampSession(req, user);
 
-  const hasPermission =
   const hasPermission = !!(
     user &&
     user.access &&
@@ -126,8 +125,6 @@ const createAndSendToken = async (user, statusCode, res, req) => {
         logout_time: null,
       });
 
-      let sessionRecordId;
-
       if (existingSession) {
         // Reactivate existing
         await userSessionsCollection.updateOne(
@@ -142,8 +139,6 @@ const createAndSendToken = async (user, statusCode, res, req) => {
           }
         );
 
-        sessionRecordId = existingSession._id;
-
         // Set session data
         if (req.session) {
           req.session.PosnicPro = {
@@ -155,8 +150,6 @@ const createAndSendToken = async (user, statusCode, res, req) => {
       } else {
         // Create new
         const result = await userSessionsCollection.insertOne(sessionData);
-        sessionRecordId = result.insertedId;
-
         // Set session data
         if (req.session) {
           req.session.PosnicPro = {
