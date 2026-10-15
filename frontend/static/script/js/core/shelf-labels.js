@@ -130,7 +130,39 @@
         }
         var nameText = String(item.name || ''), nameParts = nameText.match(/^(.*?)-([0-9]{2}-[0-9]{2}\/[^/]+?)(?:\s+\/\s+(.+))?$/);
         if (nameParts) nameText = nameParts[1].trim() + '\n' + nameParts[2].trim() + (nameParts[3] ? ' / ' + nameParts[3].trim() : '');
-        text(nameText, 'sl-name', 'name');
+        if (s.samarina) {
+            var selectedVariant = String(item.variant_value || '').trim();
+            var allVariants = Array.isArray(item.available_variant_values) ? item.available_variant_values : [];
+            var variantNode = doc.createElement('p');
+            variantNode.className = 'sl-variant-values sl-element';
+            variantNode.dataset.slElement = 'variant_values';
+            var variantLayout = (s.elementLayout || DEFAULT_ELEMENT_LAYOUT).variant_values || { x: 3, y: 24, w: 94, h: 17, font_size: 100, font_weight: 'normal', text_align: 'center', color: '#000000' };
+            var values = allVariants.map(function (value) {
+                var span = doc.createElement('span');
+                span.textContent = String(value);
+                if (String(value).trim().toLowerCase() === selectedVariant.toLowerCase()) {
+                    span.style.fontWeight = '900';
+                    span.style.textDecoration = 'underline';
+                    span.setAttribute('aria-current', 'true');
+                }
+                variantNode.appendChild(span);
+                return span;
+            });
+            if (!allVariants.length && selectedVariant) {
+                var selected = doc.createElement('strong'); selected.textContent = selectedVariant; variantNode.appendChild(selected);
+            }
+            applyElementLayout(variantNode, 'variant_values', s);
+            div.appendChild(variantNode);
+            var nameNode = text(String(item.article_type || nameText.split(' / ')[0] || '').trim(), 'sl-name', 'name');
+            nameNode.style.fontWeight = '600';
+            var brand = String(item.brand_abbreviation || item.brand || '').trim();
+            if (brand) nameNode.textContent = nameNode.textContent + ' · ' + brand;
+            var reference = String(item.reference_date || '').trim();
+            var modelReference = String(item.model_reference || '').trim();
+            if (reference || modelReference) text((reference ? reference : '') + (modelReference ? ' / ' + modelReference : ''), 'sl-foot', 'details');
+        } else {
+            text(nameText, 'sl-name', 'name');
+        }
         if (s.barcode !== false) {
             var svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('sl-barcode');
             applyElementLayout(svg, 'barcode', s); div.appendChild(svg);
@@ -182,6 +214,7 @@
             elementLayout: state.elementLayout || readElementLayout(),
             logoData: readLogoData(),
             paper: $('#sl-paper').val(), width: Number($('#sl-width').val()), height: Number($('#sl-height').val()),
+            samarina: $('#sl-samarina-mode').is(':checked'),
             margin: Number($('#sl-margin').val()), gap: Number($('#sl-gap').val()), start: Number($('#sl-start').val()), guides: $('#sl-guides').is(':checked'),
             font: $('#font').val(), fontSize: Number($('#bar-fontSize').val()), align: $('#view_print_lable .text-align.btn-primary').val() || 'center',
             fontOptions: $('#view_print_lable .font-option.btn-primary').map(function () { return this.value; }).get().join(' '),
