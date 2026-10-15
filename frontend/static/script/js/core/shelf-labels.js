@@ -603,7 +603,12 @@
                 var layout = state.elementLayout[node.dataset.slElement]; return layout && layout.group_id;
             }));
             $('#sl-apply-element-style').prop('disabled', selected.length === 0);
+            var customSelected = selected.filter(function (node) { return node.dataset.slElement.indexOf('custom_') === 0; });
+            $('#sl-apply-element-text').prop('disabled', customSelected.length === 0);
+            $('#sl-delete-custom-element').prop('disabled', customSelected.length === 0);
             if (selected.length === 1) {
+                var selectedKey = selected[0].dataset.slElement;
+                $('#sl-selected-element-text').val(selectedKey.indexOf('custom_') === 0 ? (state.elementLayout[selectedKey].text || '') : '');
                 var current = state.elementLayout[selected[0].dataset.slElement] || {};
                 $('#sl-element-font-size').val(current.font_size || (selected[0].dataset.slElement === 'price' ? 220 : selected[0].dataset.slElement === 'details' ? 75 : 100));
                 $('#sl-element-font-weight').val(current.font_weight || 'normal');
@@ -611,6 +616,37 @@
                 $('#sl-element-color').val(current.color || '#000000');
             }
         }
+        $(root.document).on('click', '#sl-add-text-element', function () {
+            var value = String($('#sl-new-element-text').val() || '').trim();
+            if (!value) { error('Enter the text you want to add to the label.'); return; }
+            var key = 'custom_' + Date.now().toString(36);
+            state.elementLayout[key] = { x: 10, y: 10, w: 45, h: 12, rotation: 0, group_id: '', font_size: 100, font_weight: 'normal', text_align: 'center', color: '#000000', text: value };
+            try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
+            $('#sl-new-element-text').val('');
+            refresh();
+            var node = document.querySelector('#sl-sample .sl-element[data-sl-element="' + key + '"]');
+            if (node) node.classList.add('sl-selected');
+            syncSelectionControls();
+        });
+        $(root.document).on('click', '#sl-apply-element-text', function () {
+            var nodes = $('#sl-sample .sl-element.sl-selected').toArray().filter(function (node) { return node.dataset.slElement.indexOf('custom_') === 0; });
+            if (!nodes.length) return;
+            var value = String($('#sl-selected-element-text').val() || '').trim();
+            if (!value) { error('Custom text cannot be empty.'); return; }
+            var keys = nodes.map(function (node) { return node.dataset.slElement; });
+            keys.forEach(function (key) { state.elementLayout[key].text = value; });
+            try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
+            refresh();
+            keys.forEach(function (key) { var node = document.querySelector('#sl-sample .sl-element[data-sl-element="' + key + '"]'); if (node) node.classList.add('sl-selected'); });
+            syncSelectionControls();
+        });
+        $(root.document).on('click', '#sl-delete-custom-element', function () {
+            var keys = $('#sl-sample .sl-element.sl-selected').toArray().map(function (node) { return node.dataset.slElement; }).filter(function (key) { return key.indexOf('custom_') === 0; });
+            if (!keys.length) return;
+            keys.forEach(function (key) { delete state.elementLayout[key]; });
+            try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
+            refresh(); syncSelectionControls();
+        });
         $(root.document).on('click', '#sl-apply-element-style', function () {
             var nodes = $('#sl-sample .sl-element.sl-selected').toArray();
             if (!nodes.length) return;
