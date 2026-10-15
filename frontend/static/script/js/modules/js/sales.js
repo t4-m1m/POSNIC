@@ -241,6 +241,36 @@ PosnicPro.sales = {
         var loader = $(".loader-sales-balance");
         loader.find(".loadingSpinner:first").remove();
     },
+    cancelSale: function (id) {
+        if (!id) return;
+        swal({
+            title: PosnicPro.i18n.t('lang_cancel_sale_title', 'Cancel this sale?'),
+            text: PosnicPro.i18n.t('lang_cancel_sale_warning', 'This cancels the sale and reverses its stock effects. This cannot be undone.'),
+            type: 'warning',
+            showCancelButton: true,
+            confirmButtonText: PosnicPro.i18n.t('lang_cancel_sale_confirm', 'Cancel sale'),
+            cancelButtonText: PosnicPro.i18n.t('lang_keep_sale', 'Keep sale')
+        }).then(function (result) {
+            if (!result || result.dismiss || result.value === false) return;
+            PosnicPro.request({
+                method: 'POST',
+                url: 'sales/cancel/' + encodeURIComponent(id),
+                data: JSON.stringify({})
+            }, function (response) {
+                if (response && response.type === 'success') {
+                    PosnicPro.alert('success', response.message || PosnicPro.i18n.t('lang_sale_cancelled', 'Sale cancelled'));
+                    PosnicPro.sales.loadHistory(1);
+                    PosnicPro.sales.openDoc(id);
+                } else {
+                    PosnicPro.alert('error', response && response.message || PosnicPro.i18n.t('lang_sale_cancel_failed', 'Could not cancel sale'));
+                }
+            }, function (xhr) {
+                var response = {};
+                try { response = jQuery.parseJSON(xhr.responseText) || {}; } catch (_) {}
+                PosnicPro.alert('error', response.message || PosnicPro.i18n.t('lang_sale_cancel_failed', 'Could not cancel sale'));
+            });
+        }).catch(function () { /* dismissed */ });
+    },
     showDelete: function (id) {
         if (PosnicPro.local.get('usertype') !== 'super_admin' || PosnicPro.local.get('allow_sale_hard_delete') !== 'true') {
             PosnicPro.alert('warning', PosnicPro.i18n.t('lang_sale_hard_delete_disabled', 'Hard delete of sales is disabled in Sales settings'));
@@ -1142,11 +1172,12 @@ PosnicPro.sales = {
             + '<div class="dropdown-divider"></div>'
             + '<a class="dropdown-item sale-invoice-link" href="javascript:void(0)" data-sale-id="' + esc(id) + '"><i class="feather icon-link mr-2"></i>Copy invoice link</a>'
             + '</div></div>'
-            + (!/return/i.test(proc)
+            + (!cancelled && !/^FullReturn$/i.test(proc)
                 ? '<div class="btn-group">'
                     + '<button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><lang class="lang_tab_more">More</lang></button>'
                     + '<div class="dropdown-menu dropdown-menu-right">'
                     + '<a class="dropdown-item" data-module="sales" data-access="write" href="javascript:void(0)" onclick="hasher.setHash(\'sales/' + esc(id) + '/return\');"><i class="feather icon-corner-up-left mr-2"></i>Return items</a>'
+                    + (!/return/i.test(proc) ? '<a class="dropdown-item text-danger" data-module="sales" data-access="delete" href="javascript:void(0)" onclick="PosnicPro.sales.cancelSale(\'' + esc(id) + '\');"><i class="feather icon-x-circle mr-2"></i>Cancel sale</a>' : '')
                     + (PosnicPro.local.get('usertype') === 'super_admin' && PosnicPro.local.get('allow_sale_hard_delete') === 'true' ? '<a class="dropdown-item text-danger" data-module="sales" data-access="delete" href="javascript:void(0)" onclick="PosnicPro.sales.showDelete(\'' + esc(id) + '\');"><i class="feather icon-trash-2 mr-2"></i><lang class="lang_delete_sale">Delete sale</lang></a>' : '')
                     + '</div></div>'
                 : '')
