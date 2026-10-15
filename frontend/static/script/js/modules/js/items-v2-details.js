@@ -5,6 +5,18 @@
         var a = list(first), b = list(second);
         return b.length ? a.flatMap(function (x) { return b.map(function (y) { return x + ' / ' + y; }); }) : a;
     }
+    function makeInternalBarcode(existing) {
+        var used = new Set((existing || []).map(function (v) { return String(v || '').trim(); }).filter(Boolean));
+        for (var attempt = 0; attempt < 30; attempt++) {
+            var bytes = new Uint8Array(6);
+            if (root.crypto && typeof root.crypto.getRandomValues === 'function') root.crypto.getRandomValues(bytes);
+            else for (var i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+            var suffix = Array.from(bytes).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('').toUpperCase();
+            var code = 'P' + Date.now().toString(36).toUpperCase() + suffix;
+            if (!used.has(code)) return code;
+        }
+        throw new Error('Could not generate a unique barcode. Try again.');
+    }
     function validGtin(value) {
         var code = String(value || '').replace(/[\s-]/g, '');
         if (!code) return true;
@@ -139,7 +151,19 @@
                 input.id = 'iv2-variant-' + i + '-' + spec[0]; lab.htmlFor = input.id; lab.textContent = spec[1]; input.dataset.field = spec[0]; input.type = spec[2];
                 if (spec[2] === 'number') { input.min = '0'; input.step = 'any'; }
                 if (spec[0] === 'discount_percentage') input.max = '100';
-                input.value = row[spec[0]] || ''; wrap.append(lab, input); grid.appendChild(wrap);
+                input.value = row[spec[0]] || ''; wrap.append(lab, input);
+                if (spec[0] === 'barcode_id') {
+                    var generateCode = document.createElement('button');
+                    generateCode.type = 'button'; generateCode.className = 'iv2-secondary'; generateCode.textContent = 'Generate barcode';
+                    generateCode.addEventListener('click', function () {
+                        try {
+                            var used = Array.from(document.querySelectorAll('#iv2-variant-rows [data-field="barcode_id"]')).filter(function (field) { return field !== input; }).map(function (field) { return field.value; });
+                            input.value = makeInternalBarcode(used); notify();
+                        } catch (e) { report(e.message); }
+                    });
+                    wrap.appendChild(generateCode);
+                }
+                grid.appendChild(wrap);
             });
             var unitWrap=document.createElement('div'), unitLabel=document.createElement('label'), unitPick=el('unit').cloneNode(true);
             unitPick.id='iv2-variant-'+i+'-unit';unitPick.dataset.field='unit_id';unitPick.disabled=false;unitPick.value=row.unit_id||val('unit');unitLabel.htmlFor=unitPick.id;unitLabel.textContent=label('lang_item_units','Item Units');unitWrap.append(unitLabel,unitPick);grid.appendChild(unitWrap);
@@ -239,6 +263,16 @@
     function init() {
         if(initialized)return;initialized=true;
         el('hsn').addEventListener('focus', hsnSuggestions);
+        el('form').addEventListener('click', function (event) {
+            if (!event.target.closest('#iv2-generate-barcode')) return;
+            try {
+                var used = [val('barcode') === '' ? '' : val('barcode')];
+                el('barcode').value = makeInternalBarcode(used);
+                el('same-sku').checked = false;
+                el('barcode').readOnly = false;
+                notify();
+            } catch (e) { report(e.message); }
+        });
         el('hsn').addEventListener('input', hsnSuggestions);
         el('photos').addEventListener('change',readPhotos);
         var palette=document.createElement('div');palette.className='iv2-icon-palette';
