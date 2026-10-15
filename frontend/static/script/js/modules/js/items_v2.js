@@ -4,7 +4,7 @@
     function assess(f) {
         var tracked = f.kind !== 'service' && f.stock === 'tracked';
         var price = Number(f.price), quantity = Number(f.quantity), cost = Number(f.cost);
-        if (!String(f.name || '').trim()) return { error: 'Give your item a name.', field: 'iv2-name' };
+        if (!String(f.name || '').trim()) return { error: 'Enter the article type, brand abbreviation and model reference.', field: 'iv2-type-name' };
         if (![price, cost].every(function (n) { return Number.isFinite(n) && n >= 0; })) return { error: 'Enter a valid price of zero or more.', field: 'iv2-price' };
         if (tracked && (!Number.isFinite(quantity) || quantity < 0)) return { error: 'Enter an opening stock quantity of zero or more.', field: 'iv2-quantity' };
         if (!price && !f.confirmZero && !f.openPrice) return { error: 'Add a selling price, or confirm that you want to save it at zero.', field: 'iv2-confirm-zero' };
