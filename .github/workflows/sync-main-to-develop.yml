@@ -36,6 +36,11 @@ jobs:
       - name: Is develop actually behind?
         id: check
         run: |
+          if ! git ls-remote --exit-code --heads origin develop >/dev/null 2>&1; then
+            echo "The repository has no develop branch; sync is not applicable." >> "$GITHUB_STEP_SUMMARY"
+            echo "develop branch does not exist; skipping sync."
+            exit 0
+          fi
           git fetch origin main develop
           # Commits on main that develop does not have. Zero is the normal
           # case - after a release develop already contains everything.

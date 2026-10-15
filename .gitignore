@@ -35,3 +35,7 @@ id_ed25519
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Downloaded bundled runtimes (never commit binaries)
+mongodb/bin/
+nodejs/

@@ -483,7 +483,7 @@
                 var name = root.prompt('Name this label template:');
                 if (name === null) return;
                 name = String(name).trim().slice(0, 80);
-                if (!name) { $('#sl-status').text('Enter a template name.'); return; }
+                if (!name) { $('#sl-status').text(PosnicPro.i18n.t('lang_enter_a_template_name', 'Enter a template name.')); return; }
                 var templates = readTemplates(), existing = templates.findIndex(function (x) { return x.name.toLowerCase() === name.toLowerCase(); });
                 var current = JSON.parse(root.localStorage.getItem('posnic.shelf-label-layout') || 'null');
                 if (!current) throw Error('Adjust the label settings before saving a template.');
@@ -502,7 +502,7 @@
             if (!file) return;
             if (!/^image\/(png|jpeg|webp)$/i.test(file.type) || file.size > 1024 * 1024) {
                 this.value = '';
-                $('#sl-status').text('Choose a PNG, JPEG or WebP logo smaller than 1 MB.');
+                $('#sl-status').text(PosnicPro.i18n.t('lang_choose_a_png_jpeg_or_webp_logo_smaller_tha', 'Choose a PNG, JPEG or WebP logo smaller than 1 MB.'));
                 return;
             }
             var reader = new FileReader();
@@ -512,17 +512,17 @@
                     root.localStorage.setItem('posnic.shelf-label-logo', reader.result);
                     state.elementLayout = state.elementLayout || readElementLayout();
                     refresh();
-                    $('#sl-status').text('Store logo added to the label design.');
+                    $('#sl-status').text(PosnicPro.i18n.t('lang_store_logo_added_to_the_label_design', 'Store logo added to the label design.'));
                 } catch (e) { $('#sl-status').text(e.message || 'Could not save the logo.'); }
             };
-            reader.onerror = function () { $('#sl-status').text('Could not read the logo image.'); };
+            reader.onerror = function () { $('#sl-status').text(PosnicPro.i18n.t('lang_could_not_read_the_logo_image', 'Could not read the logo image.')); };
             reader.readAsDataURL(file);
         });
         $(root.document).on('click', '#sl-logo-remove', function () {
             try { root.localStorage.removeItem('posnic.shelf-label-logo'); } catch (_) {}
             $('#sl-logo-file').val('');
             refresh();
-            $('#sl-status').text('Store logo removed.');
+            $('#sl-status').text(PosnicPro.i18n.t('lang_store_logo_removed', 'Store logo removed.'));
         });
         $(root.document).on('change', '#sl-template-list', function () {
             $('#sl-template-load,#sl-template-delete').prop('disabled', !this.value);
@@ -538,7 +538,7 @@
             if (!chosen || !root.confirm('Delete the template "' + chosen + '"?')) return;
             root.localStorage.setItem('posnic.shelf-label-templates', JSON.stringify(readTemplates().filter(function (x) { return x.name !== chosen; })));
             renderTemplates();
-            $('#sl-status').text('Template deleted.');
+            $('#sl-status').text(PosnicPro.i18n.t('lang_template_deleted_2', 'Template deleted.'));
         });
         $(root.document).on('pointerdown', '#sl-sample .sl-element', function (e) {
             if (e.target.closest('.sl-resize-handle')) return;
