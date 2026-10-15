@@ -74,19 +74,19 @@ describe('validation happens before creation', () => {
   test(
     'a barcode already used by an existing item is refused before any family child is created',
     async () => {
-    const svc = makeService();
-    svc.repository.getCollection = async () => ({
-      findOne: async () => ({ name: 'Existing shirt', barcode_id: 'EXT-123' }),
-    });
-    const r = await svc.createItemFamily(
-      family([
-        { name: 'Shirt / S', variant_value: 'S', barcode_id: 'EXT-123' },
-        { name: 'Shirt / M', variant_value: 'M', barcode_id: 'EXT-456' },
-      ])
-    );
-    expect(r.status).toBe(false);
-    expect(r.message).toContain('EXT-123');
-      expect(svc.calls).toHaveLength(0);
+      const svc = makeService();
+      svc.repository.getCollection = async () => ({
+        findOne: async () => ({ name: 'Existing shirt', barcode_id: 'EXT-123' }),
+      });
+      const r = await svc.createItemFamily(
+        family([
+          { name: 'Shirt / S', variant_value: 'S', barcode_id: 'EXT-123' },
+          { name: 'Shirt / M', variant_value: 'M', barcode_id: 'EXT-456' },
+        ])
+      );
+      expect(r.status).toBe(false);
+      expect(r.message).toContain('EXT-123');
+        expect(svc.calls).toHaveLength(0);
     }
   );
 
