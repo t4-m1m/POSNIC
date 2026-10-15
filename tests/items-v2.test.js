@@ -57,3 +57,18 @@ test('all standard item edit and duplicate entry points use the new editor', () 
         assert.match(source, new RegExp(method + ': function \\(id\\) \\{\\s*(?:return )?PosnicPro.items_v2.showClone\\(id\\)'));
     }
 });
+
+test('the simplified item editor hides the requested advanced fields without removing the primary barcode or variant controls', () => {
+  const html = require('node:fs').readFileSync('frontend/modules/items_v2.html', 'utf8');
+  assert.match(html, /#iv2-tab-languages/);
+  assert.match(html, /#iv2-tax-extra/);
+  assert.match(html, /#iv2-channels-extra/);
+  assert.match(html, /:has\(#iv2-reorder\)/);
+  assert.match(html, /:has\(#iv2-mfg\)/);
+  assert.match(html, /:has\(#iv2-expiry\)/);
+  assert.match(html, /:has\(#iv2-sku\)/);
+  assert.match(html, /:has\(#iv2-gtin\)/);
+  assert.match(html, /:has\(#iv2-alt-barcodes\)/);
+  assert.match(html, /id="iv2-barcode"/);
+  assert.match(html, /id="iv2-variants"/);
+});
