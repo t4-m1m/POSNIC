@@ -32,6 +32,38 @@
     var marks = ['signature', 'chefs_pick', 'house_special', 'new'];
     function el(id) { return document.getElementById('iv2-' + id); }
     function val(id) { return el(id).value.trim(); }
+    function selectedValues(id) { return Array.from(el(id).selectedOptions).map(function (o) { return o.value; }).filter(Boolean); }
+    function axisLabel(id) { var o = option(id); return o && o.value ? o.textContent.trim() : ''; }
+    function fillVariantValues(axisId, valuesId) {
+        var axis = option(axisId), target = el(valuesId), previous = new Set(selectedValues(valuesId));
+        target.replaceChildren();
+        var fields = [];
+        try { fields = JSON.parse(axis && axis.dataset.variantFields || '[]') || []; } catch (_) {}
+        var seen = new Set();
+        fields.forEach(function (field) {
+            var name = String(field && field.name != null ? field.name : '').trim(), key = name.toLocaleLowerCase();
+            if (!name || seen.has(key)) return;
+            seen.add(key);
+            var opt = document.createElement('option'); opt.value = name; opt.textContent = name; opt.selected = previous.has(name); target.appendChild(opt);
+        });
+    }
+    function loadVariantDefinitions() {
+        P.get({ url: 'variants/getVariantsAjaxList', data: 'query=' }, function (response) {
+            var rows = response && Array.isArray(response.suggestions) ? response.suggestions : [];
+            ['axis1', 'axis2'].forEach(function (id) {
+                var select = el(id), prior = select.value; select.replaceChildren();
+                var empty = document.createElement('option'); empty.value = ''; empty.textContent = id === 'axis2' ? 'No second variant' : 'Choose a predefined variant'; select.appendChild(empty);
+                rows.forEach(function (row) {
+                    if (!row || !row.id || !row.name) return;
+                    var opt = document.createElement('option'); opt.value = String(row.id); opt.textContent = row.name;
+                    opt.dataset.variantFields = JSON.stringify(Array.isArray(row.fields) ? row.fields : []);
+                    if (String(row.id) === prior) opt.selected = true;
+                    select.appendChild(opt);
+                });
+            });
+            fillVariantValues('axis1', 'values1'); fillVariantValues('axis2', 'values2');
+        }, function () { report('Could not load POSNIC predefined variants. Reopen this section or use the original item editor.'); });
+    }
     function checked(id) { return el(id).checked; }
     function option(id) { return el(id).selectedOptions[0]; }
     function selected(id) { return Array.from(el(id).selectedOptions).map(function (o) { return o.value; }).filter(Boolean); }
