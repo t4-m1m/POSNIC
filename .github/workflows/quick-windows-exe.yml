@@ -3,7 +3,7 @@ name: Quick Windows EXE (no tests)
 on:
   workflow_dispatch:
   push:
-    branches: [main, fix/ci-desktop-and-release]
+    branches: [main]
     paths:
       - ".github/workflows/quick-windows-exe.yml"
 
