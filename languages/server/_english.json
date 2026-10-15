@@ -509,6 +509,9 @@
   "Could not email the report": [
     "app.js"
   ],
+  "Could not generate a unique barcode. Please try again.": [
+    "src/repositories/item.repository.js"
+  ],
   "Could not list deliveries": [
     "app.js"
   ],

@@ -177,8 +177,8 @@
     <div id="sl-a4-settings" class="sl-fields"><label class="sl-field"><lang class="lang_sheet_margin_mm">Sheet margin (mm)</lang><input id="sl-margin" class="sl-input" type="number" value="5" min="0" step="0.5"></label><label class="sl-field"><lang class="lang_gap_between_labels_mm">Gap between labels (mm)</lang><input id="sl-gap" class="sl-input" type="number" value="2" min="0" step="0.5"></label><label class="sl-field"><lang class="lang_start_at_label_position">Start at label position</lang><input id="sl-start" class="sl-input" type="number" value="1" min="1"></label></div>
     <label class="sl-field"><lang class="lang_price_on_label">Price on label</lang><select class="sl-input" disabled><option><lang class="lang_current_price_including_vat_after_item_dis">Current price including VAT (after item discount)</lang></option></select></label>
     <label class="sl-check"><input id="sl-guides" type="checkbox" ><lang class="lang_show_cutting_guides">Show cutting guides</lang></label><label class="sl-check"><input id="sl-show-barcode" type="checkbox" checked><lang class="lang_show_barcode">Show barcode</lang></label><label class="sl-check"><input id="sl-bar-text" type="checkbox" checked><lang class="lang_barcode_number">Barcode number</lang></label><label class="sl-check"><input id="sl-shop" type="checkbox" checked><lang class="lang_shop_name">Shop name</lang></label>
-    <label class="sl-field" for="sl-logo-file">Store logo (optional)<input id="sl-logo-file" class="sl-input" type="file" accept="image/png,image/jpeg,image/webp"></label>
-    <button type="button" class="sl-button" id="sl-logo-remove">Remove store logo</button><label class="sl-check"><input id="sl-date" type="checkbox" ><lang class="lang_printed_date">Printed date</lang></label><label class="sl-check"><input id="sl-mrp" type="checkbox" ><lang class="lang_mrp_from_item_record">MRP from item record</lang></label>
+    <label class="sl-field" for="sl-logo-file"><lang class="lang_store_logo_optional">Store logo (optional)</lang><input id="sl-logo-file" class="sl-input" type="file" accept="image/png,image/jpeg,image/webp"></label>
+    <button type="button" class="sl-button" id="sl-logo-remove"><lang class="lang_remove_store_logo">Remove store logo</lang></button><label class="sl-check"><input id="sl-date" type="checkbox" ><lang class="lang_printed_date">Printed date</lang></label><label class="sl-check"><input id="sl-mrp" type="checkbox" ><lang class="lang_mrp_from_item_record">MRP from item record</lang></label>
     <details id="sl-design"><summary><lang class="lang_font_colour_and_barcode_settings">Font, colour and barcode settings</lang></summary><div id="barcode-container" class="sl-fields">
      <label class="sl-field"><lang class="lang_font">Font</lang><select id="font" class="sl-input">
                                                                 <option value="monospace" style="font-family: monospace" selected="selected"><lang class="lang_monospace">Monospace</lang></option>
@@ -219,17 +219,17 @@
      <label class="sl-field"><lang class="lang_top_margin">Top margin</lang><input id="margin_top" class="sl-input" type="number" value="0" min="0"></label><label class="sl-field"><lang class="lang_bottom_margin">Bottom margin</lang><input id="margin_bottom" class="sl-input" type="number" value="0" min="0"></label><label class="sl-field"><lang class="lang_left_margin">Left margin</lang><input id="margin_left" class="sl-input" type="number" value="0" min="0"></label><label class="sl-field"><lang class="lang_right_margin">Right margin</lang><input id="margin_right" class="sl-input" type="number" value="0" min="0"></label>
      <label class="sl-check"><input id="mfg_checkbox" type="checkbox" ><lang class="lang_manufacturing_date">Manufacturing date</lang></label><label class="sl-check"><input id="exp_checkbox" type="checkbox" ><lang class="lang_expiry_date_2">Expiry date</lang></label><label class="sl-field"><lang class="lang_address_title">Address</lang><textarea id="address-value" class="sl-input" rows="2"></textarea></label>
     </div></details>
-    <div class="sl-template-tools" aria-label="Reusable label templates">
-     <label class="sl-field" for="sl-template-list">Saved label templates
-      <select id="sl-template-list" class="sl-input"><option value="">Choose a saved template…</option></select>
+    <div class="sl-template-tools" aria-label="Reusable label templates" data-t-aria-label="lang_reusable_label_templates">
+     <label class="sl-field" for="sl-template-list"><lang class="lang_saved_label_templates">Saved label templates</lang>
+      <select id="sl-template-list" class="sl-input"><option value=""><lang class="lang_choose_a_saved_template">Choose a saved template…</lang></option></select>
      </label>
      <div class="sl-row">
-      <button type="button" class="sl-button" id="sl-template-save">Save current as template</button>
-      <button type="button" class="sl-button" id="sl-template-load">Load template</button>
-      <button type="button" class="sl-button" id="sl-template-delete">Delete template</button>
+      <button type="button" class="sl-button" id="sl-template-save"><lang class="lang_save_current_as_template">Save current as template</lang></button>
+      <button type="button" class="sl-button" id="sl-template-load"><lang class="lang_load_template">Load template</lang></button>
+      <button type="button" class="sl-button" id="sl-template-delete"><lang class="lang_delete_template">Delete template</lang></button>
      </div>
-     <p class="sl-muted">Templates are saved in this browser for this POS installation.</p>
-     <p class="sl-muted">In the sample preview, drag an outlined field to move it. Drag its blue corner handle to resize it. Changes apply to printing and saved templates.</p>
+     <p class="sl-muted"><lang class="lang_templates_are_saved_in_this_browser_for_th">Templates are saved in this browser for this POS installation.</lang></p>
+     <p class="sl-muted"><lang class="lang_in_the_sample_preview_drag_an_outlined_fie">In the sample preview, drag an outlined field to move it. Drag its blue corner handle to resize it. Changes apply to printing and saved templates.</lang></p>
     </div>
     <p class="sl-muted"><lang class="lang_match_these_dimensions_to_your_label_stock">Match these dimensions to your label stock before printing.</lang></p>
    </div><div><h3><lang class="lang_sample_label">Sample label</lang></h3><div class="sl-sample-area"><div id="sl-sample" class="sl-preview-host"></div></div><div id="sl-dimensions" class="sl-dimensions"></div></div></div></section>
