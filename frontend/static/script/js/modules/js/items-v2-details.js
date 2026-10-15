@@ -311,8 +311,8 @@
         var palette=document.createElement('div');palette.className='iv2-icon-palette';
         ['📦','👕','👟','👜','📱','📚','🧴','✂️','🔧','☕','🍵','🍛','🍜','🍕','🥪','🥗','🍰','🍨','🥤','💧'].forEach(function(icon){var pick=button(icon,function(){el('icon').value=icon;notify();});pick.setAttribute('aria-label',icon);palette.appendChild(pick);});el('icon').after(palette);
         el('form').addEventListener('click',function(e){var target=e.target.closest('[data-iv2-advanced]');if(target&&target.dataset.iv2Advanced==='generate')generate();});
-        el('axis1').addEventListener('change',function(){fillVariantValues('axis1','values1');if(variants.length)generate();});
-        el('axis2').addEventListener('change',function(){fillVariantValues('axis2','values2');if(variants.length)generate();});
+        el('axis1').addEventListener('change',function(){el('values1').replaceChildren();fillVariantValues('axis1','values1');if(variants.length)generate();});
+        el('axis2').addEventListener('change',function(){el('values2').replaceChildren();fillVariantValues('axis2','values2');if(variants.length)generate();});
         loadVariantDefinitions();
         requestOptions('unit','setting/getUnitAjaxList',function(r){return {id:r.unit_id,name:r.unit_name,unit:r.unit_value};});
         requestOptions('supplier','suppliers/getSuppliersAjaxList',function(r){return {id:r.id,name:r.name};});
