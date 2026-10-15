@@ -1752,6 +1752,17 @@ class ItemRepository extends BaseModel {
         };
       }
 
+      // Recalculate EUR purchase costs on the server so stored cost and TVA
+      // cannot drift from the exchange rate and VAT supplied by the form.
+      if (data.purchase_price_eur !== undefined && data.purchase_price_eur !== null && String(data.purchase_price_eur).trim() !== '') {
+        const { calculatePurchaseCost } = require('../utils/purchase-cost');
+        const purchaseCost = calculatePurchaseCost(data.purchase_price_eur, {
+          purchase_exchange_rate: data.purchase_exchange_rate,
+          purchase_vat_rate: data.purchase_vat_rate,
+        });
+        data = { ...data, ...purchaseCost, company_price: purchaseCost.purchase_cost_dzd };
+      }
+
       // Generate an internal Code 128 barcode for new items when none was supplied.
       // Existing/manual barcodes and barcodes on item edits are preserved.
       if (!id && !itemBarcodes.normalize(data.barcode_id)) {
