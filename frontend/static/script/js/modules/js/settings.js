@@ -640,6 +640,8 @@ PosnicPro.settings = {
                     // Store general settings including hardware_weight_machine_enable
                     var generalSettings = {
                         stock_management: response.data['stock_management'] !== false,
+                        purchase_exchange_rate: Number(response.data['purchase_exchange_rate']) > 0 ? Number(response.data['purchase_exchange_rate']) : 280,
+                        purchase_vat_rate: Number.isFinite(Number(response.data['purchase_vat_rate'])) ? Number(response.data['purchase_vat_rate']) : 9,
                         hardware_weight_machine_enable: response.data['hardware_weight_machine_enable'] || false,
                         till_lock_enable: response.data['till_lock_enable'] || false,
                         till_lock_idle_minutes: response.data['till_lock_idle_minutes'] || 0,
@@ -1006,6 +1008,8 @@ PosnicPro.settings = {
                 // Store general settings including hardware_weight_machine_enable
                 var generalSettings = {
                     stock_management: data.stock_management !== false,
+                    purchase_exchange_rate: Number(data.purchase_exchange_rate) > 0 ? Number(data.purchase_exchange_rate) : 280,
+                    purchase_vat_rate: Number.isFinite(Number(data.purchase_vat_rate)) ? Number(data.purchase_vat_rate) : 9,
                     hardware_weight_machine_enable: data.hardware_weight_machine_enable || false,
                     till_lock_enable: data.till_lock_enable || false,
                     till_lock_idle_minutes: data.till_lock_idle_minutes || 0,
