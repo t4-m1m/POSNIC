@@ -86,7 +86,7 @@
             var w = Math.max(5, Math.min(100, n('w'))), h = Math.max(5, Math.min(100, n('h')));
             var rawRotation = n('rotation');
             var rotation = Number.isFinite(rawRotation) ? ((rawRotation % 360) + 360) % 360 : 0;
-            result[key] = { x: Math.max(0, Math.min(100 - w, n('x'))), y: Math.max(0, Math.min(100 - h, n('y'))), w: w, h: h, rotation: rotation };
+            result[key] = { x: Math.max(0, Math.min(100 - w, n('x'))), y: Math.max(0, Math.min(100 - h, n('y'))), w: w, h: h, rotation: rotation, group_id: typeof v.group_id === 'string' && v.group_id.length <= 80 ? v.group_id : '' };
         });
         return result;
     }
@@ -549,11 +549,21 @@
             var key = this.dataset.slElement, label = this.closest('.sl-label');
             if (!key || !label) return;
             e.preventDefault();
-            $('#sl-sample .sl-element').removeClass('sl-selected');
-            $(this).addClass('sl-selected');
-            $('#sl-rotate-element').prop('disabled', false);
+            if (e.shiftKey || e.ctrlKey || e.metaKey) {
+                $(this).toggleClass('sl-selected');
+                syncSelectionControls();
+                return;
+            }
+            if (!$(this).hasClass('sl-selected')) {
+                $('#sl-sample .sl-element').removeClass('sl-selected');
+                $(this).addClass('sl-selected');
+            }
+            syncSelectionControls();
             var rect = label.getBoundingClientRect(), layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key];
-            editorDrag = { key: key, mode: 'move', startX: e.clientX, startY: e.clientY, rect: rect, initial: Object.assign({}, layout) };
+            var dragKeys = layout.group_id ? Object.keys(state.elementLayout).filter(function (k) { return state.elementLayout[k].group_id === layout.group_id; }) : [key];
+            var initialLayouts = {};
+            dragKeys.forEach(function (k) { initialLayouts[k] = Object.assign({}, state.elementLayout[k]); });
+            editorDrag = { key: key, keys: dragKeys, initialLayouts: initialLayouts, mode: 'move', startX: e.clientX, startY: e.clientY, rect: rect, initial: Object.assign({}, layout) };
             if (this.setPointerCapture && e.pointerId !== undefined) { try { this.setPointerCapture(e.pointerId); } catch (_) {} }
         });
         $(root.document).on('pointerdown', '#sl-sample .sl-resize-handle', function (e) {
@@ -563,9 +573,35 @@
             $('#sl-sample .sl-element').removeClass('sl-selected');
             var selectedElement = label.querySelector('[data-sl-element="' + key + '"]');
             if (selectedElement) $(selectedElement).addClass('sl-selected');
-            $('#sl-rotate-element').prop('disabled', false);
+            syncSelectionControls();
             var layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key];
             editorDrag = { key: key, mode: 'resize', startX: e.clientX, startY: e.clientY, rect: label.getBoundingClientRect(), initial: Object.assign({}, layout) };
+        });
+        function syncSelectionControls() {
+            var selected = $('#sl-sample .sl-element.sl-selected');
+            $('#sl-rotate-element').prop('disabled', selected.length !== 1);
+            $('#sl-group-elements').prop('disabled', selected.length < 2);
+            $('#sl-ungroup-elements').prop('disabled', !selected.toArray().some(function (node) {
+                var layout = state.elementLayout[node.dataset.slElement]; return layout && layout.group_id;
+            }));
+        }
+        $(root.document).on('click', '#sl-group-elements', function () {
+            var keys = $('#sl-sample .sl-element.sl-selected').toArray().map(function (node) { return node.dataset.slElement; }).filter(Boolean);
+            if (keys.length < 2) return;
+            var groupId = 'label-group-' + Date.now();
+            keys.forEach(function (key) { state.elementLayout[key].group_id = groupId; });
+            try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
+            refresh();
+            keys.forEach(function (key) { var node = document.querySelector('#sl-sample .sl-element[data-sl-element="' + key + '"]'); if (node) node.classList.add('sl-selected'); });
+            syncSelectionControls();
+        });
+        $(root.document).on('click', '#sl-ungroup-elements', function () {
+            var keys = $('#sl-sample .sl-element.sl-selected').toArray().map(function (node) { return node.dataset.slElement; }).filter(Boolean);
+            keys.forEach(function (key) { if (state.elementLayout[key]) delete state.elementLayout[key].group_id; });
+            try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
+            refresh();
+            keys.forEach(function (key) { var node = document.querySelector('#sl-sample .sl-element[data-sl-element="' + key + '"]'); if (node) node.classList.add('sl-selected'); });
+            syncSelectionControls();
         });
         $(root.document).on('click', '#sl-rotate-element', function () {
             var selected = document.querySelector('#sl-sample .sl-element.sl-selected');
@@ -586,28 +622,33 @@
             if (!editorDrag) return;
             var drag = editorDrag, dx = (e.clientX - drag.startX) / Math.max(1, drag.rect.width) * 100;
             var dy = (e.clientY - drag.startY) / Math.max(1, drag.rect.height) * 100;
-            var next = Object.assign({}, drag.initial);
-            if (drag.mode === 'move') {
-                next.x = Math.max(0, Math.min(100 - next.w, drag.initial.x + dx));
-                next.y = Math.max(0, Math.min(100 - next.h, drag.initial.y + dy));
-            } else {
-                next.w = Math.max(5, Math.min(100 - next.x, drag.initial.w + dx));
-                next.h = Math.max(5, Math.min(100 - next.y, drag.initial.h + dy));
-            }
-            state.elementLayout[drag.key] = next;
-            var element = document.querySelector('#sl-sample [data-sl-element="' + drag.key + '"]');
-            if (element) {
-                element.style.left = next.x + '%'; element.style.top = next.y + '%';
-                element.style.width = next.w + '%'; element.style.height = next.h + '%';
-                var handle = document.querySelector('#sl-sample .sl-resize-handle[data-sl-resize-for="' + drag.key + '"]');
-                if (handle) { handle.style.left = (next.x + next.w) + '%'; handle.style.top = (next.y + next.h) + '%'; }
-            }
+            var keys = drag.mode === 'move' ? drag.keys : [drag.key];
+            keys.forEach(function (key) {
+                var initial = drag.initialLayouts ? drag.initialLayouts[key] : drag.initial;
+                var next = Object.assign({}, initial);
+                if (drag.mode === 'move') {
+                    next.x = Math.max(0, Math.min(100 - next.w, initial.x + dx));
+                    next.y = Math.max(0, Math.min(100 - next.h, initial.y + dy));
+                } else {
+                    next.w = Math.max(5, Math.min(100 - next.x, initial.w + dx));
+                    next.h = Math.max(5, Math.min(100 - next.y, initial.h + dy));
+                }
+                state.elementLayout[key] = next;
+                var element = document.querySelector('#sl-sample [data-sl-element="' + key + '"]');
+                if (element) {
+                    element.style.left = next.x + '%'; element.style.top = next.y + '%';
+                    element.style.width = next.w + '%'; element.style.height = next.h + '%';
+                    var handle = document.querySelector('#sl-sample .sl-resize-handle[data-sl-resize-for="' + key + '"]');
+                    if (handle) { handle.style.left = (next.x + next.w) + '%'; handle.style.top = (next.y + next.h) + '%'; }
+                }
+            });
         });
         $(root.document).on('pointerup pointercancel', function () {
             if (!editorDrag) return;
             editorDrag = null;
             try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
             refresh();
+            syncSelectionControls();
         });
                 $(root.document).on('shown.bs.modal', '#view_print_lable', function () { renderTemplates(); refresh(); });
         $(root.document).on('hidden.bs.modal', '#view_print_lable', function () { state.token++; state.loading = false; state.bulkLoading = false; clearTimeout(searchTimer); });
