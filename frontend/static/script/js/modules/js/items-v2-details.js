@@ -237,12 +237,22 @@
     }
     function data() {
         var u = option('unit'), supplier = option('supplier'), auto = checked('auto-tile') && P.autoTile ? P.autoTile(val('name')) : null;
+        var eurRaw = val('cost-eur'), eur = Number(eurRaw), rate = Number(val('exchange-rate')) || 280, vatRate = Number(val('purchase-vat'));
+        var purchaseBase = eurRaw !== '' && Number.isFinite(eur) && eur >= 0 ? Math.round((eur * rate + Number.EPSILON) * 100) / 100 : null;
+        var purchaseVat = purchaseBase === null ? null : Math.round((purchaseBase * (Number.isFinite(vatRate) ? vatRate : 9) / 100 + Number.EPSILON) * 100) / 100;
         var out = { mrp_price: Number(val('mrp')), reorder_point: number('reorder'), unit_id: val('unit') === 'qty' ? '' : val('unit'), unit: u && u.dataset.unit || 'qty', supplier_id: val('supplier'), supplier_name: supplier && supplier.dataset.name || '',
             open_price: checked('open-price'), service_unit: val('service-unit'), item_weight_machine_based: caps.weight && checked('weight'),
             discount_amount: val('discount-type') === 'amount' ? Number(val('discount')) : 0, discount_percentage: val('discount-type') === 'percentage' ? Number(val('discount')) : 0,
             plu_code: val('plu'), gtin: val('gtin'), barcodes: list(val('alt-barcodes')), purchase_unit: val('purchase-unit'), conversion_factor: number('pack-size'), brand: val('brand'), tags: list(val('tags')), position: Number(val('position')),
             items_mfg_date: val('mfg'), items_expiry_date: val('expiry'), icon: val('icon'), tile_color: auto ? auto.color : val('tile-color'), tile_shape: auto ? auto.shape : val('tile-shape'),
-            image: photos.map(function (p) { return { name:p.uploaded||p.name, size:p.size, cover:p.cover }; }), cover_image: (function(){var p=photos.find(function(p){return p.cover==='yes';});return p?(p.uploaded||p.name):'item.svg';}()), channel_off: selected('channel-off') };
+            image: photos.map(function (p) { return { name:p.uploaded||p.name, size:p.size, cover:p.cover }; }),
+            purchase_price_eur: purchaseBase === null ? undefined : Math.round(eur * 100) / 100,
+            purchase_exchange_rate: purchaseBase === null ? undefined : rate,
+            purchase_vat_rate: purchaseBase === null ? undefined : (Number.isFinite(vatRate) ? vatRate : 9),
+            purchase_base_dzd: purchaseBase === null ? undefined : purchaseBase,
+            purchase_vat_dzd: purchaseVat === null ? undefined : purchaseVat,
+            purchase_cost_dzd: purchaseBase === null ? undefined : purchaseBase + purchaseVat,
+            cover_image: (function(){var p=photos.find(function(p){return p.cover==='yes';});return p?(p.uploaded||p.name):'item.svg';}()), channel_off: selected('channel-off') };
         Object.assign(out, P.itemTranslationsV2.data());
         if (caps.tax && val('hsn')) Object.assign(out, { tax_method: 'hsn', hsn_code: val('hsn'), hsn_description: val('hsn-description'), tax: Number(val('hsn-rate')), tax_id: '', tax_name: '' });
         if (caps.restaurant && document.querySelector('#items_v2 [name="iv2-kind"]:checked').value !== 'service') {
@@ -285,8 +295,37 @@
         preview.style.background=checked('auto-tile')&&P.autoTile?P.autoTile(val('name')).color:val('tile-color');preview.style.color='white';
     }
     function reset() {generation++;reading=0;photos=[];variants=[];signature='';el('variant-rows').replaceChildren();el('auto-tile').checked=true;photoPicker();P.itemTranslationsV2.reset();}
+    function currentYYMM() { var d = new Date(); return String(d.getFullYear()).slice(-2) + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+    function syncComposedName() {
+        var type = el('type-name').value.trim(), brand = el('brand-abbr').value.trim(), ref = el('reference').value.trim(), date = el('reference-date').value || currentYYMM();
+        var base = [type, brand].filter(Boolean).join(' ');
+        var full = base;
+        if (ref) full += (full ? '-' : '') + date + '/' + ref;
+        el('name').value = full;
+        el('preview-name').textContent = full || label('lang_your_next_item', 'Your next item');
+        notify();
+    }
+    function updatePurchaseCost() {
+        var eurRaw = el('cost-eur').value, eur = Number(eurRaw), rate = Number(el('exchange-rate').value), vat = Number(el('purchase-vat').value);
+        if (!Number.isFinite(rate) || rate <= 0) rate = 280;
+        if (!Number.isFinite(vat) || vat < 0 || vat > 100) vat = 9;
+        if (eurRaw === '' || !Number.isFinite(eur) || eur < 0) {
+            el('cost').value = '';
+            el('purchase-cost-summary').textContent = 'Enter a purchase price in EUR to calculate the cost in DZD.';
+            notify(); return;
+        }
+        var base = Math.round((eur * rate + Number.EPSILON) * 100) / 100;
+        var vatAmount = Math.round((base * vat / 100 + Number.EPSILON) * 100) / 100;
+        var total = Math.round((base + vatAmount + Number.EPSILON) * 100) / 100;
+        el('cost').value = total.toFixed(2);
+        el('purchase-cost-summary').textContent = base.toFixed(2) + ' DA + ' + vatAmount.toFixed(2) + ' DA TVA = ' + total.toFixed(2) + ' DA';
+        notify();
+    }
     function init() {
         if(initialized)return;initialized=true;
+        el('reference-date').value = currentYYMM();
+        ['type-name','brand-abbr','reference'].forEach(function(id){el(id).addEventListener('input',syncComposedName);});
+        ['cost-eur','exchange-rate','purchase-vat'].forEach(function(id){el(id).addEventListener('input',updatePurchaseCost);});
         el('hsn').addEventListener('focus', hsnSuggestions);
         el('form').addEventListener('click', function (event) {
             if (!event.target.closest('#iv2-generate-barcode')) return;
@@ -331,8 +370,28 @@
     }
     function load(item) {
         reset();
+        var itemName = String(item.name || '');
+        var parsedName = itemName.match(/^(.*?)-([0-9]{2}-[0-9]{2})\/([^/]+)$/);
+        if (parsedName) {
+            var nameParts = parsedName[1].trim().split(/\s+/);
+            el('type-name').value = nameParts.shift() || '';
+            el('brand-abbr').value = nameParts.join(' ');
+            el('reference-date').value = parsedName[2];
+            el('reference').value = parsedName[3];
+        } else {
+            el('type-name').value = itemName;
+            el('brand-abbr').value = '';
+            el('reference-date').value = '';
+            el('reference').value = '';
+        }
         var mapping = {mrp:'mrp_price',reorder:'reorder_point',plu:'plu_code',gtin:'gtin','purchase-unit':'purchase_unit','pack-size':'conversion_factor',brand:'brand',position:'sort_order',icon:'icon','tile-color':'tile_color','tile-shape':'tile_shape','service-unit':'service_unit','hsn':'hsncode','hsn-description':'hsndescription','hsn-rate':'tax','prep-note':'prep_note','prep-minutes':'prep_minutes'};
         Object.keys(mapping).forEach(function(id){if(item[mapping[id]] != null) el(id).value=item[mapping[id]];});
+        if (item.purchase_price_eur != null) el('cost-eur').value = item.purchase_price_eur;
+        if (item.purchase_exchange_rate != null) el('exchange-rate').value = item.purchase_exchange_rate;
+        if (item.purchase_vat_rate != null) el('purchase-vat').value = item.purchase_vat_rate;
+        if (item.purchase_cost_dzd != null) el('cost').value = item.purchase_cost_dzd;
+        if (itemName) el('name').value = itemName;
+        updatePurchaseCost();
         ['mfg','expiry'].forEach(function(id){var v=item[id==='mfg'?'items_mfg_date':'items_expiry_date'];el(id).value=v?String(v).slice(0,10):'';});
         el('tags').value=(item.tags||[]).join(', '); el('alt-barcodes').value=(item.barcodes||[]).join(', ');
         el('discount-type').value=Number(item.discount_percentage)?'percentage':'amount';el('discount').value=item.discount_percentage||item.discount_amount||0;
