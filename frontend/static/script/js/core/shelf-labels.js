@@ -387,6 +387,23 @@
         state.token++; state.bulkLoading = false; state.loading = false; state.completeKey = null;
         $('#sl-all').prop('disabled', false);
     }
+    async function enrichVariantValues(items) {
+        if (!$('#sl-samarina-mode').is(':checked')) return;
+        var parents = Array.from(new Set((items || []).map(function (item) {
+            return String(item.variant_parent_name || '').trim();
+        }).filter(Boolean)));
+        for (var parent of parents) {
+            try {
+                var data = await request({ url: 'items', data: { page: 1, limit: 100, filters: JSON.stringify({ variant_parent_name: parent }), label_pricing: 'true' } });
+                var rows = Array.isArray(data.list) ? data.list : [];
+                var values = Array.from(new Set(rows.map(function (row) { return String(row.variant_value || '').trim(); }).filter(Boolean)));
+                state.entries.forEach(function (entry) {
+                    if (String(entry.item.variant_parent_name || '').trim() === parent) entry.item.available_variant_values = values;
+                });
+            } catch (_) { /* Keep printing the selected variant even if sibling lookup is unavailable. */ }
+        }
+        refresh();
+    }
     async function loadPage(page) {
         var token = ++state.token; state.loading = true; state.bulkLoading = false; state.loadError = null;
         state.productPage = page; renderRows();
@@ -395,6 +412,7 @@
             if (state.token !== token) return;
             var current = remember(data.list || []);
             state.viewIds = current.map(function (e) { return String(e.item._id); });
+            enrichVariantValues(data.list || []);
             state.total = Number(data.total) || 0; state.totalPages = Math.max(1, Number(data.total_pages) || 1);
         } catch (e) { if (state.token === token) state.loadError = e; }
         finally { if (state.token === token) { state.loading = false; renderRows(); } }
