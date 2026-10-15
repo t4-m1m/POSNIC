@@ -57,7 +57,7 @@
             '.sl-name{font-weight:600}.sl-price{font-weight:700;font-size:220%}.sl-barcode{display:block;max-width:100%;max-height:100%;}' +
             '.sl-foot{font-size:75%;white-space:pre-line}.sl-design-editable .sl-element{outline:1px dashed #2563eb;cursor:move;touch-action:none}' +
             '.sl-design-editable .sl-element.sl-selected{outline:2px solid #ef4444;z-index:20;overflow:visible}' +
-            '.sl-resize-handle{position:absolute;right:-3px;bottom:-3px;width:12px;height:12px;border:2px solid white;border-radius:2px;background:#2563eb;cursor:nwse-resize;z-index:21}';
+            '.sl-resize-handle{position:absolute;width:12px;height:12px;border:2px solid white;border-radius:2px;background:#2563eb;cursor:nwse-resize;z-index:21;transform:translate(-50%,-50%);touch-action:none}';
     }
     function validateDesign(s) {
         if (!/^[a-zA-Z ,\-]+$/.test(s.font) || !['left', 'center', 'right'].includes(s.align) || !/^#[a-f\d]{6}$/i.test(s.background) || !/^#[a-f\d]{6}$/i.test(s.ink)) throw Error('Invalid label design.');
@@ -186,10 +186,14 @@
             page.querySelectorAll('.sl-label').forEach(function (label) {
                 label.classList.add('sl-design-editable');
                 label.querySelectorAll('[data-sl-element]').forEach(function (element) {
+                    var key = element.dataset.slElement, layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key];
                     var handle = doc.createElement('span');
                     handle.className = 'sl-resize-handle';
+                    handle.dataset.slResizeFor = key;
                     handle.setAttribute('aria-hidden', 'true');
-                    element.appendChild(handle);
+                    handle.style.left = (layout.x + layout.w) + '%';
+                    handle.style.top = (layout.y + layout.h) + '%';
+                    label.appendChild(handle);
                 });
             });
         }
@@ -222,7 +226,7 @@
         try {
             var s = settings(), g = geometry(s), amount = Number($('#sl-batch').val()), from = Number($('#sl-from').val());
             $('#sl-start').attr('max', g.capacity); $('#sl-dimensions').text(s.width + ' × ' + s.height + ' mm');
-            try { root.localStorage.setItem('posnic.shelf-label-layout', JSON.stringify({ paper: s.paper, width: s.width, height: s.height, margin: s.margin, gap: s.gap, start: s.start, guides: s.guides, barcode: s.barcode, barText: s.barText, shop: !!s.shop, date: s.date, mrp: s.mrp, mfg: s.mfg, exp: s.exp,
+            try { root.localStorage.setItem('posnic.shelf-label-layout', JSON.stringify({ paper: s.paper, width: s.width, height: s.height, margin: s.margin, gap: s.gap, start: s.start, guides: s.guides, barcode: s.barcode, barText: s.barText, shop: !!s.shop, date: s.date, mrp: s.mrp, mfg: s.mfg, exp: s.exp, elementLayout: s.elementLayout,
                 design: { font: s.font, fontSize: s.fontSize, align: s.align, ink: s.ink, background: s.background, format: s.format, barWidth: s.barWidth, barHeight: s.barHeight, barMargin: s.barMargin, textMargin: s.textMargin, top: s.top, bottom: s.bottom, left: s.left, right: s.right, fontOptions: s.fontOptions } })); } catch (_) { /* Optional storage. */ }
             if (state.step === 1) {
                 var sampleGeometry = geometry(Object.assign({}, s, { paper: 'roll' }));
@@ -501,7 +505,7 @@
             if (this.setPointerCapture && e.pointerId !== undefined) { try { this.setPointerCapture(e.pointerId); } catch (_) {} }
         });
         $(root.document).on('pointerdown', '#sl-sample .sl-resize-handle', function (e) {
-            var element = this.closest('[data-sl-element]'), label = this.closest('.sl-label'), key = element && element.dataset.slElement;
+            var label = this.closest('.sl-label'), key = this.dataset.slResizeFor;
             if (!key || !label) return;
             e.preventDefault(); e.stopPropagation();
             $('#sl-sample .sl-element').removeClass('sl-selected');
@@ -526,6 +530,8 @@
             if (element) {
                 element.style.left = next.x + '%'; element.style.top = next.y + '%';
                 element.style.width = next.w + '%'; element.style.height = next.h + '%';
+                var handle = document.querySelector('#sl-sample .sl-resize-handle[data-sl-resize-for="' + drag.key + '"]');
+                if (handle) { handle.style.left = (next.x + next.w) + '%'; handle.style.top = (next.y + next.h) + '%'; }
             }
         });
         $(root.document).on('pointerup pointercancel', function () {
