@@ -54,7 +54,7 @@
             ';font-weight:' + (s.fontOptions?.includes('bold') ? '700' : '400') + ';font-style:' + (s.fontOptions?.includes('italic') ? 'italic' : 'normal') +
             ';color:' + s.ink + ';background:' + s.background + ';print-color-adjust:exact;-webkit-print-color-adjust:exact}' +
             '.sl-label .sl-element{position:absolute;margin:0;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:' + (s.align === 'left' ? 'flex-start' : s.align === 'right' ? 'flex-end' : 'center') + ';line-height:1.15;overflow-wrap:anywhere}' +
-            '.sl-name{font-weight:600}.sl-logo{object-fit:contain}.sl-price{font-weight:700;font-size:220%}.sl-label svg.sl-element{display:block;max-width:100%;max-height:100%;}' +
+            '.sl-name{font-weight:600;white-space:pre-line}.sl-custom-text{white-space:pre-wrap}.sl-logo{object-fit:contain}.sl-price{font-weight:700;font-size:220%}.sl-label svg.sl-element{display:block;max-width:100%;max-height:100%;}' +
             '.sl-foot{font-size:75%;white-space:pre-line}.sl-design-editable .sl-element{outline:1px dashed #2563eb;cursor:move;touch-action:none}' +
             '.sl-design-editable .sl-element.sl-selected{outline:2px solid #ef4444;z-index:20;overflow:visible}' +
             '.sl-resize-handle{position:absolute;width:12px;height:12px;border:2px solid white;border-radius:2px;background:#2563eb;cursor:nwse-resize;z-index:21;transform:translate(-50%,-50%);touch-action:none}';
@@ -80,8 +80,8 @@
         var saved = {};
         try { saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-elements') || '{}') || {}; } catch (_) {}
         var result = {};
-        Object.keys(DEFAULT_ELEMENT_LAYOUT).forEach(function (key) {
-            var d = DEFAULT_ELEMENT_LAYOUT[key], v = saved[key] || {};
+        Object.keys(DEFAULT_ELEMENT_LAYOUT).concat(Object.keys(saved).filter(function (key) { return key.indexOf('custom_') === 0 && !DEFAULT_ELEMENT_LAYOUT[key]; })).forEach(function (key) {
+            var d = DEFAULT_ELEMENT_LAYOUT[key] || { x: 10, y: 10, w: 45, h: 12 }, v = saved[key] || {};
             function n(name) { var value = Number(v[name]); return Number.isFinite(value) ? value : d[name]; }
             var w = Math.max(5, Math.min(100, n('w'))), h = Math.max(5, Math.min(100, n('h')));
             var rawRotation = n('rotation');
@@ -93,7 +93,7 @@
             var fontWeight = v.font_weight === 'bold' ? 'bold' : (v.font_weight === 'normal' ? 'normal' : (key === 'name' || key === 'price' ? 'bold' : 'normal'));
             var textAlign = ['left', 'center', 'right'].indexOf(v.text_align) >= 0 ? v.text_align : 'center';
             var color = /^#[0-9a-f]{6}$/i.test(String(v.color || '')) ? v.color : '#000000';
-            result[key] = { x: Math.max(0, Math.min(100 - w, n('x'))), y: Math.max(0, Math.min(100 - h, n('y'))), w: w, h: h, rotation: rotation, group_id: typeof v.group_id === 'string' && v.group_id.length <= 80 ? v.group_id : '', font_size: fontSize, font_weight: fontWeight, text_align: textAlign, color: color };
+            result[key] = { x: Math.max(0, Math.min(100 - w, n('x'))), y: Math.max(0, Math.min(100 - h, n('y'))), w: w, h: h, rotation: rotation, group_id: typeof v.group_id === 'string' && v.group_id.length <= 80 ? v.group_id : '', font_size: fontSize, font_weight: fontWeight, text_align: textAlign, color: color, text: key.indexOf('custom_') === 0 ? String(v.text || 'New text') : '' };
         });
         return result;
     }
@@ -125,7 +125,9 @@
             var logo = doc.createElement('img'); logo.className = 'sl-logo sl-element'; logo.alt = 'Store logo';
             logo.src = s.logoData; applyElementLayout(logo, 'logo', s); div.appendChild(logo);
         }
-        text(item.name, 'sl-name', 'name');
+        var nameText = String(item.name || ''), nameParts = nameText.match(/^(.*?)-([0-9]{2}-[0-9]{2}\/[^/]+?)(?:\s+\/\s+(.+))?$/);
+        if (nameParts) nameText = nameParts[1].trim() + '\n' + nameParts[2].trim() + (nameParts[3] ? ' / ' + nameParts[3].trim() : '');
+        text(nameText, 'sl-name', 'name');
         if (s.barcode !== false) {
             var svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('sl-barcode');
             applyElementLayout(svg, 'barcode', s); div.appendChild(svg);
@@ -144,6 +146,10 @@
         if (s.address) details.push(s.address);
         if (s.date) details.push(s.printedDate);
         if (details.length) text(details.join('\n'), 'sl-foot', 'details');
+        Object.keys(s.elementLayout || {}).filter(function (key) { return key.indexOf('custom_') === 0; }).forEach(function (key) {
+            var custom = s.elementLayout[key];
+            text(String(custom.text || 'New text'), 'sl-custom-text', key);
+        });
         return div;
     }
     function sheet(doc, cells, s, barcode) {
