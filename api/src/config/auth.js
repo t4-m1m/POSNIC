@@ -1,5 +1,6 @@
 const { isProduction } = require('./environment');
 const { ephemeralSecret } = require('./signing-secret');
+const { logger } = require('../utils/logger');
 
 // Default JWT configuration
 const getJwtConfig = () => ({
@@ -32,7 +33,7 @@ const getApiKeys = () => {
     try {
       return JSON.parse(apiKeysEnv);
     } catch (error) {
-      console.error('Failed to parse API_KEYS environment variable', error);
+      logger.error('Failed to parse API_KEYS environment variable.', { error: error.message });
     }
   }
 
