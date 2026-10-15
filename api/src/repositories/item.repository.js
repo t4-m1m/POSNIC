@@ -1884,6 +1884,10 @@ class ItemRepository extends BaseModel {
         branch_name: branchName,
         branch_access: [{ branch_id: branchObjectId, branch_name: branchName }],
         name: (data.name || '').trim(),
+        ...(Object.prototype.hasOwnProperty.call(data, 'article_type') ? { article_type: String(data.article_type || '').trim() } : {}),
+        ...(Object.prototype.hasOwnProperty.call(data, 'brand_abbreviation') ? { brand_abbreviation: String(data.brand_abbreviation || '').trim() } : {}),
+        ...(Object.prototype.hasOwnProperty.call(data, 'reference_date') ? { reference_date: String(data.reference_date || '').trim() } : {}),
+        ...(Object.prototype.hasOwnProperty.call(data, 'model_reference') ? { model_reference: String(data.model_reference || '').trim() } : {}),
         ...(Object.prototype.hasOwnProperty.call(data, 'translations')
           ? { translations: itemText.normalize(data.translations) }
           : {}),
