@@ -359,7 +359,82 @@
             if (typeof root.newBarcode === 'function') root.newBarcode();
             refresh();
         });
-        $(root.document).on('shown.bs.modal', '#view_print_lable', refresh);
+        function readTemplates() {
+            try {
+                var saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-templates') || '[]');
+                return Array.isArray(saved) ? saved.filter(function (x) { return x && typeof x.name === 'string' && x.settings; }) : [];
+            } catch (_) { return []; }
+        }
+        function renderTemplates(selected) {
+            var select = $('#sl-template-list'), templates = readTemplates();
+            select.empty().append($('<option>').val('').text('Choose a saved template…'));
+            templates.forEach(function (item) {
+                select.append($('<option>').val(item.name).text(item.name));
+            });
+            if (selected) select.val(selected);
+            $('#sl-template-load,#sl-template-delete').prop('disabled', !select.val());
+        }
+        function applyTemplate(saved) {
+            if (!saved || typeof saved !== 'object') return;
+            if (['a4', 'roll'].includes(saved.paper)) $('#sl-paper').val(saved.paper);
+            ['width', 'height', 'margin', 'gap', 'start'].forEach(function (key) {
+                if (Number.isFinite(saved[key])) $('#sl-' + key).val(saved[key]);
+            });
+            ['guides', 'date', 'mrp', 'shop'].forEach(function (key) {
+                if (typeof saved[key] === 'boolean') $('#sl-' + key).prop('checked', saved[key]);
+            });
+            ['mfg', 'exp'].forEach(function (key) {
+                if (typeof saved[key] === 'boolean') $('#' + key + '_checkbox').prop('checked', saved[key]);
+            });
+            if (typeof saved.barcode === 'boolean') $('#sl-show-barcode').prop('checked', saved.barcode);
+            if (typeof saved.barText === 'boolean') $('#sl-bar-text').prop('checked', saved.barText);
+            if (saved.design) {
+                var d = saved.design;
+                Object.entries({ font: 'font', fontSize: 'bar-fontSize', ink: 'line-color', background: 'background-color', format: 'barcodeLabelType', barWidth: 'bar-width', barHeight: 'bar-height', barMargin: 'bar-margin', textMargin: 'bar-text-margin', top: 'margin_top', bottom: 'margin_bottom', left: 'margin_left', right: 'margin_right' }).forEach(function (pair) {
+                    if (d[pair[0]] !== undefined) $('#' + pair[1]).val(d[pair[0]]);
+                });
+                if (['left', 'center', 'right'].includes(d.align)) $('.text-align').removeClass('btn-primary').filter('[value="' + d.align + '"]').addClass('btn-primary');
+                $('.font-option').each(function () { $(this).toggleClass('btn-primary', typeof d.fontOptions === 'string' && d.fontOptions.split(' ').includes(this.value)); });
+            }
+            refresh();
+        }
+        $(root.document).on('click', '#sl-template-save', function () {
+            try {
+                refresh();
+                var name = root.prompt('Name this label template:');
+                if (name === null) return;
+                name = String(name).trim().slice(0, 80);
+                if (!name) { $('#sl-status').text('Enter a template name.'); return; }
+                var templates = readTemplates(), existing = templates.findIndex(function (x) { return x.name.toLowerCase() === name.toLowerCase(); });
+                var current = JSON.parse(root.localStorage.getItem('posnic.shelf-label-layout') || 'null');
+                if (!current) throw Error('Adjust the label settings before saving a template.');
+                var record = { name: name, settings: current, updatedAt: new Date().toISOString() };
+                if (existing >= 0) {
+                    if (!root.confirm('Replace the saved template "' + templates[existing].name + '"?')) return;
+                    templates[existing] = record;
+                } else templates.push(record);
+                root.localStorage.setItem('posnic.shelf-label-templates', JSON.stringify(templates));
+                renderTemplates(name);
+                $('#sl-status').text('Template "' + name + '" saved in this browser.');
+            } catch (e) { error(e); }
+        });
+        $(root.document).on('change', '#sl-template-list', function () {
+            $('#sl-template-load,#sl-template-delete').prop('disabled', !this.value);
+        });
+        $(root.document).on('click', '#sl-template-load', function () {
+            var chosen = $('#sl-template-list').val(), item = readTemplates().find(function (x) { return x.name === chosen; });
+            if (!item) return;
+            applyTemplate(item.settings);
+            $('#sl-status').text('Loaded template "' + item.name + '".');
+        });
+        $(root.document).on('click', '#sl-template-delete', function () {
+            var chosen = $('#sl-template-list').val();
+            if (!chosen || !root.confirm('Delete the template "' + chosen + '"?')) return;
+            root.localStorage.setItem('posnic.shelf-label-templates', JSON.stringify(readTemplates().filter(function (x) { return x.name !== chosen; })));
+            renderTemplates();
+            $('#sl-status').text('Template deleted.');
+        });
+        $(root.document).on('shown.bs.modal', '#view_print_lable', function () { renderTemplates(); refresh(); });
         $(root.document).on('hidden.bs.modal', '#view_print_lable', function () { state.token++; state.loading = false; state.bulkLoading = false; clearTimeout(searchTimer); });
         $(root.document).on('change', '#sl-all', function () { if (this.checked) loadAll(); else clear(); });
         $(root.document).on('change', '#sl-page-all', function () { cancelBulk(); var selected = this.checked; state.entries.forEach(function (e) { if (state.viewIds.includes(String(e.item._id))) e.selected = selected; }); state.furthestStep = 0; renderRows(); });
