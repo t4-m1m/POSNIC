@@ -387,7 +387,12 @@
         reset();
         var itemName = String(item.name || '');
         var parsedName = itemName.match(/^(.*?)-([0-9]{2}-[0-9]{2})\/([^/]+)$/);
-        if (parsedName) {
+        if (item.article_type || item.brand_abbreviation || item.model_reference) {
+            el('type-name').value = item.article_type || '';
+            el('brand-abbr').value = item.brand_abbreviation || '';
+            el('reference-date').value = item.reference_date || (parsedName && parsedName[2]) || '';
+            el('reference').value = item.model_reference || (parsedName && parsedName[3]) || '';
+        } else if (parsedName) {
             var nameParts = parsedName[1].trim().split(/\s+/);
             el('type-name').value = nameParts.shift() || '';
             el('brand-abbr').value = nameParts.join(' ');
