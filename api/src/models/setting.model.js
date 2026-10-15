@@ -884,6 +884,19 @@ class SettingModel extends BaseModel {
         cleanTimezone = gmtOffsetMatch[1].trim();
       }
 
+      const purchaseExchangeRate = data.purchase_exchange_rate === undefined
+        ? undefined
+        : Number(data.purchase_exchange_rate);
+      const purchaseVatRate = data.purchase_vat_rate === undefined
+        ? undefined
+        : Number(data.purchase_vat_rate);
+      if (purchaseExchangeRate !== undefined && (!Number.isFinite(purchaseExchangeRate) || purchaseExchangeRate <= 0 || purchaseExchangeRate > 1e9)) {
+        return { status: false, data: null, message: 'Exchange rate must be greater than 0 and no more than 1,000,000,000 DZD per EUR.' };
+      }
+      if (purchaseVatRate !== undefined && (!Number.isFinite(purchaseVatRate) || purchaseVatRate < 0 || purchaseVatRate > 100)) {
+        return { status: false, data: null, message: 'Purchase TVA must be between 0 and 100 percent.' };
+      }
+
       const updateData = {
         ...require('../utils/branch-upi').update(data),
         branch_name: data.store_name?.trim() || '',
@@ -909,6 +922,8 @@ class SettingModel extends BaseModel {
         time_zone: cleanTimezone,
         printing_address: data.printing_address?.trim() || '',
         branch_gstin_number: data.branch_gstin_number || '',
+        ...(purchaseExchangeRate !== undefined ? { purchase_exchange_rate: purchaseExchangeRate } : {}),
+        ...(purchaseVatRate !== undefined ? { purchase_vat_rate: purchaseVatRate } : {}),
         ...ifSent('hardware_weight_machine_enable', hardware_weight_machine_enable),
         ...ifSent('till_lock_enable', till_lock_enable),
         ...ifSent('till_lock_idle_minutes', till_lock_idle_minutes),
@@ -974,6 +989,9 @@ class SettingModel extends BaseModel {
         };
       }
 
+      const persistedPurchaseSettings = await collection.findOne(filter, {
+        projection: { purchase_exchange_rate: 1, purchase_vat_rate: 1 },
+      });
       const country_state = {
         country: data.setting_country || '',
         state: data.setting_state || '',
@@ -1555,6 +1573,8 @@ class SettingModel extends BaseModel {
         indian_gst: data.indian_gst,
         receiving_prefix: data.receiving_prefix,
         branch_gstin_number: data.branch_gstin_number || '',
+        purchase_exchange_rate: Number(persistedPurchaseSettings?.purchase_exchange_rate) > 0 ? Number(persistedPurchaseSettings.purchase_exchange_rate) : 280,
+        purchase_vat_rate: Number.isFinite(Number(persistedPurchaseSettings?.purchase_vat_rate)) ? Number(persistedPurchaseSettings.purchase_vat_rate) : 9,
         roundOff: roundOff,
         receipt_barcode: barcode,
         stock_management: stockManagement,
