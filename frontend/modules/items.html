@@ -243,7 +243,18 @@
       </label>
       <button type="button" class="sl-button" id="sl-apply-element-style" disabled>Apply to selected</button>
      </div>
-     <p class="sl-muted">Templates are saved in this browser for this POS installation. Select one or more elements to adjust their typography and color.</p>
+     <div class="sl-row sl-custom-element-tools">
+      <label class="sl-field" for="sl-new-element-text">Add a text element
+       <input id="sl-new-element-text" class="sl-input" type="text" maxlength="120" placeholder="e.g. New collection">
+      </label>
+      <button type="button" class="sl-button" id="sl-add-text-element">Add text element</button>
+      <label class="sl-field" for="sl-selected-element-text">Selected text element content
+       <input id="sl-selected-element-text" class="sl-input" type="text" maxlength="120" placeholder="Select a custom text element">
+      </label>
+      <button type="button" class="sl-button" id="sl-apply-element-text" disabled>Apply text</button>
+      <button type="button" class="sl-button" id="sl-delete-custom-element" disabled>Delete selected text</button>
+     </div>
+     <p class="sl-muted">Templates are saved in this browser for this POS installation. Select one or more elements to adjust their typography and color, or add your own text fields. Custom text elements can be moved, resized, rotated, grouped, styled and saved in templates.</p>
      <p class="sl-muted">Drag an outlined field to move it, drag its blue corner handle to resize it, and use rotation and grouping controls to compose the label. Changes apply to printing and saved templates.</p>
     </div>
     <p class="sl-muted"><lang class="lang_match_these_dimensions_to_your_label_stock">Match these dimensions to your label stock before printing.</lang></p>
