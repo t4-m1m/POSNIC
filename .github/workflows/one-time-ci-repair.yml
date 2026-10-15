@@ -1,0 +1,90 @@
+name: One-time CI repair generation
+on:
+  push:
+    branches: [fix/ci-desktop-and-release]
+    paths:
+      - .github/workflows/one-time-ci-repair.yml
+      - .github/workflows/sync-main-to-develop.yml
+      - frontend/modules/items.html
+      - frontend/modules/items_v2.html
+      - frontend/static/script/js/core/shelf-labels.js
+      - api/**
+      - tests/tools/i18n-*.js
+      - .gitignore
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/ci-desktop-and-release
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Refresh generated translation catalogues and tags
+        run: |
+          node tests/tools/i18n-tag.js --write
+          node tests/tools/i18n-tag-js.js --write
+          node tests/tools/i18n-server-text.js --write
+      - name: Restore executable bits
+        run: |
+          chmod +x \
+            .githooks/commit-msg .githooks/pre-commit .githooks/security-audit.js \
+            .husky/pre-commit .husky/pre-push \
+            api/scripts/audit-module-keys.js api/scripts/audit-money.js api/scripts/check-ci-database.js \
+            api/scripts/extensions.cjs api/scripts/known-failures.js api/scripts/local-dev.js \
+            api/scripts/retro-link-variants.js api/scripts/ring-reload.sh api/scripts/smoke-restock.js \
+            api/scripts/test-local.js scripts/build-apt-repo.sh scripts/build-asset-bundle.js \
+            scripts/build-cdn-frontend.js scripts/check-advisories.js scripts/check-ai-attribution.js \
+            scripts/check-app-boots.js scripts/check-badges.js scripts/check-installed-app.js \
+            scripts/check-locally.js scripts/check-mongodb-binaries.js scripts/check-packaged-modules.js \
+            scripts/check-release-gate.js scripts/demo-image-sheet.js scripts/dev-server.js \
+            scripts/dev/build-audit-page.cjs scripts/dev/copy-dish-facts.cjs scripts/dev/serve-order.js \
+            scripts/dev/shoot.cjs scripts/fetch-demo-images.js scripts/generate-asset-keypair.js \
+            scripts/install-server.sh scripts/make-installer-art.js scripts/migrate-legacy-tenant.js \
+            scripts/module-defaults-backfill.js scripts/recover-access.js scripts/release-manifest.js \
+            scripts/sandbox/bootstrap.sh scripts/sandbox/reset.sh scripts/sandbox/seed.js \
+            scripts/scan-git-history.js scripts/tenant-audit.js \
+            tests/tools/check-translations.js tests/tools/dead-exports.js tests/tools/dead-selectors.js \
+            tests/tools/i18n-collisions.js tests/tools/i18n-coverage.js tests/tools/i18n-gaps.js \
+            tests/tools/i18n-load-time.js tests/tools/i18n-screen.js tests/tools/i18n-server-text.js \
+            tests/tools/i18n-tag-js.js tests/tools/i18n-tag.js tests/tools/seed-from-glossary.js \
+            api/scripts/ring-reload.sh scripts/build-apt-repo.sh scripts/install-server.sh \
+            scripts/sandbox/bootstrap.sh scripts/sandbox/reset.sh
+      - name: Fix ignore rule and missing-develop workflow guard
+        run: |
+          grep -qxF 'mongodb/bin/' .gitignore || printf '\nmongodb/bin/\n' >> .gitignore
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('.github/workflows/sync-main-to-develop.yml')
+          s = p.read_text()
+          old = '          git fetch origin main develop\n'
+          new = '''          if ! git ls-remote --exit-code --heads origin develop >/dev/null 2>&1; then
+            echo "The repository has no develop branch; sync is not applicable." >> "$GITHUB_STEP_SUMMARY"
+            echo "develop branch does not exist; skipping sync."
+            exit 0
+          fi
+          git fetch origin main develop
+          '''
+          if old in s and 'git ls-remote --exit-code --heads origin develop' not in s:
+              p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Check generated JavaScript syntax
+        run: |
+          git diff --name-only -- '*.js' '*.cjs' | while IFS= read -r file; do
+            [ -f "$file" ] && node --check "$file"
+          done
+      - name: Commit generated repairs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No generated repairs were needed."
+          else
+            git commit -m "fix: resolve desktop CI and translation catalogue failures"
+            git push origin HEAD:fix/ci-desktop-and-release
+          fi
