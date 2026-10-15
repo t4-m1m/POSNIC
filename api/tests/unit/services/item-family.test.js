@@ -86,8 +86,9 @@ describe('validation happens before creation', () => {
     );
     expect(r.status).toBe(false);
     expect(r.message).toContain('EXT-123');
-    expect(svc.calls).toHaveLength(0);
-  });
+      expect(svc.calls).toHaveLength(0);
+    }
+  );
 
   test('duplicate values and duplicate barcodes are refused up front', async () => {
     const svc = makeService();
