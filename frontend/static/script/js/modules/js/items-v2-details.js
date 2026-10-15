@@ -307,7 +307,10 @@
         el('type-name').value=''; el('brand-abbr').value=''; el('reference').value='';
         el('reference-date').value=currentYYMM(); el('name').value='';
         el('type-name').required=true; el('brand-abbr').required=true; el('reference').required=true;
-        el('cost-eur').value=''; el('exchange-rate').value='280'; el('purchase-vat').value='9';
+        el('cost-eur').value='';
+        var purchaseDefaults = readPurchaseSettings();
+        el('exchange-rate').value=String(purchaseDefaults.exchangeRate);
+        el('purchase-vat').value=String(purchaseDefaults.vatRate);
         updatePurchaseCost(); photoPicker(); P.itemTranslationsV2.reset();
     }
     function currentYYMM() { var d = new Date(); return String(d.getFullYear()).slice(-2) + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
@@ -320,10 +323,20 @@
         el('preview-name').textContent = full || label('lang_your_next_item', 'Your next item');
         notify();
     }
+    function readPurchaseSettings() {
+        try {
+            var saved = JSON.parse(root.localStorage.getItem('posnic.purchase-cost-settings') || '{}');
+            return {
+                exchangeRate: Number.isFinite(Number(saved.exchangeRate)) && Number(saved.exchangeRate) > 0 ? Number(saved.exchangeRate) : 280,
+                vatRate: Number.isFinite(Number(saved.vatRate)) && Number(saved.vatRate) >= 0 && Number(saved.vatRate) <= 100 ? Number(saved.vatRate) : 9
+            };
+        } catch (_) { return { exchangeRate: 280, vatRate: 9 }; }
+    }
     function updatePurchaseCost() {
         var eurRaw = el('cost-eur').value, eur = Number(eurRaw), rate = Number(el('exchange-rate').value), vat = Number(el('purchase-vat').value);
         if (!Number.isFinite(rate) || rate <= 0) rate = 280;
         if (!Number.isFinite(vat) || vat < 0 || vat > 100) vat = 9;
+        try { root.localStorage.setItem('posnic.purchase-cost-settings', JSON.stringify({ exchangeRate: rate, vatRate: vat })); } catch (_) {}
         if (eurRaw === '' || !Number.isFinite(eur) || eur < 0) {
             el('cost').value = '';
             el('purchase-cost-summary').textContent = 'Enter a purchase price in EUR to calculate the cost in DZD.';
