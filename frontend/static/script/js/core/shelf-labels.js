@@ -445,8 +445,10 @@
         function applyTemplate(saved) {
             if (!saved || typeof saved !== 'object') return;
             if (saved.elementLayout && typeof saved.elementLayout === 'object') {
-                state.elementLayout = saved.elementLayout;
-                try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(saved.elementLayout)); } catch (_) {}
+                try {
+                    root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(saved.elementLayout));
+                    state.elementLayout = readElementLayout();
+                } catch (_) {}
             }
             if (typeof saved.logoData === 'string' && /^data:image\/(png|jpeg|webp);base64,/i.test(saved.logoData)) {
                 try { root.localStorage.setItem('posnic.shelf-label-logo', saved.logoData); } catch (_) {}
