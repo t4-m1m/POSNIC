@@ -84,7 +84,8 @@
             var d = DEFAULT_ELEMENT_LAYOUT[key], v = saved[key] || {};
             function n(name) { var value = Number(v[name]); return Number.isFinite(value) ? value : d[name]; }
             var w = Math.max(5, Math.min(100, n('w'))), h = Math.max(5, Math.min(100, n('h')));
-            result[key] = { x: Math.max(0, Math.min(100 - w, n('x'))), y: Math.max(0, Math.min(100 - h, n('y'))), w: w, h: h };
+            var rotation = ((n('rotation') % 360) + 360) % 360;
+            result[key] = { x: Math.max(0, Math.min(100 - w, n('x'))), y: Math.max(0, Math.min(100 - h, n('y'))), w: w, h: h, rotation: rotation };
         });
         return result;
     }
@@ -96,6 +97,8 @@
         node.style.top = layout.y + '%';
         node.style.width = layout.w + '%';
         node.style.height = layout.h + '%';
+        node.style.transform = 'rotate(' + (Number(layout.rotation) || 0) + 'deg)';
+        node.style.transformOrigin = 'center center';
     }
     function label(doc, item, s, barcode) {
         if (!Number.isFinite(item.label_price)) throw Error(item.name + ': ' + (item.label_price_error || 'A fixed price is required.'));
@@ -547,6 +550,7 @@
             e.preventDefault();
             $('#sl-sample .sl-element').removeClass('sl-selected');
             $(this).addClass('sl-selected');
+            $('#sl-rotate-element').prop('disabled', false);
             var rect = label.getBoundingClientRect(), layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key];
             editorDrag = { key: key, mode: 'move', startX: e.clientX, startY: e.clientY, rect: rect, initial: Object.assign({}, layout) };
             if (this.setPointerCapture && e.pointerId !== undefined) { try { this.setPointerCapture(e.pointerId); } catch (_) {} }
@@ -556,9 +560,26 @@
             if (!key || !label) return;
             e.preventDefault(); e.stopPropagation();
             $('#sl-sample .sl-element').removeClass('sl-selected');
-            $(element).addClass('sl-selected');
+            var selectedElement = label.querySelector('[data-sl-element="' + key + '"]');
+            if (selectedElement) $(selectedElement).addClass('sl-selected');
+            $('#sl-rotate-element').prop('disabled', false);
             var layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key];
             editorDrag = { key: key, mode: 'resize', startX: e.clientX, startY: e.clientY, rect: label.getBoundingClientRect(), initial: Object.assign({}, layout) };
+        });
+        $(root.document).on('click', '#sl-rotate-element', function () {
+            var selected = document.querySelector('#sl-sample .sl-element.sl-selected');
+            var key = selected && selected.dataset.slElement;
+            if (!key || !state.elementLayout[key]) { $(this).prop('disabled', true); return; }
+            var layout = Object.assign({}, state.elementLayout[key]);
+            layout.rotation = (((Number(layout.rotation) || 0) + 90) % 360 + 360) % 360;
+            state.elementLayout[key] = layout;
+            selected.style.transform = 'rotate(' + layout.rotation + 'deg)';
+            selected.style.transformOrigin = 'center center';
+            try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
+            refresh();
+            var restored = document.querySelector('#sl-sample .sl-element[data-sl-element="' + key + '"]');
+            if (restored) restored.classList.add('sl-selected');
+            $('#sl-rotate-element').prop('disabled', !restored);
         });
         $(root.document).on('pointermove', function (e) {
             if (!editorDrag) return;
