@@ -41,7 +41,7 @@ function ephemeralSecret(name) {
     generated.set(name, crypto.randomBytes(32).toString('hex'));
 
     // Said once, so the reason for the sudden logouts is discoverable.
-    console.warn(
+    process.emitWarning(
       `[config] ${name} is not set. Using a random value for this process only; ` +
         `sessions will not survive a restart. Set ${name} to fix this.`
     );

@@ -47,10 +47,6 @@ const signToken = (id, version = 0) => {
 const createSendToken = (user, statusCode, res) => {
   const token = signToken(user._id, authVersion.version(user));
   authVersion.stampSession(res.req, user);
-  const cookieOptions = authCookieOptions({
-    expires: new Date(Date.now() + cookieDays() * 24 * 60 * 60 * 1000),
-  });
-
   // Remove password from output
   user.password = undefined;
 
@@ -78,51 +74,15 @@ const getTokenFromRequest = (req) => {
 };
 
 const createAndSendToken = async (user, statusCode, res, req) => {
-  // 🔍 SIMPLE DEBUG - Check if this function is called
-  console.log('🔥 createAndSendToken called!');
-  console.log('🔥 User:', user?.email);
-  console.log('🔥 Status:', statusCode);
-  console.log('🔥 req exists:', !!req);
-
   const token = signToken(user._id, authVersion.version(user));
   authVersion.stampSession(req, user);
 
-  // 🔍 SESSION CREATION DEBUG - ADD THIS
-  console.log('=======================');
-
-  // 1. Check user authentication
-  console.log('📋 1. User Authentication:');
-  console.log('req.user exists:', !!req?.user);
-  console.log('user parameter exists:', !!user);
-  if (user) {
-    console.log('User email:', user.email);
-    console.log('User ID:', user._id);
-    console.log('User access:', JSON.stringify(user.access, null, 2));
-  } else {
-  }
-
-  // 2. Check permission
-  console.log('\n📋 2. Permission Check:');
   const hasPermission = !!(
     user &&
     user.access &&
     user.access.sales &&
     user.access.sales.session_filter === true
   );
-  console.log('Has session filter permission:', hasPermission);
-
-  if (!hasPermission) {
-    console.log(
-      '💡 Fix with: db.users.updateOne({email:"' +
-        (user?.email || 'user@example.com') +
-        '"}, {$set: {"access.sales.session_filter": true}})'
-    );
-  }
-
-  // 3. Check database connection
-  console.log('\n📋 3. Database Connection:');
-  console.log('req.db exists:', !!req?.db);
-  console.log('req.app.locals.mongoClient exists:', !!req?.app?.locals?.mongoClient);
 
   let db = req?.db;
   if (!db && req?.app?.locals?.mongoClient) {
@@ -131,14 +91,8 @@ const createAndSendToken = async (user, statusCode, res, req) => {
     db = mongoClient.db(dbName);
   }
 
-  if (!db) {
-    console.log('💡 Fix: Add to app.js -> app.locals.mongoClient = mongoClient;');
-  }
-
   // 4. Try session creation (only if has permission and database available)
   if (hasPermission && db) {
-    console.log('\n📋 4. Session Creation:');
-
     try {
       const { ObjectId } = require('mongodb');
       const loginTime = new Date();
@@ -158,24 +112,18 @@ const createAndSendToken = async (user, statusCode, res, req) => {
         created_date: loginTime,
       };
 
-      console.log('Session data prepared:', JSON.stringify(sessionData, null, 2));
-
       const userSessionsCollection = db.collection('user_sessions');
 
       // Mark previous sessions inactive
-      const updateResult = await userSessionsCollection.updateMany(
+      await userSessionsCollection.updateMany(
         { user_id: sessionData.user_id, is_active: true },
         { $set: { is_active: false } }
       );
-      console.log('Previous sessions marked inactive:', updateResult.modifiedCount);
-
       // Check existing session
       const existingSession = await userSessionsCollection.findOne({
         user_id: sessionData.user_id,
         logout_time: null,
       });
-
-      let sessionRecordId;
 
       if (existingSession) {
         // Reactivate existing
@@ -191,8 +139,6 @@ const createAndSendToken = async (user, statusCode, res, req) => {
           }
         );
 
-        sessionRecordId = existingSession._id;
-
         // Set session data
         if (req.session) {
           req.session.PosnicPro = {
@@ -204,8 +150,6 @@ const createAndSendToken = async (user, statusCode, res, req) => {
       } else {
         // Create new
         const result = await userSessionsCollection.insertOne(sessionData);
-        sessionRecordId = result.insertedId;
-
         // Set session data
         if (req.session) {
           req.session.PosnicPro = {
@@ -216,29 +160,10 @@ const createAndSendToken = async (user, statusCode, res, req) => {
         }
       }
 
-      // Verify record
-      const createdRecord = await userSessionsCollection.findOne({
-        _id: sessionRecordId,
-      });
-
-      if (createdRecord) {
-        console.log(JSON.stringify(createdRecord, null, 2));
-      } else {
-      }
-
-      console.log('\n🎉 SESSION CREATION SUCCESS!');
     } catch (error) {
-      console.log('Stack:', error.stack);
-    }
-  } else {
-    console.log('\n📋 4. No Session Creation:');
-    if (!hasPermission) {
-    }
-    if (!db) {
+      process.emitWarning(`Could not persist the login session record: ${error.message}`);
     }
   }
-
-  console.log('=======================\n');
 
   // Set cookie
   const cookieOptions = authCookieOptions({

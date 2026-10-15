@@ -32,7 +32,7 @@ const getApiKeys = () => {
     try {
       return JSON.parse(apiKeysEnv);
     } catch (error) {
-      console.error('Failed to parse API_KEYS environment variable', error);
+      process.emitWarning(`Failed to parse API_KEYS environment variable: ${error.message}`);
     }
   }
 
