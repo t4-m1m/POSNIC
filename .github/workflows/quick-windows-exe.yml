@@ -15,6 +15,7 @@ on:
       - "frontend/static/script/js/modules/js/sales.js"
       - "api/src/controllers/receivings.controller.js"
       - "api/src/models/setting.model.js"
+      - "api/src/repositories/item.repository.js"
       - "api/src/utils/purchase-cost.js"
 
 permissions:
