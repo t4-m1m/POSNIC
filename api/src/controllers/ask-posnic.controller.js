@@ -370,7 +370,11 @@ class AskPosnicController {
       if (intent === 'unknown' || help) {
         await require('../services/ask-posnic-knowledge-sync.service')
           .sync(req)
-          .catch((error) => process.emitWarning(`[ask-posnic] published knowledge sync unavailable: ${error.message}`));
+          .catch((error) =>
+            process.emitWarning(
+              `[ask-posnic] published knowledge sync unavailable: ${error.message}`
+            )
+          );
         let matches = await platform.retrieve(req, question);
         let answer;
         let reason;
@@ -674,7 +678,9 @@ class AskPosnicController {
       await platform.audit(req, 'question', { intent, period, report: answer.source });
       return res.json({ type: 'success', message: 'Answer', data });
     } catch (error) {
-      process.emitWarning(`Ask Posnic request failed: ${error.stack || error.message}`);
+      process.emitWarning(
+        `Ask Posnic request failed: ${error.stack || error.message}`
+      );
       if ([400, 403].includes(error.statusCode))
         return res
           .status(error.statusCode)
