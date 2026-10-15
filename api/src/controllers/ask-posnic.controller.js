@@ -17,7 +17,6 @@ const scheduleRunner = require('../services/ask-posnic-runner.service');
 const outletInsights = require('../services/ask-posnic-outlet-insights.service');
 const reorder = require('../services/ask-posnic-reorder.service');
 const { excerptAnswer } = require('../services/ask-posnic-retrieval');
-const { logger } = require('../utils/logger');
 
 function requireReorderAccess(req, preferences) {
   if (
@@ -371,7 +370,7 @@ class AskPosnicController {
       if (intent === 'unknown' || help) {
         await require('../services/ask-posnic-knowledge-sync.service')
           .sync(req)
-          .catch((error) => logger.warn('[ask-posnic] published knowledge sync unavailable', { error: error.message }));
+          .catch((error) => process.emitWarning(`[ask-posnic] published knowledge sync unavailable: ${error.message}`));
         let matches = await platform.retrieve(req, question);
         let answer;
         let reason;
@@ -675,7 +674,7 @@ class AskPosnicController {
       await platform.audit(req, 'question', { intent, period, report: answer.source });
       return res.json({ type: 'success', message: 'Answer', data });
     } catch (error) {
-      logger.error('Ask Posnic request failed.', { error: error.message, stack: error.stack });
+      process.emitWarning(`Ask Posnic request failed: ${error.stack || error.message}`);
       if ([400, 403].includes(error.statusCode))
         return res
           .status(error.statusCode)
