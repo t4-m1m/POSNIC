@@ -54,7 +54,7 @@
             ';font-weight:' + (s.fontOptions?.includes('bold') ? '700' : '400') + ';font-style:' + (s.fontOptions?.includes('italic') ? 'italic' : 'normal') +
             ';color:' + s.ink + ';background:' + s.background + ';print-color-adjust:exact;-webkit-print-color-adjust:exact}' +
             '.sl-label .sl-element{position:absolute;margin:0;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center;line-height:1.15;overflow-wrap:anywhere}' +
-            '.sl-name{font-weight:600}.sl-price{font-weight:700;font-size:220%}.sl-barcode{display:block;max-width:100%;max-height:100%;}' +
+            '.sl-name{font-weight:600}.sl-logo{object-fit:contain}.sl-price{font-weight:700;font-size:220%}.sl-barcode{display:block;max-width:100%;max-height:100%;}' +
             '.sl-foot{font-size:75%;white-space:pre-line}.sl-design-editable .sl-element{outline:1px dashed #2563eb;cursor:move;touch-action:none}' +
             '.sl-design-editable .sl-element.sl-selected{outline:2px solid #ef4444;z-index:20;overflow:visible}' +
             '.sl-resize-handle{position:absolute;width:12px;height:12px;border:2px solid white;border-radius:2px;background:#2563eb;cursor:nwse-resize;z-index:21;transform:translate(-50%,-50%);touch-action:none}';
@@ -64,11 +64,18 @@
         if (!Number.isFinite(s.fontSize) || s.fontSize < 3 || s.fontSize > 36) throw Error('Choose a font size between 3 and 36.');
     }
     var DEFAULT_ELEMENT_LAYOUT = {
-        name: { x: 5, y: 4, w: 90, h: 18 },
+        name: { x: 4, y: 4, w: 70, h: 18 },
+        logo: { x: 76, y: 2, w: 20, h: 20 },
         barcode: { x: 10, y: 24, w: 80, h: 38 },
         price: { x: 5, y: 65, w: 90, h: 23 },
         details: { x: 5, y: 89, w: 90, h: 10 }
     };
+    function readLogoData() {
+        try {
+            var value = root.localStorage.getItem('posnic.shelf-label-logo') || '';
+            return /^data:image\/(png|jpeg|webp);base64,/i.test(value) ? value : '';
+        } catch (_) { return ''; }
+    }
     function readElementLayout() {
         var saved = {};
         try { saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-elements') || '{}') || {}; } catch (_) {}
@@ -98,6 +105,10 @@
             var p = doc.createElement('p'); p.className = (cls || '') + ' sl-element'; p.textContent = value;
             applyElementLayout(p, key, s); div.appendChild(p); return p;
         }
+        if (s.logoData) {
+            var logo = doc.createElement('img'); logo.className = 'sl-logo sl-element'; logo.alt = 'Store logo';
+            logo.src = s.logoData; applyElementLayout(logo, 'logo', s); div.appendChild(logo);
+        }
         text(item.name, 'sl-name', 'name');
         if (s.barcode !== false) {
             var svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('sl-barcode');
@@ -109,6 +120,7 @@
         }
         text(s.currency + ' ' + item.label_price.toFixed(item.label_currency_digits ?? 2), 'sl-price', 'price');
         var details = [];
+        if (item.variant_value && !String(item.name || '').includes(String(item.variant_value))) details.push('Variant ' + String(item.variant_value));
         if (s.mrp && Number(item.mrp_price) > 0) details.push('MRP ' + s.currency + ' ' + Number(item.mrp_price).toFixed(item.label_currency_digits ?? 2));
         if (s.mfg && item.items_mfg_date) details.push('MFG ' + String(item.items_mfg_date).split(' ')[0]);
         if (s.exp && item.items_expiry_date) details.push('EXP ' + String(item.items_expiry_date).split(' ')[0]);
@@ -143,6 +155,7 @@
     function settings() {
         var s = {
             elementLayout: state.elementLayout || readElementLayout(),
+            logoData: readLogoData(),
             paper: $('#sl-paper').val(), width: Number($('#sl-width').val()), height: Number($('#sl-height').val()),
             margin: Number($('#sl-margin').val()), gap: Number($('#sl-gap').val()), start: Number($('#sl-start').val()), guides: $('#sl-guides').is(':checked'),
             font: $('#font').val(), fontSize: Number($('#bar-fontSize').val()), align: $('#view_print_lable .text-align.btn-primary').val() || 'center',
@@ -226,7 +239,7 @@
         try {
             var s = settings(), g = geometry(s), amount = Number($('#sl-batch').val()), from = Number($('#sl-from').val());
             $('#sl-start').attr('max', g.capacity); $('#sl-dimensions').text(s.width + ' × ' + s.height + ' mm');
-            try { root.localStorage.setItem('posnic.shelf-label-layout', JSON.stringify({ paper: s.paper, width: s.width, height: s.height, margin: s.margin, gap: s.gap, start: s.start, guides: s.guides, barcode: s.barcode, barText: s.barText, shop: !!s.shop, date: s.date, mrp: s.mrp, mfg: s.mfg, exp: s.exp, elementLayout: s.elementLayout,
+            try { root.localStorage.setItem('posnic.shelf-label-layout', JSON.stringify({ paper: s.paper, width: s.width, height: s.height, margin: s.margin, gap: s.gap, start: s.start, guides: s.guides, barcode: s.barcode, barText: s.barText, shop: !!s.shop, date: s.date, mrp: s.mrp, mfg: s.mfg, exp: s.exp, elementLayout: s.elementLayout, logoData: s.logoData,
                 design: { font: s.font, fontSize: s.fontSize, align: s.align, ink: s.ink, background: s.background, format: s.format, barWidth: s.barWidth, barHeight: s.barHeight, barMargin: s.barMargin, textMargin: s.textMargin, top: s.top, bottom: s.bottom, left: s.left, right: s.right, fontOptions: s.fontOptions } })); } catch (_) { /* Optional storage. */ }
             if (state.step === 1) {
                 var sampleGeometry = geometry(Object.assign({}, s, { paper: 'roll' }));
@@ -435,6 +448,11 @@
                 state.elementLayout = saved.elementLayout;
                 try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(saved.elementLayout)); } catch (_) {}
             }
+            if (typeof saved.logoData === 'string' && /^data:image\/(png|jpeg|webp);base64,/i.test(saved.logoData)) {
+                try { root.localStorage.setItem('posnic.shelf-label-logo', saved.logoData); } catch (_) {}
+            } else {
+                try { root.localStorage.removeItem('posnic.shelf-label-logo'); } catch (_) {}
+            }
             if (['a4', 'roll'].includes(saved.paper)) $('#sl-paper').val(saved.paper);
             ['width', 'height', 'margin', 'gap', 'start'].forEach(function (key) {
                 if (Number.isFinite(saved[key])) $('#sl-' + key).val(saved[key]);
@@ -476,6 +494,33 @@
                 renderTemplates(name);
                 $('#sl-status').text('Template "' + name + '" saved in this browser.');
             } catch (e) { error(e); }
+        });
+        $(root.document).on('change', '#sl-logo-file', function () {
+            var file = this.files && this.files[0];
+            if (!file) return;
+            if (!/^image\/(png|jpeg|webp)$/i.test(file.type) || file.size > 1024 * 1024) {
+                this.value = '';
+                $('#sl-status').text('Choose a PNG, JPEG or WebP logo smaller than 1 MB.');
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function () {
+                try {
+                    if (typeof reader.result !== 'string' || !/^data:image\/(png|jpeg|webp);base64,/i.test(reader.result)) throw Error('Could not read the logo image.');
+                    root.localStorage.setItem('posnic.shelf-label-logo', reader.result);
+                    state.elementLayout = state.elementLayout || readElementLayout();
+                    refresh();
+                    $('#sl-status').text('Store logo added to the label design.');
+                } catch (e) { $('#sl-status').text(e.message || 'Could not save the logo.'); }
+            };
+            reader.onerror = function () { $('#sl-status').text('Could not read the logo image.'); };
+            reader.readAsDataURL(file);
+        });
+        $(root.document).on('click', '#sl-logo-remove', function () {
+            try { root.localStorage.removeItem('posnic.shelf-label-logo'); } catch (_) {}
+            $('#sl-logo-file').val('');
+            refresh();
+            $('#sl-status').text('Store logo removed.');
         });
         $(root.document).on('change', '#sl-template-list', function () {
             $('#sl-template-load,#sl-template-delete').prop('disabled', !this.value);
