@@ -83,3 +83,22 @@
     </div>
   </div>
 </div>
+
+<style id="iv2-simplified-item-form">
+/* Keep legacy values in the form model for compatibility, but remove low-value
+   fields from the day-to-day item creation experience. The primary barcode and
+   existing variant controls remain available. */
+#items_v2 #iv2-tab-languages,
+#items_v2 #iv2-panel-languages,
+#items_v2 #iv2-section-select option[value="languages"],
+#items_v2 #iv2-tax-extra,
+#items_v2 #iv2-channels-extra,
+#items_v2 #iv2-pricing-extra .iv2-grid > div:has(#iv2-reorder),
+#items_v2 #iv2-details-extra .iv2-grid > div:has(#iv2-mfg),
+#items_v2 #iv2-details-extra .iv2-grid > div:has(#iv2-expiry),
+#items_v2 #iv2-codes .iv2-grid > div:has(#iv2-sku),
+#items_v2 #iv2-codes .iv2-grid > div:has(#iv2-gtin),
+#items_v2 #iv2-codes .iv2-grid > div:has(#iv2-alt-barcodes) {
+  display: none !important;
+}
+</style>
