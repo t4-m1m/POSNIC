@@ -339,7 +339,16 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
     const config = loadReceiptSettings();
     const paperKey = String(options.paperWidth || config.paperWidth || '80mm').replace(/mm$/i, '');
     const paperWidth = ['58', '80', '112'].includes(paperKey) ? paperKey : '80';
-    const mergedSale = { storeName: config.storeName, storeAddress: config.storeAddress, storePhone: config.storePhone, storeEmail: config.storeEmail, title: config.receiptTitle, footer: config.footer, ...sale };
+    const mergedSale = { ...sale,
+      storeName: config.storeName || sale.storeName || '',
+      storeAddress: config.storeAddress || sale.storeAddress || '',
+      storePhone: config.storePhone || sale.storePhone || '',
+      storeEmail: config.storeEmail || sale.storeEmail || '',
+      title: config.receiptTitle || sale.title || 'SALE RECEIPT',
+      footer: config.footer || sale.footer || '',
+      cashier: config.showCashier ? (sale.cashier || '') : '',
+      customer: config.showCustomer ? (sale.customer || []) : [],
+      branch: config.showBranch ? (sale.branch || '') : '' };
     return parse(render(mergedSale || {}, { paperWidth, cut: false }), WIDTHS[paperWidth]);
   });
 
@@ -352,7 +361,16 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
     try {
       const { render } = require('./tysoo-prp300-receipt');
       const config = loadReceiptSettings();
-      const receiptSale = { storeName: config.storeName, storeAddress: config.storeAddress, storePhone: config.storePhone, storeEmail: config.storeEmail, title: config.receiptTitle, footer: config.footer, ...sale };
+      const receiptSale = { ...sale,
+        storeName: config.storeName || sale.storeName || '',
+        storeAddress: config.storeAddress || sale.storeAddress || '',
+        storePhone: config.storePhone || sale.storePhone || '',
+        storeEmail: config.storeEmail || sale.storeEmail || '',
+        title: config.receiptTitle || sale.title || 'SALE RECEIPT',
+        footer: config.footer || sale.footer || '',
+        cashier: config.showCashier ? (sale.cashier || '') : '',
+        customer: config.showCustomer ? (sale.customer || []) : [],
+        branch: config.showBranch ? (sale.branch || '') : '' };
       const { normalizeTargets, columnsFor } = require('./printer-targets');
       // PRP-300 is an 80mm printer. Keep that as the default while still
       // respecting an explicitly configured printer/paper target.
