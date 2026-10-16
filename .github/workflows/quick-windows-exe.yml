@@ -46,6 +46,8 @@ on:
       - "frontend/static/script/js/core/receipt-data.js"
       - "frontend/static/script/js/core/shelf-labels.js"
       - "src/hardware-manager.js"
+      - "src/hardware-ipc.js"
+      - "src/escpos-unicode.js"
       - "src/windows-spooler.js"
       - "src/escpos-report.js"
       - "src/escpos-receipt.js"
