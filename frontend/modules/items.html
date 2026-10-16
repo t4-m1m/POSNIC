@@ -19,7 +19,6 @@
                 -->
                 <div class="col-auto text-right">
                     <div class="widgetbar">
-                        <button type="button" class="btn btn-primary" id="open_minimal_label_designer" onclick="PosnicShelfLabels.open();"><i class="feather icon-printer mr-2"></i><span>Custom labels · Print batch</span></button>
                         <a class="btn btn-outline-primary" href="#/itemsettings"><i class="feather icon-settings mr-2"></i><lang class="lang_item_settings">Item settings</lang></a>
                         <a data-module="item" data-access="write" href="#/items" class="btn btn-primary-rgba"
                             onclick="PosnicPro.importTableFile('items'); return false;"
@@ -45,6 +44,7 @@
                                 <i class="feather icon-tool mr-2"></i><lang class="lang_tools">Tools</lang>
                             </button>
                             <div class="dropdown-menu dropdown-menu-right">
+                                <a class="dropdown-item" href="javascript:void(0)" onclick="PosnicShelfLabels.open(); return false;"><i class="feather icon-printer mr-2"></i>Design &amp; print labels</a>
                                 <a class="dropdown-item" href="javascript:void(0)" onclick="PosnicPro.items.openBulkPrice(); return false;"><i class="feather icon-trending-up mr-2"></i><lang class="lang_bulk_price_update">Bulk price update</lang></a>
                                 <a class="dropdown-item" href="javascript:void(0)" onclick="PosnicPro.items.openStockAdjustment(); return false;"><i class="feather icon-sliders mr-2"></i><lang class="lang_stock_adjust_title">Stock adjustment</lang></a>
                                 <a class="dropdown-item" href="javascript:void(0)" onclick="PosnicPro.items.openBulkStock(); return false;"><i class="feather icon-layers mr-2"></i><lang class="lang_bulk_stock_update">Bulk stock update</lang></a>
@@ -181,31 +181,25 @@
     <p id="sl-product-note" class="sl-muted" style="margin-top:12px"></p>
    </section>
    <section class="sl-panel" data-sl-panel="1" hidden><h3><lang class="lang_choose_label_layout">Choose label layout</lang></h3><div class="sl-two-col"><div class="sl-options">
-    <label class="sl-field"><lang class="lang_paper_format">Paper format</lang><select id="sl-paper" class="sl-input"><option value="a4"><lang class="lang_a4_sheet_multiple_labels">A4 sheet · multiple labels</lang></option><option value="roll"><lang class="lang_label_roll_one_label_per_page">Label roll · one label per page</lang></option></select></label>
-    <label class="sl-check" hidden=""><input id="sl-samarina-mode" type="checkbox" checked="" disabled=""> SAMA life RIMA · fixed variant label</label>
+    <label class="sl-field"><lang class="lang_paper_format">Paper format</lang><select id="sl-paper" class="sl-input"><option value="roll" selected><lang class="lang_label_roll_one_label_per_page">Label roll · one label per page</lang></option><option value="a4"><lang class="lang_a4_sheet_multiple_labels">A4 sheet · multiple labels</lang></option></select></label>
     <div class="sl-fields"><label class="sl-field"><lang class="lang_label_width_mm">Label width (mm)</lang><input id="sl-width" class="sl-input" type="number" value="45" min="15" max="210" step="0.1"></label><label class="sl-field"><lang class="lang_label_height_mm">Label height (mm)</lang><input id="sl-height" class="sl-input" type="number" value="30" min="15" max="297" step="0.1"></label></div>
     <div id="sl-a4-settings" class="sl-fields"><label class="sl-field"><lang class="lang_sheet_margin_mm">Sheet margin (mm)</lang><input id="sl-margin" class="sl-input" type="number" value="5" min="0" step="0.5"></label><label class="sl-field"><lang class="lang_gap_between_labels_mm">Gap between labels (mm)</lang><input id="sl-gap" class="sl-input" type="number" value="2" min="0" step="0.5"></label><label class="sl-field"><lang class="lang_start_at_label_position">Start at label position</lang><input id="sl-start" class="sl-input" type="number" value="1" min="1"></label></div>
     <div class="sl-minimal-editor">
      <h4 class="sl-editor-title">Label content</h4>
      <p class="sl-muted">Start with a blank label, then add only the fields you need. Each field reads live data from the selected article/variant.</p>
-     <label class="sl-check sl-blank-toggle"><input id="sl-blank-label" type="checkbox"> Start with a blank label</label>
      <div class="sl-element-shortcuts" aria-label="Add automatic article fields">
-      <button type="button" class="sl-button sl-element-toggle" data-sl-field="logo">+ Logo</button>
       <button type="button" class="sl-button sl-element-toggle" data-sl-field="variant_values">+ Variants</button>
       <button type="button" class="sl-button sl-element-toggle" data-sl-field="name">+ Article name</button>
       <button type="button" class="sl-button sl-element-toggle" data-sl-field="brand">+ Brand abbreviation</button>
       <button type="button" class="sl-button sl-element-toggle" data-sl-field="reference">+ MM-YY / reference</button>
       <button type="button" class="sl-button sl-element-toggle" data-sl-field="barcode">+ Barcode</button>
      </div>
-     <label class="sl-field" for="sl-logo-file">Upload / replace logo<input id="sl-logo-file" class="sl-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"></label>
-     <button type="button" class="sl-button" id="sl-logo-remove">Remove logo</button>
      <div class="sl-row sl-minimal-controls">
       <label class="sl-field">Font size (px)<input id="bar-fontSize" class="sl-input" type="number" value="12" min="3" max="36"></label>
       <label class="sl-field">Text colour<input id="line-color" class="sl-input" type="color" value="#000000"></label>
       <label class="sl-field">Background<input id="background-color" class="sl-input" type="color" value="#ffffff"></label>
      </div>
      <div class="sl-field"><span>Alignment</span><div class="sl-align"><button type="button" class="sl-button text-align" value="left">Left</button><button type="button" class="sl-button text-align btn-primary" value="center">Center</button><button type="button" class="sl-button text-align" value="right">Right</button></div></div>
-     <div class="sl-row"><label class="sl-field">Custom text (optional)<input id="sl-new-element-text" class="sl-input" type="text" maxlength="120" placeholder="Add a fixed text"></label><button type="button" class="sl-button" id="sl-add-text-element">Add text</button></div>
      <p class="sl-muted">Drag fields in the preview to move them. Use the blue corner to resize. Changes are saved for this POS profile.</p>
      <div hidden aria-hidden="true">
       <label><input id="sl-guides" type="checkbox">Cutting guides</label><label><input id="sl-show-barcode" type="checkbox" checked>Barcode</label><label><input id="sl-bar-text" type="checkbox" checked>Barcode number</label>
@@ -214,9 +208,7 @@
       <input id="margin_top" value="0"><input id="margin_bottom" value="0"><input id="margin_left" value="0"><input id="margin_right" value="0">
       <input id="mfg_checkbox" type="checkbox"><input id="exp_checkbox" type="checkbox"><textarea id="address-value"></textarea>
       <input id="sl-mrp" type="checkbox"><input id="sl-shop" type="checkbox"><input id="sl-date" type="checkbox">
-      <input id="sl-element-font-size" value="100"><select id="sl-element-font-weight"><option value="normal">Normal</option></select><select id="sl-element-text-align"><option value="center">Center</option></select><input id="sl-element-color" type="color" value="#000000">
-      <input id="sl-selected-element-text"><button type="button" id="sl-apply-element-style"></button><button type="button" id="sl-apply-element-text"></button><button type="button" id="sl-delete-custom-element"></button><button type="button" id="sl-rotate-element"></button><button type="button" id="sl-group-elements"></button><button type="button" id="sl-ungroup-elements"></button><button type="button" id="sl-template-save"></button><select id="sl-template-list"><option value=""></option></select><button type="button" id="sl-template-load"></button><button type="button" id="sl-template-delete"></button>
-     </div>
+      </div>
     </div>
     <p class="sl-muted"><lang class="lang_match_these_dimensions_to_your_label_stock">Match these dimensions to your label stock before printing.</lang></p>
    </div><div><h3><lang class="lang_sample_label">Sample label</lang></h3><div class="sl-sample-area"><div id="sl-sample" class="sl-preview-host"></div></div><div id="sl-dimensions" class="sl-dimensions"></div></div></div></section>

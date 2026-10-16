@@ -2645,7 +2645,7 @@ PosnicPro = {
     },
 
     showAddModal: function (page) {
-        $(".infobar-settings-sidebar-overlay").css({ "background": "rgba(0,0,0,0.4)", "position": "fixed" });
+        $(".infobar-settings-sidebar-overlay").addClass("is-active").css({ "background": "rgba(0,0,0,0.4)", "position": "fixed" });
         $("#infobar-settings-sidebar-" + page).addClass("sidebarshow");
     },
 
@@ -5897,8 +5897,13 @@ $(document).on('keydown.infobarEscape', function (e) {
     if (!$open.length) return;
     $open.last().find('.infobar-settings-close').first().trigger('click');
 });
+$(document).on('click.infobarOverlay', '.infobar-settings-sidebar-overlay', function () {
+    var $open = $('.infobar-settings-sidebar.sidebarshow, .infobar-settings-sidebar.sidebarview');
+    if ($open.length) $open.last().find('.infobar-settings-close').first().trigger('click');
+});
 
 $(".infobar-settings-close").on("click", function (e) {
+    $(".infobar-settings-sidebar-overlay").removeClass("is-active").css({ "background": "transparent", "position": "initial" });
     var category = 'sales/categories/new';
     if (currentHash === category) {
         hasher.changed.active = true;

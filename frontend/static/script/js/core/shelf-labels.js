@@ -120,7 +120,6 @@
         node.style.justifyContent = layout.text_align === 'left' ? 'flex-start' : layout.text_align === 'right' ? 'flex-end' : 'center';
     }
     function label(doc, item, s, barcode) {
-        if (!s.samarina && !Number.isFinite(item.label_price)) throw Error(item.name + ': ' + (item.label_price_error || 'A fixed price is required.'));
         if (s.barcode !== false && !item.barcode_id) throw Error(item.name + ': ' + t('lang_sl_barcode_missing', 'No barcode is stored for this item.'));
         var div = doc.createElement('div'); div.className = 'sl-label';
         function text(value, cls, key) {
@@ -207,18 +206,16 @@
         return page;
     }
     var state = { entries: [], byId: new Map(), viewIds: [], filters: {}, step: 0, furthestStep: 0, page: 0, productPage: 1, totalPages: 1, total: 0, loading: false, bulkLoading: false, token: 0, loadError: null, completeKey: null };
-    state.elementLayout = readElementLayout();
-    // Fresh installs start from a truly empty canvas. One-time migration removes
-    // legacy designer presets/layout options so they cannot silently reappear.
+    // Start blank and clear every saved preset from the retired designer.
     try {
-        if (root.localStorage.getItem('posnic.shelf-label-minimal-v2') !== '1') {
+        if (root.localStorage.getItem('posnic.shelf-label-minimal-v3') !== '1') {
             ['posnic.shelf-label-layout', 'posnic.shelf-label-elements',
-             'posnic.shelf-label-enabled-fields', 'posnic.shelf-label-templates'].forEach(function (key) {
-                root.localStorage.removeItem(key);
-            });
-            root.localStorage.setItem('posnic.shelf-label-minimal-v2', '1');
+             'posnic.shelf-label-enabled-fields', 'posnic.shelf-label-templates',
+             'posnic.shelf-label-logo'].forEach(function (key) { root.localStorage.removeItem(key); });
+            root.localStorage.setItem('posnic.shelf-label-minimal-v3', '1');
         }
     } catch (_) {}
+    state.elementLayout = readElementLayout();
     var DEFAULT_ENABLED_FIELDS = [];
     function readEnabledFields() {
         try {
@@ -247,9 +244,9 @@
         var s = {
             elementLayout: state.elementLayout || readElementLayout(),
             enabledFields: state.enabledFields || readEnabledFields(),
-            logoData: readLogoData(),
+            logoData: '',
             paper: $('#sl-paper').val(), width: Number($('#sl-width').val()), height: Number($('#sl-height').val()),
-            samarina: true,
+            samarina: false,
             margin: Number($('#sl-margin').val()), gap: Number($('#sl-gap').val()), start: Number($('#sl-start').val()), guides: $('#sl-guides').is(':checked'),
             font: $('#font').val(), fontSize: Number($('#bar-fontSize').val()), align: $('#view_print_lable .text-align.btn-primary').val() || 'center',
             fontOptions: $('#view_print_lable .font-option.btn-primary').map(function () { return this.value; }).get().join(' '),
@@ -474,12 +471,8 @@
         // The wizard owns its visible search/category filters. Tenant scope remains enforced by the Items API.
         state.filters = {};
         state.elementLayout = readElementLayout();
-        if ($('#sl-samarina-mode').is(':checked')) {
-            $('#sl-paper').val('roll'); $('#sl-width').val(45); $('#sl-height').val(30);
-            $('#sl-show-barcode,#sl-bar-text').prop('checked', true);
-        }
         $('#sl-search').val(''); $('#sl-category').val(''); $('#sl-from').val(1); $('#sl-batch').val(2000); $('#sl-copies').val(1);
-        $('#sl-width').val(Math.round(Number($('#document_width').val()) * 25.4 * 10) / 10); $('#sl-height').val(Math.round(Number($('#document_height').val()) * 25.4 * 10) / 10);
+        $('#sl-width').val(45); $('#sl-height').val(30); $('#sl-paper').val('roll');
         try {
             var saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-layout') || 'null');
             if (saved) {
@@ -497,11 +490,6 @@
                 }
             }
         } catch (_) { /* Use current controls if storage is unavailable. */ }
-        // SAMA labels always use the physical stock size, even if an older
-        // generic shelf-label template was saved in this browser.
-        $('#sl-samarina-mode').prop('checked', true);
-        $('#sl-paper').val('roll'); $('#sl-width').val(45); $('#sl-height').val(30);
-        $('#sl-show-barcode,#sl-bar-text').prop('checked', true);
         $('#view_print_lable').modal('show'); setStep(0); renderRows();
         var scopeToken = state.token;
         root.PosnicPro.get({ url: 'categories/getCategoryAjaxList', data: 'query=' }, function (response) {

@@ -16,10 +16,12 @@
     var finished=false;
     function success(response){
       if(finished)return;finished=true;
-      if(response && (response.status===false || response.type==='error' || response.error)) {
-        notice(response.message||(response.error&&response.error.message)||'Opération refusée.','danger');return;
+      var payload = response && response.data !== undefined ? response.data : response;
+      if (payload && (payload.status === false || payload.type === 'error' || payload.error)) {
+        notice(payload.message || (payload.error && payload.error.message) || 'Opération refusée.', 'danger'); return;
       }
-      done(response && response.data!==undefined ? response.data : response);
+      if (payload && payload.status === true && payload.data !== undefined) payload = payload.data;
+      done(payload);
     }
     function failure(xhr){
       if(finished)return;finished=true;
@@ -93,7 +95,8 @@
       $('#hr_tx_form')[0].reset();$('#hr_tx_type').val(type);$('#hr_tx_worker_id').val(w._id);$('#hr_tx_worker_name').val(w.name);$('#hr_tx_title').text(labels[type]||'Mouvement');$('#hr_tx_date').val(today());$('#hr_tx_period_input').val(selectedPeriod);$('#hr_tx_amount').val('');$('#hr_tx_rate').val(w.hourly_rate||0);$('#hr_tx_amount_wrap').toggle(type!=='overtime');$('#hr_tx_hours_wrap').toggle(type==='overtime');$('#hr_tx_modal').modal('show');
       if (type === 'salary_payment') {
         request('GET', 'hr/payroll/' + encodeURIComponent(selectedPeriod), {}, function (rows) {
-          var current = Array.isArray(rows) ? rows.find(function (row) { return String(row._id) === String(w._id); }) : null;
+          var payrollRows = Array.isArray(rows) ? rows : (rows && Array.isArray(rows.data) ? rows.data : []);
+          var current = payrollRows.find(function (row) { return String(row._id) === String(w._id); }) || null;
           // Do not overwrite the amount if the user has already started entering it.
           if (current && $('#hr_tx_modal').hasClass('show') && $('#hr_tx_type').val() === 'salary_payment' &&
               String($('#hr_tx_worker_id').val()) === String(w._id) &&
