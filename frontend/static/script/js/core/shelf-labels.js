@@ -670,8 +670,8 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
         $(root.document).on('change', '#sl-image-upload', function () {
             var file = this.files && this.files[0];
             if (!file) return;
-            if (!/^image\/(png|jpeg|webp)$/.test(file.type) || file.size > 512 * 1024) {
-                error(new Error('Choose a PNG, JPEG or WebP image smaller than 1 MB.'));
+            if (['image/png', 'image/jpeg', 'image/webp'].indexOf(file.type) === -1 || file.size > 1024 * 1024) {
+                error(new Error('Choose a PNG, JPEG or WebP image no larger than 1 MB.'));
                 this.value = '';
                 return;
             }
