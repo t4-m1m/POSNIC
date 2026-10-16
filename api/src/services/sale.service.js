@@ -1884,12 +1884,21 @@ const processSale = async (
         // Human-readable sale number for UI (e.g. SDS000123)
         sale_no: salePrefixedId,
         date: mongo_date,
-        register_amount: parseFloat(finalSaleTotAmount),
+        // Cash-register totals must represent money collected now, not the
+        // whole invoice value when some of it remains on the customer's account.
+        register_amount: parseFloat(
+          paymentStatus === 'Unpaid'
+            ? 0
+            : paymentStatus === 'Partialy Paid'
+              ? Math.max(0, Number(partialBalance) || 0)
+              : finalSaleTotAmount
+        ),
         register_discount: parseFloat(sale_discount_amount),
         register_tax: parseFloat(sale_tax_amount),
         registerItems_return_total: 0.0,
         register_paymentmode: data.payment_mode,
-        multi_payment: data.multi_payment || [],
+        // Never count stale tender selections as cash when this sale is unpaid.
+        multi_payment: paymentStatus === 'Unpaid' ? {} : data.multi_payment || [],
       };
 
       if (id === '') {
