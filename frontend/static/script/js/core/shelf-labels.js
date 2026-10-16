@@ -55,7 +55,7 @@
             ';color:' + s.ink + ';background:' + s.background + ';print-color-adjust:exact;-webkit-print-color-adjust:exact}' +
             '.sl-label .sl-element{position:absolute;margin:0;padding:0;overflow:visible;display:flex;align-items:center;justify-content:' + (s.align === 'left' ? 'flex-start' : s.align === 'right' ? 'flex-end' : 'center') + ';line-height:1.15;overflow-wrap:anywhere}' +
             '.sl-name{font-weight:600;white-space:pre-line}.sl-custom-text{white-space:pre-wrap}.sl-logo{object-fit:contain}.sl-price{font-weight:700}.sl-variant-values{display:block!important;white-space:pre-line}.sl-variant-line{display:block;width:100%;line-height:1.15}.sl-label svg.sl-element{display:block;width:100%;height:100%;max-width:none;max-height:none;overflow:visible;}' +
-            '.sl-foot{font-size:75%;white-space:pre-line}.sl-design-editable .sl-element{outline:1px dashed #2563eb;cursor:move;touch-action:none}' +
+            '.sl-foot{font-size:75%;white-space:pre-line}.sl-barcode-visual{display:flex!important;align-items:center;justify-content:center;overflow:hidden}.sl-barcode-visual svg.sl-barcode{display:block;width:auto!important;max-width:100%;height:100%;max-height:100%;overflow:hidden}.sl-design-editable .sl-element{outline:1px dashed #2563eb;cursor:move;touch-action:none}' +
             '.sl-design-editable .sl-element.sl-selected{outline:2px solid #ef4444;z-index:20;overflow:visible}' +
             '.sl-resize-handle{position:absolute;width:12px;height:12px;border:2px solid white;border-radius:2px;background:#2563eb;cursor:nwse-resize;z-index:21;transform:translate(-50%,-50%);touch-action:none}' +
             '.sl-rotate-handle{position:absolute;width:13px;height:13px;border:2px solid white;border-radius:50%;background:#f97316;cursor:grab;z-index:22;transform:translate(-50%,-50%);touch-action:none;box-shadow:0 0 0 1px #c2410c}' +
@@ -106,7 +106,6 @@
         node.style.left = layout.x + '%';
         var top = layout.y, height = layout.h;
         if (key === 'name' && String(node.textContent || '').indexOf('\n') >= 0) height = Math.max(height, 22);
-        if (key === 'barcode' && node.parentElement && node.parentElement.querySelector('.sl-name') && String(node.parentElement.querySelector('.sl-name').textContent || '').indexOf('\n') >= 0) top = Math.max(top, 27);
         node.style.top = top + '%';
         node.style.width = layout.w + '%';
         node.style.height = height + '%';
@@ -128,8 +127,11 @@
             var p = doc.createElement('p'); p.className = (cls || '') + ' sl-element'; p.textContent = value;
             applyElementLayout(p, key, s); div.appendChild(p); return p;
         }
-        var nameText = String(item.name || ''), nameParts = nameText.match(/^(.*?)-([0-9]{2}-[0-9]{2}\/[^/]+?)(?:\s+\/\s+(.+))?$/);
-        if (nameParts) nameText = nameParts[1].trim() + '\n' + nameParts[2].trim() + (nameParts[3] ? ' / ' + nameParts[3].trim() : '');
+        var rawName = String(item.name || '').trim();
+        var nameParts = rawName.match(/^(.*?)-([0-9]{2}-[0-9]{2}\/[^/]+?)(?:\s+\/\s+(.+))?$/);
+        var baseName = nameParts ? nameParts[1].trim() : rawName;
+        var brand = String(item.brand_abbreviation || item.brand_abbreviation_short || item.brand || '').trim();
+        var nameText = [baseName, brand].filter(Boolean).join(' · ');
         if (s.enabledFields.includes('name') && nameText.trim()) text(nameText, 'sl-name', 'name');
         if (s.enabledFields.includes('image') && s.logoData) {
             var logo = doc.createElement('img');
@@ -193,19 +195,21 @@
                 applyElementLayout(variantNode, 'variant_values', s);
                 div.appendChild(variantNode);
             }
-            var brand = String(item.brand_abbreviation || item.brand_abbreviation_short || item.brand || '').trim();
-            if (brand && s.enabledFields.includes('brand')) text(brand, 'sl-brand', 'brand');
             var reference = String(item.reference_date || item.mm_yy || '').trim();
             var modelReference = String(item.model_reference || item.reference || item.ref || '').trim();
             if ((reference || modelReference) && s.enabledFields.includes('reference')) text((reference ? reference : '') + (reference && modelReference ? ' / ' : '') + modelReference, 'sl-reference', 'reference');
         }
         if (s.barcode !== false && s.enabledFields.includes('barcode')) {
+            var barcodeBox = doc.createElement('div');
+            barcodeBox.className = 'sl-element sl-barcode-visual';
+            applyElementLayout(barcodeBox, 'barcode', s);
             var svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('sl-barcode');
-            applyElementLayout(svg, 'barcode', s); div.appendChild(svg);
-            barcode(svg, String(item.barcode_id), { format: s.format || 'CODE128', width: s.barWidth, height: s.barHeight, margin: 0,
+            barcodeBox.appendChild(svg); div.appendChild(barcodeBox);
+            barcode(svg, String(item.barcode_id), { format: s.format || 'CODE128', width: Math.max(0.5, Math.min(1.2, Number(s.barWidth) || 1)), height: Math.max(10, Math.min(24, Number(s.barHeight) || 18)), margin: 0,
             marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0,
             displayValue: true, textMargin: 1, font: 'monospace', fontSize: 7,
-            textAlign: s.align, fontOptions: s.fontOptions || '', lineColor: s.ink, background: s.background });
+            textAlign: 'center', fontOptions: s.fontOptions || '', lineColor: s.ink, background: s.background });
+            svg.style.width = 'auto'; svg.style.maxWidth = '100%'; svg.style.height = '100%'; svg.style.maxHeight = '100%';
         }
         if (s.enabledFields.includes('price') && Number.isFinite(item.label_price)) text(s.currency + ' ' + item.label_price.toFixed(item.label_currency_digits ?? 2), 'sl-price', 'price');
         return div;
