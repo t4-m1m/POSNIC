@@ -1037,8 +1037,14 @@ const processSale = async (
     let paidAmount = 0;
     let balance = 0;
 
-    if (partialCheck) {
-      // In PHP partial sale, customer has paid partialBalance and pending = paymentPending
+    if (String(data.unpaid) === 'true') {
+      // The explicit Unpaid toggle overrides the entered amount in the legacy
+      // payment-status rules above: nothing is collected on this sale.
+      paidAmount = 0;
+      balance = paymentPending;
+    } else if (partialCheck) {
+      // In a partial sale, the recorded paid amount and remaining balance must
+      // agree with the payment status and the customer transaction ledger.
       paidAmount = partialBalance;
       balance = paymentPending;
     } else {
@@ -1893,7 +1899,7 @@ const processSale = async (
             sale_id: saleId,
             amount: finalSaleTotAmount,
             type: 'out',
-            pending: finalSaleTotAmount - partialBalance,
+            pending: paymentPending,
             sale_total: finalSaleTotAmount,
             description: 'Add sale wallet',
           };
@@ -1906,7 +1912,7 @@ const processSale = async (
             sale_id: saleId,
             amount: customerCurrentBalance,
             type: 'out',
-            pending: finalSaleTotAmount - partialBalance,
+            pending: paymentPending,
             sale_total: finalSaleTotAmount,
             description: 'Add sale',
           };
@@ -1919,7 +1925,7 @@ const processSale = async (
             sale_id: saleId,
             amount: 0.0,
             type: 'out',
-            pending: finalSaleTotAmount - partialBalance,
+            pending: paymentPending,
             sale_total: finalSaleTotAmount,
             description: 'Add sale',
           };
@@ -1955,7 +1961,7 @@ const processSale = async (
                 amount: finalSaleTotAmount,
                 type: 'out',
                 updated_date: mongo_date,
-                pending: finalSaleTotAmount - partialBalance,
+                pending: paymentPending,
                 sale_total: finalSaleTotAmount,
                 description: 'Edit sale',
               },
@@ -1975,7 +1981,7 @@ const processSale = async (
                 amount: customerCurrentBalance,
                 type: 'out',
                 updated_date: mongo_date,
-                pending: finalSaleTotAmount - partialBalance,
+                pending: paymentPending,
                 sale_total: finalSaleTotAmount,
                 description: 'Edit sale',
               },
@@ -1995,7 +2001,7 @@ const processSale = async (
                 amount: 0.0,
                 type: 'out',
                 updated_date: mongo_date,
-                pending: finalSaleTotAmount - partialBalance,
+                pending: paymentPending,
                 sale_total: finalSaleTotAmount,
                 description: 'Edit sale',
               },
