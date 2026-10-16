@@ -192,7 +192,18 @@
       <button type="button" class="sl-button sl-element-toggle" data-sl-field="name">+ Article name</button>
       <button type="button" class="sl-button sl-element-toggle" data-sl-field="brand">+ Brand abbreviation</button>
       <button type="button" class="sl-button sl-element-toggle" data-sl-field="reference">+ MM-YY / reference</button>
-      <button type="button" class="sl-button sl-element-toggle" data-sl-field="barcode">+ Barcode</button>
+      <button type="button" class="sl-button sl-element-toggle" data-sl-field="barcode">+ Compact barcode</button>
+      <button type="button" class="sl-button sl-element-toggle" data-sl-field="custom_text">+ Custom text</button>
+      <button type="button" class="sl-button sl-element-toggle" data-sl-field="image">+ Image</button>
+     </div>
+     <div class="sl-fields">
+      <label class="sl-field">Custom label text<input id="sl-custom-text-input" class="sl-input" type="text" maxlength="120" placeholder="Enter your own text"></label>
+      <label class="sl-field">Upload label image<input id="sl-image-upload" class="sl-input" type="file" accept="image/png,image/jpeg,image/webp"></label>
+     </div>
+     <div class="sl-fields">
+      <label class="sl-field">Selected element rotation (°)<input id="sl-rotation" class="sl-input" type="number" min="-180" max="180" step="5" value="0"></label>
+      <button type="button" class="sl-button" id="sl-rotate-left">↶ Rotate −15°</button>
+      <button type="button" class="sl-button" id="sl-rotate-right">↷ Rotate +15°</button>
      </div>
      <div class="sl-row sl-minimal-controls">
       <label class="sl-field">Font size (px)<input id="bar-fontSize" class="sl-input" type="number" value="12" min="3" max="36"></label>
