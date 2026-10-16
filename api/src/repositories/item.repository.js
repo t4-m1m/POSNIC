@@ -1758,6 +1758,7 @@ class ItemRepository extends BaseModel {
         const { calculatePurchaseCost } = require('../utils/purchase-cost');
         const purchaseCost = calculatePurchaseCost(data.purchase_price_eur, {
           purchase_exchange_rate: data.purchase_exchange_rate,
+          purchase_extra_cost_dzd: data.purchase_extra_cost_dzd ?? data.purchase_vat_dzd ?? 0,
           purchase_vat_rate: data.purchase_vat_rate,
         });
         data = { ...data, ...purchaseCost, company_price: purchaseCost.purchase_cost_dzd };
