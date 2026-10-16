@@ -271,16 +271,8 @@
             shop: $('#sl-shop').is(':checked') ? root.PosnicPro.local.get('branchname') || '' : '', address: $('#address-value').val(),
             date: $('#sl-date').is(':checked'), printedDate: new Date().toLocaleDateString(), currency: root.PosnicPro.local.get('currencySign') || ''
         };
-        if (s.elementLayout && s.elementLayout.barcode) {
-            var labelWidthMm = Math.max(1, Number(s.width) || 45);
-            var labelHeightMm = Math.max(1, Number(s.height) || 30);
-            var barcodeMaxWidth = Math.min(100, 25 / labelWidthMm * 100);
-            var barcodeMaxHeight = Math.min(100, 20 / labelHeightMm * 100);
-            s.elementLayout.barcode.w = Math.min(barcodeMaxWidth, Math.max(5, Number(s.elementLayout.barcode.w) || barcodeMaxWidth));
-            s.elementLayout.barcode.h = Math.min(barcodeMaxHeight, Math.max(5, Number(s.elementLayout.barcode.h) || barcodeMaxHeight));
-            s.elementLayout.barcode.x = Math.max(0, Math.min(100 - s.elementLayout.barcode.w, Number(s.elementLayout.barcode.x) || 0));
-            s.elementLayout.barcode.y = Math.max(0, Math.min(100 - s.elementLayout.barcode.h, Number(s.elementLayout.barcode.y) || 0));
-        }
+        // Keep the saved/default barcode dimensions intact. The designer controls its size and position;
+        // do not silently clamp it to the former 25 mm x 20 mm physical limit.
         validateDesign(s); geometry(s); return s;
     }
     function chosen() { return state.entries.filter(function (e) { return e.selected; }); }
