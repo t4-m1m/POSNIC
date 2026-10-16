@@ -57,21 +57,23 @@
             '.sl-name{font-weight:600;white-space:pre-line}.sl-custom-text{white-space:pre-wrap}.sl-logo{object-fit:contain}.sl-price{font-weight:700}.sl-variant-values{display:block!important;white-space:pre-line}.sl-variant-line{display:block;width:100%;line-height:1.15}.sl-label svg.sl-element{display:block;width:100%;height:100%;max-width:none;max-height:none;overflow:visible;}' +
             '.sl-foot{font-size:75%;white-space:pre-line}.sl-design-editable .sl-element{outline:1px dashed #2563eb;cursor:move;touch-action:none}' +
             '.sl-design-editable .sl-element.sl-selected{outline:2px solid #ef4444;z-index:20;overflow:visible}' +
-            '.sl-resize-handle{position:absolute;width:12px;height:12px;border:2px solid white;border-radius:2px;background:#2563eb;cursor:nwse-resize;z-index:21;transform:translate(-50%,-50%);touch-action:none}';
+            '.sl-resize-handle{position:absolute;width:12px;height:12px;border:2px solid white;border-radius:2px;background:#2563eb;cursor:nwse-resize;z-index:21;transform:translate(-50%,-50%);touch-action:none}' +
+            '.sl-rotate-handle{position:absolute;width:13px;height:13px;border:2px solid white;border-radius:50%;background:#f97316;cursor:grab;z-index:22;transform:translate(-50%,-50%);touch-action:none;box-shadow:0 0 0 1px #c2410c}' +
+            '.sl-rotate-handle:after{content:"";position:absolute;width:2px;height:7px;background:#f97316;left:4px;top:-7px}';
     }
     function validateDesign(s) {
         if (!/^[a-zA-Z ,\-]+$/.test(s.font) || !['left', 'center', 'right'].includes(s.align) || !/^#[a-f\d]{6}$/i.test(s.background) || !/^#[a-f\d]{6}$/i.test(s.ink)) throw Error('Invalid label design.');
         if (!Number.isFinite(s.fontSize) || s.fontSize < 3 || s.fontSize > 36) throw Error('Choose a font size between 3 and 36.');
     }
     var DEFAULT_ELEMENT_LAYOUT = {
-        name: { x: 4, y: 2, w: 92, h: 16, font_size: 100, font_weight: 'bold', text_align: 'center', color: '#000000' },
+        name: { x: 4, y: 2, w: 92, h: 16, rotation: 0, font_size: 100, font_weight: 'bold', text_align: 'center', color: '#000000' },
         price: { x: 8, y: 76, w: 84, h: 16, font_size: 220, font_weight: 'bold', text_align: 'center', color: '#000000' },
         variant_values: { x: 3, y: 20, w: 94, h: 14, font_size: 100, font_weight: 'normal', text_align: 'center', color: '#000000' },
         brand: { x: 5, y: 35, w: 90, h: 10, font_size: 90, font_weight: 'bold', text_align: 'center', color: '#000000' },
         reference: { x: 5, y: 45, w: 90, h: 10, font_size: 75, font_weight: 'normal', text_align: 'center', color: '#000000' },
-        barcode: { x: 15, y: 62, w: 70, h: 22, rotation: 0, font_size: 70 },
+        barcode: { x: 27, y: 59, w: 46, h: 19, rotation: 0, font_size: 70 },
         custom_text: { x: 5, y: 44, w: 90, h: 12, rotation: 0, text: '' },
-        image: { x: 35, y: 35, w: 30, h: 25, rotation: 0 }
+        image: { x: 3, y: 3, w: 20, h: 15, rotation: 0 }
     };
     function readElementLayout() {
         var saved = {};
@@ -127,6 +129,13 @@
         }
         var nameText = String(item.name || ''), nameParts = nameText.match(/^(.*?)-([0-9]{2}-[0-9]{2}\/[^/]+?)(?:\s+\/\s+(.+))?$/);
         if (nameParts) nameText = nameParts[1].trim() + '\n' + nameParts[2].trim() + (nameParts[3] ? ' / ' + nameParts[3].trim() : '');
+        if (s.enabledFields.includes('name') && nameText.trim()) text(nameText, 'sl-name', 'name');
+        if (s.enabledFields.includes('image') && s.logoData) {
+            var logo = doc.createElement('img');
+            logo.className = 'sl-element sl-logo'; logo.dataset.slElement = 'image';
+            logo.alt = 'Label logo'; logo.src = s.logoData;
+            applyElementLayout(logo, 'image', s); div.appendChild(logo);
+        }
         {
             var selectedVariant = String(item.variant_value || '').trim();
             var selectedAxisParts = String(item.variant_axis || '').split(/\s*\/\s*|\s*,\s*/).map(function (v) { return v.trim(); }).filter(Boolean);
@@ -194,7 +203,7 @@
             applyElementLayout(svg, 'barcode', s); div.appendChild(svg);
             barcode(svg, String(item.barcode_id), { format: s.format || 'CODE128', width: s.barWidth, height: s.barHeight, margin: 0,
             marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0,
-            displayValue: true, textMargin: 1, font: 'monospace', fontSize: 8,
+            displayValue: true, textMargin: 1, font: 'monospace', fontSize: 7,
             textAlign: s.align, fontOptions: s.fontOptions || '', lineColor: s.ink, background: s.background });
         }
         if (s.enabledFields.includes('price') && Number.isFinite(item.label_price)) text(s.currency + ' ' + item.label_price.toFixed(item.label_currency_digits ?? 2), 'sl-price', 'price');
@@ -246,6 +255,7 @@
             enabledFields: state.enabledFields || readEnabledFields(),
             paper: $('#sl-paper').val(), width: Number($('#sl-width').val()), height: Number($('#sl-height').val()),
             margin: Number($('#sl-margin').val()), gap: Number($('#sl-gap').val()), start: Number($('#sl-start').val()), guides: $('#sl-guides').is(':checked'),
+            logoData: (function () { try { return root.localStorage.getItem('posnic.shelf-label-logo') || ''; } catch (_) { return ''; } })(),
             font: $('#font').val(), fontSize: Number($('#bar-fontSize').val()), align: $('#view_print_lable .text-align.btn-primary').val() || 'center',
             fontOptions: $('#view_print_lable .font-option.btn-primary').map(function () { return this.value; }).get().join(' '),
             background: $('#background-color').val(), ink: $('#line-color').val(), format: $('#barcodeLabelType').val(),
@@ -295,6 +305,13 @@
                     handle.style.left = (layout.x + layout.w) + '%';
                     handle.style.top = (layout.y + layout.h) + '%';
                     label.appendChild(handle);
+                    var rotateHandle = doc.createElement('span');
+                    rotateHandle.className = 'sl-rotate-handle';
+                    rotateHandle.dataset.slRotateFor = key;
+                    rotateHandle.setAttribute('aria-label', 'Rotate element');
+                    rotateHandle.style.left = (layout.x + layout.w / 2) + '%';
+                    rotateHandle.style.top = Math.max(1, layout.y - 4) + '%';
+                    label.appendChild(rotateHandle);
                 });
             });
         }
@@ -586,6 +603,20 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
             editorDrag = { key: key, keys: dragKeys, initialLayouts: initialLayouts, mode: 'move', startX: e.clientX, startY: e.clientY, rect: rect, initial: Object.assign({}, layout) };
             if (this.setPointerCapture && e.pointerId !== undefined) { try { this.setPointerCapture(e.pointerId); } catch (_) {} }
         });
+        $(root.document).on('pointerdown', '#sl-sample .sl-rotate-handle', function (e) {
+            var label = this.closest('.sl-label'), key = this.dataset.slRotateFor;
+            var selectedElement = label && label.querySelector('[data-sl-element="' + key + '"]');
+            if (!key || !label || !selectedElement) return;
+            e.preventDefault(); e.stopPropagation();
+            $('#sl-sample .sl-element').removeClass('sl-selected');
+            $(selectedElement).addClass('sl-selected');
+            syncSelectionControls();
+            var rect = selectedElement.getBoundingClientRect();
+            var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+            editorDrag = { key: key, mode: 'rotate', startX: e.clientX, startY: e.clientY, centerX: cx, centerY: cy,
+                startAngle: Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI,
+                initial: Object.assign({}, state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key]) };
+        });
         $(root.document).on('pointerdown', '#sl-sample .sl-resize-handle', function (e) {
             var label = this.closest('.sl-label'), key = this.dataset.slResizeFor;
             if (!key || !label) return;
@@ -690,7 +721,21 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
         });
         $(root.document).on('pointermove', function (e) {
             if (!editorDrag) return;
-            var drag = editorDrag, dx = (e.clientX - drag.startX) / Math.max(1, drag.rect.width) * 100;
+            var drag = editorDrag;
+            if (drag.mode === 'rotate') {
+                var angle = Math.atan2(e.clientY - drag.centerY, e.clientX - drag.centerX) * 180 / Math.PI;
+                var delta = angle - drag.startAngle;
+                if (delta > 180) delta -= 360;
+                if (delta < -180) delta += 360;
+                var rotated = Object.assign({}, drag.initial, { rotation: Math.max(-180, Math.min(180, (Number(drag.initial.rotation) || 0) + delta)) });
+                state.elementLayout[drag.key] = rotated;
+                var rotatingNode = document.querySelector('#sl-sample [data-sl-element="' + drag.key + '"]');
+                if (rotatingNode) rotatingNode.style.transform = 'rotate(' + rotated.rotation + 'deg)';
+                var rotationInput = document.querySelector('#sl-rotation');
+                if (rotationInput) rotationInput.value = Math.round(rotated.rotation);
+                return;
+            }
+            var dx = (e.clientX - drag.startX) / Math.max(1, drag.rect.width) * 100;
             var dy = (e.clientY - drag.startY) / Math.max(1, drag.rect.height) * 100;
             var keys = drag.mode === 'move' ? drag.keys : [drag.key];
             keys.forEach(function (key) {
