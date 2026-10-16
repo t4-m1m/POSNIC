@@ -351,7 +351,7 @@
                 var s = settings(), g = geometry(s), entries = chosen();
                 // Validate every selected item, including later pages; never hide a print failure behind a good first sheet.
                 entries.forEach(function (e) {
-                    if (!Number.isFinite(e.item.label_price)) throw Error(e.item.name + ': ' + (e.item.label_price_error || t('lang_sl_fixed_price', 'A fixed price is required.')));
+                    if (!s.samarina && !Number.isFinite(e.item.label_price)) throw Error(e.item.name + ': ' + (e.item.label_price_error || t('lang_sl_fixed_price', 'A fixed price is required.')));
                     if (s.barcode) {
                         if (!e.item.barcode_id) throw Error(e.item.name + ': ' + t('lang_sl_barcode_missing', 'No barcode. Switch off Show barcode to print a price label.'));
                         try { root.JsBarcode({}, String(e.item.barcode_id), { format: s.format }); }
