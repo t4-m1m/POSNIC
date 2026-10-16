@@ -8,9 +8,21 @@ router.use(protect);
 
 function context(req) {
   const user = req.user || {};
-  const roleSource = user.usertype || (user.role && typeof user.role === 'object' ? (user.role.name || user.role.role || user.role.usertype || user.role.key) : user.role) || user.role_name || user.user_type || user.type || '';
-  const role = String(roleSource).trim().toLowerCase().replace(/[\s-]+/g, '_');
-  const isAdmin = [true, 'true', 1, '1'].includes(user.is_admin) || [true, 'true', 1, '1'].includes(user.admin) || ['admin', 'admin_user', 'administrator', 'owner', 'super_admin', 'superadmin', 'super_administrator'].includes(role);
+  // Legacy POSNIC accounts can have usertype="staff" as a default while
+  // the actual authorization role is stored in role="admin". Evaluate every
+  // known role field instead of letting a truthy default mask the admin role.
+  const roleValues = [
+    user.usertype,
+    user.role && typeof user.role === 'object'
+      ? (user.role.name || user.role.role || user.role.usertype || user.role.key)
+      : user.role,
+    user.role_name, user.user_type, user.type, user.userType,
+  ].filter(value => value !== undefined && value !== null && value !== '');
+  const roles = roleValues.map(value => String(value).trim().toLowerCase().replace(/[\s-]+/g, '_'));
+  const adminRoles = ['admin', 'admin_user', 'administrator', 'owner', 'super_admin', 'superadmin', 'super_administrator'];
+  const isAdmin = [true, 'true', 1, '1'].includes(user.is_admin) ||
+    [true, 'true', 1, '1'].includes(user.admin) ||
+    roles.some(role => adminRoles.includes(role));
   if (!isAdmin) {
     const error = new Error('Only administrators can access employee salary records.');
     error.status = 403;
