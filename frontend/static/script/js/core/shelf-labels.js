@@ -68,7 +68,9 @@
         variant_values: { x: 3, y: 20, w: 94, h: 14, font_size: 100, font_weight: 'normal', text_align: 'center', color: '#000000' },
         brand: { x: 5, y: 35, w: 90, h: 10, font_size: 90, font_weight: 'bold', text_align: 'center', color: '#000000' },
         reference: { x: 5, y: 45, w: 90, h: 10, font_size: 75, font_weight: 'normal', text_align: 'center', color: '#000000' },
-        barcode: { x: 10, y: 57, w: 80, h: 38 }
+        barcode: { x: 22, y: 60, w: 56, h: 24, rotation: 0 },
+        custom_text: { x: 5, y: 44, w: 90, h: 12, rotation: 0, text: '' },
+        image: { x: 35, y: 35, w: 30, h: 25, rotation: 0 }
     };
     function readElementLayout() {
         var saved = {};
@@ -108,6 +110,8 @@
         node.style.fontWeight = layout.font_weight || 'normal';
         node.style.textAlign = layout.text_align || 'center';
         node.style.color = layout.color || '#000000';
+        node.style.transform = 'rotate(' + (Number(layout.rotation) || 0) + 'deg)';
+        node.style.transformOrigin = 'center center';
         node.style.justifyContent = layout.text_align === 'left' ? 'flex-start' : layout.text_align === 'right' ? 'flex-end' : 'center';
     }
     function label(doc, item, s, barcode) {
@@ -150,6 +154,12 @@
             div.appendChild(variantNode);
             }
             if (s.enabledFields.includes('name')) text(String(item.article_type || nameText.split(' / ')[0] || '').trim(), 'sl-name', 'name');
+            if (s.enabledFields.includes('custom_text')) text(String(root.localStorage.getItem('posnic.shelf-label-custom-text') || 'Custom text'), 'sl-custom-text', 'custom_text');
+            if (s.enabledFields.includes('image')) {
+                var imageData = '';
+                try { imageData = root.localStorage.getItem('posnic.shelf-label-logo') || ''; } catch (_) {}
+                if (imageData) { var imageNode = doc.createElement('img'); imageNode.className = 'sl-logo sl-element'; imageNode.dataset.slElement = 'image'; imageNode.src = imageData; imageNode.alt = 'Label image'; applyElementLayout(imageNode, 'image', s); div.appendChild(imageNode); }
+            }
             var brand = String(item.brand_abbreviation || item.brand_abbreviation_short || item.brand || '').trim();
             if (brand && s.enabledFields.includes('brand')) text(brand, 'sl-brand', 'brand');
             var reference = String(item.reference_date || item.mm_yy || '').trim();
@@ -187,7 +197,7 @@
     function readEnabledFields() {
         try {
             var saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-enabled-fields') || 'null');
-            if (Array.isArray(saved)) return saved.filter(function (key, index, arr) { return ['variant_values','name','brand','reference','barcode'].includes(key) && arr.indexOf(key) === index; });
+            if (Array.isArray(saved)) return saved.filter(function (key, index, arr) { return ['variant_values','name','brand','reference','barcode','custom_text','image'].includes(key) && arr.indexOf(key) === index; });
         } catch (_) {}
         return DEFAULT_ENABLED_FIELDS.slice();
     }
@@ -503,12 +513,12 @@
             $('.sl-element-toggle').each(function () {
                 var active = state.enabledFields.includes(this.dataset.slField);
                 $(this).toggleClass('is-active', active).attr('aria-pressed', active ? 'true' : 'false');
-                this.textContent = (active ? '✓ ' : '+ ') + ({variant_values:'Variants',name:'Article name',brand:'Brand abbreviation',reference:'MM-YY / reference',barcode:'Barcode'}[this.dataset.slField] || this.dataset.slField.replace(/_/g,' '));
+                this.textContent = (active ? '✓ ' : '+ ') + ({variant_values:'Variants',name:'Article name',brand:'Brand abbreviation',reference:'MM-YY / reference',barcode:'Compact barcode',custom_text:'Custom text',image:'Uploaded image'}[this.dataset.slField] || this.dataset.slField.replace(/_/g,' '));
             });
 }
         $(root.document).on('click', '.sl-element-toggle', function () {
             var key = this.dataset.slField;
-            if (!['variant_values','name','brand','reference','barcode'].includes(key)) return;
+            if (!['variant_values','name','brand','reference','barcode','custom_text','image'].includes(key)) return;
             if (state.enabledFields.includes(key)) state.enabledFields = state.enabledFields.filter(function (field) { return field !== key; });
             else state.enabledFields.push(key);
             persistEnabledFields();
