@@ -10,10 +10,21 @@
     var opts={url:url,data:data};
     var fn=method==='GET'?PosnicPro.get:method==='POST'?PosnicPro.post:PosnicPro.put;
     if(typeof fn!=='function'){notice('Le client API POSNIC est indisponible.','danger');return;}
-    fn.call(PosnicPro,opts,function(response){
-      if(response && (response.status===false || response.type==='error')) { notice(response.message||'Opération refusée.','danger'); return; }
+    var finished=false;
+    function success(response){
+      if(finished)return;finished=true;
+      if(response && (response.status===false || response.type==='error' || response.error)) {
+        notice(response.message||(response.error&&response.error.message)||'Opération refusée.','danger');return;
+      }
       done(response && response.data!==undefined ? response.data : response);
-    });
+    }
+    function failure(xhr){
+      if(finished)return;finished=true;
+      var message=xhr&&xhr.responseJSON&&(xhr.responseJSON.message||(xhr.responseJSON.error&&xhr.responseJSON.error.message));
+      notice(message||'Impossible de communiquer avec le serveur RH. Vérifiez votre session et les droits administrateur.','danger');
+    }
+    try { fn.call(PosnicPro,opts,success,failure); }
+    catch(e) { failure({responseJSON:{message:e&&e.message}}); }
   }
   function notice(message,kind) { $('#hr_notice').removeClass('alert-success alert-danger alert-info').addClass('alert-'+(kind||'info')).text(message).show(); }
   function showPanel(which) {
