@@ -58,6 +58,15 @@ function dateValue(value, field = 'date') {
   }
   return d;
 }
+function payrollPeriod(value, fallbackDate) {
+  const period = String(value || fallbackDate.toISOString().slice(0, 7)).slice(0, 7);
+  if (!/^\\d{4}-(0[1-9]|1[0-2])$/.test(period)) {
+    const error = new Error('Period must use a valid YYYY-MM month.');
+    error.status = 400;
+    throw error;
+  }
+  return period;
+}
 function sendError(res, error) {
   return res.status(error.status || 500).json({ status: false, message: error.message || 'HR operation failed.' });
 }
@@ -129,8 +138,7 @@ router.post('/transactions', async (req,res) => {
     if(!worker)return res.status(404).json({status:false,message:'Active worker not found.'});
     const type=String(b.type||'');
     if(!['salary_payment','advance','overtime','adjustment'].includes(type))return res.status(400).json({status:false,message:'Invalid transaction type.'});
-    const d=dateValue(b.date), period=String(b.period||d.toISOString().slice(0,7)).slice(0,7);
-    if(!/^\d{4}-\d{2}$/.test(period))return res.status(400).json({status:false,message:'Period must use YYYY-MM.'});
+    const d=dateValue(b.date), period=payrollPeriod(b.period, d);
     let value;
     if(type==='overtime') {
       const hours=amount(b.hours,'Overtime hours'), rate=amount(b.hourly_rate===undefined?worker.hourly_rate:b.hourly_rate,'Hourly rate');
@@ -164,7 +172,7 @@ router.post('/transactions', async (req,res) => {
 router.get('/payroll/:period', async (req,res) => {
   try {
     const period=String(req.params.period||'');
-    if(!/^\d{4}-\d{2}$/.test(period))return res.status(400).json({status:false,message:'Period must use YYYY-MM.'});
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(period))return res.status(400).json({status:false,message:'Period must use a valid YYYY-MM month.'});
     const {license}=req.hrContext;
     const [workers,tx]=await Promise.all([
       (await collection('hr_workers')).find({license,active:{$ne:false}}).toArray(),
