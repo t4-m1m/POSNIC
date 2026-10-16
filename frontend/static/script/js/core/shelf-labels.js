@@ -71,7 +71,7 @@
         variant_values: { x: 3, y: 20, w: 94, h: 14, font_size: 100, font_weight: 'normal', text_align: 'center', color: '#000000' },
         brand: { x: 5, y: 35, w: 90, h: 10, font_size: 90, font_weight: 'bold', text_align: 'center', color: '#000000' },
         reference: { x: 5, y: 45, w: 90, h: 10, font_size: 75, font_weight: 'normal', text_align: 'center', color: '#000000' },
-        barcode: { x: 22, y: 56, w: 56, h: 38, rotation: 0, font_size: 70 },
+        barcode: { x: 20, y: 54, w: 60, h: 42, rotation: 0, font_size: 70 },
         custom_text: { x: 5, y: 44, w: 90, h: 12, rotation: 0, text: '' },
         image: { x: 3, y: 3, w: 20, h: 15, rotation: 0 }
     };
@@ -206,9 +206,9 @@
             applyElementLayout(barcodeBox, 'barcode', s);
             var svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('sl-barcode');
             barcodeBox.appendChild(svg); div.appendChild(barcodeBox);
-            barcode(svg, String(item.barcode_id), { format: s.format || 'CODE128', width: Math.max(0.55, Math.min(0.8, Number(s.barWidth) || 0.7)), height: 20, margin: 0,
+            barcode(svg, String(item.barcode_id), { format: s.format || 'CODE128', width: Math.max(0.65, Math.min(1, Number(s.barWidth) || 0.85)), height: 30, margin: 0,
             marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0,
-            displayValue: true, textMargin: 2, font: 'monospace', fontSize: 10,
+            displayValue: true, textMargin: 2, font: 'monospace', fontSize: 12,
             textAlign: 'center', fontOptions: s.fontOptions || '', lineColor: s.ink, background: s.background });
             svg.style.width = 'auto'; svg.style.maxWidth = '100%'; svg.style.height = '100%'; svg.style.maxHeight = '100%';
         }
@@ -625,7 +625,7 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
             var dragKeys = layout.group_id ? Object.keys(state.elementLayout).filter(function (k) { return state.elementLayout[k].group_id === layout.group_id; }) : [key];
             var initialLayouts = {};
             dragKeys.forEach(function (k) { initialLayouts[k] = Object.assign({}, state.elementLayout[k]); });
-            editorDrag = { key: key, keys: dragKeys, initialLayouts: initialLayouts, mode: 'move', startX: e.clientX, startY: e.clientY, rect: rect, initial: Object.assign({}, layout) };
+            editorDrag = { key: key, keys: dragKeys, initialLayouts: initialLayouts, mode: 'move', startX: e.clientX, startY: e.clientY, rect: rect, initial: Object.assign({}, layout), moved: false };
             if (this.setPointerCapture && e.pointerId !== undefined) { try { this.setPointerCapture(e.pointerId); } catch (_) {} }
         });
         $(root.document).on('pointerdown', '#sl-sample .sl-rotate-handle', function (e) {
@@ -639,7 +639,7 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
             syncSelectionControls();
             var rect = selectedElement.getBoundingClientRect();
             var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
-            editorDrag = { key: key, mode: 'rotate', startX: e.clientX, startY: e.clientY, centerX: cx, centerY: cy,
+            editorDrag = { key: key, mode: 'rotate', startX: e.clientX, startY: e.clientY, centerX: cx, centerY: cy, moved: false,
                 startAngle: Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI,
                 initial: Object.assign({}, state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key]) };
         });
@@ -653,7 +653,7 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
             state.selectedElementKey = key;
             syncSelectionControls();
             var layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key];
-            editorDrag = { key: key, mode: 'resize', startX: e.clientX, startY: e.clientY, rect: label.getBoundingClientRect(), initial: Object.assign({}, layout) };
+            editorDrag = { key: key, mode: 'resize', startX: e.clientX, startY: e.clientY, rect: label.getBoundingClientRect(), initial: Object.assign({}, layout), moved: false };
         });
         function syncSelectionControls() {
             var selected = $('#sl-sample .sl-element.sl-selected').first();
@@ -754,6 +754,8 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
         $(root.document).on('pointermove', function (e) {
             if (!editorDrag) return;
             var drag = editorDrag;
+            if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 3) return;
+            drag.moved = true;
             if (drag.mode === 'rotate') {
                 var angle = Math.atan2(e.clientY - drag.centerY, e.clientX - drag.centerX) * 180 / Math.PI;
                 var delta = angle - drag.startAngle;
@@ -777,8 +779,8 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
                     next.x = Math.max(-300, Math.min(300, initial.x + dx));
                     next.y = Math.max(-300, Math.min(300, initial.y + dy));
                 } else {
-                    next.w = Math.max(5, Math.min(300, initial.w + dx));
-                    next.h = Math.max(5, Math.min(300, initial.h + dy));
+                    next.w = Math.max(5, Math.min(500, initial.w + dx));
+                    next.h = Math.max(5, Math.min(500, initial.h + dy));
                 }
                 state.elementLayout[key] = next;
                 var element = document.querySelector('#sl-sample [data-sl-element="' + key + '"]');
