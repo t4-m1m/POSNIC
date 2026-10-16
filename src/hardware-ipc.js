@@ -84,6 +84,7 @@ const RECEIPT_SETTINGS_DEFAULTS = Object.freeze({
   showCustomer: true,
   showBranch: false,
   openDrawer: false,
+  design: { logoText: '', alignment: 'left', titleAlignment: 'center', titleSize: 'large', titleBold: true, totalSize: 'large', totalBold: true, separator: '-', showTitle: true, showAddress: true, showPhone: true, showEmail: false, showTicket: true, showDate: true, showCashier: true, showCustomer: true, showBranch: false, itemsHeader: true, showVariant: true, showUnitPrice: true, showSubtotal: true, showTaxes: true, showDiscount: true, showRoundOff: false, showTotalQty: false, showPayments: true, showChange: true, showBarcode: true, showBarcodeText: true, barcodeWidth: 2, barcodeHeight: 55, showNote: true, note: 'Please keep this receipt for your records.', headerRule: true, totalRule: true, currencyFirst: true },
 });
 function receiptSettingsPath() {
   return path.join(app.getPath('userData'), 'receipt-printer-settings.json');
@@ -107,6 +108,15 @@ function saveReceiptSettings(settings) {
     allowed[key] = String(allowed[key] || '').slice(0, 500);
   });
   ['showCashier', 'showCustomer', 'showBranch', 'openDrawer'].forEach((key) => { allowed[key] = !!allowed[key]; });
+  const defaults = RECEIPT_SETTINGS_DEFAULTS.design;
+  const supplied = settings && settings.design && typeof settings.design === 'object' ? settings.design : {};
+  allowed.design = { ...defaults, ...supplied };
+  ['logoText', 'note'].forEach((key) => { allowed.design[key] = String(allowed.design[key] || '').slice(0, 500); });
+  ['alignment', 'titleAlignment'].forEach((key) => { if (!['left', 'center', 'right'].includes(allowed.design[key])) allowed.design[key] = defaults[key]; });
+  ['titleSize', 'totalSize'].forEach((key) => { if (!['normal', 'large', 'extra'].includes(allowed.design[key])) allowed.design[key] = defaults[key]; });
+  if (!['-', '=', '*', '.'].includes(allowed.design.separator)) allowed.design.separator = '-';
+  ['barcodeWidth', 'barcodeHeight'].forEach((key) => { allowed.design[key] = Math.max(key === 'barcodeWidth' ? 2 : 40, Math.min(key === 'barcodeWidth' ? 4 : 120, Number(allowed.design[key]) || defaults[key])); });
+  Object.keys(defaults).forEach((key) => { if (typeof defaults[key] === 'boolean') allowed.design[key] = !!allowed.design[key]; });
   fs.writeFileSync(receiptSettingsPath(), JSON.stringify(allowed, null, 2), 'utf8');
   return allowed;
 }
@@ -312,6 +322,7 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
         totalQty: 2, subTotal: 300, total: 300, currency: 'DA',
         payments: [{ label: 'Cash', amount: 300 }], change: 0,
         footer: config.footer || '',
+        design: config.design,
       };
       const targets = normalizeTargets({ printerName: config.printerName, paperSize: config.paperWidth }, config.paperWidth);
       const results = [];
@@ -346,6 +357,7 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
       storeEmail: config.storeEmail || sale.storeEmail || '',
       title: config.receiptTitle || sale.title || 'SALE RECEIPT',
       footer: config.footer || sale.footer || '',
+      design: config.design || sale.design || {},
       cashier: config.showCashier ? (sale.cashier || '') : '',
       customer: config.showCustomer ? (sale.customer || []) : [],
       branch: config.showBranch ? (sale.branch || '') : '' };
@@ -368,6 +380,7 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
         storeEmail: config.storeEmail || sale.storeEmail || '',
         title: config.receiptTitle || sale.title || 'SALE RECEIPT',
         footer: config.footer || sale.footer || '',
+        design: config.design || sale.design || {},
         cashier: config.showCashier ? (sale.cashier || '') : '',
         customer: config.showCustomer ? (sale.customer || []) : [],
         branch: config.showBranch ? (sale.branch || '') : '' };
