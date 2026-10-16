@@ -94,6 +94,10 @@ class DashboardModel extends BaseModel {
                 $switch: {
                   branches: [
                     {
+                      case: { $in: ['$payment_status', ['Unpaid', 'unpaid']] },
+                      then: 0,
+                    },
+                    {
                       case: { $eq: ['$payment_status', 'Paid'] },
                       then: { $toDouble: { $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, '$items_total'] } },
                     },
