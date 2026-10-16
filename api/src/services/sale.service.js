@@ -51,6 +51,40 @@ const buildDailyPaymentAggregationPipeline = (match) => [
       },
       multi_payment: 1,
       payment_mode: 1,
+      payment_status: 1,
+      payment_pending: 1,
+      partial_check: 1,
+      partial_balance: 1,
+      paid_amount: 1,
+      collected_total: {
+        $switch: {
+          branches: [
+            {
+              case: { $eq: ['$payment_status', 'Paid'] },
+              then: { $toDouble: { $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, 0] } },
+            },
+            {
+              case: { $gt: [{ $toDouble: { $ifNull: ['$payment_pending', 0] } }, 0] },
+              then: {
+                $max: [
+                  0,
+                  {
+                    $subtract: [
+                      { $toDouble: { $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, 0] } },
+                      { $toDouble: { $ifNull: ['$payment_pending', 0] } },
+                    ],
+                  },
+                ],
+              },
+            },
+            {
+              case: { $eq: ['$partial_check', 'true'] },
+              then: { $toDouble: { $ifNull: ['$partial_balance', 0] } },
+            },
+          ],
+          default: 0,
+        },
+      },
       payment_entries: {
         $cond: [
           { $eq: [{ $type: '$multi_payment' }, 'object'] },
@@ -69,7 +103,7 @@ const buildDailyPaymentAggregationPipeline = (match) => [
     $facet: {
       // Sales with split/multi payment methods
       split_payments: [
-        { $match: { has_split: true } },
+        { $match: { has_split: true, collected_total: { $gt: 0 } } },
         { $unwind: '$payment_entries' },
         {
           $group: {
@@ -89,11 +123,7 @@ const buildDailyPaymentAggregationPipeline = (match) => [
           $group: {
             _id: { $ifNull: ['$payment_mode', 'Cash'] },
             total: {
-              $sum: {
-                $toDouble: {
-                  $ifNull: ['$sales_total', '$items_total'],
-                },
-              },
+              $sum: { $toDouble: { $ifNull: ['$collected_total', 0] } },
             },
           },
         },
