@@ -628,14 +628,17 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
             var element = $('#sl-sample [data-sl-element="' + key + '"]');
             if (element.length) element.css('transform', 'rotate(' + layout.rotation + 'deg)');
         });
-        $(root.document).on('input change', '#sl-custom-text-input', function () {
-            try { root.localStorage.setItem('posnic.shelf-label-custom-text', String(this.value || '').slice(0, 120)); } catch (_) {}
-            refresh();
+        $(root.document).on('input', '#sl-custom-text-input', function () {
+            var value = String(this.value || '').slice(0, 120);
+            try { root.localStorage.setItem('posnic.shelf-label-custom-text', value); } catch (_) {}
+            var node = document.querySelector('#sl-sample [data-sl-element="custom_text"]');
+            if (node) node.textContent = value || 'Custom text';
         });
+        $(root.document).on('change', '#sl-custom-text-input', function () { refresh(); });
         $(root.document).on('change', '#sl-image-upload', function () {
             var file = this.files && this.files[0];
             if (!file) return;
-            if (!/^image\/(png|jpeg|webp)$/.test(file.type) || file.size > 1024 * 1024) {
+            if (!/^image\/(png|jpeg|webp)$/.test(file.type) || file.size > 512 * 1024) {
                 error(new Error('Choose a PNG, JPEG or WebP image smaller than 1 MB.'));
                 this.value = '';
                 return;
