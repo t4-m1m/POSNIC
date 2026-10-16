@@ -13,7 +13,7 @@ function settingNumber(value, fallback, { min = 0, max = Number.MAX_SAFE_INTEGER
 function purchaseSettings(settings = {}) {
   return {
     exchangeRate: settingNumber(settings.purchase_exchange_rate, DEFAULT_EXCHANGE_RATE, { min: 0.000001, max: 1e9 }),
-    extraCost: settingNumber(settings.purchase_extra_cost_dzd ?? settings.purchase_vat_dzd ?? settings.purchase_vat_rate, DEFAULT_EXTRA_COST, { min: 0, max: 1e9 }),
+    extraCost: settingNumber(settings.purchase_extra_cost_dzd ?? settings.purchase_vat_dzd, DEFAULT_EXTRA_COST, { min: 0, max: 1e9 }),
   };
 }
 
