@@ -65,6 +65,7 @@
     }
     var DEFAULT_ELEMENT_LAYOUT = {
         name: { x: 4, y: 2, w: 92, h: 16, font_size: 100, font_weight: 'bold', text_align: 'center', color: '#000000' },
+        price: { x: 8, y: 76, w: 84, h: 16, font_size: 220, font_weight: 'bold', text_align: 'center', color: '#000000' },
         variant_values: { x: 3, y: 20, w: 94, h: 14, font_size: 100, font_weight: 'normal', text_align: 'center', color: '#000000' },
         brand: { x: 5, y: 35, w: 90, h: 10, font_size: 90, font_weight: 'bold', text_align: 'center', color: '#000000' },
         reference: { x: 5, y: 45, w: 90, h: 10, font_size: 75, font_weight: 'normal', text_align: 'center', color: '#000000' },
@@ -155,6 +156,11 @@
             div.appendChild(variantNode);
             }
             if (s.enabledFields.includes('name')) text(String(item.article_type || nameText.split(' / ')[0] || '').trim(), 'sl-name', 'name');
+            if (s.enabledFields.includes('price')) {
+                var sellingPrice = Number(item.selling_price);
+                var priceText = Number.isFinite(sellingPrice) ? sellingPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' DZD' : '';
+                if (priceText) text(priceText, 'sl-price', 'price');
+            }
             if (s.enabledFields.includes('custom_text')) text(String(root.localStorage.getItem('posnic.shelf-label-custom-text') || 'Custom text'), 'sl-custom-text', 'custom_text');
             if (s.enabledFields.includes('image')) {
                 var imageData = '';
@@ -198,7 +204,7 @@
     function readEnabledFields() {
         try {
             var saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-enabled-fields') || 'null');
-            if (Array.isArray(saved)) return saved.filter(function (key, index, arr) { return ['variant_values','name','brand','reference','barcode','custom_text','image'].includes(key) && arr.indexOf(key) === index; });
+            if (Array.isArray(saved)) return saved.filter(function (key, index, arr) { return ['variant_values','name','brand','reference','barcode','custom_text','image','price'].includes(key) && arr.indexOf(key) === index; });
         } catch (_) {}
         return DEFAULT_ENABLED_FIELDS.slice();
     }
@@ -514,12 +520,12 @@
             $('.sl-element-toggle').each(function () {
                 var active = state.enabledFields.includes(this.dataset.slField);
                 $(this).toggleClass('is-active', active).attr('aria-pressed', active ? 'true' : 'false');
-                this.textContent = (active ? '✓ ' : '+ ') + ({variant_values:'Variants',name:'Article name',brand:'Brand abbreviation',reference:'MM-YY / reference',barcode:'Compact barcode',custom_text:'Custom text',image:'Uploaded image'}[this.dataset.slField] || this.dataset.slField.replace(/_/g,' '));
+                this.textContent = (active ? '✓ ' : '+ ') + ({variant_values:'Variants',name:'Article name',brand:'Brand abbreviation',reference:'MM-YY / reference',barcode:'Compact barcode',custom_text:'Custom text',image:'Uploaded image',price:'Selling price'}[this.dataset.slField] || this.dataset.slField.replace(/_/g,' '));
             });
 }
         $(root.document).on('click', '.sl-element-toggle', function () {
             var key = this.dataset.slField;
-            if (!['variant_values','name','brand','reference','barcode','custom_text','image'].includes(key)) return;
+            if (!['variant_values','name','brand','reference','barcode','custom_text','image','price'].includes(key)) return;
             if (state.enabledFields.includes(key)) state.enabledFields = state.enabledFields.filter(function (field) { return field !== key; });
             else state.enabledFields.push(key);
             persistEnabledFields();
