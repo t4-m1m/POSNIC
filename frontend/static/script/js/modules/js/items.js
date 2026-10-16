@@ -1126,16 +1126,7 @@ PosnicPro.items = {
                 translations: (shared.translations || []).map(function (entry) { return Object.assign({}, entry, { name: entry.name ? entry.name + " / " + variantName : "" }); }),
                 variant_value: variantName,
                 sku_id: $('#items_itemid_' + key + '').val(),
-                barcode_id: (function () {
-                    var entered = String($('#items_barcodeid_' + key + '').val() || '').trim();
-                    if (entered) {
-                        if (!/^\\d{6}$/.test(entered)) throw new Error('Variant barcodes must contain exactly 6 digits.');
-                        if (usedVariantBarcodes[entered]) throw new Error('Each variant must have a different six-digit barcode.');
-                        usedVariantBarcodes[entered] = true;
-                        return entered;
-                    }
-                    return PosnicPro.items._newSixDigitVariantBarcode(usedVariantBarcodes);
-                }()),
+                barcode_id: '', // Server allocates a branch-unique six-digit numeric Code 128 value.
                 mrp_price: $('#items_mrp_price_' + key + '').val(),
                 company_price: $('#items_company_price_' + key + '').val(),
                 selling_price: $('#items_selling_price_' + key + '').val(),
