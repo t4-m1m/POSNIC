@@ -6,16 +6,17 @@
         return b.length ? a.flatMap(function (x) { return b.map(function (y) { return x + ' / ' + y; }); }) : a;
     }
     function makeInternalBarcode(existing) {
+        // Compact internal label barcode: exactly six decimal digits, including
+        // leading zeroes. The server performs the authoritative uniqueness check.
         var used = new Set((existing || []).map(function (v) { return String(v || '').trim(); }).filter(Boolean));
-        for (var attempt = 0; attempt < 30; attempt++) {
-            var bytes = new Uint8Array(6);
+        for (var attempt = 0; attempt < 1000; attempt++) {
+            var bytes = new Uint32Array(1);
             if (root.crypto && typeof root.crypto.getRandomValues === 'function') root.crypto.getRandomValues(bytes);
-            else for (var i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
-            var suffix = Array.from(bytes).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('').toUpperCase();
-            var code = 'P' + Date.now().toString(36).toUpperCase() + suffix;
+            else bytes[0] = Math.floor(Math.random() * 0xFFFFFFFF);
+            var code = String(bytes[0] % 1000000).padStart(6, '0');
             if (!used.has(code)) return code;
         }
-        throw new Error('Could not generate a unique barcode. Try again.');
+        throw new Error('Could not generate a unique six-digit barcode. Try again.');
     }
     function validGtin(value) {
         var code = String(value || '').replace(/[\s-]/g, '');
@@ -140,8 +141,19 @@
         if (!val('axis1') || names.length < 2 || names.length > 50 || (val('axis2') && !list(val('values2')).length)) {
             report('Enter a variant name and comma-separated values. Create between 2 and 50 combinations.'); return;
         }
-        captureVariants(); var previous = new Map(variants.map(function (r) { return [r.variant_value, r]; }));
-        variants = names.map(function (name) { return previous.get(name) || { variant_value: name, selling_price: val('price'), available_quantity: '0', company_price: val('cost'), mrp_price: val('mrp'), position: val('position'), discount_amount: val('discount-type') === 'amount' ? val('discount') : '', discount_percentage: val('discount-type') === 'percentage' ? val('discount') : '' }; });
+        captureVariants();
+        var previous = new Map(variants.map(function (r) { return [r.variant_value, r]; }));
+        // Reserve existing parent and variant codes before generating codes for
+        // newly selected combinations, so every combination gets its own code.
+        var reservedCodes = variants.map(function (r) { return r.barcode_id; }).filter(Boolean);
+        if (val('barcode')) reservedCodes.push(val('barcode'));
+        variants = names.map(function (name) {
+            var prior = previous.get(name);
+            if (prior) return prior;
+            var barcode = makeInternalBarcode(reservedCodes);
+            reservedCodes.push(barcode);
+            return { variant_value: name, barcode_id: barcode, selling_price: val('price'), available_quantity: '0', company_price: val('cost'), mrp_price: val('mrp'), position: val('position'), discount_amount: val('discount-type') === 'amount' ? val('discount') : '', discount_percentage: val('discount-type') === 'percentage' ? val('discount') : '' };
+        });
         signature = variantSignature(); var box = el('variant-rows'); box.replaceChildren();
         variants.forEach(function (row, i) {
             var card = document.createElement('div'); card.className = 'iv2-variant'; var heading = document.createElement('h3'); heading.textContent = row.variant_value; card.appendChild(heading);
