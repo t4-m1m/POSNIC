@@ -21398,10 +21398,6 @@ html.is-electron .topbar { top: var(--titlebar-h, 44px); }
   right: 0;
   overflow: hidden;
   z-index: 1000;
-  pointer-events: none;
-}
-.infobar-settings-sidebar-overlay.is-active {
-  pointer-events: auto;
   /* The scrim's color is set inline by the openers; fading it here keeps
      every call-site untouched. */
   transition: background-color 280ms cubic-bezier(0.4, 0, 0.2, 1);
