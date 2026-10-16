@@ -1023,6 +1023,18 @@ PosnicPro.items = {
      * rolls back if a row fails mid-way - a network blip can no longer
      * leave half a family behind.
      */
+    _newSixDigitVariantBarcode: function (used) {
+        used = used || {};
+        var code;
+        var attempts = 0;
+        do {
+            code = String(Math.floor(100000 + Math.random() * 900000));
+            attempts++;
+        } while (used[code] && attempts < 1000);
+        if (used[code]) throw new Error('Could not allocate a unique six-digit variant barcode. Please retry.');
+        used[code] = true;
+        return code;
+    },
     saveVariantFamily: function (loader) {
         var itemName = $('#items_name').val();
         /* The same ordered list loadVariant built the inputs from. Walking it
@@ -1034,6 +1046,7 @@ PosnicPro.items = {
         var shared = PosnicPro.items._sharedItemFields();
         var axis = PosnicPro.items.variantAxisLabel();
         var rows = [];
+        var usedVariantBarcodes = Object.create(null);
         /* Did somebody actually PICK a tile, or is it the automatic one?
            _sharedItemFields already resolved the fallback against the parent
            name, so by the time it is spread onto a row there is no way left to
@@ -1113,7 +1126,16 @@ PosnicPro.items = {
                 translations: (shared.translations || []).map(function (entry) { return Object.assign({}, entry, { name: entry.name ? entry.name + " / " + variantName : "" }); }),
                 variant_value: variantName,
                 sku_id: $('#items_itemid_' + key + '').val(),
-                barcode_id: $('#items_barcodeid_' + key + '').val(),
+                barcode_id: (function () {
+                    var entered = String($('#items_barcodeid_' + key + '').val() || '').trim();
+                    if (entered) {
+                        if (!/^\\d{6}$/.test(entered)) throw new Error('Variant barcodes must contain exactly 6 digits.');
+                        if (usedVariantBarcodes[entered]) throw new Error('Each variant must have a different six-digit barcode.');
+                        usedVariantBarcodes[entered] = true;
+                        return entered;
+                    }
+                    return PosnicPro.items._newSixDigitVariantBarcode(usedVariantBarcodes);
+                }()),
                 mrp_price: $('#items_mrp_price_' + key + '').val(),
                 company_price: $('#items_company_price_' + key + '').val(),
                 selling_price: $('#items_selling_price_' + key + '').val(),
