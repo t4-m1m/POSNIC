@@ -586,6 +586,30 @@
             }
             refresh();
         }
+        function persistEnabledFields() {
+            try { root.localStorage.setItem('posnic.shelf-label-enabled-fields', JSON.stringify(state.enabledFields)); } catch (_) {}
+            $('.sl-element-toggle').each(function () {
+                var active = state.enabledFields.includes(this.dataset.slField);
+                $(this).toggleClass('is-active', active).attr('aria-pressed', active ? 'true' : 'false');
+                this.textContent = (active ? '✓ ' : '+ ') + ({logo:'Logo',variant_values:'Variants',name:'Article name',brand:'Brand abbreviation',reference:'MM-YY / reference',barcode:'Barcode'}[this.dataset.slField] || this.dataset.slField.replace(/_/g,' '));
+            });
+            $('#sl-blank-label').prop('checked', state.enabledFields.length === 0);
+        }
+        $(root.document).on('click', '.sl-element-toggle', function () {
+            var key = this.dataset.slField;
+            if (!['logo','variant_values','name','brand','reference','barcode'].includes(key)) return;
+            if (state.enabledFields.includes(key)) state.enabledFields = state.enabledFields.filter(function (field) { return field !== key; });
+            else state.enabledFields.push(key);
+            persistEnabledFields();
+            state.furthestStep = Math.min(state.furthestStep, 1);
+            refresh();
+        });
+        $(root.document).on('change', '#sl-blank-label', function () {
+            state.enabledFields = this.checked ? [] : DEFAULT_ENABLED_FIELDS.slice();
+            persistEnabledFields();
+            state.furthestStep = Math.min(state.furthestStep, 1);
+            refresh();
+        });
         $(root.document).on('click', '#sl-template-save', function () {
             try {
                 refresh();
@@ -606,6 +630,7 @@
                 $('#sl-status').text('Template "' + name + '" saved in this browser.');
             } catch (e) { error(e); }
         });
+        persistEnabledFields();
         $(root.document).on('change', '#sl-logo-file', function () {
             var file = this.files && this.files[0];
             if (!file) return;
