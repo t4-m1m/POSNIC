@@ -41,6 +41,17 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group col-md-12">
+                        <label for="customer_price_tier">Default selling price</label>
+                        <select id="customer_price_tier" name="price_tier" class="form-control">
+                            <option value="1">Price 1 · Standard</option>
+                            <option value="2">Price 2 · Alternative</option>
+                            <option value="3">Price 3 · Lowest</option>
+                        </select>
+                        <small class="form-text text-muted">Applied automatically to new sale lines for this customer. The cashier can choose another configured price.</small>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-12">
                         <label for="customer_referrer_name">
                             <lang class="lang_choosecustomerReferral_title"> Referral customer </lang>
                         </label>
