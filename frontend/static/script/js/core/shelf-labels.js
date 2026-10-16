@@ -154,7 +154,15 @@
                     return span;
                 }
                 if (variantOptions && Object.keys(variantOptions).length) {
-                    Object.keys(variantOptions).forEach(function (axis) {
+                    Object.keys(variantOptions).sort(function (a, b) {
+                        function rank(axis) {
+                            var key = String(axis).toLocaleLowerCase();
+                            if (/taille|size|pointure|shoe/.test(key)) return 0;
+                            if (/couleur|color|colour/.test(key)) return 1;
+                            return 2;
+                        }
+                        return rank(a) - rank(b) || a.localeCompare(b);
+                    }).forEach(function (axis) {
                         var line = doc.createElement('div');
                         line.className = 'sl-variant-line';
                         var heading = doc.createElement('strong');
