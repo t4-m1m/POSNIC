@@ -151,7 +151,7 @@ function render(sale = {}, options = {}) {
   if (design.showChange !== false && sale.change != null) pair('Monnaie rendue', money(sale.change));
   for (const extra of sale.extras || []) pair(extra.label || '', extra.value || '');
   if (design.showBarcode && billNo) {
-    const barcode = ascii(billNo).replace(/[^0-9A-Za-z _.$/+%-]/g, '').slice(0, 32);
+    const barcode = '{B' + ascii(billNo).replace(/[^0-9A-Za-z _.$/+%-]/g, '').slice(0, 30);
     if (barcode) {
       bytes(ESC, 0x61, 1, GS, 0x48, 2, GS, 0x77, Math.max(2, Math.min(4, Number(design.barcodeWidth) || 2)), GS, 0x68, Math.max(40, Math.min(120, Number(design.barcodeHeight) || 55)));
       bytes(GS, 0x6b, 73, barcode.length);
