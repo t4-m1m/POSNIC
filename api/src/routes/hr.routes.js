@@ -138,6 +138,24 @@ router.post('/transactions', async (req,res) => {
       value={hours,hourly_rate:rate,amount:amount(hours*rate,'Overtime amount')};
     } else value={amount:amount(b.amount,'Amount')};
     if(value.amount<=0)return res.status(400).json({status:false,message:'Amount must be greater than zero.'});
+    if (type === 'salary_payment') {
+      // Do not allow a payment to exceed this worker's unpaid balance for the selected payroll period.
+      const existing = await (await collection('hr_transactions'))
+        .find({ license, worker_id: workerId, period, type: { $in: ['salary_payment', 'advance', 'overtime', 'adjustment'] } })
+        .toArray();
+      const advances = existing.filter(t => t.type === 'advance').reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      const paid = existing.filter(t => t.type === 'salary_payment').reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      const overtime = existing.filter(t => t.type === 'overtime').reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      const adjustments = existing.filter(t => t.type === 'adjustment').reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      const gross = Math.max(0, Number(worker.monthly_salary || 0) + overtime + adjustments);
+      const remaining = Math.max(0, gross - advances - paid);
+      if (value.amount > remaining) {
+        return res.status(400).json({
+          status: false,
+          message: 'Payment exceeds the remaining salary balance of ' + remaining.toFixed(2) + ' DA.'
+        });
+      }
+    }
     const doc={worker_id:workerId,worker_name:worker.name,type,...value,date:d,period,method:String(b.method||'cash'),reference:String(b.reference||'').trim(),notes:String(b.notes||'').trim(),license,created_at:new Date(),created_by:userId,created_by_name:username};
     const result=await (await collection('hr_transactions')).insertOne(doc);
     res.status(201).json({status:true,data:{...doc,_id:String(result.insertedId),worker_id:String(workerId)},message:'Transaction recorded.'});
