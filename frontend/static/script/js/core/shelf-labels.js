@@ -270,6 +270,11 @@
             shop: $('#sl-shop').is(':checked') ? root.PosnicPro.local.get('branchname') || '' : '', address: $('#address-value').val(),
             date: $('#sl-date').is(':checked'), printedDate: new Date().toLocaleDateString(), currency: root.PosnicPro.local.get('currencySign') || ''
         };
+        if (s.elementLayout && s.elementLayout.barcode) {
+            var barcodeMaxWidth = Math.min(100, 20 / Math.max(1, Number(s.width) || 30) * 100);
+            s.elementLayout.barcode.w = Math.min(barcodeMaxWidth, Math.max(5, Number(s.elementLayout.barcode.w) || barcodeMaxWidth));
+            s.elementLayout.barcode.x = Math.max(0, Math.min(100 - s.elementLayout.barcode.w, Number(s.elementLayout.barcode.x) || 0));
+        }
         validateDesign(s); geometry(s); return s;
     }
     function chosen() { return state.entries.filter(function (e) { return e.selected; }); }
@@ -760,6 +765,8 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
                     element.style.width = next.w + '%'; element.style.height = next.h + '%';
                     var handle = document.querySelector('#sl-sample .sl-resize-handle[data-sl-resize-for="' + key + '"]');
                     if (handle) { handle.style.left = (next.x + next.w) + '%'; handle.style.top = (next.y + next.h) + '%'; }
+                    var rotateHandle = document.querySelector('#sl-sample .sl-rotate-handle[data-sl-rotate-for="' + key + '"]');
+                    if (rotateHandle) { rotateHandle.style.left = (next.x + next.w / 2) + '%'; rotateHandle.style.top = Math.max(1, next.y - 4) + '%'; }
                 }
             });
         });
