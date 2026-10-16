@@ -475,6 +475,11 @@
                 }
             }
         } catch (_) { /* Use current controls if storage is unavailable. */ }
+        // SAMA labels always use the physical stock size, even if an older
+        // generic shelf-label template was saved in this browser.
+        $('#sl-samarina-mode').prop('checked', true);
+        $('#sl-paper').val('roll'); $('#sl-width').val(30); $('#sl-height').val(45);
+        $('#sl-show-barcode,#sl-bar-text').prop('checked', true);
         $('#view_print_lable').modal('show'); setStep(0); renderRows();
         var scopeToken = state.token;
         root.PosnicPro.get({ url: 'categories/getCategoryAjaxList', data: 'query=' }, function (response) {
