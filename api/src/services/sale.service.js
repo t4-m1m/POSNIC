@@ -507,6 +507,7 @@ const processSale = async (
           branch: pricingBranch,
           allowCounterPriceOverride: context.allowCounterPriceOverride === true,
           roundGrossUnit: context.roundGrossUnit === true,
+          priceTier: item.price_tier == null ? 1 : item.price_tier,
           previous: previousLine,
           submitted: pricingAuthority.desktopSubmittedPrice(item),
           extras: extras.delta,
