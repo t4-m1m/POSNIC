@@ -2521,6 +2521,9 @@ PosnicPro.sales = {
     },
     paymentMethodEnabled: function (name) {
         const key = String(name || '').trim().toLowerCase();
+        // COUPURES is a legacy denomination screen, not a tender method.
+        // Reject it centrally so stale saved sales cannot resurrect the tile.
+        if (key.replace(/[\\s_-]+/g, '') === 'coupures') return false;
         const rows = (PosnicPro.configPaymentType || []).filter(row => String(row.payment_value || '').trim().toLowerCase() === key);
         return rows.length ? rows.some(row => row.enabled !== false) : key === 'cash';
     },
@@ -2568,7 +2571,7 @@ PosnicPro.sales = {
         {
             $.each(SalePaymentType, function (key, val) {
                 var payment_mode_active = val.payment_value + '_active';
-                if (val.enabled === false) { return; }
+                if (val.enabled === false || !PosnicPro.sales.paymentMethodEnabled(val.payment_value)) { return; }
                 if (renderedModes[modeKey(val.payment_value)]) { return; }
                 renderedModes[modeKey(val.payment_value)] = true;
                 if (sales_payment_mode !== val.payment_value) {
@@ -3050,7 +3053,7 @@ PosnicPro.sales = {
         let SalePaymentType = PosnicPro.configPaymentType;
         if (SalePaymentType && SalePaymentType.length !== 0) {
             $.each(SalePaymentType, function (key, val) {
-                if (val.enabled !== false) addPaymentBlock(val.payment_value, val.payment_value, normalizeKey(activePaymentMethod) === normalizeKey(val.payment_value));
+                if (val.enabled !== false && PosnicPro.sales.paymentMethodEnabled(val.payment_value)) addPaymentBlock(val.payment_value, val.payment_value, normalizeKey(activePaymentMethod) === normalizeKey(val.payment_value));
             });
         }
 
@@ -11569,6 +11572,52 @@ $(document).on('change', '.sale-price-tier-select', function (event) {
     event.stopPropagation();
     PosnicPro.sales.changeLinePriceTier(String(this.getAttribute('data-line-id') || ''), this.value);
 });
+
+/* POS keyboard shortcuts: operate only while the sale workspace is visible.
+ * F3/F4 act on the focused basket row, or the first basket row if none is focused.
+ * Native browser shortcuts are left alone outside the sale screen and in text fields.
+ */
+$(document).on('keydown.posnicSaleShortcuts', function (event) {
+    if (!$('#sales_new').is(':visible') || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (!['F1', 'F2', 'F3', 'F4'].includes(event.key)) return;
+    if ($(event.target).closest('input,textarea,select,[contenteditable="true"],.modal').length) return;
+    var $rows = $('#sales_new .touch-table-tbody tr').has('input[name="addSalesLineItemQty"]');
+    if (!$rows.length) $rows = $('#sales_new .touch-table-tbody tr').has('.sale-price-tier-select');
+    if (event.key === 'F3' || event.key === 'F4') {
+        var $row = $(event.target).closest('tr');
+        if (!$row.length || !$row.find('input[name="addSalesLineItemQty"]').length) $row = $rows.first();
+        if (!$row.length) { PosnicPro.alert('warning', 'Add an item to the basket first.'); event.preventDefault(); return; }
+        if (event.key === 'F3') {
+            var $tier = $row.find('.sale-price-tier-select').first();
+            if (!$tier.length) { PosnicPro.alert('info', 'This item has no alternative selling prices.'); }
+            else { $tier.focus().trigger('mousedown'); }
+        } else {
+            var $qty = $row.find('input[name="addSalesLineItemQty"]').first();
+            if ($qty.length) { $qty.focus().select(); }
+        }
+        event.preventDefault();
+        return;
+    }
+    if (event.key === 'F2') {
+        var checkout = document.querySelector('#check_button');
+        if (checkout && !checkout.disabled) checkout.click();
+        event.preventDefault();
+        return;
+    }
+    // F1 deliberately follows the normal checkout preparation before submitting,
+    // so payment validation and the existing duplicate-submit guard remain in force.
+    if (event.key === 'F1') {
+        var $save = $('#save_btn');
+        if ($('#tenderpage').is(':visible')) {
+            if (!$save.prop('disabled')) $save.trigger('click');
+        } else {
+            var checkout = document.querySelector('#check_button');
+            if (checkout && !checkout.disabled) checkout.click();
+        }
+        event.preventDefault();
+    }
+});
+
 
 $(document).on('click', '.sale-invoice-link', function () {
     PosnicPro.sales.invoiceLink($(this).data('sale-id'));
