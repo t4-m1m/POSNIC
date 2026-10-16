@@ -3428,6 +3428,26 @@ PosnicPro.items = {
             });
             $("#load_price_fields").append(html);
             PosnicPro.items.restoreVariantRows(PosnicPro.items._rowSnapshot);
+            // Every newly-created variant combination gets its own six-digit
+            // barcode immediately; preserve codes already typed/saved in rows.
+            var reservedVariantCodes = [];
+            $('#items_barcodeid_0, [id^="items_barcodeid_"]').each(function () {
+                var value = String($(this).val() || '').trim();
+                if (value) reservedVariantCodes.push(value);
+            });
+            $('[id^="items_barcodeid_"]').each(function () {
+                var input = this;
+                if (String($(input).val() || '').trim()) return;
+                var code = '';
+                for (var attempt = 0; attempt < 1000; attempt++) {
+                    var bytes = new Uint32Array(1);
+                    if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(bytes);
+                    else bytes[0] = Math.floor(Math.random() * 0xFFFFFFFF);
+                    var candidate = String(bytes[0] % 1000000).padStart(6, '0');
+                    if (reservedVariantCodes.indexOf(candidate) === -1) { code = candidate; break; }
+                }
+                if (code) { $(input).val(code); reservedVariantCodes.push(code); }
+            });
             /* The rows only exist now, so this is the first moment their
                strips can be filled from whatever is already uploaded. */
             PosnicPro.items.renderVariantPhotoPickers();
