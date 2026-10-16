@@ -782,3 +782,66 @@ body.customer-display .contentbar {
     max-width: 100%;
   }
 }
+
+
+/* Rebuilt tender workspace: wide, readable payment summary instead of a narrow strip. */
+#infobar-settings-sidebar-tender-details {
+  width: min(1180px, 98vw);
+  max-width: 98vw;
+  z-index: 1065;
+}
+#infobar-settings-sidebar-tender-details .infobar-settings-sidebar-body {
+  height: calc(100vh - 52px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+#infobar-settings-sidebar-tender-details .contentbar-new {
+  width: 100%;
+  max-width: 100%;
+  padding: 20px;
+}
+#infobar-settings-sidebar-tender-details .contentbar-new > .row {
+  display: grid;
+  grid-template-columns: minmax(250px, .9fr) minmax(270px, 1fr) minmax(300px, 1.05fr);
+  gap: 16px;
+  margin: 0;
+  align-items: start;
+}
+#infobar-settings-sidebar-tender-details .contentbar-new > .row > [class*="col-"] {
+  width: auto;
+  max-width: none;
+  flex: initial;
+  min-width: 0;
+  padding: 0;
+}
+#infobar-settings-sidebar-tender-details .email-leftbar,
+#infobar-settings-sidebar-tender-details .email-rightbar,
+#infobar-settings-sidebar-tender-details .card {
+  width: 100%;
+  min-width: 0;
+}
+#infobar-settings-sidebar-tender-details .card {
+  border-radius: 12px;
+  overflow: hidden;
+}
+#infobar-settings-sidebar-tender-details .profilebox h1 {
+  white-space: nowrap;
+  max-width: 100%;
+}
+@media (max-width: 1000px) {
+  #infobar-settings-sidebar-tender-details .contentbar-new > .row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #infobar-settings-sidebar-tender-details .contentbar-new > .row > .col-lg-4:last-child {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 640px) {
+  #infobar-settings-sidebar-tender-details .contentbar-new { padding: 12px; }
+  #infobar-settings-sidebar-tender-details .contentbar-new > .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #infobar-settings-sidebar-tender-details .contentbar-new > .row > .col-lg-4:last-child {
+    grid-column: auto;
+  }
+}
