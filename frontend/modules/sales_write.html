@@ -1175,12 +1175,26 @@
 </div>
 
 <style id="posnic-payment-redesign-styles">
-.posnic-payment-redesign .posnic-pay-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-.posnic-payment-redesign .posnic-pay-total,.posnic-payment-redesign .posnic-pay-entered{border:1px solid #d8deea;border-radius:10px;padding:12px;background:var(--posnic-surface,#f7f9fc);min-width:0}
-.posnic-payment-redesign .posnic-pay-total span,.posnic-payment-redesign .posnic-pay-entered label{display:block;font-size:13px;font-weight:700;margin-bottom:7px}
-.posnic-payment-redesign .posnic-pay-total strong{font-size:clamp(20px,2vw,30px);overflow-wrap:anywhere}
-.posnic-payment-redesign .posnic-pay-entered input{font-size:clamp(20px,2vw,28px);font-weight:800;text-align:right;height:48px}
-.posnic-payment-redesign .posnic-pay-methods{margin:10px 0 14px;padding:12px;border:1px solid #d8deea;border-radius:10px}
-.posnic-payment-redesign .posnic-pay-methods>strong{display:block;margin-bottom:8px}
-.posnic-payment-redesign .posnic-pay-due{margin-top:12px;border-radius:8px;background:#eef3fa;padding:12px;font-weight:650}.posnic-payment-redesign #payment_id{margin:0}.posnic-payment-redesign #payment_id label{margin:3px}@media(max-width:700px){.posnic-payment-redesign .posnic-pay-summary{grid-template-columns:1fr}}
+/* Focused checkout: total, amount received, payment method and remaining due. */
+#tenderpage{border:1px solid var(--posnic-border,#e2e8f0);border-radius:16px;overflow:hidden;box-shadow:0 14px 36px rgba(15,23,42,.08);background:var(--posnic-surface,#fff)}
+#tenderpage>.card-header{padding:16px 18px;border-bottom:1px solid var(--posnic-border,#e2e8f0);background:var(--posnic-surface,#fff)}
+#tenderpage>.card-header>strong{font-size:14px;letter-spacing:.08em}
+#tenderpage .posnic-payment-redesign{padding:18px}
+.posnic-payment-redesign .posnic-pay-summary{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin-bottom:16px}
+.posnic-payment-redesign .posnic-pay-total,.posnic-payment-redesign .posnic-pay-entered{border:1px solid var(--posnic-border,#d8deea);border-radius:12px;padding:14px 16px;background:var(--posnic-surface,#f8fafc);min-width:0}
+.posnic-payment-redesign .posnic-pay-total>span,.posnic-payment-redesign .posnic-pay-entered label{display:block;font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--posnic-muted,#64748b);margin-bottom:8px}
+.posnic-payment-redesign .posnic-pay-total strong{display:block;font-size:clamp(28px,3vw,38px);line-height:1.2;letter-spacing:-.035em;overflow-wrap:anywhere}
+.posnic-payment-redesign .posnic-pay-entered input{font-size:clamp(24px,2.6vw,32px);font-weight:750;text-align:left;height:56px;border:0;border-bottom:2px solid var(--posnic-accent,#2563eb);border-radius:0;background:transparent;box-shadow:none;padding:4px 0}
+.posnic-payment-redesign .posnic-pay-entered input:focus{outline:0;box-shadow:none;border-bottom-color:var(--posnic-accent,#2563eb)}
+.posnic-payment-redesign .posnic-pay-methods{margin:12px 0;padding:0;border:0}
+.posnic-payment-redesign .posnic-pay-methods>strong{display:block;font-size:12px;letter-spacing:.04em;color:var(--posnic-muted,#64748b);margin-bottom:10px}
+.posnic-payment-redesign #payment_id{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}
+.posnic-payment-redesign #payment_id label{margin:0;min-width:0}
+.posnic-payment-redesign #payment_id .btn{width:100%;min-height:48px;border:1px solid var(--posnic-border,#d8deea);border-radius:10px;background:var(--posnic-surface,#fff);font-weight:650;white-space:normal}
+.posnic-payment-redesign #payment_id .active,.posnic-payment-redesign #payment_id label.active{border-color:var(--posnic-accent,#2563eb);background:var(--posnic-accent-soft,#eff6ff);color:var(--posnic-accent,#1d4ed8);box-shadow:inset 0 0 0 1px var(--posnic-accent,#2563eb)}
+.posnic-payment-redesign .posnic-pay-due{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px;border:1px solid var(--posnic-border,#d8deea);border-radius:12px;background:var(--posnic-surface,#f8fafc);padding:14px 16px;font-size:14px}
+.posnic-payment-redesign .posnic-pay-due strong{font-size:22px;overflow-wrap:anywhere}
+.posnic-payment-redesign .profilebox{display:none!important}
+@media(min-width:992px){#tenderpage .posnic-payment-redesign{padding:20px}}
+@media(max-width:700px){.posnic-payment-redesign #payment_id{grid-template-columns:1fr}.posnic-payment-redesign .posnic-pay-due{align-items:flex-start;flex-direction:column}}
 </style>
