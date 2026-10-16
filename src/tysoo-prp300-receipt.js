@@ -52,6 +52,19 @@ function render(sale = {}, options = {}) {
   const paperWidth = ['58', '80', '112'].includes(String(options.paperWidth)) ? String(options.paperWidth) : '80';
   const width = WIDTHS[paperWidth];
   const design = { ...(sale.design || {}) };
+  const billNo = sale.billNo || sale.sales_id || sale.invoice_number || sale.receipt_number || '';
+  const receiptDate = sale.date || sale.sales_date || sale.created_at || sale.createdAt || '';
+  const totalValue = sale.total != null ? sale.total : (sale.items_total != null ? sale.items_total : sale.sales_total);
+  const subtotalValue = sale.subTotal != null ? sale.subTotal : (sale.sub_total != null ? sale.sub_total : sale.subtotal);
+  const sourceItems = Array.isArray(sale.items) ? sale.items : (Array.isArray(sale.receipt_line_rows) ? sale.receipt_line_rows : []);
+  const basketItems = sourceItems.map((item) => ({
+    ...item,
+    name: item.name || item.item_name || item.product_name || item.title || 'Article',
+    variant: item.variant || item.variant_name || item.variant_value || item.attributes_text || '',
+    qty: item.qty != null ? item.qty : (item.item_quantity != null ? item.item_quantity : item.quantity),
+    rate: item.rate != null ? item.rate : (item.item_price != null ? item.item_price : (item.unit_price != null ? item.unit_price : item.price)),
+    amount: item.amount != null ? item.amount : (item.total_amount != null ? item.total_amount : item.line_total),
+  }));
   const chunks = [];
   const bytes = (...values) => chunks.push(Buffer.from(values));
   const text = (value) => { const str = ascii(value); if (str) chunks.push(Buffer.from(str, 'ascii')); };
@@ -92,8 +105,8 @@ function render(sale = {}, options = {}) {
     wrapped(sale.title);
     bytes(GS, 0x21, 0, ESC, 0x45, 0, ESC, 0x61, 0);
   }
-  if (design.showTicket !== false && sale.billNo) pair('Ticket', sale.billNo);
-  if (design.showDate !== false && sale.date) pair('Date', sale.date);
+  if (design.showTicket !== false && billNo) pair('Ticket', billNo);
+  if (design.showDate !== false && receiptDate) pair('Date', receiptDate);
   if (design.showCashier !== false && sale.cashier) pair('Cashier', sale.cashier);
   if (design.showBranch && sale.branch) pair('Branch', sale.branch);
   if (design.showCustomer !== false) {
@@ -105,7 +118,7 @@ function render(sale = {}, options = {}) {
     pair('Article x Qte', 'Montant');
     rule(design.separator || '-');
   }
-  for (const item of sale.items || []) {
+  for (const item of basketItems) {
     const name = ascii(item.name || 'Article');
     wrapped(name);
     if (design.showVariant && item.variant) wrapped('  ' + item.variant);
@@ -117,20 +130,28 @@ function render(sale = {}, options = {}) {
   }
   rule(design.separator || '-');
   if (design.showTotalQty && sale.totalQty != null) pair('Total articles', String(sale.totalQty));
-  if (design.showSubtotal !== false && sale.subTotal != null) pair('Sous-total', money(sale.subTotal));
-  if (design.showTaxes !== false) for (const tax of sale.taxes || []) pair(tax.label || 'Taxe', money(tax.amount));
+  if (design.showSubtotal !== false && subtotalValue != null) pair('Sous-total', money(subtotalValue));
+  if (design.showTaxes !== false) {
+    const taxes = Array.isArray(sale.taxes) ? sale.taxes : (Array.isArray(sale.receipt_tax_rows) ? sale.receipt_tax_rows : []);
+    for (const tax of taxes) pair(tax.label || tax.name || 'Taxe', tax.amount != null ? tax.amount : tax.total_amount);
+    if (!taxes.length && Number(sale.tax || sale.total_tax || 0)) pair('Taxe', sale.tax || sale.total_tax);
+  }
   if (design.showDiscount !== false && sale.discount) pair('Remise', '-' + money(sale.discount));
   if (sale.roundOff && design.showRoundOff) pair('Arrondi', money(sale.roundOff));
   if (design.totalRule !== false) rule(design.separator || '=');
   bytes(ESC, 0x45, design.totalBold === false ? 0 : 1, GS, 0x21, design.totalSize === 'normal' ? 0 : design.totalSize === 'extra' ? 0x11 : 0x10);
-  pair('TOTAL', money(sale.total));
+  pair('TOTAL', money(totalValue));
   bytes(GS, 0x21, 0, ESC, 0x45, 0);
   if (design.totalRule !== false) rule(design.separator || '=');
-  if (design.showPayments !== false) for (const payment of sale.payments || []) pair(payment.label || 'Paiement', money(payment.amount));
+  if (design.showPayments !== false) {
+    const payments = Array.isArray(sale.payments) ? sale.payments : (Array.isArray(sale.receipt_payment_rows) ? sale.receipt_payment_rows : []);
+    for (const payment of payments) pair(payment.label || payment.method || payment.payment_mode || 'Paiement', payment.amount != null ? money(payment.amount) : money(payment.payment_amount));
+    if (!payments.length && sale.payment_mode) pair('Paiement', ascii(sale.payment_mode));
+  }
   if (design.showChange !== false && sale.change != null) pair('Monnaie rendue', money(sale.change));
   for (const extra of sale.extras || []) pair(extra.label || '', extra.value || '');
-  if (design.showBarcode && sale.billNo) {
-    const barcode = ascii(sale.billNo).replace(/[^0-9A-Za-z _.$/+%-]/g, '').slice(0, 32);
+  if (design.showBarcode && billNo) {
+    const barcode = ascii(billNo).replace(/[^0-9A-Za-z _.$/+%-]/g, '').slice(0, 32);
     if (barcode) {
       bytes(ESC, 0x61, 1, GS, 0x48, 2, GS, 0x77, Math.max(2, Math.min(4, Number(design.barcodeWidth) || 2)), GS, 0x68, Math.max(40, Math.min(120, Number(design.barcodeHeight) || 55)));
       bytes(GS, 0x6b, 73, barcode.length);
