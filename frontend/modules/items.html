@@ -157,6 +157,15 @@
 #view_print_lable .sl-button:disabled{border-color:var(--theme-border-color, #dce3ec)}
 #view_print_lable .sl-primary:not(:disabled){background:var(--theme-btn-primary-bg, #2563b7);color:var(--theme-btn-primary-text, white)!important}
 #view_print_lable .sl-label p{color:inherit!important}
+#view_print_lable .sl-minimal-editor{border-top:1px solid #e5e7eb;margin-top:16px;padding-top:14px}
+#view_print_lable .sl-editor-title{font-size:16px;font-weight:700;margin:0 0 8px}
+#view_print_lable .sl-element-shortcuts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0 14px}
+#view_print_lable .sl-element-toggle{min-height:38px;text-align:left}
+#view_print_lable .sl-element-toggle.is-active{background:#eaf2ff;border-color:#2563eb;color:#1d4ed8}
+#view_print_lable .sl-blank-toggle{padding:10px;border:1px solid #dbe3ef;border-radius:8px;background:#f8fafc}
+#view_print_lable .sl-minimal-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#view_print_lable .sl-brand{font-weight:700;letter-spacing:.04em}
+#view_print_lable .sl-reference{font-size:75%}
 </style>
 <div class="modal fade close_on_esc" id="view_print_lable" tabindex="-1" role="dialog" aria-labelledby="sl-title" aria-hidden="true">
  <div class="modal-dialog" role="document"><div class="modal-content sl-wizard">
@@ -192,8 +201,6 @@
      <label class="sl-field" for="sl-logo-file">Upload / replace logo<input id="sl-logo-file" class="sl-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"></label>
      <button type="button" class="sl-button" id="sl-logo-remove">Remove logo</button>
      <div class="sl-row sl-minimal-controls">
-      <label class="sl-field">Label width (mm)<input id="sl-width" class="sl-input" type="number" value="45" min="15" max="210"></label>
-      <label class="sl-field">Label height (mm)<input id="sl-height" class="sl-input" type="number" value="30" min="15" max="297"></label>
       <label class="sl-field">Font size (px)<input id="bar-fontSize" class="sl-input" type="number" value="12" min="3" max="36"></label>
       <label class="sl-field">Text colour<input id="line-color" class="sl-input" type="color" value="#000000"></label>
       <label class="sl-field">Background<input id="background-color" class="sl-input" type="color" value="#ffffff"></label>
