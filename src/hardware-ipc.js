@@ -245,258 +245,83 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
    */
   // Render the same bytes for the tender preview without contacting a printer,
   // opening the drawer, or recording a print job.
+  // Preview the dedicated ASCII ESC/POS renderer without sending a job.
   ipcMain.handle('printer:preview-receipt', async (_event, sale, options = {}) => {
-    const { COLUMNS } = require('./escpos-receipt');
-    const { renderReceipt } = require('./escpos-unicode');
+    const { render, WIDTHS } = require('./tysoo-prp300-receipt');
     const { parse } = require('./escpos-preview');
-    const { resolvePictures } = require('./escpos-logo');
-    const paperWidth = ['58', '80', '112'].includes(options.paperWidth) ? options.paperWidth : '80';
-    const prepared = await resolvePictures(sale, paperWidth);
-    return parse(await renderReceipt(prepared, {
-      paperWidth,
-      symbolGlyphs: options.symbolGlyphs !== false,
-    }), COLUMNS[paperWidth]);
+    const paperWidth = ['58', '80', '112'].includes(String(options.paperWidth)) ? String(options.paperWidth) : '80';
+    return parse(render(sale || {}, { paperWidth, cut: false }), WIDTHS[paperWidth]);
   });
 
-  ipcMain.handle('printer:print-receipt', async (event, sale, options = {}) => {
-    /*
-     * Every receipt is written down, printed or not.
-     *
-     * Kitchen tickets have had a day's log with a screen for a long time;
-     * receipts had nothing at all. When a customer says their bill never came
-     * out there was no way to tell whether the till had tried, which printer
-     * it went to, or what the printer said back.
-     *
-     * TRIED is the half that matters. A receipt that failed is the one
-     * somebody is asking about, and a log of successes only is silent at
-     * exactly the moment it is needed.
-     */
+  ipcMain.handle('printer:print-receipt', async (_event, sale, options = {}) => {
     const startedAt = Date.now();
     const receiptLog = require('./receipt-log');
+    const saleId = (sale && (sale.billNo || sale.sales_id || sale.invoice_number)) || '';
+    const title = (sale && sale.title) || options.docName || 'Receipt';
+    const source = options.source || 'Till';
     try {
-      const { renderSale } = require('./escpos-receipt');
+      const { render } = require('./tysoo-prp300-receipt');
       const { normalizeTargets, columnsFor } = require('./printer-targets');
-
-      /*
-       * Use the same fast, text-command ESC/POS route as the working cash
-       * closing report for ordinary sale receipts. The Unicode raster fallback
-       * requires Chromium layout, screenshot capture, image conversion and many
-       * raster strips; on printers whose graphics command support differs, it
-       * can also produce the repeated garbage characters reported on the
-       * Tysoo PRP-300. Normalize printable receipt text to a conservative
-       * single-byte character set before rendering so the renderer stays on
-       * the same text-command path as the cash closing slip. Image fields stay
-       * intact for the existing logo/QR processing below.
-       */
-      function textCompatible(value) {
-        if (typeof value === 'string') {
-          return value
-            .replace(/€/g, 'EUR')
-            .normalize('NFKD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^\x20-\x7e\r\n\t]/g, '?');
-        }
-        if (Array.isArray(value)) return value.map(textCompatible);
-        if (value && typeof value === 'object') {
-          const out = {};
-          for (const [key, child] of Object.entries(value)) {
-            if (key === 'logo' || key === 'footerImage') out[key] = child;
-            else out[key] = textCompatible(child);
-          }
-          return out;
-        }
-        return value;
-      }
-
-      /*
-       * One receipt can now go to several printers, each with its own paper and
-       * its own number of copies - a counter roll and a duplicate for the file,
-       * or a second copy to the back office.
-       *
-       * normalizeTargets accepts the old { printerName, paperWidth } this used
-       * to take, so the sale screen keeps working untouched while the Hardware
-       * Manager starts sending a printers[] list.
-       */
+      // PRP-300 is an 80mm printer. Keep that as the default while still
+      // respecting an explicitly configured printer/paper target.
       const targets = normalizeTargets(
         options.printers && options.printers.length
           ? { printers: options.printers }
-          : { printerName: options.printerName, paperSize: options.paperWidth },
-        options.paperWidth
+          : { printerName: options.printerName, paperSize: options.paperWidth || '80mm' },
+        options.paperWidth || '80mm'
       );
-
-      /*
-       * A LOGO THE PAGE WAS NOT ALLOWED TO READ.
-       *
-       * receipt-data.js prepares the logo in the page, where the image is
-       * already decoded and it costs nothing. When the canvas is tainted -
-       * a logo served from another origin without CORS headers - it hands
-       * over `{ src }` instead of dots, because a page can never read those
-       * pixels however it asks.
-       *
-       * Here there is no origin and no canvas, only Chromium's decoder, so
-       * the picture the page was refused is simply a file. Resolved once per
-       * paper width rather than per target: two 80mm printers want the same
-       * bitmap, and fetching it twice is a second round trip for nothing.
-       */
-      const madeAlready = new Map();
-
-      /**
-       * One picture, for one paper width.
-       *
-       * `which` is the field on the sale: the logo at the top, or whatever
-       * the shop put under the total. They differ in one way that matters -
-       * a logo is a picture and is dithered, a QR is data and must be
-       * thresholded or a scanner cannot read it back.
-       */
-      async function pictureDots(which, paperWidth, dither) {
-        const asked = sale && sale[which];
-        if (!asked || asked.data || !asked.src) return asked || null;
-
-        const key = which + ":" + paperWidth;
-        if (madeAlready.has(key)) return madeAlready.get(key);
-
-        const { rasterFor } = require('./escpos-logo');
-        const { nativeImage, net } = require('electron');
-        const raster = await rasterFor(asked.src, paperWidth, {
-          decode: (buf) => nativeImage.createFromBuffer(buf),
-          readFile: (file) => require('fs').readFileSync(file),
-          get: (url, limits) =>
-            new Promise((done) => {
-              /* Never rejects: a logo is decoration and a receipt is not. */
-              let finished = false;
-              const settle = (v) => {
-                if (!finished) { finished = true; done(v); }
-              };
-              const timer = setTimeout(() => settle(null), limits.timeout);
-              try {
-                const req = net.request(url);
-                const chunks = [];
-                let size = 0;
-                req.on('response', (res) => {
-                  res.on('data', (c) => {
-                    size += c.length;
-                    if (size > limits.limit) { req.abort(); settle(null); return; }
-                    chunks.push(c);
-                  });
-                  res.on('end', () => { clearTimeout(timer); settle(Buffer.concat(chunks)); });
-                  res.on('error', () => { clearTimeout(timer); settle(null); });
-                });
-                req.on('error', () => { clearTimeout(timer); settle(null); });
-                req.end();
-              } catch (e) {
-                clearTimeout(timer);
-                settle(null);
-              }
-            }),
-        }, { dither, maxRows: which === 'footerImage' ? 384 : 240 });
-        if (!raster) {
-          console.warn('[Print] the ' + which + ' could not be read here either, printing without it');
-        }
-        madeAlready.set(key, raster);
-        return raster;
-      }
-
-      const requestId = options.jobId || 'receipt:' + require('crypto').createHash('sha256').update(JSON.stringify(sale || {})).digest('hex');
       const results = [];
-      for (const target of targets) {
-        /* Rendered per target: an 80mm roll is 48 columns and a 58mm roll is
-           32, so the same bytes cannot serve both. Getting this wrong wraps the
-           total onto its own line, which looks like a rounding bug on paper. */
-        const paperWidth = columnsFor(target.pageSize) <= 32 ? '58' : columnsFor(target.pageSize) === 69 ? '112' : '80';
-        /* eslint-disable-next-line no-await-in-loop -- one fetch, cached
-           per paper width, and the loop is serial anyway. */
-        const logo = await pictureDots('logo', paperWidth, true);
-        /* eslint-disable-next-line no-await-in-loop -- cached per width. */
-        const footerImage = await pictureDots('footerImage', paperWidth, false);
-        const compatibleSale = textCompatible({ ...(sale || {}), logo, footerImage });
-        const bytes = renderSale(compatibleSale, {
+      const requestId = options.jobId || 'receipt:' + require('crypto').createHash('sha256')
+        .update(JSON.stringify({ sale: sale || {}, at: Date.now() })).digest('hex');
+      for (let targetIndex = 0; targetIndex < targets.length; targetIndex++) {
+        const target = targets[targetIndex];
+        const columns = columnsFor(target.pageSize);
+        const paperWidth = columns <= 32 ? '58' : columns === 69 ? '112' : '80';
+        const bytes = render(sale || {}, {
           paperWidth,
-          /* A printer that cannot be taught a glyph spells the currency
-             instead. Per machine, like the printer name. */
-          symbolGlyphs: options.symbolGlyphs !== false,
-          /* The drawer opens once, on the first sheet. Pulsing it per copy
-             would have it kick three times for a three-copy receipt. */
-          openDrawer: !!options.openDrawer && results.length === 0,
-          drawerPin: options.drawerPin,
           cut: options.cut !== false,
+          openDrawer: !!options.openDrawer && results.length === 0
         });
-
-        for (let copy = 0; copy < target.copies; copy += 1) {
-          const label = (options.docName || 'Posnic Receipt')
-            + (target.copies > 1 ? ` (${copy + 1}/${target.copies})` : '');
-          /* eslint-disable-next-line no-await-in-loop -- printers are serial
-             devices; two jobs sent at once interleave on the same roll. */
-          const r = await hardwareManager.sendRawToPrinter(target.name, bytes, label, { jobId: requestId + ":" + targets.indexOf(target) + ":" + copy });
-          results.push({ printer: target.name || '(default)', copy: copy + 1, sent: bytes.length, ...r });
+        const copies = Math.max(1, Math.min(20, parseInt(target.copies, 10) || 1));
+        for (let copy = 0; copy < copies; copy++) {
+          const label = (options.docName || 'POSNIC Receipt') +
+            (copies > 1 ? ' (' + (copy + 1) + '/' + copies + ')' : '');
+          // One serial job at a time prevents raw bytes from interleaving.
+          const result = await hardwareManager.sendRawToPrinter(
+            target.name, bytes, label,
+            { jobId: requestId + ':' + targetIndex + ':' + copy }
+          );
+          results.push({ printer: target.name || '(default)', copy: copy + 1, sent: bytes.length, ...result });
+          if (!result.success) console.error('[PRP-300 receipt] print failed:', result.error || result.status);
         }
       }
-
-      /* One failed printer must not report the whole receipt as failed when the
-         customer already has their copy, so success means at least one landed
-         and the failures are named for the operator. */
-      const failed = results.filter((r) => !r.success);
-      /*
-       * How much actually went down the wire.
-       *
-       * Hardware Manager's test print says "Sent N bytes", and N came back
-       * undefined from the day this handler learned to drive several printers:
-       * the old single-printer version answered { success, bytes } and the
-       * rewrite answered a summary that forgot to carry it. The one screen
-       * whose whole job is to prove the printer works was reporting
-       * "Sent undefined bytes".
-       */
-      const sentBytes = results.reduce((n, r) => n + (r.success ? (r.sent || 0) : 0), 0);
-
+      const failed = results.filter((result) => !result.success);
+      const sentBytes = results.reduce((sum, result) => sum + (result.success ? (result.sent || 0) : 0), 0);
       receiptLog.record({
-        kind: options.kind || 'receipt',
-        saleId: (sale && (sale.billNo || sale.sales_id || sale.invoice_number)) || '',
-        title: (sale && sale.title) || options.docName || 'Receipt',
-        total: sale && (sale.total ?? sale.sales_total),
-        /* Who asked. The floor bill passes its own; anything else is somebody
-           standing at the counter. */
-        source: options.source || 'Till',
-        ms: Date.now() - startedAt,
-        printers: results.map((r) => ({
-          name: r.printer,
-          jobId: r.jobId,
-          copy: r.copy,
-          status: r.success ? 'success' : 'failed',
-          reason: r.success ? undefined : (r.error || 'unknown'),
-          bytes: r.sent,
-        })),
+        kind: options.kind || 'receipt', saleId, title, total: sale && (sale.total ?? sale.sales_total),
+        source, ms: Date.now() - startedAt,
+        printers: results.map((result) => ({
+          name: result.printer, jobId: result.jobId, copy: result.copy,
+          status: result.success ? 'success' : 'failed',
+          reason: result.success ? undefined : (result.error || 'unknown'), bytes: result.sent
+        }))
       });
-
       return {
-        success: results.some((r) => r.success),
-        pending: results.some(r => r.pending),
-        status: results.every(r => r.success) ? 'Sent to printer' : (results.find(r => !r.success)?.status || 'Failed'),
-        jobs: results,
-        bytes: sentBytes,
-        printed: results.length - failed.length,
+        success: results.some((result) => result.success),
+        status: results.every((result) => result.success) ? 'Sent to printer' : (results.find((result) => !result.success)?.status || 'Failed'),
+        jobs: results, bytes: sentBytes, printed: results.length - failed.length,
         attempted: results.length,
-        failures: failed.map((r) => ({ printer: r.printer, error: r.error || 'unknown' })),
-        error: failed.length && !results.some((r) => r.success)
-          ? (failed[0].error || 'Print failed') : undefined,
+        failures: failed.map((result) => ({ printer: result.printer, error: result.error || 'unknown' })),
+        error: failed.length && !results.some((result) => result.success) ? (failed[0].error || 'Print failed') : undefined
       };
-    } catch (err) {
-      console.error('[Print] receipt render failed:', err.message);
-      /*
-       * A receipt that never reached a printer is the most important row in
-       * the log, not the least. Without this the failures that happen BEFORE
-       * any printer is touched - a layout that will not draw, a missing
-       * setting - would leave no trace at all and look like the till simply
-       * ignored the button.
-       */
+    } catch (error) {
+      console.error('[PRP-300 receipt] render failed:', error.message);
       receiptLog.record({
-        kind: options.kind || 'receipt',
-        saleId: (sale && (sale.billNo || sale.sales_id || sale.invoice_number)) || '',
-        title: (sale && sale.title) || options.docName || 'Receipt',
-        total: sale && (sale.total ?? sale.sales_total),
-        source: options.source || 'Till',
-        ms: Date.now() - startedAt,
-        printers: [{ name: '(never reached a printer)', status: 'failed', reason: err.message }],
+        kind: options.kind || 'receipt', saleId, title, total: sale && (sale.total ?? sale.sales_total),
+        source, ms: Date.now() - startedAt,
+        printers: [{ name: '(never reached a printer)', status: 'failed', reason: error.message }]
       });
-      return { success: false, error: err.message };
+      return { success: false, error: error.message };
     }
   });
 
