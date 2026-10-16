@@ -267,10 +267,24 @@
             var image = new Image(); image.onerror = function () { status(t('Could not read this image.'), true); };
             image.onload = function () {
                 var canvas = document.createElement('canvas'); var scale = Math.min(1, 768 / image.width, 768 / image.height);
-                canvas.width = Math.max(1, Math.round(image.width * scale)); canvas.height = Math.max(1, Math.round(image.height * scale));
-                var ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-                var src = canvas.toDataURL('image/png');
-                if (src.length > 400000) src = canvas.toDataURL('image/jpeg', 0.85);
+                var preserveAlpha = file.type === 'image/png' || file.type === 'image/webp';
+                var src = '';
+                // Keep the canvas transparent for PNG/WebP logos. Filling it white
+                // here made uploaded transparent logos acquire a white rectangle.
+                // If the image is too large, downscale it instead of flattening alpha.
+                for (var attempt = 0; attempt < 8; attempt++) {
+                    canvas.width = Math.max(1, Math.round(image.width * scale)); canvas.height = Math.max(1, Math.round(image.height * scale));
+                    var ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+                    src = canvas.toDataURL('image/png');
+                    if (src.length <= 400000 || scale <= 0.08) break;
+                    scale *= 0.82;
+                }
+                if (src.length > 400000 && !preserveAlpha) {
+                    // JPEG compression is safe only for opaque source images.
+                    var opaque = document.createElement('canvas'); opaque.width = canvas.width; opaque.height = canvas.height;
+                    var opaqueCtx = opaque.getContext('2d'); opaqueCtx.fillStyle = '#fff'; opaqueCtx.fillRect(0, 0, opaque.width, opaque.height); opaqueCtx.drawImage(canvas, 0, 0);
+                    src = opaque.toDataURL('image/jpeg', 0.82);
+                }
                 if (!schema.image(src)) { status(t('This image is too detailed. Choose a smaller image.'), true); return; }
                 checkpoint(); b.src = src; renderList(); changed();
             }; image.src = reader.result;
