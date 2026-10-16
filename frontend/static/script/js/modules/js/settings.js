@@ -3701,22 +3701,8 @@ PosnicPro.payment = {
                     PosnicPro.payment.paymentTable();
                     PosnicPro.payment.paymentClearForm();
 
-                    /*
-                     * STAY OPEN, READY FOR THE NEXT ONE.
-                     *
-                     * A shop setting up its payment methods enters several in
-                     * a row - Cash, UPI, Card, Zomato - and the panel closed
-                     * itself after each one, so every entry cost a reopen.
-                     * Owner: "also dont close after save. lets ready to
-                     * insert new. if user wants, then he can close or press
-                     * esc."
-                     *
-                     * The form is already cleared above, so the cursor goes
-                     * back to the name box and typing continues. Closing is
-                     * the Close button or Escape, both of which the person
-                     * chooses - see the Escape handler in PosnicPro.js.
-                     */
-                    $('#payment_value').val('').trigger('focus');
+                    $('#payment_value').val('');
+                    $('#infobar-settings-sidebar-payment .infobar-settings-close[data-id="payment"]').trigger('click');
 
                     loader.find(".loadingSpinner:first").remove();
                 }
@@ -3738,8 +3724,8 @@ PosnicPro.payment = {
             if (response.type === 'success') {
                 PosnicPro.payment.paymentClearForm();
                 PosnicPro.payment.paymentTable();
-                $(".infobar-settings-sidebar-overlay").css({ "background": "transparent", "position": "initial" });
-                $("#infobar-settings-sidebar-tax").removeClass("sidebarshow");
+                $(".infobar-settings-sidebar-overlay").removeClass("is-active").css({ "background": "transparent", "position": "initial" });
+                $("#infobar-settings-sidebar-payment").removeClass("sidebarshow sidebarview");
                 hasher.setHash('settings');
             }
             loader.find(".loadingSpinner:first").remove();
@@ -3757,8 +3743,8 @@ PosnicPro.payment = {
                 if (response.type === 'success') {
                     PosnicPro.deleteConfirmation = false;
                     PosnicPro.payment.paymentTable();
-                    $(".infobar-settings-sidebar-overlay").css({ "background": "transparent", "position": "initial" });
-                    $("#infobar-settings-sidebar-tax").removeClass("sidebarshow");
+                    $(".infobar-settings-sidebar-overlay").removeClass("is-active").css({ "background": "transparent", "position": "initial" });
+                    $("#infobar-settings-sidebar-payment").removeClass("sidebarshow sidebarview");
                     hasher.setHash('settings');
                 }
                 PosnicPro.alert(response.type, response.message);

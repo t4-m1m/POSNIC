@@ -60,7 +60,7 @@ function dateValue(value, field = 'date') {
 }
 function payrollPeriod(value, fallbackDate) {
   const period = String(value || fallbackDate.toISOString().slice(0, 7)).slice(0, 7);
-  if (!/^\\d{4}-(0[1-9]|1[0-2])$/.test(period)) {
+  if (/^\d{4}-(0[1-9]|1[0-2])$/.test(period) === false) {
     const error = new Error('Period must use a valid YYYY-MM month.');
     error.status = 400;
     throw error;

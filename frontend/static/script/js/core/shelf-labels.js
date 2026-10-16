@@ -505,8 +505,7 @@
                 $(this).toggleClass('is-active', active).attr('aria-pressed', active ? 'true' : 'false');
                 this.textContent = (active ? '✓ ' : '+ ') + ({variant_values:'Variants',name:'Article name',brand:'Brand abbreviation',reference:'MM-YY / reference',barcode:'Barcode'}[this.dataset.slField] || this.dataset.slField.replace(/_/g,' '));
             });
-            $('#sl-blank-label').prop('checked', state.enabledFields.length === 0);
-        }
+}
         $(root.document).on('click', '.sl-element-toggle', function () {
             var key = this.dataset.slField;
             if (!['variant_values','name','brand','reference','barcode'].includes(key)) return;
@@ -516,12 +515,7 @@
             state.furthestStep = Math.min(state.furthestStep, 1);
             refresh();
         });
-        $(root.document).on('change', '#sl-blank-label', function () {
-            state.enabledFields = this.checked ? [] : DEFAULT_ENABLED_FIELDS.slice();
-            persistEnabledFields();
-            state.furthestStep = Math.min(state.furthestStep, 1);
-            refresh();
-        });        persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .sl-element', function (e) {
+persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .sl-element', function (e) {
             if (e.target.closest('.sl-resize-handle')) return;
             var key = this.dataset.slElement, label = this.closest('.sl-label');
             if (!key || !label) return;
