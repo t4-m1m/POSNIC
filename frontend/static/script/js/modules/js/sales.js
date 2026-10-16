@@ -11580,7 +11580,10 @@ $(document).on('change', '.sale-price-tier-select', function (event) {
 $(document).on('keydown.posnicSaleShortcuts', function (event) {
     if (!$('#sales_new').is(':visible') || event.altKey || event.ctrlKey || event.metaKey) return;
     if (!['F1', 'F2', 'F3', 'F4'].includes(event.key)) return;
-    if ($(event.target).closest('input,textarea,select,[contenteditable="true"],.modal').length) return;
+    var inEditor = $(event.target).closest('input,textarea,select,[contenteditable="true"],.modal').length > 0;
+    // F3/F4 are intentionally available while a basket quantity/price control has focus.
+    if (inEditor && event.key !== 'F3' && event.key !== 'F4') return;
+    if ($(event.target).closest('.modal').length) return;
     var $rows = $('#sales_new .touch-table-tbody tr').has('input[name="addSalesLineItemQty"]');
     if (!$rows.length) $rows = $('#sales_new .touch-table-tbody tr').has('.sale-price-tier-select');
     if (event.key === 'F3' || event.key === 'F4') {
