@@ -129,6 +129,7 @@
             var selectedVariant = String(item.variant_value || '').trim();
             var selectedTokens = selectedVariant.split(/\s*\/\s*|\s*,\s*/).map(function (v) { return v.trim().toLocaleLowerCase(); }).filter(Boolean);
             var allVariants = Array.isArray(item.available_variant_values) ? item.available_variant_values : [];
+            var variantOptions = item.available_variant_options && typeof item.available_variant_options === 'object' ? item.available_variant_options : null;
             var tokens = [];
             allVariants.forEach(function (value) {
                 String(value).split(/\s*\/\s*|\s*,\s*/).forEach(function (part) {
@@ -138,34 +139,41 @@
             });
             if (!tokens.length) tokens = selectedVariant.split(/\s*\/\s*|\s*,\s*/).map(function (v) { return v.trim(); }).filter(Boolean);
             if (s.enabledFields.includes('variant_values')) {
-            var variantNode = doc.createElement('p');
-            variantNode.className = 'sl-variant-values sl-element';
-            variantNode.dataset.slElement = 'variant_values';
-            tokens.forEach(function (value, index) {
-                if (index) variantNode.appendChild(doc.createTextNode('  '));
-                var span = doc.createElement('span');
-                span.textContent = value;
-                if (selectedTokens.includes(value.toLocaleLowerCase())) {
-                    span.style.fontWeight = '900';
-                    span.style.textDecoration = 'underline';
-                    span.setAttribute('aria-current', 'true');
+                var variantNode = doc.createElement('div');
+                variantNode.className = 'sl-variant-values sl-element';
+                variantNode.dataset.slElement = 'variant_values';
+                function appendVariantValue(value) {
+                    var span = doc.createElement('span');
+                    span.textContent = value;
+                    if (selectedTokens.includes(String(value).trim().toLocaleLowerCase())) {
+                        span.style.fontWeight = '900';
+                        span.style.textDecoration = 'underline';
+                        span.setAttribute('aria-current', 'true');
+                    }
+                    return span;
                 }
-                variantNode.appendChild(span);
-            });
-            applyElementLayout(variantNode, 'variant_values', s);
-            div.appendChild(variantNode);
-            }
-            if (s.enabledFields.includes('name')) text(String(item.article_type || nameText.split(' / ')[0] || '').trim(), 'sl-name', 'name');
-            if (s.enabledFields.includes('price')) {
-                var sellingPrice = Number(item.selling_price);
-                var priceText = Number.isFinite(sellingPrice) ? sellingPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' DZD' : '';
-                if (priceText) text(priceText, 'sl-price', 'price');
-            }
-            if (s.enabledFields.includes('custom_text')) text(String(root.localStorage.getItem('posnic.shelf-label-custom-text') || 'Custom text'), 'sl-custom-text', 'custom_text');
-            if (s.enabledFields.includes('image')) {
-                var imageData = '';
-                try { imageData = root.localStorage.getItem('posnic.shelf-label-logo') || ''; } catch (_) {}
-                if (imageData) { var imageNode = doc.createElement('img'); imageNode.className = 'sl-logo sl-element'; imageNode.dataset.slElement = 'image'; imageNode.src = imageData; imageNode.alt = 'Label image'; applyElementLayout(imageNode, 'image', s); div.appendChild(imageNode); }
+                if (variantOptions && Object.keys(variantOptions).length) {
+                    Object.keys(variantOptions).forEach(function (axis, axisIndex) {
+                        if (axisIndex) variantNode.appendChild(doc.createTextNode('  ·  '));
+                        var group = doc.createElement('span');
+                        group.className = 'sl-variant-axis';
+                        var label = doc.createElement('strong');
+                        label.textContent = axis + ': ';
+                        group.appendChild(label);
+                        variantOptions[axis].forEach(function (value, valueIndex) {
+                            if (valueIndex) group.appendChild(doc.createTextNode(' '));
+                            group.appendChild(appendVariantValue(value));
+                        });
+                        variantNode.appendChild(group);
+                    });
+                } else {
+                    tokens.forEach(function (value, index) {
+                        if (index) variantNode.appendChild(doc.createTextNode('  '));
+                        variantNode.appendChild(appendVariantValue(value));
+                    });
+                }
+                applyElementLayout(variantNode, 'variant_values', s);
+                div.appendChild(variantNode);
             }
             var brand = String(item.brand_abbreviation || item.brand_abbreviation_short || item.brand || '').trim();
             if (brand && s.enabledFields.includes('brand')) text(brand, 'sl-brand', 'brand');
@@ -401,8 +409,19 @@
                 var data = await request({ url: 'items', data: { page: 1, limit: 100, filters: JSON.stringify({ variant_parent_name: parent }), label_pricing: 'true' } });
                 var rows = Array.isArray(data.list) ? data.list : [];
                 var values = Array.from(new Set(rows.map(function (row) { return String(row.variant_value || '').trim(); }).filter(Boolean)));
+                var axes = {};
+                rows.forEach(function (row) {
+                    var axis = String(row.variant_axis || '').trim();
+                    var value = String(row.variant_value || '').trim();
+                    if (!axis || !value) return;
+                    if (!axes[axis]) axes[axis] = [];
+                    if (!axes[axis].some(function (existing) { return existing.toLocaleLowerCase() === value.toLocaleLowerCase(); })) axes[axis].push(value);
+                });
                 state.entries.forEach(function (entry) {
-                    if (String(entry.item.variant_parent_name || '').trim() === parent) entry.item.available_variant_values = values;
+                    if (String(entry.item.variant_parent_name || '').trim() === parent) {
+                        entry.item.available_variant_values = values;
+                        entry.item.available_variant_options = axes;
+                    }
                 });
             } catch (_) { /* Keep printing the selected variant even if sibling lookup is unavailable. */ }
         }
@@ -609,7 +628,7 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
         $(root.document).on('change', '#sl-image-upload', function () {
             var file = this.files && this.files[0];
             if (!file) return;
-            if (!/^image\\/(png|jpeg|webp)$/.test(file.type) || file.size > 1024 * 1024) {
+            if (!/^image\/(png|jpeg|webp)$/.test(file.type) || file.size > 1024 * 1024) {
                 error(new Error('Choose a PNG, JPEG or WebP image smaller than 1 MB.'));
                 this.value = '';
                 return;
