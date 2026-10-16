@@ -129,8 +129,8 @@
         if (nameParts) nameText = nameParts[1].trim() + '\n' + nameParts[2].trim() + (nameParts[3] ? ' / ' + nameParts[3].trim() : '');
         {
             var selectedVariant = String(item.variant_value || '').trim();
-            var selectedAxisParts = String(item.variant_axis || '').split(/\\s*\\/\\s*|\\s*,\\s*/).map(function (v) { return v.trim(); }).filter(Boolean);
-            var selectedValueParts = selectedVariant.split(/\\s*\\/\\s*|\\s*,\\s*/).map(function (v) { return v.trim(); }).filter(Boolean);
+            var selectedAxisParts = String(item.variant_axis || '').split(/\s*\/\s*|\s*,\s*/).map(function (v) { return v.trim(); }).filter(Boolean);
+            var selectedValueParts = selectedVariant.split(/\s*\/\s*|\s*,\s*/).map(function (v) { return v.trim(); }).filter(Boolean);
             var selectedByAxis = {};
             selectedAxisParts.forEach(function (axis, index) {
                 if (selectedValueParts[index]) selectedByAxis[axis.toLocaleLowerCase()] = selectedValueParts[index].toLocaleLowerCase();
@@ -418,7 +418,7 @@
                 var rows = Array.isArray(data.list) ? data.list : [];
                 var values = Array.from(new Set(rows.map(function (row) { return String(row.variant_value || '').trim(); }).filter(Boolean)));
                 var axes = {};
-                function splitParts(value) { return String(value || '').split(/\\s*\\/\\s*|\\s*,\\s*/).map(function (part) { return part.trim(); }).filter(Boolean); }
+                function splitParts(value) { return String(value || '').split(/\s*\/\s*|\s*,\s*/).map(function (part) { return part.trim(); }).filter(Boolean); }
                 rows.forEach(function (row) {
                     var axisParts = splitParts(row.variant_axis), valueParts = splitParts(row.variant_value);
                     axisParts.forEach(function (axis, index) {
