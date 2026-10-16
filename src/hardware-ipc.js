@@ -278,6 +278,37 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
       const { normalizeTargets, columnsFor } = require('./printer-targets');
 
       /*
+       * Use the same fast, text-command ESC/POS route as the working cash
+       * closing report for ordinary sale receipts. The Unicode raster fallback
+       * requires Chromium layout, screenshot capture, image conversion and many
+       * raster strips; on printers whose graphics command support differs, it
+       * can also produce the repeated garbage characters reported on the
+       * Tysoo PRP-300. Normalize printable receipt text to a conservative
+       * single-byte character set before rendering so the renderer stays on
+       * the same text-command path as the cash closing slip. Image fields stay
+       * intact for the existing logo/QR processing below.
+       */
+      function textCompatible(value) {
+        if (typeof value === 'string') {
+          return value
+            .replace(/€/g, 'EUR')
+            .normalize('NFKD')
+            .replace(/[\\u0300-\\u036f]/g, '')
+            .replace(/[^\\x20-\\x7e\\r\\n\\t]/g, '?');
+        }
+        if (Array.isArray(value)) return value.map(textCompatible);
+        if (value && typeof value === 'object') {
+          const out = {};
+          for (const [key, child] of Object.entries(value)) {
+            if (key === 'logo' || key === 'footerImage') out[key] = child;
+            else out[key] = textCompatible(child);
+          }
+          return out;
+        }
+        return value;
+      }
+
+      /*
        * One receipt can now go to several printers, each with its own paper and
        * its own number of copies - a counter roll and a duplicate for the file,
        * or a second copy to the back office.
@@ -377,7 +408,8 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
         const logo = await pictureDots('logo', paperWidth, true);
         /* eslint-disable-next-line no-await-in-loop -- cached per width. */
         const footerImage = await pictureDots('footerImage', paperWidth, false);
-        const bytes = await renderReceipt({ ...(sale || {}), logo, footerImage }, {
+        const compatibleSale = textCompatible({ ...(sale || {}), logo, footerImage });
+        const bytes = await renderReceipt(compatibleSale, {
           paperWidth,
           /* A printer that cannot be taught a glyph spells the currency
              instead. Per machine, like the printer name. */
