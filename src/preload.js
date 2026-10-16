@@ -157,6 +157,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // rendering. The browser keeps using print() above.
     printReceipt: (sale, options) => ipcRenderer.invoke('printer:print-receipt', sale, options),
     previewReceipt: (sale, options) => ipcRenderer.invoke('printer:preview-receipt', sale, options),
+    getReceiptSettings: () => ipcRenderer.invoke('printer:receipt-settings-get'),
+    saveReceiptSettings: settings => ipcRenderer.invoke('printer:receipt-settings-save', settings),
+    testReceipt: settings => ipcRenderer.invoke('printer:receipt-test', settings),
     // Roll reports declare their sections; sheet PDFs use printPdf above.
     printReport: (doc, options) => ipcRenderer.invoke('printer:print-report', doc, options)
   },
