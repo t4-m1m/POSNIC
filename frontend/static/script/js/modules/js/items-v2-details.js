@@ -76,7 +76,7 @@
     function report(message) { el('error').textContent = message; el('error').hidden = false; }
     function number(id) { return val(id) === '' ? undefined : Number(val(id)); }
     function notify() { el('form').dispatchEvent(new Event('input', { bubbles: true })); }
-    var hsnRows = null, hsnLoading = false;
+    var hsnRows = null, hsnLoading = false, manualPurchaseCost = false;
     function hsnSuggestions() {
         if (!caps.tax) return;
         if (hsnRows === null) {
@@ -250,6 +250,8 @@
         var eurRaw = val('cost-eur'), eur = Number(eurRaw), rate = Number(val('exchange-rate')) || 280, extraCost = Number(val('purchase-vat'));
         var purchaseBase = eurRaw !== '' && Number.isFinite(eur) && eur >= 0 ? Math.round((eur * rate + Number.EPSILON) * 100) / 100 : null;
         var purchaseExtraCost = purchaseBase === null ? null : Math.round((Math.max(0, Number.isFinite(extraCost) ? extraCost : 0) + Number.EPSILON) * 100) / 100;
+        var enteredPurchaseCost = val('cost') === '' ? null : Number(val('cost'));
+        var finalPurchaseCost = manualPurchaseCost && Number.isFinite(enteredPurchaseCost) && enteredPurchaseCost >= 0 ? Math.round((enteredPurchaseCost + Number.EPSILON) * 100) / 100 : (purchaseBase === null ? null : purchaseBase + purchaseExtraCost);
         var out = { mrp_price: Number(val('mrp')), reorder_point: number('reorder'), unit_id: val('unit') === 'qty' ? '' : val('unit'), unit: u && u.dataset.unit || 'qty', supplier_id: val('supplier'), supplier_name: supplier && supplier.dataset.name || '',
             selling_price_2: val('price-2') === '' ? 0 : Number(val('price-2')), selling_price_3: val('price-3') === '' ? 0 : Number(val('price-3')), open_price: checked('open-price'), service_unit: val('service-unit'), item_weight_machine_based: caps.weight && checked('weight'),
             discount_amount: val('discount-type') === 'amount' ? Number(val('discount')) : 0, discount_percentage: val('discount-type') === 'percentage' ? Number(val('discount')) : 0,
@@ -261,7 +263,8 @@
             purchase_extra_cost_dzd: purchaseBase === null ? undefined : (Number.isFinite(extraCost) && extraCost >= 0 ? extraCost : 0),
             purchase_base_dzd: purchaseBase === null ? undefined : purchaseBase,
             purchase_vat_dzd: purchaseExtraCost === null ? undefined : purchaseExtraCost,
-            purchase_cost_dzd: purchaseBase === null ? undefined : purchaseBase + purchaseExtraCost,
+            purchase_cost_dzd: finalPurchaseCost === null ? undefined : finalPurchaseCost,
+            purchase_cost_manual_override: manualPurchaseCost && finalPurchaseCost !== null,
             cover_image: (function(){var p=photos.find(function(p){return p.cover==='yes';});return p?(p.uploaded||p.name):'item.svg';}()), channel_off: selected('channel-off') };
         Object.assign(out, P.itemTranslationsV2.data());
         if (caps.tax && val('hsn')) Object.assign(out, { tax_method: 'hsn', hsn_code: val('hsn'), hsn_description: val('hsn-description'), tax: Number(val('hsn-rate')), tax_id: '', tax_name: '' });
@@ -337,6 +340,10 @@
     }
     function updatePurchaseCost() {
         var eurRaw = el('cost-eur').value, eur = Number(eurRaw), rate = Number(el('exchange-rate').value), extraCost = Number(el('purchase-vat').value);
+        if (manualPurchaseCost) {
+            el('purchase-cost-summary').textContent = 'Manual final cost: ' + (Number.isFinite(Number(el('cost').value)) ? Number(el('cost').value).toFixed(2) : '—') + ' DA. Change EUR cost, exchange rate or extra cost to recalculate.';
+            notify(); return;
+        }
         if (!Number.isFinite(rate) || rate <= 0) rate = 280;
         if (!Number.isFinite(extraCost) || extraCost < 0) extraCost = 0;
         try { root.localStorage.setItem('posnic.purchase-cost-settings', JSON.stringify({ exchangeRate: rate, extraCost: extraCost })); } catch (_) {}
@@ -356,7 +363,12 @@
         if(initialized)return;initialized=true;
         el('reference-date').value = currentYYMM();
         ['type-name','brand-abbr','reference'].forEach(function(id){el(id).addEventListener('input',syncComposedName);});
-        ['cost-eur','exchange-rate','purchase-vat'].forEach(function(id){el(id).addEventListener('input',updatePurchaseCost);});
+        ['cost-eur','exchange-rate','purchase-vat'].forEach(function(id){el(id).addEventListener('input',function(){manualPurchaseCost=false;updatePurchaseCost();});});
+        el('cost').addEventListener('input',function(){
+            manualPurchaseCost = el('cost').value.trim() !== '' && Number.isFinite(Number(el('cost').value)) && Number(el('cost').value) >= 0;
+            if(manualPurchaseCost) el('purchase-cost-summary').textContent = 'Manual final cost: ' + Number(el('cost').value).toFixed(2) + ' DA. Change EUR cost, exchange rate or extra cost to recalculate.';
+            notify();
+        });
         el('hsn').addEventListener('focus', hsnSuggestions);
         el('form').addEventListener('click', function (event) {
             if (!event.target.closest('#iv2-generate-barcode')) return;
@@ -425,13 +437,20 @@
         Object.keys(mapping).forEach(function(id){if(item[mapping[id]] != null) el(id).value=item[mapping[id]];});
         if (item.selling_price_2 != null) el('price-2').value = item.selling_price_2; else el('price-2').value = '';
          if (item.selling_price_3 != null) el('price-3').value = item.selling_price_3; else el('price-3').value = '';
-         if (item.purchase_price_eur != null) {
+         manualPurchaseCost = false;
+        if (item.purchase_price_eur != null) {
             el('cost-eur').value = item.purchase_price_eur;
             if (item.purchase_exchange_rate != null) el('exchange-rate').value = item.purchase_exchange_rate;
             if (item.purchase_extra_cost_dzd != null) el('purchase-vat').value = item.purchase_extra_cost_dzd; else if (item.purchase_vat_dzd != null) el('purchase-vat').value = item.purchase_vat_dzd;
             updatePurchaseCost();
+            if (item.purchase_cost_dzd != null && Math.abs(Number(item.purchase_cost_dzd) - Number(el('cost').value)) > 0.009) {
+                el('cost').value = Number(item.purchase_cost_dzd).toFixed(2);
+                manualPurchaseCost = item.purchase_cost_manual_override !== false;
+                if (manualPurchaseCost) el('purchase-cost-summary').textContent = 'Manual final cost: ' + Number(el('cost').value).toFixed(2) + ' DA. Change EUR cost, exchange rate or extra cost to recalculate.';
+            }
         } else {
             el('cost').value = item.purchase_cost_dzd != null ? item.purchase_cost_dzd : (item.company_price != null ? item.company_price : '');
+            manualPurchaseCost = item.purchase_cost_dzd != null;
         }
         if (itemName) el('name').value = itemName;
         ['mfg','expiry'].forEach(function(id){var v=item[id==='mfg'?'items_mfg_date':'items_expiry_date'];el(id).value=v?String(v).slice(0,10):'';});
