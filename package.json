@@ -173,6 +173,7 @@
       "src/print-pdf.js",
       "src/windows-spooler.js",
       "src/print-temp-files.js",
+      "src/tysoo-prp300-receipt.js",
       "src/escpos-receipt.js",
       "src/escpos-unicode.js",
       "src/bill-design.js",
