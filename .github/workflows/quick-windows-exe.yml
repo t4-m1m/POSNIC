@@ -1,4 +1,5 @@
 name: Quick Windows EXE (no tests)
+# Re-triggered for the current POSNIC update; build installer only, no test steps.
 
 on:
   workflow_dispatch:
