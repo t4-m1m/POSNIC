@@ -89,7 +89,8 @@
             var fontWeight = v.font_weight === 'bold' ? 'bold' : (v.font_weight === 'normal' ? 'normal' : (key === 'name' || key === 'price' ? 'bold' : 'normal'));
             var textAlign = ['left', 'center', 'right'].indexOf(v.text_align) >= 0 ? v.text_align : 'center';
             var color = /^#[0-9a-f]{6}$/i.test(String(v.color || '')) ? v.color : '#000000';
-            result[key] = { x: Math.max(0, Math.min(100 - w, n('x'))), y: Math.max(0, Math.min(100 - h, n('y'))), w: w, h: h, rotation: rotation, group_id: typeof v.group_id === 'string' && v.group_id.length <= 80 ? v.group_id : '', font_size: fontSize, font_weight: fontWeight, text_align: textAlign, color: color, text: '' };
+            if (key === 'barcode' && Number(v.w) === 80 && Number(v.h) === 38 && Number(v.x) === 10 && Number(v.y) === 57) { v = Object.assign({}, v, { x: 22, y: 60, w: 56, h: 24 }); w = 56; h = 24; }
+            result[key] = { x: Math.max(0, Math.min(100 - w, n('x'))), y: Math.max(0, Math.min(100 - h, n('y'))), w: w, h: h, rotation: rotation, group_id: typeof v.group_id === 'string' && v.group_id.length <= 80 ? v.group_id : '', font_size: fontSize, font_weight: fontWeight, text_align: textAlign, color: color, text: typeof v.text === 'string' ? v.text.slice(0, 120) : '' };
         });
         return result;
     }
