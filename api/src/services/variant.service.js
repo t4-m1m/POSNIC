@@ -156,9 +156,20 @@ class VariantsService {
       const parsedFilters = this.parseFilters(filters);
       const query = this.buildQueryFromFilters(parsedFilters);
 
-      // Add branch_id filter matching PHP: $filters['branch_id'] = self::$currentBranch;
+      // New variants are branch-owned, but the original POSNIC catalogue
+      // also has shared definitions with no branch_id. Keep those visible to
+      // the variant editor and barcode-combination picker.
       if (branch_id) {
-        query.branch_id = branch_id;
+        const branchId = branch_id.toString();
+        if (query.$or) {
+          query.$and = (query.$and || []).concat([{ $or: query.$or }]);
+          delete query.$or;
+        }
+        query.$or = [
+          { branch_id: branchId },
+          { branch_id: { $exists: false } },
+          { branch_id: null },
+        ];
       }
 
       const result = await variantsRepository.findAll(query, {
