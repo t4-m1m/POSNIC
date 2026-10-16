@@ -158,7 +158,7 @@
                 var toId = this.getAttribute('data-block-id');
                 drag = null;
                 previewBlocks.removeClass('rd-drop-target');
-                if (!fromId || !toId || fromId === toId) return;
+                if (!fromId || !toId) return;
                 var blocks = layout().blocks;
                 var from = blocks.findIndex(function (b) { return b.id === fromId; });
                 var to = blocks.findIndex(function (b) { return b.id === toId; });
