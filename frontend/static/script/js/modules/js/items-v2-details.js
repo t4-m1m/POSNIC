@@ -214,6 +214,9 @@
         if (!P.itemTranslationsV2.ready()) return error(label('lang_item_ai_finish', 'Wait for the suggestion, then keep or cancel it before saving.'), 'item_translation_ai');
         if (val('cost-eur') !== '' && (!(Number(val('exchange-rate')) > 0) || !Number.isFinite(Number(val('exchange-rate'))))) return error('Exchange rate must be greater than zero.', 'exchange-rate');
         if (val('cost-eur') !== '' && (!Number.isFinite(Number(val('purchase-vat'))) || Number(val('purchase-vat')) < 0)) return error('Extra cost must be zero or greater.', 'purchase-vat');
+        if (val('price-2') !== '' && Number(val('price-2')) < Number(val('price'))) return error('Selling price 2 cannot be lower than the standard price; use price 3 for the minimum.', 'price-2');
+        if (val('price-3') !== '' && Number(val('price-3')) > Number(val('price'))) return error('Selling price 3 must be the lowest selling price.', 'price-3');
+        if (val('price-2') !== '' && val('price-3') !== '' && Number(val('price-3')) > Number(val('price-2'))) return error('Selling price 3 must not exceed selling price 2.', 'price-3');
         if (val('pack-size') && !(Number(val('pack-size')) > 0)) return error('Units per pack must be greater than zero.', 'pack-size');
         if (val('expiry') && val('mfg') && val('expiry') < val('mfg')) return error('Expiry date must not be earlier than manufacture date.', 'expiry');
         if (!validGtin(val('gtin')) && !isFamily()) return error('Enter a valid GTIN with a matching check digit.', 'gtin');
@@ -248,7 +251,7 @@
         var purchaseBase = eurRaw !== '' && Number.isFinite(eur) && eur >= 0 ? Math.round((eur * rate + Number.EPSILON) * 100) / 100 : null;
         var purchaseExtraCost = purchaseBase === null ? null : Math.round((Math.max(0, Number.isFinite(extraCost) ? extraCost : 0) + Number.EPSILON) * 100) / 100;
         var out = { mrp_price: Number(val('mrp')), reorder_point: number('reorder'), unit_id: val('unit') === 'qty' ? '' : val('unit'), unit: u && u.dataset.unit || 'qty', supplier_id: val('supplier'), supplier_name: supplier && supplier.dataset.name || '',
-            open_price: checked('open-price'), service_unit: val('service-unit'), item_weight_machine_based: caps.weight && checked('weight'),
+            selling_price_2: val('price-2') === '' ? 0 : Number(val('price-2')), selling_price_3: val('price-3') === '' ? 0 : Number(val('price-3')), open_price: checked('open-price'), service_unit: val('service-unit'), item_weight_machine_based: caps.weight && checked('weight'),
             discount_amount: val('discount-type') === 'amount' ? Number(val('discount')) : 0, discount_percentage: val('discount-type') === 'percentage' ? Number(val('discount')) : 0,
             plu_code: val('plu'), gtin: val('gtin'), barcodes: list(val('alt-barcodes')), purchase_unit: val('purchase-unit'), conversion_factor: number('pack-size'), brand: val('brand'), article_type: val('type-name'), brand_abbreviation: val('brand-abbr'), reference_date: val('reference-date'), model_reference: val('reference'), tags: list(val('tags')), position: Number(val('position')),
             items_mfg_date: val('mfg'), items_expiry_date: val('expiry'), icon: val('icon'), tile_color: auto ? auto.color : val('tile-color'), tile_shape: auto ? auto.shape : val('tile-shape'),
@@ -420,7 +423,9 @@
         }
         var mapping = {mrp:'mrp_price',reorder:'reorder_point',plu:'plu_code',gtin:'gtin','purchase-unit':'purchase_unit','pack-size':'conversion_factor',brand:'brand',position:'sort_order',icon:'icon','tile-color':'tile_color','tile-shape':'tile_shape','service-unit':'service_unit','hsn':'hsncode','hsn-description':'hsndescription','hsn-rate':'tax','prep-note':'prep_note','prep-minutes':'prep_minutes'};
         Object.keys(mapping).forEach(function(id){if(item[mapping[id]] != null) el(id).value=item[mapping[id]];});
-        if (item.purchase_price_eur != null) {
+        if (item.selling_price_2 != null) el('price-2').value = item.selling_price_2; else el('price-2').value = '';
+         if (item.selling_price_3 != null) el('price-3').value = item.selling_price_3; else el('price-3').value = '';
+         if (item.purchase_price_eur != null) {
             el('cost-eur').value = item.purchase_price_eur;
             if (item.purchase_exchange_rate != null) el('exchange-rate').value = item.purchase_exchange_rate;
             if (item.purchase_extra_cost_dzd != null) el('purchase-vat').value = item.purchase_extra_cost_dzd; else if (item.purchase_vat_dzd != null) el('purchase-vat').value = item.purchase_vat_dzd;
