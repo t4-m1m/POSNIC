@@ -65,6 +65,7 @@
     });
   }
   PosnicPro.hr={
+    showDataTablePage:function(){ $('.page_loader').hide(); $('#hr_new').show(); showPanel('workers'); },
     tab:showPanel,
     refresh:function(){loadWorkers();loadSummary();},
     openWorkerForm:function(w){
