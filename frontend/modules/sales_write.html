@@ -847,8 +847,23 @@
                                             </label>
                                         </div>
                                     </div>
-                                    <div class="card-body payment-lockable">
-                                        <div class="profilebox text-center">
+                                    <div class="card-body payment-lockable posnic-payment-redesign">
+                                        <div class="posnic-pay-summary">
+                                            <div class="posnic-pay-total"><span>Total à payer</span><strong><span class="display-currency"></span> <span class="tendered_total"></span></strong></div>
+                                            <div class="posnic-pay-entered"><label for="Partial_amount">Montant payé</label><input type="text" name="Partial_amount" id="Partial_amount" class="form-control partial_amount allow_decimal" aria-label="Montant payé" inputmode="decimal" autocomplete="off"></div>
+                                        </div>
+                                        <div class="posnic-pay-methods">
+                                            <strong>Mode de paiement</strong>
+                                            <div class="row btn-group-toggle" data-toggle="buttons" id="payment_id"><!-- payment methods fields --></div>
+                                        </div>
+                                        <div class="posnic-pay-keypad" role="group" aria-label="Clavier de paiement">
+                                            <button type="button" data-pay-key="7">7</button><button type="button" data-pay-key="8">8</button><button type="button" data-pay-key="9">9</button><button type="button" data-pay-key="back" aria-label="Effacer le dernier chiffre">⌫</button>
+                                            <button type="button" data-pay-key="4">4</button><button type="button" data-pay-key="5">5</button><button type="button" data-pay-key="6">6</button><button type="button" data-pay-key="clear" class="posnic-pay-clear">C</button>
+                                            <button type="button" data-pay-key="1">1</button><button type="button" data-pay-key="2">2</button><button type="button" data-pay-key="3">3</button><button type="button" data-pay-key="00">00</button>
+                                            <button type="button" data-pay-key=".">.</button><button type="button" data-pay-key="0">0</button><button type="button" data-pay-key="due" class="posnic-pay-fill">Montant dû</button><button type="button" data-pay-key="validate" class="posnic-pay-validate">Valider la vente</button>
+                                        </div>
+                                        <div class="posnic-pay-due">Reste à payer : <strong><span class="display-currency"></span> <span class="balanceDue font-18">0.00</span></strong></div>
+                                        <div class="profilebox text-center" style="display:none">
                                             <div class="row mb-3">
                                                 <div class="col-lg-12">
                                                     <h1 class="text-center badge badge-success-inverse"
@@ -904,9 +919,7 @@
                                                 </div>
                                             </div>
 
-                                            <div class="row btn-group-toggle" data-toggle="buttons" id="payment_id">
-                                                <!--  payment methods fields -->
-                                            </div>
+                                            
 
                                         </div>
                                     </div>
