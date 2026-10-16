@@ -88,7 +88,7 @@
             var defaultFontSize = key === 'price' ? 220 : key === 'details' ? 75 : 100;
             var fontSize = Number(v.font_size);
             if (!Number.isFinite(fontSize)) fontSize = defaultFontSize;
-            fontSize = Math.max(40, Math.min(400, fontSize));
+            fontSize = Math.max(25, Math.min(600, fontSize));
             var fontWeight = v.font_weight === 'bold' ? 'bold' : (v.font_weight === 'normal' ? 'normal' : (key === 'name' || key === 'price' ? 'bold' : 'normal'));
             var textAlign = ['left', 'center', 'right'].indexOf(v.text_align) >= 0 ? v.text_align : 'center';
             var color = /^#[0-9a-f]{6}$/i.test(String(v.color || '')) ? v.color : '#000000';
@@ -111,7 +111,7 @@
         node.style.height = height + '%';
         node.style.transform = 'rotate(' + (Number(layout.rotation) || 0) + 'deg)';
         node.style.transformOrigin = 'center center';
-        node.style.fontSize = (Number(layout.font_size) || 100) + '%';
+        node.style.fontSize = ((Number(s.fontSize) || 12) * (Number(layout.font_size) || 100) / 100) + 'px';
         node.style.fontWeight = layout.font_weight || 'normal';
         node.style.textDecoration = layout.emphasis ? 'underline' : 'none';
         node.style.textAlign = layout.text_align || 'center';
@@ -206,9 +206,9 @@
             applyElementLayout(barcodeBox, 'barcode', s);
             var svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('sl-barcode');
             barcodeBox.appendChild(svg); div.appendChild(barcodeBox);
-            barcode(svg, String(item.barcode_id), { format: s.format || 'CODE128', width: Math.max(0.5, Math.min(1.2, Number(s.barWidth) || 1)), height: Math.max(10, Math.min(24, Number(s.barHeight) || 18)), margin: 0,
+            barcode(svg, String(item.barcode_id), { format: s.format || 'CODE128', width: Math.max(0.55, Math.min(0.8, Number(s.barWidth) || 0.7)), height: 15, margin: 0,
             marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0,
-            displayValue: true, textMargin: 1, font: 'monospace', fontSize: 7,
+            displayValue: true, textMargin: 2, font: 'monospace', fontSize: 10,
             textAlign: 'center', fontOptions: s.fontOptions || '', lineColor: s.ink, background: s.background });
             svg.style.width = 'auto'; svg.style.maxWidth = '100%'; svg.style.height = '100%'; svg.style.maxHeight = '100%';
         }
@@ -272,9 +272,14 @@
             date: $('#sl-date').is(':checked'), printedDate: new Date().toLocaleDateString(), currency: root.PosnicPro.local.get('currencySign') || ''
         };
         if (s.elementLayout && s.elementLayout.barcode) {
-            var barcodeMaxWidth = Math.min(100, 20 / Math.max(1, Number(s.width) || 30) * 100);
+            var labelWidthMm = Math.max(1, Number(s.width) || 45);
+            var labelHeightMm = Math.max(1, Number(s.height) || 30);
+            var barcodeMaxWidth = Math.min(100, 25 / labelWidthMm * 100);
+            var barcodeMaxHeight = Math.min(100, 15 / labelHeightMm * 100);
             s.elementLayout.barcode.w = Math.min(barcodeMaxWidth, Math.max(5, Number(s.elementLayout.barcode.w) || barcodeMaxWidth));
+            s.elementLayout.barcode.h = Math.min(barcodeMaxHeight, Math.max(5, Number(s.elementLayout.barcode.h) || barcodeMaxHeight));
             s.elementLayout.barcode.x = Math.max(0, Math.min(100 - s.elementLayout.barcode.w, Number(s.elementLayout.barcode.x) || 0));
+            s.elementLayout.barcode.y = Math.max(0, Math.min(100 - s.elementLayout.barcode.h, Number(s.elementLayout.barcode.y) || 0));
         }
         validateDesign(s); geometry(s); return s;
     }
@@ -661,7 +666,7 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
                 syncSelectionControls();
             } else {
                 var node = document.querySelector('#sl-sample [data-sl-element="' + key + '"]');
-                if (node) applyElementLayout(node, key, { elementLayout: state.elementLayout });
+                if (node) applyElementLayout(node, key, { elementLayout: state.elementLayout, fontSize: Math.max(3, Number($('#bar-fontSize').val()) || 12) });
             }
         }
         $(root.document).on('input change', '#sl-selected-font-size', function () {

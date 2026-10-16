@@ -4646,15 +4646,6 @@ $(document).ready(function () {
                 greaterThanMfgDate: "#items_mfg_date",
                 expiryGreaterThanCurrentDate: true
             },
-            // Validated only when HSN tax mode shows it (hidden fields are
-            // ignored) - it is the tax source in that mode, so it must be a
-            // real HSN: 4-8 digits.
-            items_hsncode: {
-                digits: true,
-                minlength: 4,
-                maxlength: 8
-            }
-
         },
         messages: {
             items_name: {
@@ -4714,11 +4705,6 @@ $(document).ready(function () {
             items_description: {
                 minlength: "This field must consist of at least 100 characters",
                 maxlength: "This field should not be more than 10000 characters"
-            },
-            items_hsncode: {
-                digits: "HSN code is digits only",
-                minlength: "HSN code is 4 to 8 digits",
-                maxlength: "HSN code is 4 to 8 digits"
             },
             items_mfg_date: {
                 dateISO: "Use the date format YYYY-MM-DD",

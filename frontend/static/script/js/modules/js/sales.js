@@ -1450,6 +1450,7 @@ PosnicPro.sales = {
         params._priceListApplied = true;
         params._replaceExistingLine = true;
         params.item_quantity = Number($('#touchsale_item_qty' + id).val()) || 1;
+        $name.data('itemText', $.extend(true, {}, params));
         PosnicPro.sales.addSalesLineItems(params);
     },
     addSalesLineItems: function (params) {

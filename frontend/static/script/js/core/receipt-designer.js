@@ -52,10 +52,20 @@
         } catch (_) { return ''; }
     }
     function barcode(text) {
-        if (!text || !$.fn.barcode) return '';
-        var canvas = $('<canvas>');
-        canvas.barcode(String(text), 'code128', { output: 'canvas', barWidth: 2, barHeight: 42, showHRI: true });
-        return canvas[0].toDataURL('image/png');
+        if (!text) return '';
+        if ($.fn.barcode) {
+            var canvas = $('<canvas>');
+            canvas.barcode(String(text), 'code128', { output: 'canvas', barWidth: 2, barHeight: 42, showHRI: true });
+            return canvas[0].toDataURL('image/png');
+        }
+        if (window.JsBarcode) {
+            try {
+                var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                window.JsBarcode(svg, String(text), { format: 'CODE128', displayValue: true, fontSize: 12, height: 42, margin: 2 });
+                return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
+            } catch (_) { return ''; }
+        }
+        return '';
     }
     function formatFor(data, requested) {
         if (!data.receipt_designs) return requested;
@@ -336,7 +346,7 @@
             }
             else {
                 var logo = data.logo || data.branch_image;
-                var src = b.type === 'logo' ? safeImage(!logo || logo === 'store.png' ? 'static/images/default/store.png' : logo) : b.type === 'barcode' ? barcode(data.sales_id) : safeImage(b.src);
+                var src = b.type === 'logo' ? safeImage(!logo || logo === 'store.png' ? 'static/images/default/store.png' : logo) : b.type === 'barcode' ? barcode(data.sales_id || 'PREVIEW-RECEIPT-0001') : safeImage(b.src);
                 if (!src) return '';
                 var imageWidth = b.type === 'logo' ? (sheet ? 22 : 45) : b.type === 'barcode' ? 90 : b.width;
                 content = '<img src="' + esc(src) + '" alt="' + esc(label(b.type === 'qr' ? 'QR code' : b.type === 'logo' ? 'Store logo' : b.type === 'barcode' ? PosnicPro.i18n.t('lang_rd_receipt_barcode', 'Receipt barcode') : PosnicPro.i18n.t('lang_image', 'Image'))) + '" style="width:' + (sheet ? contract.formats[format].content * imageWidth / 100 + 'mm' : imageWidth + '%') + ';max-height:' + (b.type === 'logo' ? '100px' : 'none') + ';">';

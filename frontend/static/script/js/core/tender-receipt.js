@@ -124,7 +124,7 @@
         root.find('.header-content').text($('<div>').html(branch.header_print || '').text());
         root.find('.footer-content').text($('<div>').html(branch.footer_print || 'Thank you for shopping...!').text());
         PosnicPro.sales.view.renderSaleDocument(data, 'sale', true, root, layout);
-        if (!data.sales_id) { root.find('.print_view_id, .invoice-policy, .barcodeValue').hide(); }
+        if (!data.sales_id) { root.find('.print_view_id, .invoice-policy, .barcodeValue, .rd-block-barcode').hide(); }
         // Payment is still being collected. Do not invent a paid status or a
         // receipt number, and do not leave empty payment rows in the template.
         root.find('.print-invoice-payment-mode, .print-payment-status, .print-payment-balance, .print-payment-pending')

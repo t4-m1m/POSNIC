@@ -206,16 +206,16 @@
     }
     function isFamily() { return checked('has-variants') && document.querySelector('#items_v2 [name="iv2-kind"]:checked').value !== 'service'; }
     function validate() {
-        if (caps.tax && val('hsn') && !/^\d{4,8}$/.test(val('hsn'))) return error(P.i18n.t('lang_iv2_hsn_code_invalid', 'Choose an HSN / SAC code from the suggestions, or enter a 4 to 8 digit code.'), 'hsn');
-        if (caps.tax && val('hsn') && val('hsn-rate') === '') return error(P.i18n.t('lang_iv2_hsn_rate_required', 'Enter the applicable tax rate for this code. Enter 0 for a zero-rated item.'), 'hsn-rate');
         var invalid = document.querySelector('#iv2-fields input:invalid, #iv2-fields select:invalid, #iv2-fields textarea:invalid');
         if (invalid) return { error: invalid.validationMessage, field: invalid.id };
         if (reading) return error('Wait for the selected photos to finish loading.', 'photos');
         if (!P.itemTranslationsV2.ready()) return error(label('lang_item_ai_finish', 'Wait for the suggestion, then keep or cancel it before saving.'), 'item_translation_ai');
         if (val('cost-eur') !== '' && (!(Number(val('exchange-rate')) > 0) || !Number.isFinite(Number(val('exchange-rate'))))) return error('Exchange rate must be greater than zero.', 'exchange-rate');
         if (val('cost-eur') !== '' && (!Number.isFinite(Number(val('purchase-vat'))) || Number(val('purchase-vat')) < 0)) return error('Extra cost must be zero or greater.', 'purchase-vat');
-        if (val('price-2') !== '' && Number(val('price-2')) < Number(val('price'))) return error('Selling price 2 cannot be lower than the standard price; use price 3 for the minimum.', 'price-2');
-        if (val('price-3') !== '' && Number(val('price-3')) > Number(val('price'))) return error('Selling price 3 must be the lowest selling price.', 'price-3');
+        // Both alternate prices may be below the standard price. Price 3 may
+        // be the lowest, so only enforce the ordering between tiers 2 and 3.
+        if (val('price-2') !== '' && Number(val('price-2')) < 0) return error('Selling price 2 must be zero or greater.', 'price-2');
+        if (val('price-3') !== '' && Number(val('price-3')) < 0) return error('Selling price 3 must be zero or greater.', 'price-3');
         if (val('price-2') !== '' && val('price-3') !== '' && Number(val('price-3')) > Number(val('price-2'))) return error('Selling price 3 must not exceed selling price 2.', 'price-3');
         if (val('pack-size') && !(Number(val('pack-size')) > 0)) return error('Units per pack must be greater than zero.', 'pack-size');
         if (val('expiry') && val('mfg') && val('expiry') < val('mfg')) return error('Expiry date must not be earlier than manufacture date.', 'expiry');
