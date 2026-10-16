@@ -274,7 +274,7 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
     const startedAt = Date.now();
     const receiptLog = require('./receipt-log');
     try {
-      const { renderReceipt } = require('./escpos-unicode');
+      const { renderSale } = require('./escpos-receipt');
       const { normalizeTargets, columnsFor } = require('./printer-targets');
 
       /*
@@ -409,7 +409,7 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
         /* eslint-disable-next-line no-await-in-loop -- cached per width. */
         const footerImage = await pictureDots('footerImage', paperWidth, false);
         const compatibleSale = textCompatible({ ...(sale || {}), logo, footerImage });
-        const bytes = await renderReceipt(compatibleSale, {
+        const bytes = renderSale(compatibleSale, {
           paperWidth,
           /* A printer that cannot be taught a glyph spells the currency
              instead. Per machine, like the printer name. */
