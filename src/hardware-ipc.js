@@ -293,8 +293,8 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
           return value
             .replace(/€/g, 'EUR')
             .normalize('NFKD')
-            .replace(/[\\u0300-\\u036f]/g, '')
-            .replace(/[^\\x20-\\x7e\\r\\n\\t]/g, '?');
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^\x20-\x7e\r\n\t]/g, '?');
         }
         if (Array.isArray(value)) return value.map(textCompatible);
         if (value && typeof value === 'object') {
