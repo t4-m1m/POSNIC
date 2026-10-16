@@ -13902,3 +13902,39 @@ $(document).on('focusin click', '#sales_new input[name="addSalesLineItemQty"], #
         if (document.activeElement === input && !input.disabled && !input.readOnly) input.select();
     }, 0);
 });
+
+/* POSNIC payment keypad: edit the existing tender field so all established
+   payment/accounting listeners continue to run. Sale validation remains owned
+   by cartOrderSubmit; this UI never creates a sale by itself. */
+$(document).on('click', '.posnic-pay-keypad [data-pay-key]', function () {
+    var key = String($(this).attr('data-pay-key') || '');
+    var input = $('#Partial_amount');
+    if (!input.length) return;
+    if (key === 'validate') {
+        var dueText = String($('.balanceDue').first().text() || '0').replace(/[^0-9,.-]/g, '').replace(/,/g, '');
+        var due = parseFloat(dueText);
+        var methodText = String($('#payment_id .active, #payment_id input:checked').first().closest('label').text() || '').toLowerCase();
+        var isCredit = /credit|cr[eé]dit|unpaid|account/.test(methodText);
+        if (isFinite(due) && due > 0.009 && !isCredit && !$('#unpaid_payment_toggle').is(':checked')) {
+            PosnicPro.alert('warning', 'Payment is not complete. Add another payment method or enter the remaining amount.');
+            input.focus();
+            return;
+        }
+        $('#save_btn').trigger('click');
+        return;
+    }
+    var current = String(input.val() || '');
+    if (key === 'clear') current = '';
+    else if (key === 'back') current = current.slice(0, -1);
+    else if (key === 'due') {
+        var total = String($('.tendered_total').first().text() || '').replace(/[^0-9,.-]/g, '').replace(/,/g, '');
+        var dueValue = parseFloat(total);
+        current = isFinite(dueValue) ? String(dueValue) : current;
+    } else if (key === '.') {
+        if (current.indexOf('.') < 0) current = current ? current + '.' : '0.';
+    } else if (/^\d+$/.test(key)) {
+        current += key;
+    }
+    input.val(current).trigger('input').trigger('keyup').trigger('change');
+    input.focus();
+});
