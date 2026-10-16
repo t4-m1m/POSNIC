@@ -67,6 +67,14 @@ PosnicPro.sales = {
     },
     showAdd: function () {
         PosnicPro.sales.resetOrderRequest();
+        // A drawer opened by the previous screen must never leave its full-screen
+        // scrim intercepting the fresh sale workspace. HideSideBarModal resets
+        // styles/classes on the panels; clear the overlay's interaction class too.
+        $('.infobar-settings-sidebar-overlay').removeClass('is-active').css({
+            background: 'transparent',
+            position: 'initial',
+            pointerEvents: 'none'
+        });
         if (PosnicPro.askposnic) PosnicPro.askposnic.checkout = null;
         $('#ask_checkout_payment').remove();
         // ✅ Reset submission flag when opening new sale
