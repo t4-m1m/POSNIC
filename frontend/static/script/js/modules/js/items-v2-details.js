@@ -285,7 +285,7 @@
     }
     function update(capabilities, kind) {
         caps=capabilities;
-        el('food-extra').hidden=!caps.restaurant || kind==='service'; el('tax-extra').hidden=!caps.tax;
+        el('food-extra').hidden=!caps.restaurant || kind==='service'; el('tax-extra').hidden=true;
         el('service-unit').parentElement.hidden=kind!=='service'; el('variants').hidden=kind==='service'; el('variant-editor').hidden=!isFamily();
         ['food-extra','tax-extra','variants'].forEach(function(id){el(id).querySelectorAll('input,select,textarea,button').forEach(function(input){input.disabled=el(id).hidden;});});
         ['reorder','purchase-unit','pack-size','weight'].forEach(function(id){el(id).closest(id==='weight'?'label':'div').hidden=kind==='service';});
