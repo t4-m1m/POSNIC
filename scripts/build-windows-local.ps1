@@ -52,11 +52,10 @@ try {
     $mongod = Get-ChildItem -Path $tempRoot -Filter 'mongod.exe' -Recurse -File | Select-Object -First 1
     if (-not $mongod) { throw "mongod.exe was not found in the archive from $mongoUrl." }
     Copy-Item -LiteralPath $mongod.FullName -Destination (Join-Path $mongoBin 'mongod.exe') -Force
-    foreach ($dll in @('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll')) {
-        $dllPath = Join-Path $env:WINDIR "System32\$dll"
-        if (-not (Test-Path $dllPath)) { throw "Required Windows runtime file is missing: $dllPath" }
-        Copy-Item -LiteralPath $dllPath -Destination (Join-Path $mongoBin $dll) -Force
-    }
+    # prepare:bundle runs bundle-vc-runtime.js, which selects the correct x64
+    # Visual C++ runtime from Visual Studio or System32 and fails if unavailable.
+    # Do not copy DLLs here: that would bypass the shared runtime check and
+    # reject valid build machines where the DLLs are installed outside System32.
 } finally {
     Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $zipPath -Force -ErrorAction SilentlyContinue
