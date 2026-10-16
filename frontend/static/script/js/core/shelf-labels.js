@@ -593,8 +593,34 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
             var selected = $('#sl-sample .sl-element.sl-selected').first();
             var key = selected.attr('data-sl-element');
             var layout = key ? (state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key]) : null;
+            var baseSize = Math.max(3, Number($('#bar-fontSize').val()) || 12);
             $('#sl-rotation').val(layout ? (Number(layout.rotation) || 0) : 0).prop('disabled', !layout);
+            $('#sl-selected-font-size').val(layout ? Math.max(3, Math.min(72, Math.round(baseSize * (Number(layout.font_size) || 100) / 100))) : '').prop('disabled', !layout);
+            $('#sl-selected-bold').prop('checked', !!layout && layout.font_weight === 'bold').prop('disabled', !layout);
+            $('#sl-selected-emphasis').prop('checked', !!layout && layout.emphasis === true).prop('disabled', !layout);
         }
+        function updateSelectedLayout(patch, render) {
+            var selected = $('#sl-sample .sl-element.sl-selected').first(), key = selected.attr('data-sl-element');
+            if (!key) return;
+            var layout = Object.assign({}, state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key], patch);
+            state.elementLayout[key] = layout;
+            try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
+            if (render) {
+                refresh();
+                $('#sl-sample [data-sl-element="' + key + '"]').addClass('sl-selected');
+                syncSelectionControls();
+            } else {
+                var node = document.querySelector('#sl-sample [data-sl-element="' + key + '"]');
+                if (node) applyElementLayout(node, key, { elementLayout: state.elementLayout });
+            }
+        }
+        $(root.document).on('input change', '#sl-selected-font-size', function () {
+            var value = Number(this.value), baseSize = Math.max(3, Number($('#bar-fontSize').val()) || 12);
+            if (!Number.isFinite(value) || value < 3 || value > 72) return;
+            updateSelectedLayout({ font_size: Math.max(25, Math.min(600, value / baseSize * 100)) }, false);
+        });
+        $(root.document).on('change', '#sl-selected-bold', function () { updateSelectedLayout({ font_weight: this.checked ? 'bold' : 'normal' }, false); });
+        $(root.document).on('change', '#sl-selected-emphasis', function () { updateSelectedLayout({ emphasis: this.checked }, false); });
         function rotateSelected(delta) {
             var selected = $('#sl-sample .sl-element.sl-selected').first();
             var key = selected.attr('data-sl-element');
