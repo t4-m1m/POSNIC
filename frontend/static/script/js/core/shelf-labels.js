@@ -66,7 +66,7 @@
     var DEFAULT_ELEMENT_LAYOUT = {
         name: { x: 4, y: 2, w: 70, h: 23 },
         variant_values: { x: 3, y: 23, w: 94, h: 18, font_size: 100, font_weight: 'normal', text_align: 'center', color: '#000000' },
-        logo: { x: 76, y: 2, w: 20, h: 18 },
+        logo: { x: 25, y: 2, w: 50, h: 18 },
         barcode: { x: 10, y: 27, w: 80, h: 32 },
         price: { x: 5, y: 60, w: 90, h: 23 },
         details: { x: 5, y: 84, w: 90, h: 14 }
@@ -125,17 +125,14 @@
             var p = doc.createElement('p'); p.className = (cls || '') + ' sl-element'; p.textContent = value;
             applyElementLayout(p, key, s); div.appendChild(p); return p;
         }
-        if (s.samarina) {
-            var wordmark = doc.createElement('div');
-            wordmark.className = 'sl-logo sl-element sl-samarina-wordmark';
-            wordmark.dataset.slElement = 'logo';
-            if (s.logoData) { var logoImage = doc.createElement('img'); logoImage.src = s.logoData; logoImage.alt = 'SAMA life RIMA'; logoImage.style.cssText = 'width:100%;height:100%;object-fit:contain'; wordmark.appendChild(logoImage); } else { wordmark.innerHTML = '<span>SAMA</span><i>life</i><span>RIMA</span>'; }
-            wordmark.style.cssText = 'position:absolute;left:5%;top:3%;width:90%;height:17%;display:flex;align-items:center;justify-content:center;gap:2%;font-family:Georgia,serif;font-size:17px;font-weight:700;letter-spacing:-1px;color:#000;white-space:nowrap';
-            if (wordmark.querySelector('i')) wordmark.querySelector('i').style.cssText = 'font-family:cursive;font-size:12px;font-weight:400;margin:0 -2px;transform:rotate(-12deg)';
-            div.appendChild(wordmark);
-        } else if (s.logoData) {
-            var logo = doc.createElement('img'); logo.className = 'sl-logo sl-element'; logo.alt = 'Store logo';
-            logo.src = s.logoData; applyElementLayout(logo, 'logo', s); div.appendChild(logo);
+        // The store logo is supplied by the POSNIC user. Never synthesize a
+        // substitute wordmark when no logo has been uploaded.
+        if (s.logoData) {
+            var logo = doc.createElement('img'); logo.className = 'sl-logo sl-element';
+            logo.alt = s.samarina ? 'SAMA life RIMA logo' : 'Store logo';
+            logo.src = s.logoData;
+            applyElementLayout(logo, 'logo', s);
+            div.appendChild(logo);
         }
         var nameText = String(item.name || ''), nameParts = nameText.match(/^(.*?)-([0-9]{2}-[0-9]{2}\/[^/]+?)(?:\s+\/\s+(.+))?$/);
         if (nameParts) nameText = nameParts[1].trim() + '\n' + nameParts[2].trim() + (nameParts[3] ? ' / ' + nameParts[3].trim() : '');
