@@ -80,7 +80,8 @@ function render(sale = {}, options = {}) {
   if (sale.date) line('Date: ' + sale.date);
   if (sale.cashier) line('Cashier: ' + sale.cashier);
   if (sale.branch) line('Branch: ' + sale.branch);
-  for (const customer of sale.customer || []) wrapped(customer);
+  const customers = Array.isArray(sale.customer) ? sale.customer : (sale.customer ? [sale.customer] : []);
+  for (const customer of customers) wrapped(customer);
   rule('-');
 
   for (const item of sale.items || []) {
