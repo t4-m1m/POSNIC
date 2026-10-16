@@ -74,7 +74,7 @@
     function readLogoData() {
         try {
             var value = root.localStorage.getItem('posnic.shelf-label-logo') || '';
-            return /^data:image\/(png|jpeg|webp);base64,/i.test(value) ? value : '';
+            return /^data:image\/(png|jpeg|webp|svg\+xml);base64,/i.test(value) ? value : '';
         } catch (_) { return ''; }
     }
     function readElementLayout() {
@@ -546,7 +546,7 @@
                     state.elementLayout = readElementLayout();
                 } catch (_) {}
             }
-            if (typeof saved.logoData === 'string' && /^data:image\/(png|jpeg|webp);base64,/i.test(saved.logoData)) {
+            if (typeof saved.logoData === 'string' && /^data:image\/(png|jpeg|webp|svg\+xml);base64,/i.test(saved.logoData)) {
                 try { root.localStorage.setItem('posnic.shelf-label-logo', saved.logoData); } catch (_) {}
             } else {
                 try { root.localStorage.removeItem('posnic.shelf-label-logo'); } catch (_) {}
@@ -596,15 +596,15 @@
         $(root.document).on('change', '#sl-logo-file', function () {
             var file = this.files && this.files[0];
             if (!file) return;
-            if (!/^image\/(png|jpeg|webp)$/i.test(file.type) || file.size > 1024 * 1024) {
+            if (!/^image\/(png|jpeg|webp|svg\+xml)$/i.test(file.type) || file.size > 1024 * 1024) {
                 this.value = '';
-                $('#sl-status').text('Choose a PNG, JPEG or WebP logo smaller than 1 MB.');
+                $('#sl-status').text('Choose a PNG, JPEG, WebP or SVG logo smaller than 1 MB.');
                 return;
             }
             var reader = new FileReader();
             reader.onload = function () {
                 try {
-                    if (typeof reader.result !== 'string' || !/^data:image\/(png|jpeg|webp);base64,/i.test(reader.result)) throw Error('Could not read the logo image.');
+                    if (typeof reader.result !== 'string' || !/^data:image\/(png|jpeg|webp|svg\+xml);base64,/i.test(reader.result)) throw Error('Could not read the logo image.');
                     root.localStorage.setItem('posnic.shelf-label-logo', reader.result);
                     state.elementLayout = state.elementLayout || readElementLayout();
                     refresh();
