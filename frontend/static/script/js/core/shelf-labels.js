@@ -93,8 +93,8 @@
             var textAlign = ['left', 'center', 'right'].indexOf(v.text_align) >= 0 ? v.text_align : 'center';
             var color = /^#[0-9a-f]{6}$/i.test(String(v.color || '')) ? v.color : '#000000';
             var emphasis = v.emphasis === true;
-            if (key === 'barcode' && Number(v.w) === 80 && Number(v.h) === 38 && Number(v.x) === 10 && Number(v.y) === 57) { v = Object.assign({}, v, { x: 22, y: 60, w: 56, h: 24 }); w = 56; h = 24; }
-            if (key === 'barcode' && Number(v.w) === 70 && Number(v.h) === 22 && Number(v.x) === 15 && Number(v.y) === 62) { v = Object.assign({}, v, { x: 27, y: 56, w: 46, h: 18 }); w = 46; h = 18; }
+            if (key === 'barcode' && Number(v.w) === 80 && Number(v.h) === 38 && Number(v.x) === 10 && Number(v.y) === 57) { v = Object.assign({}, v, { x: 22, y: 56, w: 56, h: 38 }); w = 56; h = 38; }
+            if (key === 'barcode' && Number(v.w) === 70 && Number(v.h) === 22 && Number(v.x) === 15 && Number(v.y) === 62) { v = Object.assign({}, v, { x: 22, y: 56, w: 56, h: 38 }); w = 56; h = 38; }
             result[key] = { x: Math.max(-300, Math.min(300, n('x'))), y: Math.max(-300, Math.min(300, n('y'))), w: w, h: h, rotation: rotation, group_id: typeof v.group_id === 'string' && v.group_id.length <= 80 ? v.group_id : '', font_size: fontSize, font_weight: fontWeight, emphasis: emphasis, text_align: textAlign, color: color, text: typeof v.text === 'string' ? v.text.slice(0, 120) : '' };
         });
         return result;
