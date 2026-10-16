@@ -1764,39 +1764,30 @@ class ItemRepository extends BaseModel {
         data = { ...data, ...purchaseCost, company_price: purchaseCost.purchase_cost_dzd };
       }
 
-      // Generate an internal Code 128 barcode for new items when none was supplied.
-      // Existing/manual barcodes and barcodes on item edits are preserved.
+      // The shop uses compact six-digit numeric Code 128 labels for every
+      // newly-created sellable item (including variant children). Keep the
+      // number numeric: letters, branch prefixes and timestamps make the
+      // narrow retail label denser and harder for scanners to decode.
       if (!id && !itemBarcodes.normalize(data.barcode_id)) {
-        const { randomBytes } = require('crypto');
-        const branchToken = String(branchObjectId).slice(-4).toUpperCase();
         let generatedBarcode = '';
-
-        for (let attempt = 0; attempt < 10; attempt += 1) {
-          const candidate =
-            'P' +
-            branchToken +
-            Date.now().toString(36).toUpperCase() +
-            randomBytes(4).toString('hex').toUpperCase();
-
+        for (let attempt = 0; attempt < 250; attempt += 1) {
+          const candidate = String(100000 + require('crypto').randomInt(900000));
           const conflict = await itemBarcodes.findConflict(collection, [candidate], {
             branchId: branchObjectId,
             licenseId: licenseObjectId,
           });
-
           if (!conflict) {
             generatedBarcode = candidate;
             break;
           }
         }
-
         if (!generatedBarcode) {
           return {
             status: false,
-            message: 'Could not generate a unique barcode. Please try again.',
+            message: 'Could not allocate a unique six-digit barcode. The numeric code space may be full; please retry.',
             data: null,
           };
         }
-
         data = { ...data, barcode_id: generatedBarcode };
       }
 
