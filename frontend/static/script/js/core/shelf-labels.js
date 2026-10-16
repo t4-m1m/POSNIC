@@ -65,6 +65,7 @@
     }
     var DEFAULT_ELEMENT_LAYOUT = {
         name: { x: 4, y: 2, w: 70, h: 23 },
+        variant_values: { x: 3, y: 23, w: 94, h: 18, font_size: 100, font_weight: 'normal', text_align: 'center', color: '#000000' },
         logo: { x: 76, y: 2, w: 20, h: 18 },
         barcode: { x: 10, y: 27, w: 80, h: 32 },
         price: { x: 5, y: 60, w: 90, h: 23 },
@@ -270,7 +271,7 @@
             page.querySelectorAll('.sl-label').forEach(function (label) {
                 label.classList.add('sl-design-editable');
                 label.querySelectorAll('[data-sl-element]').forEach(function (element) {
-                    var key = element.dataset.slElement, layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key];
+                    var key = element.dataset.slElement, layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key] || { x: 5, y: 5, w: 90, h: 12, rotation: 0 };
                     var handle = doc.createElement('span');
                     handle.className = 'sl-resize-handle';
                     handle.dataset.slResizeFor = key;
