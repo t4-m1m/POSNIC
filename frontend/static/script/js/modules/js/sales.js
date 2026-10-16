@@ -4429,6 +4429,7 @@ PosnicPro.sales.addSale = {
                     item_quantity: $('#touchsale_item_qty' + itemid).val(),
                     item_available_quantity: $('#addSalesLineavailableQty_' + itemid).text(),
                     item_id: $('#addSalesLineItemId_' + itemid).text(),
+                    price_tier: Number(cachedItem && cachedItem.price_tier) || 1,
                     total_amount: $('#addSalesLineTotal_' + itemid).text(),
                     barcode_id: $('#addSalesLineItemBarcodeId_' + itemid).text(),
                     company_price_total: $('#addSalesLineItemCompanyPrice_' + itemid).text(),
