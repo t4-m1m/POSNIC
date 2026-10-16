@@ -178,7 +178,8 @@
             "static/script/js/core/order-alert.js",
             "static/script/js/core/kitchen-call.js",
             "static/script/js/core/online-order-watch.js",
-            "static/script/js/core/request-dock.js"
+            "static/script/js/core/request-dock.js",
+            "static/script/js/modules/js/hr.js"
         ]
     },
     "login": {
