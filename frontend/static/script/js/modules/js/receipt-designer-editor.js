@@ -127,14 +127,54 @@
                 host.css({ width: width * scale, height: height * scale });
             };
             fit(); $(doc).find('img').on('load error', fit);
-            $(doc).find('[data-block-id]').on('click', function () { selected = this.getAttribute('data-block-id'); renderList(); });
+            // The ticket preview is a direct-manipulation canvas: click a block to inspect it,
+            // then drag it onto another block to position it in the printed reading order.
+            // The receipt renderer remains flow-based so thermal printers never overlap text.
+            var previewBlocks = $(doc).find('[data-block-id]');
+            previewBlocks.attr('draggable', 'true').on('click', function (event) {
+                event.preventDefault();
+                selected = this.getAttribute('data-block-id');
+                renderList();
+            }).on('dragstart', function (event) {
+                drag = { id: this.getAttribute('data-block-id'), format: format };
+                try { event.originalEvent.dataTransfer.setData('text/plain', drag.id); } catch (_) {}
+                if (event.originalEvent.dataTransfer) event.originalEvent.dataTransfer.effectAllowed = 'move';
+                this.style.opacity = '0.45';
+            }).on('dragend', function () {
+                this.style.opacity = '';
+                previewBlocks.removeClass('rd-drop-target');
+            }).on('dragover', function (event) {
+                if (!drag || drag.format !== format) return;
+                event.preventDefault();
+                if (event.originalEvent.dataTransfer) event.originalEvent.dataTransfer.dropEffect = 'move';
+                previewBlocks.removeClass('rd-drop-target');
+                this.classList.add('rd-drop-target');
+            }).on('dragleave', function () {
+                this.classList.remove('rd-drop-target');
+            }).on('drop', function (event) {
+                if (!drag || drag.format !== format) return;
+                event.preventDefault();
+                var fromId = drag.id;
+                var toId = this.getAttribute('data-block-id');
+                drag = null;
+                previewBlocks.removeClass('rd-drop-target');
+                if (!fromId || !toId || fromId === toId) return;
+                var blocks = layout().blocks;
+                var from = blocks.findIndex(function (b) { return b.id === fromId; });
+                var to = blocks.findIndex(function (b) { return b.id === toId; });
+                if (from < 0 || to < 0) return;
+                // Required totals must stay after the item table; the shared move()
+                // guard protects that invariant for both the canvas and list controls.
+                selected = fromId;
+                move(fromId, to);
+            });
             if (observer) observer.disconnect();
             if (window.ResizeObserver) { observer = new ResizeObserver(fit); observer.observe(box.find('.rd-preview-stage')[0]); }
         });
         var padding = f.height ? '12mm' : '0 ' + ((f.width - f.content) / 2) + 'mm';
         frame.attr('srcdoc', '<!doctype html><html><head><meta charset="utf-8"></head><body>' + html +
             '<style>html{width:' + width + 'px;}body{box-sizing:border-box;width:' + width + 'px;padding:' + padding + '!important;display:flow-root;}' +
-            '.rd-document{width:' + innerWidth + 'px;max-width:100%;}.rd-block{cursor:pointer;}.rd-block:hover{outline:1px dashed #3878d8;outline-offset:3px;}</style></body></html>');
+            '.rd-document{width:' + innerWidth + 'px;max-width:100%;}.rd-block{cursor:grab;}.rd-block:active{cursor:grabbing;}.rd-block:hover{outline:1px dashed #3878d8;outline-offset:3px;}.rd-drop-target{outline:2px solid #2563eb!important;outline-offset:2px;background:rgba(37,99,235,.08)!important;}</style></body></html>');
         host.empty().append(frame);
         box.find('.rd-preview-name').text(t(f.name));
         box.find('.rd-dimensions').text(f.height ? f.width + ' × ' + f.height + ' mm' : f.width + ' mm · ' + f.content + ' mm ' + t('printable width'));
