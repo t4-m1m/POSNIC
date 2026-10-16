@@ -128,9 +128,9 @@
             var wordmark = doc.createElement('div');
             wordmark.className = 'sl-logo sl-element sl-samarina-wordmark';
             wordmark.dataset.slElement = 'logo';
-            wordmark.innerHTML = '<span>SAMA</span><i>life</i><span>RIMA</span>';
+            if (s.logoData) { var logoImage = doc.createElement('img'); logoImage.src = s.logoData; logoImage.alt = 'SAMA life RIMA'; logoImage.style.cssText = 'width:100%;height:100%;object-fit:contain'; wordmark.appendChild(logoImage); } else { wordmark.innerHTML = '<span>SAMA</span><i>life</i><span>RIMA</span>'; }
             wordmark.style.cssText = 'position:absolute;left:5%;top:3%;width:90%;height:17%;display:flex;align-items:center;justify-content:center;gap:2%;font-family:Georgia,serif;font-size:17px;font-weight:700;letter-spacing:-1px;color:#000;white-space:nowrap';
-            wordmark.querySelector('i').style.cssText = 'font-family:cursive;font-size:12px;font-weight:400;margin:0 -2px;transform:rotate(-12deg)';
+            if (wordmark.querySelector('i')) wordmark.querySelector('i').style.cssText = 'font-family:cursive;font-size:12px;font-weight:400;margin:0 -2px;transform:rotate(-12deg)';
             div.appendChild(wordmark);
         } else if (s.logoData) {
             var logo = doc.createElement('img'); logo.className = 'sl-logo sl-element'; logo.alt = 'Store logo';
@@ -453,7 +453,7 @@
         state.filters = {};
         state.elementLayout = readElementLayout();
         if ($('#sl-samarina-mode').is(':checked')) {
-            $('#sl-paper').val('roll'); $('#sl-width').val(30); $('#sl-height').val(45);
+            $('#sl-paper').val('roll'); $('#sl-width').val(45); $('#sl-height').val(30);
             $('#sl-show-barcode,#sl-bar-text').prop('checked', true);
         }
         $('#sl-search').val(''); $('#sl-category').val(''); $('#sl-from').val(1); $('#sl-batch').val(2000); $('#sl-copies').val(1);
@@ -478,7 +478,7 @@
         // SAMA labels always use the physical stock size, even if an older
         // generic shelf-label template was saved in this browser.
         $('#sl-samarina-mode').prop('checked', true);
-        $('#sl-paper').val('roll'); $('#sl-width').val(30); $('#sl-height').val(45);
+        $('#sl-paper').val('roll'); $('#sl-width').val(45); $('#sl-height').val(30);
         $('#sl-show-barcode,#sl-bar-text').prop('checked', true);
         $('#view_print_lable').modal('show'); setStep(0); renderRows();
         var scopeToken = state.token;
@@ -822,7 +822,7 @@
         $(root.document).on('change', '#sl-paper', function () { $('#sl-start').val(1); refresh(); });
         $(root.document).on('change', '#sl-samarina-mode', function () {
             if (this.checked) {
-                $('#sl-paper').val('roll'); $('#sl-width').val(30); $('#sl-height').val(45);
+                $('#sl-paper').val('roll'); $('#sl-width').val(45); $('#sl-height').val(30);
                 $('#sl-show-barcode,#sl-bar-text').prop('checked', true);
                 $('#sl-shop,#sl-date,#sl-mrp,#mfg_checkbox,#exp_checkbox').prop('checked', false);
                 state.elementLayout = Object.assign({}, state.elementLayout, {
