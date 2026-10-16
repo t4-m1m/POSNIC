@@ -113,8 +113,10 @@
         if (s.barcode !== false) {
             var svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('sl-barcode');
             applyElementLayout(svg, 'barcode', s); div.appendChild(svg);
-            barcode(svg, String(item.barcode_id), { format: s.format, width: s.barWidth, height: s.barHeight, margin: s.barMargin,
-            marginTop: s.top, marginBottom: s.bottom, marginLeft: s.left, marginRight: s.right,
+            // Six-digit Code 128 labels need narrow, separated modules to remain
+            // scan-readable on compact shelf labels. Keep at least a small quiet zone.
+            barcode(svg, String(item.barcode_id), { format: s.format, width: Math.min(Number(s.barWidth) || 1, 1), height: s.barHeight, margin: Math.max(Number(s.barMargin) || 0, 2),
+            marginTop: Math.max(Number(s.top) || 0, 2), marginBottom: Math.max(Number(s.bottom) || 0, 2), marginLeft: Math.max(Number(s.left) || 0, 2), marginRight: Math.max(Number(s.right) || 0, 2),
             displayValue: s.barText, textMargin: s.textMargin, font: s.font, fontSize: s.fontSize,
             textAlign: s.align, fontOptions: s.fontOptions || '', lineColor: s.ink, background: s.background });
         }
