@@ -328,7 +328,7 @@
             var saved = JSON.parse(root.localStorage.getItem('posnic.purchase-cost-settings') || '{}');
             return {
                 exchangeRate: Number.isFinite(Number(saved.exchangeRate)) && Number(saved.exchangeRate) > 0 ? Number(saved.exchangeRate) : 280,
-                extraCost: Number.isFinite(Number(saved.extraCost ?? saved.vatRate)) && Number(saved.extraCost ?? saved.vatRate) >= 0 ? Number(saved.extraCost ?? saved.vatRate) : 0
+                extraCost: Number.isFinite(Number(saved.extraCost)) && Number(saved.extraCost) >= 0 ? Number(saved.extraCost) : 0
             };
         } catch (_) { return { exchangeRate: 280, extraCost: 0 }; }
     }
