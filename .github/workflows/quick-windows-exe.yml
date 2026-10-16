@@ -18,6 +18,18 @@ on:
       - "api/src/models/setting.model.js"
       - "api/src/repositories/item.repository.js"
       - "api/src/utils/purchase-cost.js"
+      - "api/src/routes/hr.routes.js"
+      - "api/src/routes/index.js"
+      - "frontend/modules/hr.html"
+      - "frontend/static/script/js/modules/js/hr.js"
+      - "frontend/pages_css_js_map.json"
+      - "frontend/pages_html_map.json"
+      - "frontend/layouts/sidebar.html"
+      - "frontend/static/script/js/core/receipt-designer.js"
+      - "frontend/static/script/js/core/print-settings.js"
+      - "frontend/static/script/js/modules/js/receipt-designer-editor.js"
+      - "frontend/static/script/js/modules/js/sales.js"
+      - "frontend/modules/sales_write.html"
 
 permissions:
   contents: read
