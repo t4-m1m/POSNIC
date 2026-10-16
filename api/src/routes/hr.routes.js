@@ -146,8 +146,8 @@ router.post('/transactions', async (req,res) => {
       value={hours,hourly_rate:rate,amount:amount(hours*rate,'Overtime amount')};
     } else value={amount:amount(b.amount,'Amount')};
     if(value.amount<=0)return res.status(400).json({status:false,message:'Amount must be greater than zero.'});
-    if (type === 'salary_payment') {
-      // Do not allow a payment to exceed this worker's unpaid balance for the selected payroll period.
+    if (type === 'salary_payment' || type === 'advance') {
+      // Prevent both advances and salary payments from exceeding the unpaid balance.
       const existing = await (await collection('hr_transactions'))
         .find({ license, worker_id: workerId, period, type: { $in: ['salary_payment', 'advance', 'overtime', 'adjustment'] } })
         .toArray();
@@ -160,7 +160,7 @@ router.post('/transactions', async (req,res) => {
       if (value.amount > remaining) {
         return res.status(400).json({
           status: false,
-          message: 'Payment exceeds the remaining salary balance of ' + remaining.toFixed(2) + ' DA.'
+          message: (type === 'advance' ? 'Advance' : 'Payment') + ' exceeds the remaining salary balance of ' + remaining.toFixed(2) + ' DA.'
         });
       }
     }
