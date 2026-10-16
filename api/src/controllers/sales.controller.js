@@ -534,26 +534,53 @@ class SalesController extends BaseController {
    * the check lets the sale through rather than blocking a shop over a glitch.
    */
   async checkCustomerCreditLimit(req, payload) {
-    try {
-      const customerId = payload.customer_id;
-      const total = Number(payload.sales_total) || 0;
-      let creditAmount = 0;
-      if (String(payload.partial_check) === 'true') {
-        creditAmount = total - (Number(payload.partial_balance) || 0);
-      } else if (String(payload.unpaid) === 'true') {
-        creditAmount = total;
+    const total = Number(payload.sales_total) || 0;
+    const isPartial = String(payload.partial_check) === 'true';
+    const isUnpaid = String(payload.unpaid) === 'true';
+    const paid = Number(payload.partial_balance);
+    // The unpaid toggle overrides any entered amount in processSale, so use
+    // the same precedence when deciding whether this sale creates receivables.
+    const creditAmount = isUnpaid
+      ? Math.max(0, total)
+      : isPartial
+        ? Math.max(0, total - (Number.isFinite(paid) ? paid : 0))
+        : 0;
+
+    if (creditAmount <= 0) {
+      // Do not let malformed partial amounts reach sale.service's balance math.
+      if (isPartial && (!Number.isFinite(paid) || paid < 0 || paid > total + 0.009)) {
+        return { blocked: true, error: 'Enter a payment amount between 0 and the sale total.' };
       }
-      if (creditAmount <= 0) return { blocked: false };
-      // Credit is only valid for a real customer account. Walk-in/comptoir
-      // customers must pay the full bill; enforce this on the API as well as UI.
+      return { blocked: false };
+    }
+
+    try {
+      const customerId = String(payload.customer_id || '').trim();
       const customerName = String(payload.customer_name || '').trim();
-      if (!customerId || !mongoose.Types.ObjectId.isValid(String(customerId)) ||
+      if (!customerId || !mongoose.Types.ObjectId.isValid(customerId) ||
           /walk.?in|cash customer|comptoir/i.test(customerName)) {
         return {
           blocked: true,
           error: 'Partial payment and customer credit are available only for a registered customer. Collect the full amount for walk-in sales.',
         };
       }
+
+      // Validate the actual account in the tenant database; a forged ObjectId or
+      // a stale walk-in customer id must never create an account receivable.
+      const db = await BaseModel.getDb();
+      const customer = await db.collection('customers').findOne({
+        _id: new mongoose.Types.ObjectId(customerId),
+        license: BaseModel.license,
+        is_deleted: { $ne: true },
+        status: { $nin: ['inactive', 'blocked'] },
+      }, { projection: { _id: 1, name: 1 } });
+      if (!customer || /walk.?in|cash customer|comptoir/i.test(String(customer.name || ''))) {
+        return {
+          blocked: true,
+          error: 'Select an active, registered customer account before accepting a partial payment.',
+        };
+      }
+
       const ctx = this.buildLoyaltyCtx(req);
       const r = await creditService.checkCreditLimit(customerId, creditAmount, ctx.branchId);
       if (r && !r.allowed) {
@@ -565,8 +592,13 @@ class SalesController extends BaseController {
       }
       return { blocked: false };
     } catch (e) {
-      console.error('[credit] limit check skipped:', e && e.message);
-      return { blocked: false };
+      // Fail closed for credit: a database/ledger failure must not silently turn
+      // an unverified debt into a saved sale. Fully-paid sales never enter here.
+      console.error('[credit] validation failed:', e && e.message);
+      return {
+        blocked: true,
+        error: 'Could not verify the customer account and credit balance. Please retry or collect the full amount.',
+      };
     }
   }
 
