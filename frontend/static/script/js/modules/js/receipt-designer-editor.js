@@ -163,10 +163,27 @@
                 var from = blocks.findIndex(function (b) { return b.id === fromId; });
                 var to = blocks.findIndex(function (b) { return b.id === toId; });
                 if (from < 0 || to < 0) return;
-                // Required totals must stay after the item table; the shared move()
-                // guard protects that invariant for both the canvas and list controls.
+                // Horizontal drop position sets the selected block's alignment;
+                // vertical drop position reorders it in the receipt. The flow
+                // renderer intentionally avoids absolute overlap on thermal paper.
+                var rect = doc.body.getBoundingClientRect();
+                var x = event.originalEvent.clientX - rect.left;
+                var ratio = rect.width ? x / rect.width : 0.5;
+                var alignment = ratio < 0.34 ? 'left' : ratio > 0.66 ? 'right' : 'center';
+                var next = blocks.slice();
+                var moved = next.splice(from, 1)[0];
+                next.splice(to, 0, moved);
+                if (next.findIndex(function (b) { return b.type === 'totals'; }) < next.findIndex(function (b) { return b.type === 'items'; })) {
+                    status(t('Keep totals below the items.'), true);
+                    return;
+                }
+                if (moved.align === alignment && from === to) return;
+                checkpoint();
+                moved.align = alignment;
+                layout().blocks = next;
                 selected = fromId;
-                move(fromId, to);
+                renderList();
+                changed();
             });
             if (observer) observer.disconnect();
             if (window.ResizeObserver) { observer = new ResizeObserver(fit); observer.observe(box.find('.rd-preview-stage')[0]); }
