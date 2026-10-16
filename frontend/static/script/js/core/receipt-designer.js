@@ -8,13 +8,21 @@
     var copy = function (v) { return JSON.parse(JSON.stringify(v)); };
     function label(value) { return PosnicPro.receiptDesignLabel ? PosnicPro.receiptDesignLabel(value) : value; }
     function block(type, extra) { return Object.assign({ id: 'b' + Math.random().toString(36).slice(2), type: type, align: 'left' }, extra || {}); }
-    // A clean starting template, separate from migrating a shop's legacy settings.
+    // Blank starting template: only the four structural receipt sections remain.
+    // Optional logo, customer fields, separators, text and footer blocks are added by the user.
+    // Existing saved designs are not migrated or overwritten by this template.
     function standardLayout(format) {
         var sheet = !!contract.formats[format].height;
-        var align = contract.formats[format].height ? 'left' : 'center';
-        return { fontSize: contract.formats[format].font, blocks: [block('logo', { align: align }), block('store', { align: align, fssaiInHeader: !sheet }), block('transaction', sheet ? {} : { showTitle: false, fontSize: 10 })]
-            .concat(['customer_name', 'customer_phone', 'customer_address', 'customer_tax_number'].map(function (field) { return block('field', { field: field }); }))
-            .concat([block('items', sheet ? {} : { itemLayout: 'columns', nameMaxChars: 20, lineStyle: 'dotted', fontSize: format === '58' ? 9 : 11 })].concat(sheet ? [] : [block('field', { field: 'total_quantity' })]).concat([block('totals'), block('text', { text: 'Thank you! Visit again.', align: 'center' })])) };
+        var align = sheet ? 'left' : 'center';
+        return {
+            fontSize: contract.formats[format].font,
+            blocks: [
+                block('store', { align: align, fssaiInHeader: !sheet }),
+                block('transaction', sheet ? {} : { showTitle: false, fontSize: 10 }),
+                block('items', sheet ? {} : { itemLayout: 'columns', nameMaxChars: 20, lineStyle: 'dotted', fontSize: format === '58' ? 9 : 11 }),
+                block('totals')
+            ]
+        };
     }
     function defaults(branch) {
         var result = { version: 1, defaultFormat: branch.print_type === 'a4' ? 'a4' : ['58', '80', '112'].indexOf(branch.print_width) !== -1 ? branch.print_width : '80', layouts: {} };
