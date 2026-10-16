@@ -140,25 +140,30 @@
         if (nameParts) nameText = nameParts[1].trim() + '\n' + nameParts[2].trim() + (nameParts[3] ? ' / ' + nameParts[3].trim() : '');
         if (s.samarina) {
             var selectedVariant = String(item.variant_value || '').trim();
+            var selectedTokens = selectedVariant.split(/\s*\/\s*|\s*,\s*/).map(function (v) { return v.trim().toLocaleLowerCase(); }).filter(Boolean);
             var allVariants = Array.isArray(item.available_variant_values) ? item.available_variant_values : [];
+            var tokens = [];
+            allVariants.forEach(function (value) {
+                String(value).split(/\s*\/\s*|\s*,\s*/).forEach(function (part) {
+                    part = part.trim();
+                    if (part && !tokens.some(function (existing) { return existing.toLocaleLowerCase() === part.toLocaleLowerCase(); })) tokens.push(part);
+                });
+            });
+            if (!tokens.length) tokens = selectedVariant.split(/\s*\/\s*|\s*,\s*/).map(function (v) { return v.trim(); }).filter(Boolean);
             var variantNode = doc.createElement('p');
             variantNode.className = 'sl-variant-values sl-element';
             variantNode.dataset.slElement = 'variant_values';
-            var variantLayout = (s.elementLayout || DEFAULT_ELEMENT_LAYOUT).variant_values || { x: 3, y: 24, w: 94, h: 17, font_size: 100, font_weight: 'normal', text_align: 'center', color: '#000000' };
-            var values = allVariants.map(function (value) {
+            tokens.forEach(function (value, index) {
+                if (index) variantNode.appendChild(doc.createTextNode('  '));
                 var span = doc.createElement('span');
-                span.textContent = String(value);
-                if (String(value).trim().toLowerCase() === selectedVariant.toLowerCase()) {
+                span.textContent = value;
+                if (selectedTokens.includes(value.toLocaleLowerCase())) {
                     span.style.fontWeight = '900';
                     span.style.textDecoration = 'underline';
                     span.setAttribute('aria-current', 'true');
                 }
                 variantNode.appendChild(span);
-                return span;
             });
-            if (!allVariants.length && selectedVariant) {
-                var selected = doc.createElement('strong'); selected.textContent = selectedVariant; variantNode.appendChild(selected);
-            }
             applyElementLayout(variantNode, 'variant_values', s);
             div.appendChild(variantNode);
             var nameNode = text(String(item.article_type || nameText.split(' / ')[0] || '').trim(), 'sl-name', 'name');
@@ -179,7 +184,7 @@
             displayValue: s.barText, textMargin: s.textMargin, font: s.font, fontSize: s.fontSize,
             textAlign: s.align, fontOptions: s.fontOptions || '', lineColor: s.ink, background: s.background });
         }
-        text(s.currency + ' ' + item.label_price.toFixed(item.label_currency_digits ?? 2), 'sl-price', 'price');
+        if (!s.samarina) text(s.currency + ' ' + item.label_price.toFixed(item.label_currency_digits ?? 2), 'sl-price', 'price');
         var details = [];
         if (item.variant_value && !String(item.name || '').includes(String(item.variant_value))) details.push('Variant ' + String(item.variant_value));
         if (s.mrp && Number(item.mrp_price) > 0) details.push('MRP ' + s.currency + ' ' + Number(item.mrp_price).toFixed(item.label_currency_digits ?? 2));
@@ -447,6 +452,10 @@
         // The wizard owns its visible search/category filters. Tenant scope remains enforced by the Items API.
         state.filters = {};
         state.elementLayout = readElementLayout();
+        if ($('#sl-samarina-mode').is(':checked')) {
+            $('#sl-paper').val('roll'); $('#sl-width').val(30); $('#sl-height').val(45);
+            $('#sl-show-barcode,#sl-bar-text').prop('checked', true);
+        }
         $('#sl-search').val(''); $('#sl-category').val(''); $('#sl-from').val(1); $('#sl-batch').val(2000); $('#sl-copies').val(1);
         $('#sl-width').val(Math.round(Number($('#document_width').val()) * 25.4 * 10) / 10); $('#sl-height').val(Math.round(Number($('#document_height').val()) * 25.4 * 10) / 10);
         try {
