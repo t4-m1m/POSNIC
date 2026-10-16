@@ -4,7 +4,10 @@
   var currentWorkers = [];
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]); }); }
   function money(v) { return Number(v || 0).toLocaleString('fr-DZ',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' DA'; }
-  function today() { return new Date().toISOString().slice(0,10); }
+  function today() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
   function period() { return today().slice(0,7); }
   function request(method,url,data,done) {
     var opts={url:url,data:data};
@@ -86,7 +89,19 @@
     openTransaction:function(id,type,p){
       var w=currentWorkers.find(function(x){return String(x._id)===String(id);});if(!w){notice('Employé introuvable.','danger');return;}
       var labels={salary_payment:'Paiement du salaire',advance:'Acompte',overtime:'Heures supplémentaires',adjustment:'Ajustement positif'};
-      $('#hr_tx_form')[0].reset();$('#hr_tx_type').val(type);$('#hr_tx_worker_id').val(w._id);$('#hr_tx_worker_name').val(w.name);$('#hr_tx_title').text(labels[type]||'Mouvement');$('#hr_tx_date').val(today());$('#hr_tx_period_input').val(p||period());$('#hr_tx_amount').val(type==='salary_payment'?Math.max(0,Number(w.monthly_salary||0)):'' );$('#hr_tx_rate').val(w.hourly_rate||0);$('#hr_tx_amount_wrap').toggle(type!=='overtime');$('#hr_tx_hours_wrap').toggle(type==='overtime');$('#hr_tx_modal').modal('show');
+      var selectedPeriod = p || period();
+      $('#hr_tx_form')[0].reset();$('#hr_tx_type').val(type);$('#hr_tx_worker_id').val(w._id);$('#hr_tx_worker_name').val(w.name);$('#hr_tx_title').text(labels[type]||'Mouvement');$('#hr_tx_date').val(today());$('#hr_tx_period_input').val(selectedPeriod);$('#hr_tx_amount').val('');$('#hr_tx_rate').val(w.hourly_rate||0);$('#hr_tx_amount_wrap').toggle(type!=='overtime');$('#hr_tx_hours_wrap').toggle(type==='overtime');$('#hr_tx_modal').modal('show');
+      if (type === 'salary_payment') {
+        request('GET', 'hr/payroll/' + encodeURIComponent(selectedPeriod), {}, function (rows) {
+          var current = Array.isArray(rows) ? rows.find(function (row) { return String(row._id) === String(w._id); }) : null;
+          // Do not overwrite the amount if the user has already started entering it.
+          if (current && $('#hr_tx_modal').hasClass('show') && $('#hr_tx_type').val() === 'salary_payment' &&
+              String($('#hr_tx_worker_id').val()) === String(w._id) &&
+              $('#hr_tx_period_input').val() === selectedPeriod && $('#hr_tx_amount').val() === '') {
+            $('#hr_tx_amount').val(Math.max(0, Number(current.remaining || 0)).toFixed(2));
+          }
+        });
+      }
     },
     loadPayroll:loadPayroll,
     loadTransactions:loadTransactions
