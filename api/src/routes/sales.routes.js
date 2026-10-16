@@ -927,6 +927,7 @@ router.get(
 
 // Single sale routes
 // Legacy edit screens request /sales/:id/edit expecting same payload as /sales/:id
+router.get('/receiptLookup/:code', bindController(salesController.receiptLookup));
 router.get('/:id/edit', ensureValidSaleIdParam, bindController(salesController.getOne));
 router.get('/:id', ensureValidSaleIdParam, bindController(salesController.getOne));
 router.put(
