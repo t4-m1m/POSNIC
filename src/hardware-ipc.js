@@ -71,6 +71,46 @@ function getEssaeReader() {
   return _essaeReader;
 }
 
+const RECEIPT_SETTINGS_DEFAULTS = Object.freeze({
+  printerName: '',
+  paperWidth: '80mm',
+  storeName: '',
+  storeAddress: '',
+  storePhone: '',
+  storeEmail: '',
+  receiptTitle: 'SALE RECEIPT',
+  footer: 'Thank you, please visit again',
+  showCashier: true,
+  showCustomer: true,
+  showBranch: false,
+  openDrawer: false,
+});
+function receiptSettingsPath() {
+  return path.join(app.getPath('userData'), 'receipt-printer-settings.json');
+}
+function loadReceiptSettings() {
+  try {
+    const saved = JSON.parse(fs.readFileSync(receiptSettingsPath(), 'utf8'));
+    return { ...RECEIPT_SETTINGS_DEFAULTS, ...(saved && typeof saved === 'object' ? saved : {}) };
+  } catch (_) {
+    return { ...RECEIPT_SETTINGS_DEFAULTS };
+  }
+}
+function saveReceiptSettings(settings) {
+  const allowed = { ...RECEIPT_SETTINGS_DEFAULTS };
+  Object.keys(allowed).forEach((key) => {
+    if (settings && settings[key] !== undefined) allowed[key] = settings[key];
+  });
+  allowed.paperWidth = ['58mm', '80mm', '112mm'].includes(String(allowed.paperWidth)) ? String(allowed.paperWidth) : '80mm';
+  allowed.printerName = String(allowed.printerName || '').slice(0, 300);
+  ['storeName', 'storeAddress', 'storePhone', 'storeEmail', 'receiptTitle', 'footer'].forEach((key) => {
+    allowed[key] = String(allowed[key] || '').slice(0, 500);
+  });
+  ['showCashier', 'showCustomer', 'showBranch', 'openDrawer'].forEach((key) => { allowed[key] = !!allowed[key]; });
+  fs.writeFileSync(receiptSettingsPath(), JSON.stringify(allowed, null, 2), 'utf8');
+  return allowed;
+}
+
 function getLocalIP() {
   const ifaces = os.networkInterfaces();
   const candidates = [];
@@ -243,14 +283,50 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
    * columns or it does not, and that is decidable before anything reaches the
    * paper.
    */
+  ipcMain.handle('printer:receipt-settings-get', async () => {
+    const settings = loadReceiptSettings();
+    const defaultPrinter = await hardwareManager.getDefaultPrinter();
+    return { success: true, settings, printers: await hardwareManager.listPrinters({ fresh: true }), defaultPrinter: defaultPrinter ? defaultPrinter.name : '' };
+  });
+  ipcMain.handle('printer:receipt-settings-save', (_event, settings = {}) => {
+    try { return { success: true, settings: saveReceiptSettings(settings) }; }
+    catch (error) { return { success: false, error: error.message }; }
+  });
+  ipcMain.handle('printer:receipt-test', async (_event, settings = {}) => {
+    try {
+      const config = saveReceiptSettings(settings);
+      const sale = {
+        storeName: config.storeName || 'YOUR STORE',
+        storeAddress: config.storeAddress,
+        storePhone: config.storePhone,
+        storeEmail: config.storeEmail,
+        title: config.receiptTitle || 'SAMPLE RECEIPT',
+        billNo: 'TEST-0001',
+        date: new Date().toLocaleString(),
+        cashier: config.showCashier ? 'Sample cashier' : '',
+        customer: config.showCustomer ? ['Sample customer'] : [],
+        branch: config.showBranch ? 'Sample branch' : '',
+        items: [{ name: 'Sample item', qty: 2, rate: 150, amount: 300 }],
+        totalQty: 2, subTotal: 300, total: 300, currency: 'DA',
+        payments: [{ label: 'Cash', amount: 300 }],
+        change: 0,
+        footer: config.footer || '',
+      };
+      return await ipcMain.emit ? { success: false, error: 'Printer test unavailable' } : await Promise.resolve({ success: false, error: 'Printer test unavailable' });
+    } catch (error) { return { success: false, error: error.message }; }
+  });
+
   // Render the same bytes for the tender preview without contacting a printer,
   // opening the drawer, or recording a print job.
   // Preview the dedicated ASCII ESC/POS renderer without sending a job.
   ipcMain.handle('printer:preview-receipt', async (_event, sale, options = {}) => {
     const { render, WIDTHS } = require('./tysoo-prp300-receipt');
     const { parse } = require('./escpos-preview');
-    const paperWidth = ['58', '80', '112'].includes(String(options.paperWidth)) ? String(options.paperWidth) : '80';
-    return parse(render(sale || {}, { paperWidth, cut: false }), WIDTHS[paperWidth]);
+    const config = loadReceiptSettings();
+    const paperKey = String(options.paperWidth || config.paperWidth || '80mm').replace(/mm$/i, '');
+    const paperWidth = ['58', '80', '112'].includes(paperKey) ? paperKey : '80';
+    const mergedSale = { storeName: config.storeName, storeAddress: config.storeAddress, storePhone: config.storePhone, storeEmail: config.storeEmail, title: config.receiptTitle, footer: config.footer, ...sale };
+    return parse(render(mergedSale || {}, { paperWidth, cut: false }), WIDTHS[paperWidth]);
   });
 
   ipcMain.handle('printer:print-receipt', async (_event, sale, options = {}) => {
@@ -261,14 +337,16 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
     const source = options.source || 'Till';
     try {
       const { render } = require('./tysoo-prp300-receipt');
+      const config = loadReceiptSettings();
+      const receiptSale = { storeName: config.storeName, storeAddress: config.storeAddress, storePhone: config.storePhone, storeEmail: config.storeEmail, title: config.receiptTitle, footer: config.footer, ...sale };
       const { normalizeTargets, columnsFor } = require('./printer-targets');
       // PRP-300 is an 80mm printer. Keep that as the default while still
       // respecting an explicitly configured printer/paper target.
       const targets = normalizeTargets(
         options.printers && options.printers.length
           ? { printers: options.printers }
-          : { printerName: options.printerName, paperSize: options.paperWidth || '80mm' },
-        options.paperWidth || '80mm'
+          : { printerName: options.printerName !== undefined ? options.printerName : config.printerName, paperSize: options.paperWidth || config.paperWidth || '80mm' },
+        options.paperWidth || config.paperWidth || '80mm'
       );
       const results = [];
       const requestId = options.jobId || 'receipt:' + require('crypto').createHash('sha256')
@@ -277,10 +355,10 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
         const target = targets[targetIndex];
         const columns = columnsFor(target.pageSize);
         const paperWidth = columns <= 32 ? '58' : columns === 69 ? '112' : '80';
-        const bytes = render(sale || {}, {
+        const bytes = render(receiptSale || {}, {
           paperWidth,
           cut: options.cut !== false,
-          openDrawer: !!options.openDrawer && results.length === 0
+          openDrawer: !!(options.openDrawer !== undefined ? options.openDrawer : config.openDrawer) && results.length === 0
         });
         const copies = Math.max(1, Math.min(20, parseInt(target.copies, 10) || 1));
         for (let copy = 0; copy < copies; copy++) {
