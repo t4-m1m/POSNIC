@@ -43,7 +43,7 @@ const buildDailyPaymentAggregationPipeline = (match) => [
     $project: {
       sales_total: {
         $toDouble: {
-          $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, 0],
+          $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, '$items_total'],
         },
       },
       items_total: {
@@ -60,8 +60,12 @@ const buildDailyPaymentAggregationPipeline = (match) => [
         $switch: {
           branches: [
             {
+              case: { $in: ['$payment_status', ['Unpaid', 'unpaid']] },
+              then: 0,
+            },
+            {
               case: { $eq: ['$payment_status', 'Paid'] },
-              then: { $toDouble: { $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, 0] } },
+              then: { $toDouble: { $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, '$items_total'] } },
             },
             {
               case: { $gt: [{ $toDouble: { $ifNull: ['$payment_pending', 0] } }, 0] },
@@ -70,7 +74,7 @@ const buildDailyPaymentAggregationPipeline = (match) => [
                   0,
                   {
                     $subtract: [
-                      { $toDouble: { $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, 0] } },
+                      { $toDouble: { $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, '$items_total'] } },
                       { $toDouble: { $ifNull: ['$payment_pending', 0] } },
                     ],
                   },
