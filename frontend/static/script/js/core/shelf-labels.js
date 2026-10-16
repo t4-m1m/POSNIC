@@ -208,7 +208,18 @@
     }
     var state = { entries: [], byId: new Map(), viewIds: [], filters: {}, step: 0, furthestStep: 0, page: 0, productPage: 1, totalPages: 1, total: 0, loading: false, bulkLoading: false, token: 0, loadError: null, completeKey: null };
     state.elementLayout = readElementLayout();
-    var DEFAULT_ENABLED_FIELDS = ['variant_values', 'name', 'brand', 'reference', 'barcode'];
+    // Fresh installs start from a truly empty canvas. One-time migration removes
+    // legacy designer presets/layout options so they cannot silently reappear.
+    try {
+        if (root.localStorage.getItem('posnic.shelf-label-minimal-v2') !== '1') {
+            ['posnic.shelf-label-layout', 'posnic.shelf-label-elements',
+             'posnic.shelf-label-enabled-fields', 'posnic.shelf-label-templates'].forEach(function (key) {
+                root.localStorage.removeItem(key);
+            });
+            root.localStorage.setItem('posnic.shelf-label-minimal-v2', '1');
+        }
+    } catch (_) {}
+    var DEFAULT_ENABLED_FIELDS = [];
     function readEnabledFields() {
         try {
             var saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-enabled-fields') || 'null');
