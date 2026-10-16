@@ -64,6 +64,6 @@ jobs:
         with:
           name: POSNIC-Windows-EXE-feature-branch
           path: |
-            dist/*.exe
+            dist/*-windows-x64-installer.exe
           if-no-files-found: error
           retention-days: 14
