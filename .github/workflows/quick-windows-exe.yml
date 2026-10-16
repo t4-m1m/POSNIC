@@ -42,6 +42,7 @@ on:
       - "frontend/static/script/js/modules/js/receipt-designer-editor.js"
       - "frontend/static/script/js/modules/js/sales.js"
       - "frontend/modules/sales_write.html"
+      - "src/windows-spooler.js"
 
 permissions:
   contents: read
