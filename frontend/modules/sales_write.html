@@ -1179,3 +1179,22 @@
         </div>
     </div>
 </div>
+
+<style id="posnic-payment-redesign-styles">
+.posnic-payment-redesign .posnic-pay-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.posnic-payment-redesign .posnic-pay-total,.posnic-payment-redesign .posnic-pay-entered{border:1px solid #d8deea;border-radius:10px;padding:12px;background:var(--posnic-surface,#f7f9fc);min-width:0}
+.posnic-payment-redesign .posnic-pay-total span,.posnic-payment-redesign .posnic-pay-entered label{display:block;font-size:13px;font-weight:700;margin-bottom:7px}
+.posnic-payment-redesign .posnic-pay-total strong{font-size:clamp(20px,2vw,30px);overflow-wrap:anywhere}
+.posnic-payment-redesign .posnic-pay-entered input{font-size:clamp(20px,2vw,28px);font-weight:800;text-align:right;height:48px}
+.posnic-payment-redesign .posnic-pay-methods{margin:10px 0 14px;padding:12px;border:1px solid #d8deea;border-radius:10px}
+.posnic-payment-redesign .posnic-pay-methods>strong{display:block;margin-bottom:8px}
+.posnic-payment-redesign .posnic-pay-keypad{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.posnic-payment-redesign .posnic-pay-keypad button{min-height:48px;border:1px solid #cdd5e2;border-radius:8px;background:var(--posnic-surface,#f7f9fc);font-size:20px;font-weight:750;color:inherit}
+.posnic-payment-redesign .posnic-pay-keypad .posnic-pay-clear{background:#fbe4e6;color:#9f2330}
+.posnic-payment-redesign .posnic-pay-keypad .posnic-pay-fill{font-size:13px;background:#e8eefb}
+.posnic-payment-redesign .posnic-pay-keypad .posnic-pay-validate{grid-column:span 2;background:var(--success,#198754);color:#fff;font-size:15px}
+.posnic-payment-redesign .posnic-pay-due{margin-top:12px;border-radius:8px;background:#eef3fa;padding:12px;font-weight:650}
+.posnic-payment-redesign #payment_id{margin:0}
+.posnic-payment-redesign #payment_id label{margin:3px}
+@media(max-width:700px){.posnic-payment-redesign .posnic-pay-summary{grid-template-columns:1fr}.posnic-payment-redesign .posnic-pay-keypad button{min-height:44px}}
+</style>
