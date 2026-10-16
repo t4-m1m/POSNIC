@@ -4644,7 +4644,9 @@ PosnicPro.sales.addSale = {
                             button: "Ok",
                         });
                     }
-                    var askPrint = PosnicPro.askposnic && PosnicPro.askposnic.checkout && PosnicPro.askposnic.checkout.print === true;
+                    var askPrint = (PosnicPro.askposnic && PosnicPro.askposnic.checkout && PosnicPro.askposnic.checkout.print === true)
+                        || window.__posnicFastPrintPending === true;
+                    window.__posnicFastPrintPending = false;
                     if (PosnicPro.askposnic) PosnicPro.askposnic.checkout = null;
                     $('#ask_checkout_payment').remove();
                     if (PosnicPro.sales.saleProcess !== 'KOT' && (response.data.print === true || askPrint)) {
@@ -5329,11 +5331,15 @@ PosnicPro.sales.editSale = {
 
                     // Auto-print on KOT settlement when printall setting is enabled
                     if (isKotOrderEditFlow && PosnicPro.kotPrint) PosnicPro.kotPrint.afterSave(saleId);
+                    var fastPrintRequested = window.__posnicFastPrintPending === true;
+                    window.__posnicFastPrintPending = false;
                     if (isKotPaymentOnlyFlow &&
                         response &&
                         typeof response.data === 'object' &&
-                        response.data.print === true &&
+                        (response.data.print === true || fastPrintRequested) &&
                         saleId) {
+                        PosnicPro.sales.view.printSale(saleId, 'sale');
+                    } else if (fastPrintRequested && saleId) {
                         PosnicPro.sales.view.printSale(saleId, 'sale');
                     }
                     if (PosnicPro.sales.recentSaleAction === true) {
@@ -11618,6 +11624,9 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
     // F1 deliberately follows the normal checkout preparation before submitting,
     // so payment validation and the existing duplicate-submit guard remain in force.
     if (event.key === 'F1') {
+        // Fast payment opts into immediate receipt printing after the existing
+        // validated save flow succeeds; never print before the sale is saved.
+        window.__posnicFastPrintPending = true;
         var $save = $('#save_btn');
         if ($('#tenderpage').is(':visible')) {
             if (!$save.prop('disabled')) $save.trigger('click');
