@@ -206,8 +206,8 @@
             applyElementLayout(barcodeBox, 'barcode', s);
             var svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('sl-barcode');
             barcodeBox.appendChild(svg); div.appendChild(barcodeBox);
-            barcode(svg, String(item.barcode_id), { format: 'CODE128', width: Math.max(1, Number(s.barWidth) || 1), height: Math.max(24, Number(s.barHeight) || 30), margin: 0,
-            marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0,
+            barcode(svg, String(item.barcode_id), { format: 'CODE128', width: Math.min(1, Math.max(0.65, Number(s.barWidth) || 1)), height: Math.max(24, Number(s.barHeight) || 30), margin: 2,
+            marginTop: 2, marginBottom: 2, marginLeft: 2, marginRight: 2,
             displayValue: true, textMargin: Math.max(2, Number(s.textMargin) || 3), font: 'monospace', fontSize: Math.max(12, Number(s.barFontSize) || 14),
             textAlign: 'center', fontOptions: s.fontOptions || '', lineColor: s.ink, background: s.background });
             svg.style.width = 'auto'; svg.style.maxWidth = '100%'; svg.style.height = '100%'; svg.style.maxHeight = '100%';
