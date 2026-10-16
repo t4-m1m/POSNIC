@@ -1939,9 +1939,10 @@ class ItemRepository extends BaseModel {
         ...(data.purchase_price_eur !== undefined && data.purchase_price_eur !== null && String(data.purchase_price_eur).trim() !== '' ? {
           purchase_price_eur: parseFloat(data.purchase_price_eur),
           purchase_exchange_rate: parseFloat(data.purchase_exchange_rate) || 280,
-          purchase_vat_rate: Number.isFinite(Number(data.purchase_vat_rate)) ? Number(data.purchase_vat_rate) : 9,
+          purchase_extra_cost_dzd: Number.isFinite(Number(data.purchase_extra_cost_dzd)) ? Number(data.purchase_extra_cost_dzd) : (Number.isFinite(Number(data.purchase_vat_dzd)) ? Number(data.purchase_vat_dzd) : 0),
+          purchase_vat_rate: Number.isFinite(Number(data.purchase_vat_rate)) ? Number(data.purchase_vat_rate) : 0,
           purchase_base_dzd: parseFloat(data.purchase_base_dzd) || 0,
-          purchase_vat_dzd: parseFloat(data.purchase_vat_dzd) || 0,
+          purchase_vat_dzd: parseFloat(data.purchase_extra_cost_dzd ?? data.purchase_vat_dzd) || 0,
           purchase_cost_dzd: parseFloat(data.purchase_cost_dzd) || parseFloat(data.company_price) || 0,
         } : {}),
         selling_price: parseFloat(data.selling_price) || 0,
