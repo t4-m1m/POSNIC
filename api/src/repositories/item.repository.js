@@ -1768,7 +1768,7 @@ class ItemRepository extends BaseModel {
       // newly-created sellable item (including variant children). Keep the
       // number numeric: letters, branch prefixes and timestamps make the
       // narrow retail label denser and harder for scanners to decode.
-      if (!id && !itemBarcodes.normalize(data.barcode_id)) {
+      if (!id && !/^\\d{6}$/.test(itemBarcodes.normalize(data.barcode_id))) {
         let generatedBarcode = '';
         for (let attempt = 0; attempt < 250; attempt += 1) {
           const candidate = String(100000 + require('crypto').randomInt(900000));
