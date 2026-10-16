@@ -13,7 +13,7 @@ function Require-Command([string]$Name) {
 }
 Require-Command 'node'
 Require-Command 'npm'
-$nodeMajor = [int]((node -p "process.versions.node.Split('.')[0]").Trim())
+$nodeMajor = [int]((node -p "process.versions.node.split('.')[0]").Trim())
 if ($nodeMajor -ne 22) { Write-Warning "This repository's Windows build workflow uses Node.js 22; detected Node.js $nodeMajor." }
 
 $root = (Get-Location).Path
