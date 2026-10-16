@@ -53,8 +53,8 @@
             'display:block;border:' + (s.guides ? '.15mm dashed #aaa' : 'none') + ';font-family:' + s.font + ';font-size:' + s.fontSize + 'px;text-align:' + s.align +
             ';font-weight:' + (s.fontOptions?.includes('bold') ? '700' : '400') + ';font-style:' + (s.fontOptions?.includes('italic') ? 'italic' : 'normal') +
             ';color:' + s.ink + ';background:' + s.background + ';print-color-adjust:exact;-webkit-print-color-adjust:exact}' +
-            '.sl-label .sl-element{position:absolute;margin:0;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:' + (s.align === 'left' ? 'flex-start' : s.align === 'right' ? 'flex-end' : 'center') + ';line-height:1.15;overflow-wrap:anywhere}' +
-            '.sl-name{font-weight:600;white-space:pre-line}.sl-custom-text{white-space:pre-wrap}.sl-logo{object-fit:contain}.sl-price{font-weight:700;font-size:220%}.sl-label svg.sl-element{display:block;max-width:100%;max-height:100%;}' +
+            '.sl-label .sl-element{position:absolute;margin:0;padding:0;overflow:visible;display:flex;align-items:center;justify-content:' + (s.align === 'left' ? 'flex-start' : s.align === 'right' ? 'flex-end' : 'center') + ';line-height:1.15;overflow-wrap:anywhere}' +
+            '.sl-name{font-weight:600;white-space:pre-line}.sl-custom-text{white-space:pre-wrap}.sl-logo{object-fit:contain}.sl-price{font-weight:700}.sl-variant-values{display:block!important;white-space:pre-line}.sl-variant-line{display:block;width:100%;line-height:1.15}.sl-label svg.sl-element{display:block;width:100%;height:100%;max-width:none;max-height:none;overflow:visible;}' +
             '.sl-foot{font-size:75%;white-space:pre-line}.sl-design-editable .sl-element{outline:1px dashed #2563eb;cursor:move;touch-action:none}' +
             '.sl-design-editable .sl-element.sl-selected{outline:2px solid #ef4444;z-index:20;overflow:visible}' +
             '.sl-resize-handle{position:absolute;width:12px;height:12px;border:2px solid white;border-radius:2px;background:#2563eb;cursor:nwse-resize;z-index:21;transform:translate(-50%,-50%);touch-action:none}';
@@ -69,7 +69,7 @@
         variant_values: { x: 3, y: 20, w: 94, h: 14, font_size: 100, font_weight: 'normal', text_align: 'center', color: '#000000' },
         brand: { x: 5, y: 35, w: 90, h: 10, font_size: 90, font_weight: 'bold', text_align: 'center', color: '#000000' },
         reference: { x: 5, y: 45, w: 90, h: 10, font_size: 75, font_weight: 'normal', text_align: 'center', color: '#000000' },
-        barcode: { x: 22, y: 60, w: 56, h: 24, rotation: 0 },
+        barcode: { x: 15, y: 62, w: 70, h: 22, rotation: 0, font_size: 70 },
         custom_text: { x: 5, y: 44, w: 90, h: 12, rotation: 0, text: '' },
         image: { x: 35, y: 35, w: 30, h: 25, rotation: 0 }
     };
@@ -90,8 +90,9 @@
             var fontWeight = v.font_weight === 'bold' ? 'bold' : (v.font_weight === 'normal' ? 'normal' : (key === 'name' || key === 'price' ? 'bold' : 'normal'));
             var textAlign = ['left', 'center', 'right'].indexOf(v.text_align) >= 0 ? v.text_align : 'center';
             var color = /^#[0-9a-f]{6}$/i.test(String(v.color || '')) ? v.color : '#000000';
+            var emphasis = v.emphasis === true;
             if (key === 'barcode' && Number(v.w) === 80 && Number(v.h) === 38 && Number(v.x) === 10 && Number(v.y) === 57) { v = Object.assign({}, v, { x: 22, y: 60, w: 56, h: 24 }); w = 56; h = 24; }
-            result[key] = { x: Math.max(0, Math.min(100 - w, n('x'))), y: Math.max(0, Math.min(100 - h, n('y'))), w: w, h: h, rotation: rotation, group_id: typeof v.group_id === 'string' && v.group_id.length <= 80 ? v.group_id : '', font_size: fontSize, font_weight: fontWeight, text_align: textAlign, color: color, text: typeof v.text === 'string' ? v.text.slice(0, 120) : '' };
+            result[key] = { x: Math.max(0, Math.min(100 - w, n('x'))), y: Math.max(0, Math.min(100 - h, n('y'))), w: w, h: h, rotation: rotation, group_id: typeof v.group_id === 'string' && v.group_id.length <= 80 ? v.group_id : '', font_size: fontSize, font_weight: fontWeight, emphasis: emphasis, text_align: textAlign, color: color, text: typeof v.text === 'string' ? v.text.slice(0, 120) : '' };
         });
         return result;
     }
@@ -110,6 +111,7 @@
         node.style.transformOrigin = 'center center';
         node.style.fontSize = (Number(layout.font_size) || 100) + '%';
         node.style.fontWeight = layout.font_weight || 'normal';
+        node.style.textDecoration = layout.emphasis ? 'underline' : 'none';
         node.style.textAlign = layout.text_align || 'center';
         node.style.color = layout.color || '#000000';
         node.style.transform = 'rotate(' + (Number(layout.rotation) || 0) + 'deg)';
@@ -127,60 +129,51 @@
         if (nameParts) nameText = nameParts[1].trim() + '\n' + nameParts[2].trim() + (nameParts[3] ? ' / ' + nameParts[3].trim() : '');
         {
             var selectedVariant = String(item.variant_value || '').trim();
-            var selectedTokens = selectedVariant.split(/\s*\/\s*|\s*,\s*/).map(function (v) { return v.trim().toLocaleLowerCase(); }).filter(Boolean);
+            var selectedAxisParts = String(item.variant_axis || '').split(/\\s*\\/\\s*|\\s*,\\s*/).map(function (v) { return v.trim(); }).filter(Boolean);
+            var selectedValueParts = selectedVariant.split(/\\s*\\/\\s*|\\s*,\\s*/).map(function (v) { return v.trim(); }).filter(Boolean);
+            var selectedByAxis = {};
+            selectedAxisParts.forEach(function (axis, index) {
+                if (selectedValueParts[index]) selectedByAxis[axis.toLocaleLowerCase()] = selectedValueParts[index].toLocaleLowerCase();
+            });
             var allVariants = Array.isArray(item.available_variant_values) ? item.available_variant_values : [];
             var variantOptions = item.available_variant_options && typeof item.available_variant_options === 'object' ? item.available_variant_options : null;
-            var tokens = [];
-            allVariants.forEach(function (value) {
-                String(value).split(/\s*\/\s*|\s*,\s*/).forEach(function (part) {
-                    part = part.trim();
-                    if (part && !tokens.some(function (existing) { return existing.toLocaleLowerCase() === part.toLocaleLowerCase(); })) tokens.push(part);
-                });
-            });
-            if (!tokens.length) tokens = selectedVariant.split(/\s*\/\s*|\s*,\s*/).map(function (v) { return v.trim(); }).filter(Boolean);
             if (s.enabledFields.includes('variant_values')) {
                 var variantNode = doc.createElement('div');
                 variantNode.className = 'sl-variant-values sl-element';
                 variantNode.dataset.slElement = 'variant_values';
-                function appendVariantValue(value) {
+                function appendVariantValue(axis, value) {
                     var span = doc.createElement('span');
                     span.textContent = value;
-                    if (selectedTokens.includes(String(value).trim().toLocaleLowerCase())) {
+                    var selected = selectedByAxis[String(axis).toLocaleLowerCase()] === String(value).trim().toLocaleLowerCase();
+                    if (selected) {
                         span.style.fontWeight = '900';
                         span.style.textDecoration = 'underline';
+                        span.style.backgroundColor = 'rgba(37,99,235,.10)';
                         span.setAttribute('aria-current', 'true');
                     }
                     return span;
                 }
                 if (variantOptions && Object.keys(variantOptions).length) {
-                    Object.keys(variantOptions).forEach(function (axis, axisIndex) {
-                        if (axisIndex) variantNode.appendChild(doc.createTextNode('  ·  '));
-                        var group = doc.createElement('span');
-                        group.className = 'sl-variant-axis';
-                        var label = doc.createElement('strong');
-                        label.textContent = axis + ': ';
-                        group.appendChild(label);
-                        variantOptions[axis].forEach(function (value, valueIndex) {
-                            if (valueIndex) group.appendChild(doc.createTextNode(' '));
-                            group.appendChild(appendVariantValue(value));
+                    Object.keys(variantOptions).forEach(function (axis) {
+                        var line = doc.createElement('div');
+                        line.className = 'sl-variant-line';
+                        var heading = doc.createElement('strong');
+                        heading.textContent = axis + ': ';
+                        line.appendChild(heading);
+                        variantOptions[axis].forEach(function (value, index) {
+                            if (index) line.appendChild(doc.createTextNode(' '));
+                            line.appendChild(appendVariantValue(axis, value));
                         });
-                        variantNode.appendChild(group);
+                        variantNode.appendChild(line);
                     });
                 } else {
-                    tokens.forEach(function (value, index) {
-                        if (index) variantNode.appendChild(doc.createTextNode('  '));
-                        variantNode.appendChild(appendVariantValue(value));
-                    });
+                    var fallback = doc.createElement('div');
+                    fallback.className = 'sl-variant-line';
+                    fallback.textContent = selectedVariant;
+                    variantNode.appendChild(fallback);
                 }
                 applyElementLayout(variantNode, 'variant_values', s);
                 div.appendChild(variantNode);
-            }
-            if (s.enabledFields.includes('name')) text(String(item.article_type || nameText.split(' / ')[0] || '').trim(), 'sl-name', 'name');
-            if (s.enabledFields.includes('custom_text')) text(String(root.localStorage.getItem('posnic.shelf-label-custom-text') || 'Custom text'), 'sl-custom-text', 'custom_text');
-            if (s.enabledFields.includes('image')) {
-                var imageData = '';
-                try { imageData = root.localStorage.getItem('posnic.shelf-label-logo') || ''; } catch (_) {}
-                if (imageData) { var imageNode = doc.createElement('img'); imageNode.className = 'sl-logo sl-element'; imageNode.dataset.slElement = 'image'; imageNode.src = imageData; imageNode.alt = 'Label image'; applyElementLayout(imageNode, 'image', s); div.appendChild(imageNode); }
             }
             var brand = String(item.brand_abbreviation || item.brand_abbreviation_short || item.brand || '').trim();
             if (brand && s.enabledFields.includes('brand')) text(brand, 'sl-brand', 'brand');
@@ -191,9 +184,9 @@
         if (s.barcode !== false && s.enabledFields.includes('barcode')) {
             var svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('sl-barcode');
             applyElementLayout(svg, 'barcode', s); div.appendChild(svg);
-            barcode(svg, String(item.barcode_id), { format: s.format, width: s.barWidth, height: s.barHeight, margin: s.barMargin,
-            marginTop: s.top, marginBottom: s.bottom, marginLeft: s.left, marginRight: s.right,
-            displayValue: s.barText, textMargin: s.textMargin, font: s.font, fontSize: s.fontSize,
+            barcode(svg, String(item.barcode_id), { format: s.format || 'CODE128', width: s.barWidth, height: s.barHeight, margin: 0,
+            marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0,
+            displayValue: true, textMargin: 1, font: 'monospace', fontSize: 8,
             textAlign: s.align, fontOptions: s.fontOptions || '', lineColor: s.ink, background: s.background });
         }
         if (s.enabledFields.includes('price') && Number.isFinite(item.label_price)) text(s.currency + ' ' + item.label_price.toFixed(item.label_currency_digits ?? 2), 'sl-price', 'price');
@@ -417,12 +410,17 @@
                 var rows = Array.isArray(data.list) ? data.list : [];
                 var values = Array.from(new Set(rows.map(function (row) { return String(row.variant_value || '').trim(); }).filter(Boolean)));
                 var axes = {};
+                function splitParts(value) { return String(value || '').split(/\\s*\\/\\s*|\\s*,\\s*/).map(function (part) { return part.trim(); }).filter(Boolean); }
                 rows.forEach(function (row) {
-                    var axis = String(row.variant_axis || '').trim();
-                    var value = String(row.variant_value || '').trim();
-                    if (!axis || !value) return;
-                    if (!axes[axis]) axes[axis] = [];
-                    if (!axes[axis].some(function (existing) { return existing.toLocaleLowerCase() === value.toLocaleLowerCase(); })) axes[axis].push(value);
+                    var axisParts = splitParts(row.variant_axis), valueParts = splitParts(row.variant_value);
+                    axisParts.forEach(function (axis, index) {
+                        var value = valueParts[index];
+                        if (!axis || !value) return;
+                        var canonical = axis.toLocaleLowerCase();
+                        var key = Object.keys(axes).find(function (existing) { return existing.toLocaleLowerCase() === canonical; }) || axis;
+                        if (!axes[key]) axes[key] = [];
+                        if (!axes[key].some(function (existing) { return existing.toLocaleLowerCase() === value.toLocaleLowerCase(); })) axes[key].push(value);
+                    });
                 });
                 state.entries.forEach(function (entry) {
                     if (String(entry.item.variant_parent_name || '').trim() === parent) {
