@@ -1290,7 +1290,7 @@ class SettingModel extends BaseModel {
       const purchaseSettingsBranch = await this.getCollection('branches');
       const persistedPurchaseSettings = await purchaseSettingsBranch.findOne(
         { _id: this.normalizeId(this.branchId), license: this.normalizeId(this.licenseId) },
-        { projection: { purchase_exchange_rate: 1, purchase_vat_rate: 1 } }
+        { projection: { purchase_exchange_rate: 1, purchase_extra_cost_dzd: 1, purchase_vat_rate: 1 } }
       ) || {};
 
       /*
