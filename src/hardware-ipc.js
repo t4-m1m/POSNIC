@@ -295,6 +295,8 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
   ipcMain.handle('printer:receipt-test', async (_event, settings = {}) => {
     try {
       const config = saveReceiptSettings(settings);
+      const { render } = require('./tysoo-prp300-receipt');
+      const { normalizeTargets, columnsFor } = require('./printer-targets');
       const sale = {
         storeName: config.storeName || 'YOUR STORE',
         storeAddress: config.storeAddress,
@@ -308,11 +310,23 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
         branch: config.showBranch ? 'Sample branch' : '',
         items: [{ name: 'Sample item', qty: 2, rate: 150, amount: 300 }],
         totalQty: 2, subTotal: 300, total: 300, currency: 'DA',
-        payments: [{ label: 'Cash', amount: 300 }],
-        change: 0,
+        payments: [{ label: 'Cash', amount: 300 }], change: 0,
         footer: config.footer || '',
       };
-      return await ipcMain.emit ? { success: false, error: 'Printer test unavailable' } : await Promise.resolve({ success: false, error: 'Printer test unavailable' });
+      const targets = normalizeTargets({ printerName: config.printerName, paperSize: config.paperWidth }, config.paperWidth);
+      const results = [];
+      for (const target of targets) {
+        const columns = columnsFor(target.pageSize);
+        const paperWidth = columns <= 32 ? '58' : columns === 69 ? '112' : '80';
+        const bytes = render(sale, { paperWidth, cut: true, openDrawer: false });
+        const copies = Math.max(1, Math.min(20, parseInt(target.copies, 10) || 1));
+        for (let copy = 0; copy < copies; copy++) {
+          const result = await hardwareManager.sendRawToPrinter(target.name, bytes, 'POSNIC Receipt Test', { jobId: 'receipt-test:' + Date.now() + ':' + results.length });
+          results.push({ printer: target.name || '(default)', ...result });
+          if (!result.success) return { success: false, error: result.error || result.status || 'Printer test failed', jobs: results };
+        }
+      }
+      return { success: results.length > 0 && results.every((item) => item.success), jobs: results, message: 'Sample receipt sent.' };
     } catch (error) { return { success: false, error: error.message }; }
   });
 
