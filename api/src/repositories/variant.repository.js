@@ -54,8 +54,10 @@ class VariantsRepository {
     // without making variants from another branch visible.
     const query = {
       _id: new mongoose.Types.ObjectId(id),
-      branch_id: tenant.branch_id,
-      $or: [{ license: tenant.license }, { license: { $exists: false } }, { license: null }],
+      $and: [
+        { $or: [{ branch_id: tenant.branch_id }, { branch_id: { $exists: false } }, { branch_id: null }] },
+        { $or: [{ license: tenant.license }, { license: { $exists: false } }, { license: null }] },
+      ],
     };
     return await this.model.findOne(query).lean();
   }
@@ -88,7 +90,14 @@ class VariantsRepository {
     // Build query with branch verification
     const query = { _id: id };
     if (branch_id && mongoose.Types.ObjectId.isValid(branch_id)) {
-      query.branch_id = new mongoose.Types.ObjectId(branch_id);
+      const branchObjectId = new mongoose.Types.ObjectId(branch_id);
+      // Keep branch-owned variants isolated while allowing older POSNIC
+      // global definitions (no branch_id) to be edited from the variant UI.
+      query.$or = [
+        { branch_id: branchObjectId },
+        { branch_id: { $exists: false } },
+        { branch_id: null },
+      ];
     }
 
     const variant = await this.model.findOne(query);
