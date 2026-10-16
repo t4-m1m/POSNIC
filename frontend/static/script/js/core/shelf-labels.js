@@ -130,7 +130,7 @@
         var rawName = String(item.name || '').trim();
         var nameParts = rawName.match(/^(.*?)-([0-9]{2}-[0-9]{2}\/[^/]+?)(?:\s+\/\s+(.+))?$/);
         var baseName = nameParts ? nameParts[1].trim() : rawName;
-        var brand = String(item.brand_abbreviation || item.brand_abbreviation_short || item.brand || '').trim();
+        var brand = s.enabledFields.includes('brand') ? String(item.brand_abbreviation || item.brand_abbreviation_short || item.brand || '').trim() : '';
         var nameText = [baseName, brand].filter(Boolean).join(' · ');
         if (s.enabledFields.includes('name') && nameText.trim()) text(nameText, 'sl-name', 'name');
         if (s.enabledFields.includes('image') && s.logoData) {
@@ -197,7 +197,8 @@
             }
             var reference = String(item.reference_date || item.mm_yy || '').trim();
             var modelReference = String(item.model_reference || item.reference || item.ref || '').trim();
-            if ((reference || modelReference) && s.enabledFields.includes('reference')) text((reference ? reference : '') + (reference && modelReference ? ' / ' : '') + modelReference, 'sl-reference', 'reference');
+            var referenceText = nameParts ? String(nameParts[2] || '').trim() : ((reference ? reference : '') + (reference && modelReference ? ' / ' : '') + modelReference);
+            if ((referenceText || modelReference) && s.enabledFields.includes('reference')) text(referenceText || modelReference, 'sl-reference', 'reference');
         }
         if (s.barcode !== false && s.enabledFields.includes('barcode')) {
             var barcodeBox = doc.createElement('div');
