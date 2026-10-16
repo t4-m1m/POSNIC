@@ -469,6 +469,7 @@ const normalizeSaleItems = (rawItems) => {
         item_discount_percentage: numberOrZero(raw?.item_discount_percentage ?? 0, 0),
         item_available_quantity: numberOrZero(raw?.item_available_quantity ?? 0, 0),
         item_id: raw?.item_id ? String(raw?.item_id) : '',
+        price_tier: [1, 2, 3].includes(Number(raw?.price_tier)) ? Number(raw.price_tier) : 1,
         item_unit: raw?.item_unit || 'qty',
         total_amount: roundToTwo(numberOrZero(raw?.total_amount ?? computedTotal, computedTotal)),
         barcode_id: raw?.barcode_id || undefined,
