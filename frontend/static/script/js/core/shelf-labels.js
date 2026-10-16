@@ -206,7 +206,7 @@
             applyElementLayout(barcodeBox, 'barcode', s);
             var svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('sl-barcode');
             barcodeBox.appendChild(svg); div.appendChild(barcodeBox);
-            barcode(svg, String(item.barcode_id), { format: 'CODE128', width: Math.max(2, Number(s.barWidth) || 2), height: Math.max(24, Number(s.barHeight) || 30), margin: 0,
+            barcode(svg, String(item.barcode_id), { format: 'CODE128', width: Math.max(1, Number(s.barWidth) || 1), height: Math.max(24, Number(s.barHeight) || 30), margin: 0,
             marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0,
             displayValue: true, textMargin: Math.max(2, Number(s.textMargin) || 3), font: 'monospace', fontSize: Math.max(12, Number(s.barFontSize) || 14),
             textAlign: 'center', fontOptions: s.fontOptions || '', lineColor: s.ink, background: s.background });
@@ -391,7 +391,7 @@
                 entries.forEach(function (e) {
                     if (s.barcode) {
                         if (!e.item.barcode_id) throw Error(e.item.name + ': ' + t('lang_sl_barcode_missing', 'No barcode. Switch off Show barcode to print a price label.'));
-                        try { root.JsBarcode({}, String(e.item.barcode_id), { format: 'CODE128', width: Math.max(2, Number(s.barWidth) || 2), height: Math.max(24, Number(s.barHeight) || 30), displayValue: true, margin: 0 }); }
+                        try { root.JsBarcode({}, String(e.item.barcode_id), { format: 'CODE128', width: Math.max(1, Number(s.barWidth) || 1), height: Math.max(24, Number(s.barHeight) || 30), displayValue: true, margin: 0 }); }
                         catch (_) { throw Error(e.item.name + ': ' + t('lang_sl_barcode_format', 'The barcode does not match this format. Choose another format or switch off Show barcode.')); }
                     }
                 });
