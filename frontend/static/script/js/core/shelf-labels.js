@@ -558,7 +558,69 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
             var layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key];
             editorDrag = { key: key, mode: 'resize', startX: e.clientX, startY: e.clientY, rect: label.getBoundingClientRect(), initial: Object.assign({}, layout) };
         });
-        function syncSelectionControls() {}        $(root.document).on('pointermove', function (e) {
+        function syncSelectionControls() {
+            var selected = $('#sl-sample .sl-element.sl-selected').first();
+            var key = selected.attr('data-sl-element');
+            var layout = key ? (state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key]) : null;
+            $('#sl-rotation').val(layout ? (Number(layout.rotation) || 0) : 0).prop('disabled', !layout);
+        }
+        function rotateSelected(delta) {
+            var selected = $('#sl-sample .sl-element.sl-selected').first();
+            var key = selected.attr('data-sl-element');
+            if (!key) {
+                selected = $('#sl-sample .sl-element').first().addClass('sl-selected');
+                key = selected.attr('data-sl-element');
+            }
+            if (!key) return;
+            var layout = Object.assign({}, state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key]);
+            layout.rotation = Math.max(-180, Math.min(180, (Number(layout.rotation) || 0) + delta));
+            state.elementLayout[key] = layout;
+            try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
+            refresh();
+            var updated = $('#sl-sample [data-sl-element="' + key + '"]');
+            updated.addClass('sl-selected');
+            syncSelectionControls();
+        }
+        $(root.document).on('click', '#sl-rotate-left', function () { rotateSelected(-15); });
+        $(root.document).on('click', '#sl-rotate-right', function () { rotateSelected(15); });
+        $(root.document).on('change input', '#sl-rotation', function () {
+            var selected = $('#sl-sample .sl-element.sl-selected').first(), key = selected.attr('data-sl-element');
+            if (!key) return;
+            var value = Number(this.value);
+            if (!Number.isFinite(value)) return;
+            var layout = Object.assign({}, state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key]);
+            layout.rotation = Math.max(-180, Math.min(180, value));
+            state.elementLayout[key] = layout;
+            try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
+            var element = $('#sl-sample [data-sl-element="' + key + '"]');
+            if (element.length) element.css('transform', 'rotate(' + layout.rotation + 'deg)');
+        });
+        $(root.document).on('input change', '#sl-custom-text-input', function () {
+            try { root.localStorage.setItem('posnic.shelf-label-custom-text', String(this.value || '').slice(0, 120)); } catch (_) {}
+            refresh();
+        });
+        $(root.document).on('change', '#sl-image-upload', function () {
+            var file = this.files && this.files[0];
+            if (!file) return;
+            if (!/^image\\/(png|jpeg|webp)$/.test(file.type) || file.size > 1024 * 1024) {
+                error(new Error('Choose a PNG, JPEG or WebP image smaller than 1 MB.'));
+                this.value = '';
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function () {
+                try { root.localStorage.setItem('posnic.shelf-label-logo', String(reader.result)); }
+                catch (_) { error(new Error('Image could not be saved. Use an image smaller than 1 MB.')); return; }
+                if (!state.enabledFields.includes('image')) {
+                    state.enabledFields.push('image');
+                    persistEnabledFields();
+                }
+                refresh();
+            };
+            reader.onerror = function () { error(new Error('Could not read the selected image.')); };
+            reader.readAsDataURL(file);
+        });
+        $(root.document).on('pointermove', function (e) {
             if (!editorDrag) return;
             var drag = editorDrag, dx = (e.clientX - drag.startX) / Math.max(1, drag.rect.width) * 100;
             var dy = (e.clientY - drag.startY) / Math.max(1, drag.rect.height) * 100;
