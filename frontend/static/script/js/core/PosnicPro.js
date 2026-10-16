@@ -3540,10 +3540,15 @@ PosnicPro = {
              * it is a real page, the layout is a page layout, and it prints
              * correctly today.
              */
-            if (data !== 'a4' && window.electronAPI.printer.printReceipt && PosnicPro.receiptData
-                && PosnicPro.printReceiptRaw(contents)) {
-                return;
-            }
+            /*
+             * Do not send sale receipts through the raw ESC/POS text encoder by
+             * default. On some installed thermal printers the selected code page
+             * and command set do not match the encoder, producing corrupted,
+             * symbol-heavy output like the reported Tysoo receipt. Use Chromium's
+             * normal print pipeline so the Windows printer driver performs text
+             * encoding and preserves the configured HTML receipt layout. The raw
+             * helper remains available for a future explicitly verified device path.
+             */
 
             let printUrl = PosnicPro.local.get('print_url');
             // margin-top on the body pushes the first line down the roll and is
