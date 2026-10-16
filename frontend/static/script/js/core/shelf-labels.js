@@ -175,6 +175,13 @@
                 applyElementLayout(variantNode, 'variant_values', s);
                 div.appendChild(variantNode);
             }
+            if (s.enabledFields.includes('name')) text(String(item.article_type || nameText.split(' / ')[0] || '').trim(), 'sl-name', 'name');
+            if (s.enabledFields.includes('custom_text')) text(String(root.localStorage.getItem('posnic.shelf-label-custom-text') || 'Custom text'), 'sl-custom-text', 'custom_text');
+            if (s.enabledFields.includes('image')) {
+                var imageData = '';
+                try { imageData = root.localStorage.getItem('posnic.shelf-label-logo') || ''; } catch (_) {}
+                if (imageData) { var imageNode = doc.createElement('img'); imageNode.className = 'sl-logo sl-element'; imageNode.dataset.slElement = 'image'; imageNode.src = imageData; imageNode.alt = 'Label image'; applyElementLayout(imageNode, 'image', s); div.appendChild(imageNode); }
+            }
             var brand = String(item.brand_abbreviation || item.brand_abbreviation_short || item.brand || '').trim();
             if (brand && s.enabledFields.includes('brand')) text(brand, 'sl-brand', 'brand');
             var reference = String(item.reference_date || item.mm_yy || '').trim();
