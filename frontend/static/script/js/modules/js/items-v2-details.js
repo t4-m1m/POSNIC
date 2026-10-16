@@ -7,15 +7,14 @@
     }
     function makeInternalBarcode(existing) {
         var used = new Set((existing || []).map(function (v) { return String(v || '').trim(); }).filter(Boolean));
-        for (var attempt = 0; attempt < 30; attempt++) {
-            var bytes = new Uint8Array(6);
+        for (var attempt = 0; attempt < 1000; attempt++) {
+            var bytes = new Uint32Array(1);
             if (root.crypto && typeof root.crypto.getRandomValues === 'function') root.crypto.getRandomValues(bytes);
-            else for (var i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
-            var suffix = Array.from(bytes).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('').toUpperCase();
-            var code = 'P' + Date.now().toString(36).toUpperCase() + suffix;
+            else bytes[0] = Math.floor(Math.random() * 0xFFFFFFFF);
+            var code = String(bytes[0] % 1000000).padStart(6, '0');
             if (!used.has(code)) return code;
         }
-        throw new Error('Could not generate a unique barcode. Try again.');
+        throw new Error('Could not generate a unique six-digit barcode.');
     }
     function validGtin(value) {
         var code = String(value || '').replace(/[\s-]/g, '');
