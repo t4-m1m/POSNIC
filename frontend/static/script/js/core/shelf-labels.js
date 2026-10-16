@@ -71,7 +71,7 @@
         variant_values: { x: 3, y: 20, w: 94, h: 14, font_size: 100, font_weight: 'normal', text_align: 'center', color: '#000000' },
         brand: { x: 5, y: 35, w: 90, h: 10, font_size: 90, font_weight: 'bold', text_align: 'center', color: '#000000' },
         reference: { x: 5, y: 45, w: 90, h: 10, font_size: 75, font_weight: 'normal', text_align: 'center', color: '#000000' },
-        barcode: { x: 27, y: 56, w: 46, h: 18, rotation: 0, font_size: 70 },
+        barcode: { x: 22, y: 56, w: 56, h: 38, rotation: 0, font_size: 70 },
         custom_text: { x: 5, y: 44, w: 90, h: 12, rotation: 0, text: '' },
         image: { x: 3, y: 3, w: 20, h: 15, rotation: 0 }
     };
@@ -82,7 +82,7 @@
         Object.keys(DEFAULT_ELEMENT_LAYOUT).forEach(function (key) {
             var d = DEFAULT_ELEMENT_LAYOUT[key] || { x: 10, y: 10, w: 45, h: 12 }, v = saved[key] || {};
             function n(name) { var value = Number(v[name]); return Number.isFinite(value) ? value : d[name]; }
-            var w = Math.max(5, Math.min(100, n('w'))), h = Math.max(5, Math.min(100, n('h')));
+            var w = Math.max(5, Math.min(300, n('w'))), h = Math.max(5, Math.min(300, n('h')));
             var rawRotation = n('rotation');
             var rotation = Number.isFinite(rawRotation) ? ((rawRotation % 360) + 360) % 360 : 0;
             var defaultFontSize = key === 'price' ? 220 : key === 'details' ? 75 : 100;
@@ -95,7 +95,7 @@
             var emphasis = v.emphasis === true;
             if (key === 'barcode' && Number(v.w) === 80 && Number(v.h) === 38 && Number(v.x) === 10 && Number(v.y) === 57) { v = Object.assign({}, v, { x: 22, y: 60, w: 56, h: 24 }); w = 56; h = 24; }
             if (key === 'barcode' && Number(v.w) === 70 && Number(v.h) === 22 && Number(v.x) === 15 && Number(v.y) === 62) { v = Object.assign({}, v, { x: 27, y: 56, w: 46, h: 18 }); w = 46; h = 18; }
-            result[key] = { x: Math.max(0, Math.min(100 - w, n('x'))), y: Math.max(0, Math.min(100 - h, n('y'))), w: w, h: h, rotation: rotation, group_id: typeof v.group_id === 'string' && v.group_id.length <= 80 ? v.group_id : '', font_size: fontSize, font_weight: fontWeight, emphasis: emphasis, text_align: textAlign, color: color, text: typeof v.text === 'string' ? v.text.slice(0, 120) : '' };
+            result[key] = { x: Math.max(-300, Math.min(300, n('x'))), y: Math.max(-300, Math.min(300, n('y'))), w: w, h: h, rotation: rotation, group_id: typeof v.group_id === 'string' && v.group_id.length <= 80 ? v.group_id : '', font_size: fontSize, font_weight: fontWeight, emphasis: emphasis, text_align: textAlign, color: color, text: typeof v.text === 'string' ? v.text.slice(0, 120) : '' };
         });
         return result;
     }
@@ -206,7 +206,7 @@
             applyElementLayout(barcodeBox, 'barcode', s);
             var svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('sl-barcode');
             barcodeBox.appendChild(svg); div.appendChild(barcodeBox);
-            barcode(svg, String(item.barcode_id), { format: s.format || 'CODE128', width: Math.max(0.55, Math.min(0.8, Number(s.barWidth) || 0.7)), height: 15, margin: 0,
+            barcode(svg, String(item.barcode_id), { format: s.format || 'CODE128', width: Math.max(0.55, Math.min(0.8, Number(s.barWidth) || 0.7)), height: 20, margin: 0,
             marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0,
             displayValue: true, textMargin: 2, font: 'monospace', fontSize: 10,
             textAlign: 'center', fontOptions: s.fontOptions || '', lineColor: s.ink, background: s.background });
@@ -220,7 +220,7 @@
         cells.forEach(function (item) { page.appendChild(item ? label(doc, item, s, barcode) : doc.createElement('div')); });
         return page;
     }
-    var state = { entries: [], byId: new Map(), viewIds: [], filters: {}, step: 0, furthestStep: 0, page: 0, productPage: 1, totalPages: 1, total: 0, loading: false, bulkLoading: false, token: 0, loadError: null, completeKey: null };
+    var state = { entries: [], byId: new Map(), viewIds: [], filters: {}, step: 0, furthestStep: 0, page: 0, productPage: 1, totalPages: 1, total: 0, loading: false, bulkLoading: false, token: 0, loadError: null, completeKey: null, selectedElementKey: null };
     // Start blank and clear every saved preset from the retired designer.
     try {
         if (root.localStorage.getItem('posnic.shelf-label-minimal-v3') !== '1') {
@@ -275,7 +275,7 @@
             var labelWidthMm = Math.max(1, Number(s.width) || 45);
             var labelHeightMm = Math.max(1, Number(s.height) || 30);
             var barcodeMaxWidth = Math.min(100, 25 / labelWidthMm * 100);
-            var barcodeMaxHeight = Math.min(100, 15 / labelHeightMm * 100);
+            var barcodeMaxHeight = Math.min(100, 20 / labelHeightMm * 100);
             s.elementLayout.barcode.w = Math.min(barcodeMaxWidth, Math.max(5, Number(s.elementLayout.barcode.w) || barcodeMaxWidth));
             s.elementLayout.barcode.h = Math.min(barcodeMaxHeight, Math.max(5, Number(s.elementLayout.barcode.h) || barcodeMaxHeight));
             s.elementLayout.barcode.x = Math.max(0, Math.min(100 - s.elementLayout.barcode.w, Number(s.elementLayout.barcode.x) || 0));
@@ -310,6 +310,7 @@
         style.textContent = allCss.slice(allCss.indexOf('.sl-sheet')).replace(/(^|})(\.sl-[^{]+)/g, '$1' + host + ' $2');
         var $host = $(host).empty().append(style, page);
         if (host === '#sl-sample') {
+            style.textContent += '\n#sl-sample .sl-sheet{overflow:visible!important}#sl-sample .sl-label.sl-design-editable{overflow:visible!important}#sl-sample .sl-resize-handle,#sl-sample .sl-rotate-handle{pointer-events:auto}';
             page.querySelectorAll('.sl-label').forEach(function (label) {
                 label.classList.add('sl-design-editable');
                 label.querySelectorAll('[data-sl-element]').forEach(function (element) {
@@ -330,6 +331,12 @@
                     label.appendChild(rotateHandle);
                 });
             });
+        }
+        if (host === '#sl-sample') {
+            var selectedKey = state.selectedElementKey;
+            var selectedNode = selectedKey && page.querySelector('[data-sl-element="' + selectedKey + '"]');
+            if (!selectedNode) { selectedNode = page.querySelector('[data-sl-element]'); state.selectedElementKey = selectedNode ? selectedNode.dataset.slElement : null; }
+            if (selectedNode) selectedNode.classList.add('sl-selected');
         }
         var available = $host.parent().width() || 400;
         var scale = Math.min(1.4, available / (g.width * 96 / 25.4));
@@ -567,11 +574,12 @@
         $(root.document).on('click', '[data-sl-step]', function () { setStep(Number(this.getAttribute('data-sl-step'))); });
         $(root.document).on('click', '#sl-next-step', function () { setStep(state.step + 1); });
         $(root.document).on('click', '#sl-back', function () { setStep(state.step - 1); });
-        $(root.document).on('input change', '#view_print_lable input:not(#sl-search):not(#sl-all):not(#sl-page-all):not(#sl-category),#view_print_lable select:not(#sl-category),#view_print_lable textarea', function () {
+        $(root.document).on('input change', '#view_print_lable input:not(#sl-search):not(#sl-all):not(#sl-page-all):not(#sl-category):not(#sl-selected-font-size):not(#sl-rotation):not(#sl-selected-bold):not(#sl-selected-emphasis),#view_print_lable select:not(#sl-category),#view_print_lable textarea', function () {
             if (this.id === 'sl-width' || this.id === 'sl-height') { $('#document_width').val(Number($('#sl-width').val()) / 25.4); $('#document_height').val(Number($('#sl-height').val()) / 25.4); }
             if (state.step === 1) state.furthestStep = 1;
             state.page = 0; refresh();
             if (state.step === 1 && typeof root.newBarcode === 'function') root.newBarcode();
+            if (typeof syncSelectionControls === 'function') syncSelectionControls();
         });
         $(root.document).on('click', '#view_print_lable .text-align,#view_print_lable .font-option', function () {
             if ($(this).hasClass('text-align')) $('#view_print_lable .text-align').removeClass('btn-primary').filter(this).addClass('btn-primary');
@@ -601,6 +609,7 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
             if (e.target.closest('.sl-resize-handle')) return;
             var key = this.dataset.slElement, label = this.closest('.sl-label');
             if (!key || !label) return;
+            state.selectedElementKey = key;
             e.preventDefault();
             if (e.shiftKey || e.ctrlKey || e.metaKey) {
                 $(this).toggleClass('sl-selected');
@@ -626,6 +635,7 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
             e.preventDefault(); e.stopPropagation();
             $('#sl-sample .sl-element').removeClass('sl-selected');
             $(selectedElement).addClass('sl-selected');
+            state.selectedElementKey = key;
             syncSelectionControls();
             var rect = selectedElement.getBoundingClientRect();
             var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
@@ -640,17 +650,23 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
             $('#sl-sample .sl-element').removeClass('sl-selected');
             var selectedElement = label.querySelector('[data-sl-element="' + key + '"]');
             if (selectedElement) $(selectedElement).addClass('sl-selected');
+            state.selectedElementKey = key;
             syncSelectionControls();
             var layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key];
             editorDrag = { key: key, mode: 'resize', startX: e.clientX, startY: e.clientY, rect: label.getBoundingClientRect(), initial: Object.assign({}, layout) };
         });
         function syncSelectionControls() {
             var selected = $('#sl-sample .sl-element.sl-selected').first();
+            if (!selected.length) {
+                var remembered = state.selectedElementKey && $('#sl-sample [data-sl-element="' + state.selectedElementKey + '"]').first();
+                selected = remembered && remembered.length ? remembered : $('#sl-sample .sl-element').first();
+                if (selected.length) { selected.addClass('sl-selected'); state.selectedElementKey = selected.attr('data-sl-element'); }
+            }
             var key = selected.attr('data-sl-element');
             var layout = key ? (state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key]) : null;
             var baseSize = Math.max(3, Number($('#bar-fontSize').val()) || 12);
-            $('#sl-rotation').val(layout ? (Number(layout.rotation) || 0) : 0).prop('disabled', !layout);
-            $('#sl-selected-font-size').val(layout ? Math.max(3, Math.min(72, Math.round(baseSize * (Number(layout.font_size) || 100) / 100))) : '').prop('disabled', !layout);
+            $('#sl-rotation').val(layout ? (Number(layout.rotation) || 0) : 0).prop('disabled', false);
+            $('#sl-selected-font-size').val(layout ? Math.max(3, Math.min(72, Math.round(baseSize * (Number(layout.font_size) || 100) / 100))) : baseSize).prop('disabled', false);
             $('#sl-selected-bold').prop('checked', !!layout && layout.font_weight === 'bold').prop('disabled', !layout);
             $('#sl-selected-emphasis').prop('checked', !!layout && layout.emphasis === true).prop('disabled', !layout);
         }
@@ -758,11 +774,11 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
                 var initial = drag.initialLayouts ? drag.initialLayouts[key] : drag.initial;
                 var next = Object.assign({}, initial);
                 if (drag.mode === 'move') {
-                    next.x = Math.max(0, Math.min(100 - next.w, initial.x + dx));
-                    next.y = Math.max(0, Math.min(100 - next.h, initial.y + dy));
+                    next.x = Math.max(-300, Math.min(300, initial.x + dx));
+                    next.y = Math.max(-300, Math.min(300, initial.y + dy));
                 } else {
-                    next.w = Math.max(5, Math.min(100 - next.x, initial.w + dx));
-                    next.h = Math.max(5, Math.min(100 - next.y, initial.h + dy));
+                    next.w = Math.max(5, Math.min(300, initial.w + dx));
+                    next.h = Math.max(5, Math.min(300, initial.h + dy));
                 }
                 state.elementLayout[key] = next;
                 var element = document.querySelector('#sl-sample [data-sl-element="' + key + '"]');
@@ -778,9 +794,12 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
         });
         $(root.document).on('pointerup pointercancel', function () {
             if (!editorDrag) return;
+            var selectedKey = editorDrag.key;
+            state.selectedElementKey = selectedKey;
             editorDrag = null;
             try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
             refresh();
+            $('#sl-sample [data-sl-element="' + selectedKey + '"]').addClass('sl-selected');
             syncSelectionControls();
         });        $(root.document).on('shown.bs.modal', '#view_print_lable', function () { refresh(); });
         $(root.document).on('hidden.bs.modal', '#view_print_lable', function () { state.token++; state.loading = false; state.bulkLoading = false; clearTimeout(searchTimer); });

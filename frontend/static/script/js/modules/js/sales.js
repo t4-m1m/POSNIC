@@ -1760,13 +1760,7 @@ PosnicPro.sales = {
                 { tier: 2, price: Number(params.selling_price_2) },
                 { tier: 3, price: Number(params.selling_price_3) }
             ].filter(function (entry) { return Number.isFinite(entry.price) && entry.price > 0; });
-            if (tierPrices.length > 1) {
-                var selectedTier = Number(params.price_tier) || 1;
-                priceTierControl = '<select class="sale-price-tier-select" data-line-id="' + id + '" aria-label="Selling price tier" style="display:block;max-width:100%;width:100%;font-size:11px;margin-top:3px;padding:2px;border:1px solid #d6dce5;border-radius:4px;background:#fff;">'
-                    + tierPrices.map(function (entry) {
-                        return '<option value="' + entry.tier + '"' + (entry.tier === selectedTier ? ' selected' : '') + '>P' + entry.tier + ' · ' + entry.price.toFixed(2) + '</option>';
-                    }).join('') + '</select>';
-            }
+            if (tierPrices.length > 1) priceTierControl = '<small class="sale-price-tier-label" title="Press F3 to change selling price">P' + (Number(params.price_tier) || 1) + ' · F3</small>';
         }
         var rowHTMLLine = '<tr id="touch_row_' + id + '" class="touch-sales-hover-effect border-top pt-3"' + (saleEditIcon ? ' data-sale-edit="' + id + '" tabindex="0"' : '') + '> ' +
             '    <td id="addSalesLineItemName_' + id + '" class="font_size14" data-id="' + PosnicPro.escapeHtml(item_name) + '" ' + colWidth + '>' + PosnicPro.escapeHtml(item_name) + inlineNote + '</td>' +
@@ -11583,10 +11577,7 @@ PosnicPro.sales.applyQuickSaleGate = function () {
  * against the shop's default tax, exactly like a normal inclusive item.
  */
 /* Q2: mint (or fetch) the sale's permanent invoice link and copy it. */
-$(document).on('change', '.sale-price-tier-select', function (event) {
-    event.stopPropagation();
-    PosnicPro.sales.changeLinePriceTier(String(this.getAttribute('data-line-id') || ''), this.value);
-});
+$(document).on('click', '.sale-price-tier-label', function (event) { event.preventDefault(); event.stopPropagation(); });
 
 /* POS keyboard shortcuts: operate only while the sale workspace is visible.
  * F3/F4 act on the focused basket row, or the first basket row if none is focused.
@@ -11600,15 +11591,31 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
     if (inEditor && event.key !== 'F3' && event.key !== 'F4') return;
     if ($(event.target).closest('.modal').length) return;
     var $rows = $('#sales_new .touch-table-tbody tr').has('input[name="addSalesLineItemQty"]');
-    if (!$rows.length) $rows = $('#sales_new .touch-table-tbody tr').has('.sale-price-tier-select');
     if (event.key === 'F3' || event.key === 'F4') {
         var $row = $(event.target).closest('tr');
         if (!$row.length || !$row.find('input[name="addSalesLineItemQty"]').length) $row = $rows.first();
         if (!$row.length) { PosnicPro.alert('warning', 'Add an item to the basket first.'); event.preventDefault(); return; }
         if (event.key === 'F3') {
-            var $tier = $row.find('.sale-price-tier-select').first();
-            if (!$tier.length) { PosnicPro.alert('info', 'This item has no alternative selling prices.'); }
-            else { $tier.focus().trigger('mousedown'); }
+            var id = String($row.find('[id^="addSalesLineItemId_"]').first().text() || '');
+            var $name = id ? $('#addSalesLineItemName_' + id) : $();
+            var itemText = $name.data('itemText');
+            if (!id || !itemText) {
+                PosnicPro.alert('warning', 'Select an item in the basket first.');
+            } else {
+                var prices = [
+                    { tier: 1, price: Number(itemText.selling_price_1 != null ? itemText.selling_price_1 : itemText.selling_price) },
+                    { tier: 2, price: Number(itemText.selling_price_2) },
+                    { tier: 3, price: Number(itemText.selling_price_3) }
+                ].filter(function (entry) { return Number.isFinite(entry.price) && entry.price > 0; });
+                if (prices.length < 2) {
+                    PosnicPro.alert('info', 'This item has no alternative selling prices.');
+                } else {
+                    var currentTier = Number(itemText.price_tier) || 1;
+                    var currentIndex = prices.findIndex(function (entry) { return entry.tier === currentTier; });
+                    var nextTier = prices[(currentIndex + 1) % prices.length].tier;
+                    PosnicPro.sales.changeLinePriceTier(id, nextTier);
+                }
+            }
         } else {
             var $qty = $row.find('input[name="addSalesLineItemQty"]').first();
             if ($qty.length) { $qty.focus().select(); }
