@@ -222,44 +222,6 @@
       <input id="mfg_checkbox" type="checkbox"><input id="exp_checkbox" type="checkbox"><textarea id="address-value"></textarea>
      </div>
     </section>
-    <div class="sl-template-tools" aria-label="Reusable label templates">
-     <label class="sl-field" for="sl-template-list">Saved label templates
-      <select id="sl-template-list" class="sl-input"><option value="">Choose a saved template…</option></select>
-     </label>
-     <div class="sl-row">
-      <button type="button" class="sl-button" id="sl-template-save">Save current as template</button>
-      <button type="button" class="sl-button" id="sl-template-load">Load template</button>
-      <button type="button" class="sl-button" id="sl-template-delete">Delete template</button><button type="button" class="sl-button" id="sl-rotate-element" disabled>Rotate selected element 90°</button><button type="button" class="sl-button" id="sl-group-elements" disabled>Group selected</button><button type="button" class="sl-button" id="sl-ungroup-elements" disabled>Ungroup selected</button>
-     </div>
-     <div class="sl-row sl-element-style-tools">
-      <label class="sl-field" for="sl-element-font-size">Selected element size (%)
-       <input id="sl-element-font-size" class="sl-input" type="number" min="40" max="400" step="5" value="100">
-      </label>
-      <label class="sl-field" for="sl-element-font-weight">Weight
-       <select id="sl-element-font-weight" class="sl-input"><option value="normal">Normal</option><option value="bold">Bold</option></select>
-      </label>
-      <label class="sl-field" for="sl-element-text-align">Text alignment
-       <select id="sl-element-text-align" class="sl-input"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select>
-      </label>
-      <label class="sl-field" for="sl-element-color">Text color
-       <input id="sl-element-color" class="sl-input" type="color" value="#000000">
-      </label>
-      <button type="button" class="sl-button" id="sl-apply-element-style" disabled>Apply to selected</button>
-     </div>
-     <div class="sl-row sl-custom-element-tools">
-      <label class="sl-field" for="sl-new-element-text">Add a text element
-       <input id="sl-new-element-text" class="sl-input" type="text" maxlength="120" placeholder="e.g. New collection">
-      </label>
-      <button type="button" class="sl-button" id="sl-add-text-element">Add text element</button>
-      <label class="sl-field" for="sl-selected-element-text">Selected text element content
-       <input id="sl-selected-element-text" class="sl-input" type="text" maxlength="120" placeholder="Select a custom text element">
-      </label>
-      <button type="button" class="sl-button" id="sl-apply-element-text" disabled>Apply text</button>
-      <button type="button" class="sl-button" id="sl-delete-custom-element" disabled>Delete selected text</button>
-     </div>
-     <p class="sl-muted">Templates are saved in this browser for this POS installation. Select one or more elements to adjust their typography and color, or add your own text fields. Custom text elements can be moved, resized, rotated, grouped, styled and saved in templates.</p>
-     <p class="sl-muted">Drag an outlined field to move it, drag its blue corner handle to resize it, and use rotation and grouping controls to compose the label. Changes apply to printing and saved templates.</p>
-    </div>
     <p class="sl-muted"><lang class="lang_match_these_dimensions_to_your_label_stock">Match these dimensions to your label stock before printing.</lang></p>
    </div><div><h3><lang class="lang_sample_label">Sample label</lang></h3><div class="sl-sample-area"><div id="sl-sample" class="sl-preview-host"></div></div><div id="sl-dimensions" class="sl-dimensions"></div></div></div></section>
    <section class="sl-panel" data-sl-panel="2" hidden><h3><lang class="lang_check_before_printing">Check before printing</lang></h3><div class="sl-row"><strong id="sl-layout-summary"></strong><div><select id="sl-preview-zoom" class="sl-input" aria-label="Preview zoom" data-t-aria-label="lang_rd_preview_zoom" style="width:auto;display:inline-block;margin-right:8px"><option value="fit"><lang class="lang_fit_whole_page">Fit whole page</lang></option><option value="actual"><lang class="lang_actual_size">Actual size</lang></option></select><button type="button" class="sl-button" id="sl-prev"><lang class="lang_previous_page">Previous page</lang></button> <span id="sl-page"></span> <button type="button" class="sl-button" id="sl-next"><lang class="lang_next_page">Next page</lang></button></div></div><p id="sl-summary" class="sl-muted" style="margin-bottom:14px"></p><div class="sl-page-area"><div id="sl-preview" class="sl-preview-host"></div></div></section>
