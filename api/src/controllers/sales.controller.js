@@ -1244,7 +1244,10 @@ class SalesController extends BaseController {
       const SaleModel = this.model || Sale;
       const criteria = [{ sales_id: code }, { invoice_number: code }];
       if (mongoose.Types.ObjectId.isValid(code)) criteria.push({ _id: new mongoose.Types.ObjectId(code) });
-      const sale = await SaleModel.findOne({ $or: criteria }).select('_id sales_id invoice_number').lean();
+      const scope = BaseModel.license ? { license: BaseModel.license } : {};
+      const sale = await SaleModel.findOne({ ...scope, $or: criteria })
+        .select('_id sales_id invoice_number')
+        .lean();
       if (!sale) return this.error(res, 'No sale matches this exact receipt barcode.', 404);
       return this.success(res, { id: String(sale._id), sales_id: sale.sales_id || '', invoice_number: sale.invoice_number || '' }, SUCCESS_MESSAGES.GET_SUCCESSFULLY);
     } catch (error) {
