@@ -1274,6 +1274,10 @@ const processSale = async (
         );
 
     // Update block: mirror PHP $updateData field order and contents as much as possible.
+    // Store only the amount actually collected when the final status is Unpaid,
+    // including the KOT override; never leave a stale tender value as paid.
+    if (paymentStatus === 'Unpaid') partialBalance = 0;
+
     const updateData = {
       // Core PHP ordering
       date: mongo_date,
