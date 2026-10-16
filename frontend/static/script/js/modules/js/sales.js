@@ -1426,7 +1426,7 @@ PosnicPro.sales = {
         if (!original || PosnicPro.sales.SaleAction === 'return') return;
         var params = $.extend(true, {}, original);
         var prices = {
-            1: Number(params.selling_price),
+            1: Number(params.selling_price_1 != null ? params.selling_price_1 : params.selling_price),
             2: Number(params.selling_price_2),
             3: Number(params.selling_price_3)
         };
@@ -1461,6 +1461,9 @@ PosnicPro.sales = {
         if (PosnicPro.sales.SaleAction !== 'return'
             && PosnicPro.sales.searchItem(params.id ? params.id : params.item_id) === false) {
             params = PosnicPro.sales._applyPriceList(params);
+        }
+        if (params.selling_price_1 == null && Number.isFinite(Number(params.selling_price))) {
+            params.selling_price_1 = Number(params.selling_price);
         }
         // A dish priced on the day is asked for before it can reach the bill.
         if (PosnicPro.sales._needsTodaysPrice(params)) {
@@ -1734,7 +1737,7 @@ PosnicPro.sales = {
         var priceTierControl = '';
         if (PosnicPro.sales.SaleAction !== 'return') {
             var tierPrices = [
-                { tier: 1, price: Number(params.selling_price) },
+                { tier: 1, price: Number(params.selling_price_1 != null ? params.selling_price_1 : params.selling_price) },
                 { tier: 2, price: Number(params.selling_price_2) },
                 { tier: 3, price: Number(params.selling_price_3) }
             ].filter(function (entry) { return Number.isFinite(entry.price) && entry.price > 0; });
