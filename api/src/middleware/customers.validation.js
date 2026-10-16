@@ -23,6 +23,8 @@ const validateCreateCustomer = [
 
   body('category_name').optional({ checkFalsy: true }).trim(),
 
+  body('price_tier').optional().isInt({ min: 1, max: 3 }).withMessage('Default selling price tier must be 1, 2 or 3.').toInt(),
+
   body('customer_referrer_id')
     .optional({ checkFalsy: true })
     .isMongoId()
