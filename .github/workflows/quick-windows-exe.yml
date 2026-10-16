@@ -11,6 +11,7 @@ on:
       - "frontend/modules/items_v2.html"
       - "frontend/modules/sales_read.html"
       - "frontend/static/script/js/core/shelf-labels.js"
+      - "frontend/static/script/js/modules/js/items.js"
       - "frontend/static/script/js/modules/js/items-v2-details.js"
       - "frontend/static/script/js/modules/js/items_v2.js"
       - "frontend/static/script/js/modules/js/receiving_add.js"
