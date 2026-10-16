@@ -557,6 +557,32 @@
             remember([item], true); state.viewIds = [String(item._id)]; state.total = 1; state.loading = false; renderRows();
         }).catch(function (e) { if (state.token === scopeToken) { state.loading = false; state.loadError = e; refresh(); } });
     }
+    function labelPrinterName() {
+        try { return root.localStorage.getItem('posnic.shelf-label-printer') || 'default'; } catch (_) { return 'default'; }
+    }
+    function loadLabelPrinters() {
+        var select = $('#sl-printer');
+        if (!select.length) return;
+        var api = root.electronAPI && root.electronAPI.printer;
+        if (!api || typeof api.list !== 'function') {
+            select.html('<option value="default">Browser print dialog</option>').prop('disabled', true);
+            return;
+        }
+        select.prop('disabled', true).html('<option value="default">Loading printers…</option>');
+        Promise.resolve(api.list()).then(function (printers) {
+            var saved = labelPrinterName(), html = '<option value="default">System default printer</option>';
+            (Array.isArray(printers) ? printers : []).forEach(function (printer) {
+                if (!printer || !printer.name) return;
+                var name = String(printer.name);
+                html += '<option value="' + $('<span>').text(name).html().replace(/"/g, '&quot;') + '">' + $('<span>').text(printer.displayName || name).html() + '</option>';
+            });
+            select.html(html).val(saved);
+            if (!select.val()) select.val('default');
+            select.prop('disabled', false);
+        }).catch(function () {
+            select.html('<option value="default">System default printer</option>').val('default').prop('disabled', false);
+        });
+    }
     function print(test) {
         try {
             if (state.step !== 3) throw Error(t('lang_sl_review_first', 'Review the labels before printing.'));
@@ -565,7 +591,26 @@
             var s = settings(), g = geometry(s), entries = chosen(), from = Number($('#sl-from').val()), amount = test ? 1 : Number($('#sl-batch').val());
             var first = slots(entries, g, 0, from, amount), html = '';
             for (var i = 0; i < first.pages; i++) html += sheet(root.document, slots(entries, g, i, from, amount).cells, s, root.JsBarcode).outerHTML;
-            root.printJS({ printable: html, type: 'raw-html', style: css(s, g), scanStyles: false, documentTitle: t('lang_shelf_label_products', 'Shelf label products') });
+            var printer = root.electronAPI && root.electronAPI.printer;
+            var selectedPrinter = String($('#sl-printer').val() || labelPrinterName() || 'default');
+            try { root.localStorage.setItem('posnic.shelf-label-printer', selectedPrinter); } catch (_) {}
+            if (printer && typeof printer.print === 'function') {
+                var pageWidth = s.paper === 'a4' ? 210 : s.width;
+                var pageHeight = s.paper === 'a4' ? 297 : s.height;
+                var documentHtml = '<!doctype html><html><head><meta charset="utf-8"><title>Shelf labels</title><style>' + css(s, g) + '</style></head><body>' + html + '</body></html>';
+                Promise.resolve(printer.print(documentHtml, {
+                    printerName: selectedPrinter === 'default' ? '' : selectedPrinter,
+                    pageSize: 'custom',
+                    customPageSize: { width: pageWidth, height: pageHeight },
+                    copies: 1, silent: true, strictPrinter: true, forceHtml: true,
+                    printBackground: true, margins: { marginType: 'none' }
+                })).then(function (result) {
+                    if (!result || !result.success) error(new Error(result && result.error || 'Label printing failed.'));
+                    else $('#sl-status').text(test ? 'Test label sent to ' + (selectedPrinter === 'default' ? 'the system default printer' : selectedPrinter) + '.' : 'Labels sent to ' + (selectedPrinter === 'default' ? 'the system default printer' : selectedPrinter) + '.');
+                }).catch(error);
+            } else {
+                root.printJS({ printable: html, type: 'raw-html', style: css(s, g), scanStyles: false, documentTitle: t('lang_shelf_label_products', 'Shelf label products') });
+            }
         } catch (e) { error(e); }
         return false;
     }
@@ -803,7 +848,10 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
             refresh();
             $('#sl-sample [data-sl-element="' + selectedKey + '"]').addClass('sl-selected');
             syncSelectionControls();
-        });        $(root.document).on('shown.bs.modal', '#view_print_lable', function () { refresh(); });
+        });        $(root.document).on('shown.bs.modal', '#view_print_lable', function () { loadLabelPrinters(); refresh(); });
+        $(root.document).on('change', '#sl-printer', function () {
+            try { root.localStorage.setItem('posnic.shelf-label-printer', String(this.value || 'default')); } catch (_) {}
+        });
         $(root.document).on('hidden.bs.modal', '#view_print_lable', function () { state.token++; state.loading = false; state.bulkLoading = false; clearTimeout(searchTimer); });
         $(root.document).on('change', '#sl-all', function () { if (this.checked) loadAll(); else clear(); });
         $(root.document).on('change', '#sl-page-all', function () { cancelBulk(); var selected = this.checked; state.entries.forEach(function (e) { if (state.viewIds.includes(String(e.item._id))) e.selected = selected; }); state.furthestStep = 0; renderRows(); });
