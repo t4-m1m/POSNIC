@@ -536,7 +536,6 @@ class SalesController extends BaseController {
   async checkCustomerCreditLimit(req, payload) {
     try {
       const customerId = payload.customer_id;
-      if (!customerId) return { blocked: false };
       const total = Number(payload.sales_total) || 0;
       let creditAmount = 0;
       if (String(payload.partial_check) === 'true') {
@@ -545,6 +544,16 @@ class SalesController extends BaseController {
         creditAmount = total;
       }
       if (creditAmount <= 0) return { blocked: false };
+      // Credit is only valid for a real customer account. Walk-in/comptoir
+      // customers must pay the full bill; enforce this on the API as well as UI.
+      const customerName = String(payload.customer_name || '').trim();
+      if (!customerId || !mongoose.Types.ObjectId.isValid(String(customerId)) ||
+          /walk.?in|cash customer|comptoir/i.test(customerName)) {
+        return {
+          blocked: true,
+          error: 'Partial payment and customer credit are available only for a registered customer. Collect the full amount for walk-in sales.',
+        };
+      }
       const ctx = this.buildLoyaltyCtx(req);
       const r = await creditService.checkCreditLimit(customerId, creditAmount, ctx.branchId);
       if (r && !r.allowed) {
