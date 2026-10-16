@@ -1752,20 +1752,17 @@ class ItemRepository extends BaseModel {
         };
       }
       
-      // Generate an internal Code 128 barcode for new items when none was supplied.
-      // Existing/manual barcodes and barcodes on item edits are preserved.
+      // Internal shelf-label barcode: exactly six decimal digits (000000-999999).
+      // Keep manually entered codes and existing item codes untouched.
+      // The same six-digit format is used by the variant-family creation path.
       if (!id && !itemBarcodes.normalize(data.barcode_id)) {
-        const { randomBytes } = require('crypto');
-        const branchToken = String(branchObjectId).slice(-4).toUpperCase();
+        const { randomInt } = require('crypto');
         let generatedBarcode = '';
 
-        for (let attempt = 0; attempt < 10; attempt += 1) {
-          const candidate =
-            'P' +
-            branchToken +
-            Date.now().toString(36).toUpperCase() +
-            randomBytes(4).toString('hex').toUpperCase();
-
+        // Each candidate is checked against this branch and license before use.
+        // Retry collisions rather than silently assigning the same code twice.
+        for (let attempt = 0; attempt < 100; attempt += 1) {
+          const candidate = String(randomInt(0, 1000000)).padStart(6, '0');
           const conflict = await itemBarcodes.findConflict(
             collection,
             [candidate],
@@ -1784,7 +1781,7 @@ class ItemRepository extends BaseModel {
         if (!generatedBarcode) {
           return {
             status: false,
-            message: 'Could not generate a unique barcode. Please try again.',
+            message: 'Could not generate a unique six-digit barcode. Please try again.',
             data: null,
           };
         }
