@@ -1420,6 +1420,29 @@ PosnicPro.sales = {
             PosnicPro.sales.addSalesLineItems(params);
         }).catch(function () { /* dismissed */ });
     },
+    changeLinePriceTier: function (id, tier) {
+        var $name = $('#addSalesLineItemName_' + id);
+        var original = $name.data('itemText');
+        if (!original || PosnicPro.sales.SaleAction === 'return') return;
+        var params = $.extend(true, {}, original);
+        var prices = {
+            1: Number(params.selling_price),
+            2: Number(params.selling_price_2),
+            3: Number(params.selling_price_3)
+        };
+        var chosenPrice = prices[Number(tier)];
+        if (!Number.isFinite(chosenPrice) || chosenPrice <= 0) {
+            PosnicPro.alert('error', 'This selling price is not configured for the selected item.');
+            return;
+        }
+        params.price_tier = Number(tier);
+        params.selling_price = chosenPrice;
+        params.mrp_price = chosenPrice;
+        params._priceListApplied = true;
+        params._replaceExistingLine = true;
+        params.item_quantity = Number($('#touchsale_item_qty' + id).val()) || 1;
+        PosnicPro.sales.addSalesLineItems(params);
+    },
     addSalesLineItems: function (params) {
         // Recency (owner feedback): every added item feeds the recent list -
         // written here so search, scan, camera, tiles and recents all count.
@@ -1534,17 +1557,15 @@ PosnicPro.sales = {
             if (PosnicPro.sales.SaleAction === 'return') {
                 return false;
             } else {
-                var lineqty = params.available_quantity - placedQty;
-                /*
-                 * parseFloat, not parseInt.
-                 *
-                 * Adding the same item twice adds the two quantities. With
-                 * parseInt, 0.300kg of onions already in the cart read as 0,
-                 * so scanning them again replaced the weight with a whole
-                 * number - the customer was billed 1kg for 600g.
-                 */
-                item_quantity = (lineqty === 0) ? item_quantity
-                    : parseFloat(item_quantity) + parseFloat($('#touchsale_item_qty' + id).val());
+                if (!params._replaceExistingLine) {
+                    var lineqty = params.available_quantity - placedQty;
+                    /*
+                     * parseFloat, not parseInt. Re-adding an item adds its
+                     * quantity; replacing its selected price must not.
+                     */
+                    item_quantity = (lineqty === 0) ? item_quantity
+                        : parseFloat(item_quantity) + parseFloat($('#touchsale_item_qty' + id).val());
+                }
             }
         }
         if (params.track_inventory === true && params.negative_stock === false) {
@@ -1710,11 +1731,26 @@ PosnicPro.sales = {
         // whole-line editor door (owner ask): one pencil, every field
         var saleEditIcon = (PosnicPro.local.get('sale_quick_edit') === 'disable') ? '' :
             '<a href="javascript:void(0)" class="sale-line-act sale-line-edit" data-id="' + id + '" title="Edit price, qty, discount, tax" data-t-title="lang_edit_price_qty_discount_tax"><i class="feather icon-edit-2"></i></a>';
+        var priceTierControl = '';
+        if (PosnicPro.sales.SaleAction !== 'return') {
+            var tierPrices = [
+                { tier: 1, price: Number(params.selling_price) },
+                { tier: 2, price: Number(params.selling_price_2) },
+                { tier: 3, price: Number(params.selling_price_3) }
+            ].filter(function (entry) { return Number.isFinite(entry.price) && entry.price > 0; });
+            if (tierPrices.length > 1) {
+                var selectedTier = Number(params.price_tier) || 1;
+                priceTierControl = '<select class="sale-price-tier-select" data-line-id="' + id + '" aria-label="Selling price tier" style="display:block;max-width:100%;width:100%;font-size:11px;margin-top:3px;padding:2px;border:1px solid #d6dce5;border-radius:4px;background:#fff;">'
+                    + tierPrices.map(function (entry) {
+                        return '<option value="' + entry.tier + '"' + (entry.tier === selectedTier ? ' selected' : '') + '>P' + entry.tier + ' · ' + entry.price.toFixed(2) + '</option>';
+                    }).join('') + '</select>';
+            }
+        }
         var rowHTMLLine = '<tr id="touch_row_' + id + '" class="touch-sales-hover-effect border-top pt-3"' + (saleEditIcon ? ' data-sale-edit="' + id + '" tabindex="0"' : '') + '> ' +
             '    <td id="addSalesLineItemName_' + id + '" class="font_size14" data-id="' + PosnicPro.escapeHtml(item_name) + '" ' + colWidth + '>' + PosnicPro.escapeHtml(item_name) + inlineNote + '</td>' +
             '    <td id="addSalesLineItemQty_' + id + '" class="text-center add_circle font_size14">' + addLineItemQty + '</td>' +
             '    <td name ="addSalesLineItemUnit" id="addSalesLineItemUnit_' + id + '" class="text-center">' + item_unit + '</td>' +
-            '    <td name ="addSalesLineItemPrice" id="addSalesLineItemPrice_' + id + '" class="font_size14" ' + kotHideStyle + '>' + mrpPrice.toFixed(2) + inlinePrice + '</td>' +
+            '    <td name ="addSalesLineItemPrice" id="addSalesLineItemPrice_' + id + '" class="font_size14" ' + kotHideStyle + '>' + mrpPrice.toFixed(2) + inlinePrice + priceTierControl + '</td>' +
             '    <td name ="addSalesLineItemDiscount" id="addSalesLineItemDiscountprint_' + id + '" class="text-center font_size14" ' + kotHideStyle + '>' + discount_percentages + inlineDiscount + '</td>' +
             '    <td name="addSalesLineItemTax" id="addSalesLineItemTax_' + id + '" class="text-center font_size14" ' + kotHideStyle + '>' + lineItemTax + '<span>%</span></td>' +
             '    <td name ="addSalesLineTotal" id="addSalesLineTotal_' + id + '" class="font_size14" ' + kotHideStyle + '>' + line_total.toFixed(2) + '</td>' +
@@ -1764,6 +1800,9 @@ PosnicPro.sales = {
             addSalesLineDiscount: addSalesLineDiscount,
             addSalesLineItemCompanyPrice_: params.company_price,
             addSalesLineItemPrice: params.selling_price,
+            selling_price_2: Number(params.selling_price_2) || 0,
+            selling_price_3: Number(params.selling_price_3) || 0,
+            price_tier: Number(params.price_tier) || 1,
             addSalesLineItemUnit: params.unit,
             Discount: Discount,
             available_quantity: params.available_quantity,
@@ -11510,6 +11549,11 @@ PosnicPro.sales.applyQuickSaleGate = function () {
  * against the shop's default tax, exactly like a normal inclusive item.
  */
 /* Q2: mint (or fetch) the sale's permanent invoice link and copy it. */
+$(document).on('change', '.sale-price-tier-select', function (event) {
+    event.stopPropagation();
+    PosnicPro.sales.changeLinePriceTier(String(this.getAttribute('data-line-id') || ''), this.value);
+});
+
 $(document).on('click', '.sale-invoice-link', function () {
     PosnicPro.sales.invoiceLink($(this).data('sale-id'));
 });
