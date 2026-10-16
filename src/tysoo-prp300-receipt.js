@@ -108,6 +108,7 @@ function render(sale = {}, options = {}) {
   if (sale.footer) String(sale.footer).split(/\r?\n/).forEach(centre);
   else if (sale.showThanks !== false) centre('Thank you, please visit again');
   bytes(0x0a, 0x0a, 0x0a);
+  if (options.openDrawer) bytes(ESC, 0x70, 0x00, 0x19, 0xfa);
   if (options.cut !== false) bytes(GS, 0x56, 0x00);
   return Buffer.concat(chunks);
 }
