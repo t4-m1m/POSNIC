@@ -49,7 +49,15 @@ class VariantsRepository {
       licenseId: scope?.license,
       branchId: scope?.branch_id,
     });
-    return await this.model.findOne({ _id: id, ...tenant }).lean();
+    // Older POSNIC variant definitions were saved against a branch before
+    // license metadata was added. Keep those same-branch records editable,
+    // without making variants from another branch visible.
+    const query = {
+      _id: new mongoose.Types.ObjectId(id),
+      branch_id: tenant.branch_id,
+      $or: [{ license: tenant.license }, { license: { $exists: false } }, { license: null }],
+    };
+    return await this.model.findOne(query).lean();
   }
 
   /**
@@ -148,7 +156,10 @@ class VariantsRepository {
       filter.branch_id = new mongoose.Types.ObjectId(branchId);
     }
 
-    return await this.model.find(filter).select('name fields').limit(limit).lean();
+    // Legacy definitions may store their values in product_type rather than
+    // the newer fields array. Include both so the item editor and barcode
+    // combination generator see the same saved variant values.
+    return await this.model.find(filter).select('name fields product_type description').limit(limit).lean();
   }
 
   /**
