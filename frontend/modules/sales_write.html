@@ -1196,5 +1196,12 @@
 .posnic-payment-redesign .posnic-pay-due strong{font-size:22px;overflow-wrap:anywhere}
 .posnic-payment-redesign .profilebox{display:none!important}
 @media(min-width:992px){#tenderpage .posnic-payment-redesign{padding:20px}}
-@media(max-width:700px){.posnic-payment-redesign #payment_id{grid-template-columns:1fr}.posnic-payment-redesign .posnic-pay-due{align-items:flex-start;flex-direction:column}}
+/* Keep the sale summary and tender controls in one scrollable checkout sheet. */
+#infobar-settings-sidebar-tender-details .loader-qrimg>.row{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;width:min(100%,980px);margin:0 auto;padding:20px 18px 28px}
+#infobar-settings-sidebar-tender-details .loader-qrimg>.row> .col-lg-8,
+#infobar-settings-sidebar-tender-details .loader-qrimg>.row> .col-lg-4{width:100%;max-width:100%;flex:none;padding:0}
+#infobar-settings-sidebar-tender-details .email-leftbar,
+#infobar-settings-sidebar-tender-details .email-rightbar{width:100%;max-width:100%;margin:0}
+#infobar-settings-sidebar-tender-details .card{border-radius:14px;overflow:hidden}
+@media(max-width:700px){.posnic-payment-redesign #payment_id{grid-template-columns:1fr}.posnic-payment-redesign .posnic-pay-due{align-items:flex-start;flex-direction:column}#infobar-settings-sidebar-tender-details .loader-qrimg>.row{padding:14px 10px 24px;gap:10px}}
 </style>
