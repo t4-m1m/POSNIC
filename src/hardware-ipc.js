@@ -374,12 +374,12 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
       const { normalizeTargets, columnsFor } = require('./printer-targets');
       // PRP-300 is an 80mm printer. Keep that as the default while still
       // respecting an explicitly configured printer/paper target.
-      const targets = normalizeTargets(
-        options.printers && options.printers.length
+      const targetConfig = config.printerName
+        ? { printerName: config.printerName, paperSize: config.paperWidth }
+        : (options.printers && options.printers.length
           ? { printers: options.printers }
-          : { printerName: options.printerName !== undefined ? options.printerName : config.printerName, paperSize: options.paperWidth || config.paperWidth || '80mm' },
-        options.paperWidth || config.paperWidth || '80mm'
-      );
+          : { printerName: options.printerName !== undefined ? options.printerName : '', paperSize: options.paperWidth || config.paperWidth || '80mm' });
+      const targets = normalizeTargets(targetConfig, options.paperWidth || config.paperWidth || '80mm');
       const results = [];
       const requestId = options.jobId || 'receipt:' + require('crypto').createHash('sha256')
         .update(JSON.stringify({ sale: sale || {}, at: Date.now() })).digest('hex');
