@@ -503,7 +503,25 @@
                 var chosen = formatFor(data, requested === 'standard' && paper ? paper : requested || paper);
                 diagnostic({ stage: 'sale-document-render', format: chosen });
                 // A format explicitly selected for this print takes precedence.
-                await print(render(data, chosen, kitchenBill), chosen, { target: target, batch: true, sample: true, receiptLog: { saleId: data.sales_id, total: data.items_total, title: kitchenBill ? label('Bill') : label('Receipt'), source: 'Till' } });
+                if (window.electronAPI && window.electronAPI.printer && typeof window.electronAPI.printer.printReceipt === 'function' && ['58', '80', '112'].indexOf(chosen) !== -1 && (!target || ['a4', 'a5', 'letter'].indexOf(String(target.pageSize || '').replace('mm', '')) === -1)) {
+                    /*
+                     * Thermal sample/designer receipts use the same native
+                     * ESC/POS byte renderer and spooler as the known-good
+                     * cash-closing ticket. Do not send a Chromium HTML/raster
+                     * job to the Tysoo: that was the route producing garbage.
+                     */
+                    var nativeResult = await window.electronAPI.printer.printReceipt(data, {
+                        printers: target ? [{ name: target.name, pageSize: target.pageSize, copies: target.copies }] : [],
+                        printerName: target ? target.name : PosnicPro.resolveReceiptPrinter(),
+                        paperWidth: chosen,
+                        kind: 'receipt-design-sample',
+                        source: 'Receipt designer',
+                        cut: true
+                    });
+                    if (!nativeResult || !nativeResult.success) throw new Error(nativeResult && nativeResult.error || label('Print failed'));
+                } else {
+                    await print(render(data, chosen, kitchenBill), chosen, { target: target, batch: true, sample: true, receiptLog: { saleId: data.sales_id, total: data.items_total, title: kitchenBill ? label('Bill') : label('Receipt'), source: 'Till' } });
+                }
             }
             if (!options.preserveWorkspace) PosnicPro.afterPrint();
             return { success: true };
