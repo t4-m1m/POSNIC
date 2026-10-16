@@ -1220,6 +1220,7 @@ PosnicPro.sales = {
      * (documented default - re-add the line to reprice it).
      */
     _customerCategoryId: '',
+    _customerPriceTier: 1,
     _priceLists: null,
     _priceListsAt: 0,
     _loadPriceLists: function () {
@@ -1464,6 +1465,15 @@ PosnicPro.sales = {
         }
         if (params.selling_price_1 == null && Number.isFinite(Number(params.selling_price))) {
             params.selling_price_1 = Number(params.selling_price);
+        }
+        if (params.price_tier == null && PosnicPro.sales.SaleAction !== 'return') {
+            var customerTier = Number(PosnicPro.sales._customerPriceTier) || 1;
+            var customerTierPrice = customerTier > 1 ? Number(params['selling_price_' + customerTier]) : 0;
+            if (customerTier > 1 && Number.isFinite(customerTierPrice) && customerTierPrice > 0) {
+                params.price_tier = customerTier;
+                params.selling_price = customerTierPrice;
+                params.mrp_price = customerTierPrice;
+            }
         }
         // A dish priced on the day is asked for before it can reach the bill.
         if (PosnicPro.sales._needsTodaysPrice(params)) {
@@ -7480,6 +7490,7 @@ PosnicPro.sales.setSaleDefaults = function () {
     // A fresh sale carries no picked modifiers and no customer pricing.
     PosnicPro.sales._lineModifiers = {};
     PosnicPro.sales._customerCategoryId = '';
+    PosnicPro.sales._customerPriceTier = 1;
     PosnicPro.sales._loadPriceLists();
 
     // Tip at tender (owner feedback: SAME line as the discount - the sale
@@ -11151,6 +11162,7 @@ $('#sales_new_customer_name').on('input', function () {
     if ($('#sales_new_customer_id').val()) {
         $('#sales_new_customer_id,#sales_new_customer_phone,#sales_new_customer_email,#sales_new_customer_address,#sales_new_customer_state,#sales_new_customer_country,#sales_new_customer_gst_type,#sales_new_customer_gst_number,#sales_new_customer_partial_balance,#customer_current_balance').val('');
         PosnicPro.sales._customerCategoryId = '';
+        PosnicPro.sales._customerPriceTier = 1;
         if (PosnicPro.loyalty && PosnicPro.loyalty.tillClear) PosnicPro.loyalty.tillClear();
         if (PosnicPro.sales.refreshCustomerAccount) PosnicPro.sales.refreshCustomerAccount();
         if (PosnicPro.sales.calculation && PosnicPro.sales.calculation.salesTableRowCart) PosnicPro.sales.calculation.salesTableRowCart();
@@ -12201,10 +12213,12 @@ PosnicPro.sales.applyCustomerPick = function (data) {
     // Price lists (V4): remember this customer's category so newly added
     // lines price from their list; fetch when the payload lacks it.
     PosnicPro.sales._customerCategoryId = String(data.category_id || '');
-    if (!PosnicPro.sales._customerCategoryId && data.id) {
+    PosnicPro.sales._customerPriceTier = [1, 2, 3].includes(Number(data.price_tier)) ? Number(data.price_tier) : 1;
+    if ((!PosnicPro.sales._customerCategoryId || data.price_tier == null) && data.id) {
         PosnicPro.get('customers/' + data.id, function (r) {
             if (r && r.data && String($('#sales_new_customer_id').val()) === String(data.id)) {
                 PosnicPro.sales._customerCategoryId = String(r.data.category_id || '');
+                PosnicPro.sales._customerPriceTier = [1, 2, 3].includes(Number(r.data.price_tier)) ? Number(r.data.price_tier) : 1;
             }
         }, function () { /* no category, no list */ });
     }
