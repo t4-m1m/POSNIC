@@ -95,8 +95,9 @@ router.put('/workers/:id', async (req,res) => {
     if (b.start_date!==undefined)set.start_date=dateValue(b.start_date,'start date');
     if (b.active!==undefined)set.active=!!b.active;
     const col=await collection('hr_workers'),result=await col.findOneAndUpdate({_id:new ObjectId(req.params.id),license},{$set:set},{returnDocument:'after'});
-    if(!result.value)return res.status(404).json({status:false,message:'Worker not found.'});
-    res.json({status:true,data:{...result.value,_id:String(result.value._id)},message:'Worker updated.'});
+    const updated = result && Object.prototype.hasOwnProperty.call(result, 'value') ? result.value : result;
+    if(!updated)return res.status(404).json({status:false,message:'Worker not found.'});
+    res.json({status:true,data:{...updated,_id:String(updated._id)},message:'Worker updated.'});
   } catch(e) { sendError(res,e); }
 });
 router.get('/transactions', async (req,res) => {
