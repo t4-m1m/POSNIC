@@ -24,16 +24,33 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout selected feature branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: feat/article-cost-label-designer-sales-calendar
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Fetch the bundled MongoDB binary
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $versionLine = Select-String -Path 'src/download-mongodb.bat' -Pattern '^set MONGODB_VERSION=([0-9.]+)'
+          if (-not $versionLine) { throw 'Could not read pinned MongoDB version from src/download-mongodb.bat' }
+          $version = $versionLine.Matches[0].Groups[1].Value
+          $url = "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-$version.zip"
+          Invoke-WebRequest -Uri $url -OutFile mongodb.zip
+          Expand-Archive -Path mongodb.zip -DestinationPath mongodb-temp -Force
+          New-Item -ItemType Directory -Force -Path mongodb/bin | Out-Null
+          $mongo = Get-ChildItem -Path mongodb-temp -Filter mongod.exe -Recurse | Select-Object -First 1
+          if (-not $mongo) { throw "mongod.exe missing from MongoDB $version archive" }
+          Copy-Item $mongo.FullName mongodb/bin/mongod.exe
+          Remove-Item mongodb.zip -Force
+          Remove-Item mongodb-temp -Recurse -Force
+          node scripts/check-mongodb-binaries.js
       - name: Build Windows EXE only (no tests)
         run: npm run build
         env:
