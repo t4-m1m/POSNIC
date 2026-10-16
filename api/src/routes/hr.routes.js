@@ -8,8 +8,8 @@ router.use(protect);
 
 function context(req) {
   const user = req.user || {};
-  const role = String(user.role || user.role_name || user.user_type || '').toLowerCase();
-  const isAdmin = user.is_admin === true || user.admin === true || ['admin', 'administrator', 'owner', 'super admin', 'super_admin'].includes(role);
+  const role = String(user.usertype || user.role || user.role_name || user.user_type || '').toLowerCase().replace(/[\\s-]+/g, '_');
+  const isAdmin = [true, 'true', 1, '1'].includes(user.is_admin) || [true, 'true', 1, '1'].includes(user.admin) || ['admin', 'administrator', 'owner', 'super_admin', 'superadmin'].includes(role);
   if (!isAdmin) {
     const error = new Error('Only administrators can access employee salary records.');
     error.status = 403;
