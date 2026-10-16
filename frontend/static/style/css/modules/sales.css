@@ -752,3 +752,33 @@ body.customer-display .contentbar {
     #sales_filter_search .lf-custom { position:static; flex-direction:column; align-items:stretch; white-space:normal; }
     #sales_filter_search .lf-custom input { width:100%; min-width:0; }
 }
+
+
+/* POSNIC owner layout: keep the active basket on the left and catalogue on the right. */
+@media (min-width: 768px) {
+  #touchsales_page > .row:has(#instance-view, #items_view_hide) {
+    display: flex;
+    align-items: flex-start;
+  }
+  #touchsales_page #instance-view {
+    order: 1;
+    flex: 0 0 50%;
+    max-width: 50%;
+    min-width: 0;
+  }
+  #touchsales_page #items_view_hide {
+    order: 2;
+    flex: 0 0 50%;
+    max-width: 50%;
+    min-width: 0;
+  }
+  #touchsales_page #return_view_hide {
+    order: 3;
+  }
+}
+@media (max-width: 767.98px) {
+  #touchsales_page #instance-view,
+  #touchsales_page #items_view_hide {
+    max-width: 100%;
+  }
+}
