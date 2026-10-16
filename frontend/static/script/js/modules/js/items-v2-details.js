@@ -213,7 +213,7 @@
         if (reading) return error('Wait for the selected photos to finish loading.', 'photos');
         if (!P.itemTranslationsV2.ready()) return error(label('lang_item_ai_finish', 'Wait for the suggestion, then keep or cancel it before saving.'), 'item_translation_ai');
         if (val('cost-eur') !== '' && (!(Number(val('exchange-rate')) > 0) || !Number.isFinite(Number(val('exchange-rate'))))) return error('Exchange rate must be greater than zero.', 'exchange-rate');
-        if (val('cost-eur') !== '' && (!Number.isFinite(Number(val('purchase-vat'))) || Number(val('purchase-vat')) < 0 || Number(val('purchase-vat')) > 100)) return error('Purchase TVA must be between 0 and 100%.', 'purchase-vat');
+        if (val('cost-eur') !== '' && (!Number.isFinite(Number(val('purchase-vat'))) || Number(val('purchase-vat')) < 0)) return error('Extra cost must be zero or greater.', 'purchase-vat');
         if (val('pack-size') && !(Number(val('pack-size')) > 0)) return error('Units per pack must be greater than zero.', 'pack-size');
         if (val('expiry') && val('mfg') && val('expiry') < val('mfg')) return error('Expiry date must not be earlier than manufacture date.', 'expiry');
         if (!validGtin(val('gtin')) && !isFamily()) return error('Enter a valid GTIN with a matching check digit.', 'gtin');
@@ -244,9 +244,9 @@
     }
     function data() {
         var u = option('unit'), supplier = option('supplier'), auto = checked('auto-tile') && P.autoTile ? P.autoTile(val('name')) : null;
-        var eurRaw = val('cost-eur'), eur = Number(eurRaw), rate = Number(val('exchange-rate')) || 280, vatRate = Number(val('purchase-vat'));
+        var eurRaw = val('cost-eur'), eur = Number(eurRaw), rate = Number(val('exchange-rate')) || 280, extraCost = Number(val('purchase-vat'));
         var purchaseBase = eurRaw !== '' && Number.isFinite(eur) && eur >= 0 ? Math.round((eur * rate + Number.EPSILON) * 100) / 100 : null;
-        var purchaseVat = purchaseBase === null ? null : Math.round((purchaseBase * (Number.isFinite(vatRate) ? vatRate : 9) / 100 + Number.EPSILON) * 100) / 100;
+        var purchaseExtraCost = purchaseBase === null ? null : Math.round((Math.max(0, Number.isFinite(extraCost) ? extraCost : 0) + Number.EPSILON) * 100) / 100;
         var out = { mrp_price: Number(val('mrp')), reorder_point: number('reorder'), unit_id: val('unit') === 'qty' ? '' : val('unit'), unit: u && u.dataset.unit || 'qty', supplier_id: val('supplier'), supplier_name: supplier && supplier.dataset.name || '',
             open_price: checked('open-price'), service_unit: val('service-unit'), item_weight_machine_based: caps.weight && checked('weight'),
             discount_amount: val('discount-type') === 'amount' ? Number(val('discount')) : 0, discount_percentage: val('discount-type') === 'percentage' ? Number(val('discount')) : 0,
@@ -255,7 +255,7 @@
             image: photos.map(function (p) { return { name:p.uploaded||p.name, size:p.size, cover:p.cover }; }),
             purchase_price_eur: purchaseBase === null ? undefined : Math.round(eur * 100) / 100,
             purchase_exchange_rate: purchaseBase === null ? undefined : rate,
-            purchase_vat_rate: purchaseBase === null ? undefined : (Number.isFinite(vatRate) ? vatRate : 9),
+            purchase_extra_cost_dzd: purchaseBase === null ? undefined : (Number.isFinite(extraCost) && extraCost >= 0 ? extraCost : 0),
             purchase_base_dzd: purchaseBase === null ? undefined : purchaseBase,
             purchase_vat_dzd: purchaseVat === null ? undefined : purchaseVat,
             purchase_cost_dzd: purchaseBase === null ? undefined : purchaseBase + purchaseVat,
@@ -328,25 +328,25 @@
             var saved = JSON.parse(root.localStorage.getItem('posnic.purchase-cost-settings') || '{}');
             return {
                 exchangeRate: Number.isFinite(Number(saved.exchangeRate)) && Number(saved.exchangeRate) > 0 ? Number(saved.exchangeRate) : 280,
-                vatRate: Number.isFinite(Number(saved.vatRate)) && Number(saved.vatRate) >= 0 && Number(saved.vatRate) <= 100 ? Number(saved.vatRate) : 9
+                extraCost: Number.isFinite(Number(saved.extraCost ?? saved.vatRate)) && Number(saved.extraCost ?? saved.vatRate) >= 0 ? Number(saved.extraCost ?? saved.vatRate) : 0
             };
-        } catch (_) { return { exchangeRate: 280, vatRate: 9 }; }
+        } catch (_) { return { exchangeRate: 280, extraCost: 0 }; }
     }
     function updatePurchaseCost() {
-        var eurRaw = el('cost-eur').value, eur = Number(eurRaw), rate = Number(el('exchange-rate').value), vat = Number(el('purchase-vat').value);
+        var eurRaw = el('cost-eur').value, eur = Number(eurRaw), rate = Number(el('exchange-rate').value), extraCost = Number(el('purchase-vat').value);
         if (!Number.isFinite(rate) || rate <= 0) rate = 280;
-        if (!Number.isFinite(vat) || vat < 0 || vat > 100) vat = 9;
-        try { root.localStorage.setItem('posnic.purchase-cost-settings', JSON.stringify({ exchangeRate: rate, vatRate: vat })); } catch (_) {}
+        if (!Number.isFinite(extraCost) || extraCost < 0) extraCost = 0;
+        try { root.localStorage.setItem('posnic.purchase-cost-settings', JSON.stringify({ exchangeRate: rate, extraCost: extraCost })); } catch (_) {}
         if (eurRaw === '' || !Number.isFinite(eur) || eur < 0) {
             el('cost').value = '';
             el('purchase-cost-summary').textContent = 'Enter a purchase price in EUR to calculate the cost in DZD.';
             notify(); return;
         }
         var base = Math.round((eur * rate + Number.EPSILON) * 100) / 100;
-        var vatAmount = Math.round((base * vat / 100 + Number.EPSILON) * 100) / 100;
-        var total = Math.round((base + vatAmount + Number.EPSILON) * 100) / 100;
+        var extra = Math.round((extraCost + Number.EPSILON) * 100) / 100;
+        var total = Math.round((base + extra + Number.EPSILON) * 100) / 100;
         el('cost').value = total.toFixed(2);
-        el('purchase-cost-summary').textContent = base.toFixed(2) + ' DA + ' + vatAmount.toFixed(2) + ' DA TVA = ' + total.toFixed(2) + ' DA';
+        el('purchase-cost-summary').textContent = base.toFixed(2) + ' DA + ' + extra.toFixed(2) + ' DA extra cost = ' + total.toFixed(2) + ' DA';
         notify();
     }
     function init() {
@@ -423,7 +423,7 @@
         if (item.purchase_price_eur != null) {
             el('cost-eur').value = item.purchase_price_eur;
             if (item.purchase_exchange_rate != null) el('exchange-rate').value = item.purchase_exchange_rate;
-            if (item.purchase_vat_rate != null) el('purchase-vat').value = item.purchase_vat_rate;
+            if (item.purchase_extra_cost_dzd != null) el('purchase-vat').value = item.purchase_extra_cost_dzd; else if (item.purchase_vat_dzd != null) el('purchase-vat').value = item.purchase_vat_dzd;
             updatePurchaseCost();
         } else {
             el('cost').value = item.purchase_cost_dzd != null ? item.purchase_cost_dzd : (item.company_price != null ? item.company_price : '');
