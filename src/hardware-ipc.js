@@ -274,7 +274,10 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
     const startedAt = Date.now();
     const receiptLog = require('./receipt-log');
     try {
-      const { renderReceipt } = require('./escpos-unicode');
+      // Use the same deterministic ESC/POS command renderer as the receipt
+      // module's sale path; do not send the Unicode raster/text renderer's
+      // bytes through this raw-printer route.
+      const { renderSale } = require('./escpos-receipt');
       const { normalizeTargets, columnsFor } = require('./printer-targets');
 
       /*
@@ -377,7 +380,7 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
         const logo = await pictureDots('logo', paperWidth, true);
         /* eslint-disable-next-line no-await-in-loop -- cached per width. */
         const footerImage = await pictureDots('footerImage', paperWidth, false);
-        const bytes = await renderReceipt({ ...(sale || {}), logo, footerImage }, {
+        const bytes = renderSale({ ...(sale || {}), logo, footerImage }, {
           paperWidth,
           /* A printer that cannot be taught a glyph spells the currency
              instead. Per machine, like the printer name. */
