@@ -538,21 +538,21 @@ class SalesController extends BaseController {
     const isPartial = String(payload.partial_check) === 'true';
     const isUnpaid = String(payload.unpaid) === 'true';
     const paid = Number(payload.partial_balance);
+    // Reject malformed entered amounts even when the unpaid toggle is on;
+    // processSale still receives this payload and must never store an invalid
+    // paid_amount greater than the sale total.
+    if (isPartial && (!Number.isFinite(paid) || paid < 0 || paid > total + 0.009)) {
+      return { blocked: true, error: 'Enter a payment amount between 0 and the sale total.' };
+    }
     // The unpaid toggle overrides any entered amount in processSale, so use
     // the same precedence when deciding whether this sale creates receivables.
     const creditAmount = isUnpaid
       ? Math.max(0, total)
       : isPartial
-        ? Math.max(0, total - (Number.isFinite(paid) ? paid : 0))
+        ? Math.max(0, total - paid)
         : 0;
 
-    if (creditAmount <= 0) {
-      // Do not let malformed partial amounts reach sale.service's balance math.
-      if (isPartial && (!Number.isFinite(paid) || paid < 0 || paid > total + 0.009)) {
-        return { blocked: true, error: 'Enter a payment amount between 0 and the sale total.' };
-      }
-      return { blocked: false };
-    }
+    if (creditAmount <= 0) return { blocked: false };
 
     try {
       const customerId = String(payload.customer_id || '').trim();
