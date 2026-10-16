@@ -11626,20 +11626,27 @@ $(document).on('keydown.posnicReceiptEditShortcut', function (event) {
     function find() {
         var code = String(input.value || '').trim();
         if (!code) { input.focus(); return; }
-        close();
-        if (window.hasher && typeof window.hasher.setHash === 'function') window.hasher.setHash('sales');
-        else if (window.location) window.location.hash = 'sales';
-        window.setTimeout(function () {
-            var search = document.getElementById('sales_filter_search');
-            if (search) {
-                search.value = code;
-                search.dispatchEvent(new Event('input', { bubbles: true }));
-                search.dispatchEvent(new Event('change', { bubbles: true }));
-                search.focus();
-            } else {
-                PosnicPro.alert('warning', 'Sales history search is not available. Open Sales history and search for receipt ' + code + '.');
+        var findButton = overlay.querySelector('[data-receipt-edit-find]');
+        findButton.disabled = true; findButton.textContent = 'Searching…'; input.disabled = true;
+        // Resolve the exact receipt code server-side; never leave the cashier on a
+        // broad history search where a similar-looking ticket could be edited.
+        PosnicPro.get('sales/receiptLookup/' + encodeURIComponent(code), function (response) {
+            var data = response && response.data;
+            var id = data && (data.id || data._id);
+            if (!response || response.type !== 'success' || !id) {
+                findButton.disabled = false; findButton.textContent = 'Find sale'; input.disabled = false;
+                PosnicPro.alert('warning', (response && response.message) || 'No sale matches this exact receipt barcode.');
+                input.focus(); input.select(); return;
             }
-        }, 350);
+            close();
+            if (window.hasher && typeof window.hasher.setHash === 'function') window.hasher.setHash('sales/' + encodeURIComponent(String(id)) + '/edit');
+            else if (window.location) window.location.hash = '#/sales/' + encodeURIComponent(String(id)) + '/edit';
+        }, function (xhr) {
+            findButton.disabled = false; findButton.textContent = 'Find sale'; input.disabled = false;
+            var response = xhr && xhr.responseJSON;
+            PosnicPro.alert('warning', (response && response.message) || 'Could not find this receipt. Check the barcode and try again.');
+            input.focus(); input.select();
+        });
     }
     overlay.querySelector('[data-receipt-edit-cancel]').addEventListener('click', close);
     overlay.querySelector('[data-receipt-edit-find]').addEventListener('click', find);
