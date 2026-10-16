@@ -257,8 +257,8 @@
             purchase_exchange_rate: purchaseBase === null ? undefined : rate,
             purchase_extra_cost_dzd: purchaseBase === null ? undefined : (Number.isFinite(extraCost) && extraCost >= 0 ? extraCost : 0),
             purchase_base_dzd: purchaseBase === null ? undefined : purchaseBase,
-            purchase_vat_dzd: purchaseVat === null ? undefined : purchaseVat,
-            purchase_cost_dzd: purchaseBase === null ? undefined : purchaseBase + purchaseVat,
+            purchase_vat_dzd: purchaseExtraCost === null ? undefined : purchaseExtraCost,
+            purchase_cost_dzd: purchaseBase === null ? undefined : purchaseBase + purchaseExtraCost,
             cover_image: (function(){var p=photos.find(function(p){return p.cover==='yes';});return p?(p.uploaded||p.name):'item.svg';}()), channel_off: selected('channel-off') };
         Object.assign(out, P.itemTranslationsV2.data());
         if (caps.tax && val('hsn')) Object.assign(out, { tax_method: 'hsn', hsn_code: val('hsn'), hsn_description: val('hsn-description'), tax: Number(val('hsn-rate')), tax_id: '', tax_name: '' });
