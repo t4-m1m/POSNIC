@@ -1771,7 +1771,7 @@ class ItemRepository extends BaseModel {
       if (!id && !/^\\d{6}$/.test(itemBarcodes.normalize(data.barcode_id))) {
         let generatedBarcode = '';
         for (let attempt = 0; attempt < 250; attempt += 1) {
-          const candidate = String(100000 + require('crypto').randomInt(900000));
+          const candidate = String(require('crypto').randomInt(1000000)).padStart(6, '0');
           const conflict = await itemBarcodes.findConflict(collection, [candidate], {
             branchId: branchObjectId,
             licenseId: licenseObjectId,
