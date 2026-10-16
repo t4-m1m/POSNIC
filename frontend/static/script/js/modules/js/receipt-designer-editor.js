@@ -410,7 +410,7 @@
             if (b.type === 'qr' && key === 'text') updateQr(b); changed();
         }).on('change.receiptDesigner', '#rd-image-file', function () {
             var b = layout().blocks.find(function (v) { return v.id === selected; }); if (b) upload(this.files[0], b);
-        }).on('change.receiptDesigner', '#rd-logo-file', function () {\n            var b = layout().blocks.find(function (v) { return v.id === selected; }); if (b) upload(this.files[0], b);\n        }).on('pointerdown.receiptDesigner', '[data-drag]', function (event) {
+        }).on('pointerdown.receiptDesigner', '[data-drag]', function (event) {
             var e = event.originalEvent; if (e.button !== 0) return;
             event.preventDefault(); drag = { id: this.getAttribute('data-drag'), target: null };
             this.setPointerCapture(e.pointerId); $(this).closest('.rd-block-card').addClass('is-dragging');
