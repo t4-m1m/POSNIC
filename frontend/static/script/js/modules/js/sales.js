@@ -1444,14 +1444,36 @@ PosnicPro.sales = {
             PosnicPro.alert('error', 'This selling price is not configured for the selected item.');
             return;
         }
+
+        // Update the existing basket line in place. Re-inserting the item can
+        // be short-circuited by the catalogue/search path and leave the old
+        // line total visible even though F3 appeared to change the price.
         params.price_tier = Number(tier);
         params.selling_price = chosenPrice;
         params.mrp_price = chosenPrice;
         params._priceListApplied = true;
-        params._replaceExistingLine = true;
         params.item_quantity = Number($('#touchsale_item_qty' + id).val()) || 1;
         $name.data('itemText', $.extend(true, {}, params));
-        PosnicPro.sales.addSalesLineItems(params);
+
+        var $price = $('#addSalesLineItemPrice_' + id);
+        $price.text(chosenPrice.toFixed(2));
+        var tierLabel = $('<small class="sale-price-tier-label" title="Press F3 to change selling price">')
+            .text('P' + Number(tier) + ' · F3');
+        $price.append(' ', tierLabel);
+        $('#addSalesLineItemSellingPrice_' + id).text(chosenPrice);
+        $('#addSalesLineItemSubTotal_' + id).text(chosenPrice);
+        $('#saleInlineItemPrice_' + id).text(chosenPrice);
+        if (PosnicPro.sales.SaleTableLineItems && PosnicPro.sales.SaleTableLineItems[id]) {
+            PosnicPro.sales.SaleTableLineItems[id].addSalesLineItemPrice = chosenPrice;
+            PosnicPro.sales.SaleTableLineItems[id].price_tier = Number(tier);
+        }
+
+        var taxType = String($('#addSalesLineItemTaxType_' + id).text() || 'Inc').trim();
+        var taxRate = Number.parseFloat($('#addSalesLineItemTax_' + id).text()) || 0;
+        PosnicPro.sales.commonInlineCalculation(id, taxType, taxRate);
+        PosnicPro.sales.calculation.salesTableRowCart();
+        PosnicPro.sales.customerBalanceCheck();
+        PosnicPro.sales.customerViewDisplay();
     },
     addSalesLineItems: function (params) {
         // Recency (owner feedback): every added item feeds the recent list -
