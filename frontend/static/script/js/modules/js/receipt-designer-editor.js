@@ -150,7 +150,7 @@
             if (b.type === 'qr') html += '<small>' + esc(t('The exact content above is encoded in the QR code.')) + '</small><span class="rd-qr-status" role="status"></span>';
         }
         if (b.type === 'image') html += '<label for="rd-image-file">' + esc(t('Upload image')) + '</label><input id="rd-image-file" type="file" accept="image/png,image/jpeg,image/webp"><small>' + esc(t('PNG, JPEG or WebP. Up to 5 MB.')) + '</small>' + (b.src ? '<img class="rd-image-thumb" src="' + esc(b.src) + '" alt="' + esc(t('Uploaded image')) + '">' : '');
-        if (b.type === 'logo') html += '<p class="rd-help">' + esc(t('Uses the logo saved in Branches / Outlet.')) + '</p>';
+        if (b.type === 'logo') html += '<label for="rd-image-file">' + esc(t('Upload your PNG logo')) + '</label><input id="rd-image-file" type="file" accept="image/png,image/jpeg,image/webp"><small>' + esc(t('Transparent PNG recommended. PNG, JPEG or WebP up to 5 MB. If no custom image is uploaded, the Branches / Outlet logo is used.')) + '</small>' + (b.src ? '<img class="rd-image-thumb" src="' + esc(b.src) + '" alt="' + esc(t('Custom receipt logo')) + '">' : '<p class="rd-help">' + esc(t('Uses the logo saved in Branches / Outlet until you upload a custom logo.')) + '</p>');
         if (b.type === 'signature') html += '<div class="rd-signature-settings"></div>';
         if (b.type === 'field') html += '<p class="rd-help">' + esc(t('Filled from each sale. Omitted when no value is available.')) + '</p>' +
             '<label for="rd-field-width">' + esc(t('Field width')) + '</label><select id="rd-field-width" data-prop="width"><option value="100"' + (b.width !== 50 ? ' selected' : '') + '>' + esc(t('Full width')) + '</option><option value="50"' + (b.width === 50 ? ' selected' : '') + '>' + esc(t('Half width')) + '</option></select><small>' + esc(t('Place two half-width fields next to each other to share a row.')) + '</small>';
@@ -410,7 +410,7 @@
             if (b.type === 'qr' && key === 'text') updateQr(b); changed();
         }).on('change.receiptDesigner', '#rd-image-file', function () {
             var b = layout().blocks.find(function (v) { return v.id === selected; }); if (b) upload(this.files[0], b);
-        }).on('pointerdown.receiptDesigner', '[data-drag]', function (event) {
+        }).on('change.receiptDesigner', '#rd-logo-file', function () {\n            var b = layout().blocks.find(function (v) { return v.id === selected; }); if (b) upload(this.files[0], b);\n        }).on('pointerdown.receiptDesigner', '[data-drag]', function (event) {
             var e = event.originalEvent; if (e.button !== 0) return;
             event.preventDefault(); drag = { id: this.getAttribute('data-drag'), target: null };
             this.setPointerCapture(e.pointerId); $(this).closest('.rd-block-card').addClass('is-dragging');
