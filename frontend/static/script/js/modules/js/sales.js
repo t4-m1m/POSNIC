@@ -11601,6 +11601,82 @@ PosnicPro.sales.applyQuickSaleGate = function () {
 /* Q2: mint (or fetch) the sale's permanent invoice link and copy it. */
 $(document).on('click', '.sale-price-tier-label', function (event) { event.preventDefault(); event.stopPropagation(); });
 
+
+/* F8 receipt-code workflow: scan a receipt barcode to locate the original sale.
+ * We reuse the existing sales-history filter and edit flow instead of creating
+ * a second, potentially inconsistent sale-update path.
+ */
+$(document).on('keydown.posnicReceiptEditShortcut', function (event) {
+    if (event.key !== 'F8' || event.altKey || event.ctrlKey || event.metaKey ||
+        !$('#sales_new').is(':visible') || $(event.target).closest('input,textarea,select,[contenteditable="true"],.modal').length) return;
+    event.preventDefault();
+    var existing = document.getElementById('posnic-receipt-edit-overlay');
+    if (existing) { existing.remove(); }
+    var overlay = document.createElement('div');
+    overlay.id = 'posnic-receipt-edit-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:30000;background:rgba(15,23,42,.58);display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.innerHTML = '<section role="dialog" aria-modal="true" aria-labelledby="posnic-receipt-edit-title" style="width:min(520px,100%);background:var(--posnic-surface,#fff);color:var(--posnic-text,#182230);border-radius:14px;padding:24px;box-shadow:0 18px 55px rgba(0,0,0,.28)">' +
+        '<h3 id="posnic-receipt-edit-title" style="margin:0 0 8px;font-size:21px">Find a sale by receipt barcode</h3>' +
+        '<p style="margin:0 0 14px;color:#64748b">Scan the barcode printed on the receipt, then press Enter. POSNIC will open sales history filtered to that ticket so you can choose Edit.</p>' +
+        '<input id="posnic-receipt-edit-code" autocomplete="off" class="form-control" style="font-size:20px;height:52px" placeholder="Scan receipt barcode" aria-label="Receipt barcode">' +
+        '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button type="button" class="btn btn-outline-secondary" data-receipt-edit-cancel>Cancel (Esc)</button><button type="button" class="btn btn-primary" data-receipt-edit-find>Find sale</button></div></section>';
+    document.body.appendChild(overlay);
+    var input = overlay.querySelector('#posnic-receipt-edit-code');
+    function close() { overlay.remove(); $(document).off('keydown.posnicReceiptEditDialog'); }
+    function find() {
+        var code = String(input.value || '').trim();
+        if (!code) { input.focus(); return; }
+        close();
+        if (window.hasher && typeof window.hasher.setHash === 'function') window.hasher.setHash('sales');
+        else if (window.location) window.location.hash = 'sales';
+        window.setTimeout(function () {
+            var search = document.getElementById('sales_filter_search');
+            if (search) {
+                search.value = code;
+                search.dispatchEvent(new Event('input', { bubbles: true }));
+                search.dispatchEvent(new Event('change', { bubbles: true }));
+                search.focus();
+            } else {
+                PosnicPro.alert('warning', 'Sales history search is not available. Open Sales history and search for receipt ' + code + '.');
+            }
+        }, 350);
+    }
+    overlay.querySelector('[data-receipt-edit-cancel]').addEventListener('click', close);
+    overlay.querySelector('[data-receipt-edit-find]').addEventListener('click', find);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); find(); } });
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    $(document).on('keydown.posnicReceiptEditDialog', function (e) { if (e.key === 'Escape') close(); });
+    input.focus();
+});
+
+/* Credit is an account receivable, not a way to discount a walk-in sale.
+ * Keep the existing sale submission pipeline, but block a remaining balance
+ * unless an actual customer account is selected and credit is enabled.
+ */
+$(document).on('click.posnicCreditRules', '#save_btn', function (event) {
+    var dueText = String($('.balanceDue').first().text() || '0').replace(/[^0-9,.-]/g, '').replace(/,/g, '');
+    var due = parseFloat(dueText);
+    if (!isFinite(due) || due <= 0.009) return;
+    var customerId = String($('#sales_new_customer_id').val() || '').trim();
+    var customerName = String($('#sales_new_customer_name').val() || '').trim();
+    var unpaidAllowed = $('#unpaid_payment_toggle').is(':checked');
+    if (!unpaidAllowed) return;
+    if (!customerId || !customerName || /walk.?in|cash customer|comptoir/i.test(customerName)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        PosnicPro.alert('warning', 'Partial payment and credit are available only for a registered customer. Select the customer account or collect the full amount.');
+        return false;
+    }
+    var general = {};
+    try { general = JSON.parse(PosnicPro.local.get('general_settings') || '{}'); } catch (_) {}
+    if (general.module_credit_enable === false) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        PosnicPro.alert('warning', 'Customer credit is disabled in settings. Collect the full amount to validate this sale.');
+        return false;
+    }
+});
+
 /* POS keyboard shortcuts: operate only while the sale workspace is visible.
  * F3/F4 act on the focused basket row, or the first basket row if none is focused.
  * Native browser shortcuts are left alone outside the sale screen and in text fields.
