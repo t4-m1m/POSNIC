@@ -310,7 +310,7 @@
         el('cost-eur').value='';
         var purchaseDefaults = readPurchaseSettings();
         el('exchange-rate').value=String(purchaseDefaults.exchangeRate);
-        el('purchase-vat').value=String(purchaseDefaults.vatRate);
+        el('purchase-vat').value=String(purchaseDefaults.extraCost);
         updatePurchaseCost(); photoPicker(); P.itemTranslationsV2.reset();
     }
     function currentYYMM() { var d = new Date(); return String(d.getFullYear()).slice(-2) + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
