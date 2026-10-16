@@ -1948,8 +1948,6 @@ class ItemRepository extends BaseModel {
         selling_price: parseFloat(data.selling_price) || 0,
         selling_price_2: Number.isFinite(Number(data.selling_price_2)) ? Number(data.selling_price_2) : 0,
         selling_price_3: Number.isFinite(Number(data.selling_price_3)) ? Number(data.selling_price_3) : 0,
-        selling_price_2: Number.isFinite(Number(data.selling_price_2)) ? Number(data.selling_price_2) : 0,
-        selling_price_3: Number.isFinite(Number(data.selling_price_3)) ? Number(data.selling_price_3) : 0,
         available_quantity: parseFloat(data.available_quantity) || 0,
         image: (data.cover_image || '').trim(),
         multi_image: multiImage,
