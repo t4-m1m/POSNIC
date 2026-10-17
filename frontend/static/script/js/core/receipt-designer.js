@@ -350,7 +350,9 @@
                 if (Number.isFinite(Number(b.h)) && Number(b.h) > 0) style += 'min-height:' + Math.min(2000, Number(b.h)) + 'px;';
             }
             if (contract.textTypes.indexOf(b.type) !== -1) {
-                if (Number.isFinite(Number(b.fontSize)) && Number(b.fontSize) >= 8 && Number(b.fontSize) <= 32) style += ';font-size:' + Number(b.fontSize) + 'px';
+                if (Number.isFinite(Number(b.fontSize)) && Number(b.fontSize) >= 8 && Number(b.fontSize) <= 96) style += ';font-size:' + Number(b.fontSize) + 'px';
+                var safeFontFamilies = ['Arial, sans-serif','Tahoma, sans-serif','Verdana, sans-serif','Georgia, serif','Courier New, monospace','monospace'];
+                if (safeFontFamilies.indexOf(b.fontFamily) !== -1) style += ';font-family:' + b.fontFamily;
                 if (b.bold === true) style += ';font-weight:bold';
             }
             return { type: b.type, half: b.type === 'field' && b.width === 50, customer: b.type === 'field' && /^customer_/.test(b.field), supporting: b.type === 'text' || b.type === 'field' || ((b.type === 'qr' || b.type === 'image') && b.width <= 40), html: '<section class="rd-block rd-block-' + b.type + (b.type === 'field' ? ' rd-field-' + b.field : '') + '" data-block-id="' + esc(b.id) + '" style="' + style + '">' + content + '</section>' };
