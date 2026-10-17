@@ -14501,7 +14501,7 @@ $(document).ready(function () {
             var hasLines = ['SaleTableLineItems', 'sale_offlineadditems', 'addSalesLineTable', 'addLineTable']
                 .some(function (key) { return Array.isArray(values[key]) && values[key].length > 0; });
             if (!hasLines && typeof snap.cartHtml === 'string') {
-                hasLines = /<tr\\b[^>]*data-(?:item|id|product)|<tr\\b[^>]*class=["'][^"']*(?:sale|item|product)/i.test(snap.cartHtml);
+                hasLines = /<tr\b[^>]*data-(?:item|id|product)|<tr\b[^>]*class=["'][^"']*(?:sale|item|product)/i.test(snap.cartHtml);
             }
             if (hasLines && !window.confirm('Ce panier contient des articles. Fermer ce client et abandonner son panier ?')) return;
             var index = this.sessions.findIndex(function (item) { return item.id === id; });
