@@ -1122,6 +1122,7 @@ PosnicPro.sales = {
             + '<div class="q-cust">' + esc(d.customer_name || 'Walk-in customer') + '</div>'
             + (real(d.customer_phone) ? '<div class="q-muted">Phone: ' + esc(d.customer_phone) + '</div>' : '')
             + (real(d.customer_email) ? '<div class="q-muted">' + esc(d.customer_email) + '</div>' : '')
+            + (real(d.cashier_name || d.seller_name) ? '<div class="q-muted sale-cashier-attribution"><strong>Vendeur :</strong> ' + esc(d.cashier_name || d.seller_name) + '</div>' : '')
             + '</div>';
         var items = '<div class="table-responsive"><table class="q-items"><thead><tr>'
             + '<th>#</th><th><lang class="lang_newitem_title">Item</lang></th><th class="text-right"><lang class="lang_qty_title">Qty</lang></th>'
@@ -11796,9 +11797,9 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         var $modal = $('#posnic-vendeur-modal');
         var name = String($('#posnic-vendeur-select').val() || $modal.data('pending-name') || '').trim();
         var key = $modal.data('pending-key');
-        if (!name) {
+        if (!name || cashierNames().indexOf(name) === -1) {
             $('#posnic-vendeur-select').trigger('focus');
-            PosnicPro.alert('warning', 'Sélectionnez un vendeur dans Paramètres > Général > Vente.');
+            PosnicPro.alert('warning', 'Sélectionnez un vendeur configuré dans Paramètres > Général > Vente.');
             return;
         }
         selectedCashier = name.slice(0, 80);
