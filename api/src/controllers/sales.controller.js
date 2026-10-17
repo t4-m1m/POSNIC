@@ -1837,11 +1837,19 @@ class SalesController extends BaseController {
         serving_periods: servingPeriods || [],
       };
 
+      // Debt created by bills in this report period. This is receivable,
+      // not money collected, so it is separate from payment_details.
+      const outstandingAmount = salesPayments.reduce(
+        (sum, saleDoc) => sum + Math.max(0, Number(saleDoc.payment_pending) || 0),
+        0
+      );
+
       // ---- Build response data ----
       const responseData = {
         branch_details: branchDetails,
         product_details: productDetails,
         payment_details: paymentDetails,
+        outstanding_amount: roundToTwo(outstandingAmount),
         dine_details: dineDetails,
         tax_details: taxDetails,
         extra_discount: {
