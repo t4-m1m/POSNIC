@@ -1,21 +1,20 @@
-# Receipt printing foundation
+# Receipt Printing Studio
 
-The legacy Receipt Studio editor has been retired. Its user interface and editor
-implementation are removed; this document no longer describes an available
-designer.
+The current Receipt Printing Studio is available from the desktop settings and edits the same receipt design data used by the shared receipt renderer.
 
-The existing printing foundation is intentionally retained while a replacement
-designer and printer workflow are developed:
+## Design behavior
 
-- `frontend/static/script/js/core/receipt-designer.js` remains the receipt
-  rendering and print adapter used by the current sale-printing flow.
-- `frontend/static/script/js/core/print-settings.js` retains per-computer
-  printer selection, paper size, copies, print mode, and test-print handling.
-- `src/hardware-manager.js` and its related receipt modules retain the desktop
-  printer integration and the existing print submission/recovery behavior.
-- `frontend/static/script/js/core/receipt-data.js` and the ESC/POS modules
-  remain separate legacy/raw-print paths; they have not been replaced or removed.
+- Every block is optional. Store details, transaction details, item rows, and totals are provided in the default template, but the owner may remove any block or arrange the remaining blocks freely.
+- Each paper format keeps its own layout. Thermal formats and sheet formats can be customized independently.
+- Blocks can be added, selected, reordered, duplicated, removed, resized, repositioned, and rotated. Supported text, image, logo, barcode, QR, divider, dynamic-field, and signature blocks are validated before saving.
+- Uploaded receipt images are stored as bounded PNG/JPEG/WebP data URLs. Dynamic field names, font families, sizes, and geometry are allow-listed by the shared design contract.
+- A blank or intentionally minimal design is valid. It is the store owner's responsibility to include the information they want printed.
 
-No new designer has been added in this change. The retained renderer and printer
-paths are compatibility foundations only; the new designer/printer will be
-implemented separately and should not be coupled to the retired editor UI.
+## Printing compatibility
+
+- `frontend/static/script/js/core/receipt-designer.js` is the shared renderer and print adapter.
+- `frontend/static/script/js/modules/js/receipt-studio.js` is the visual editor.
+- `frontend/static/script/js/core/print-settings.js` retains per-computer printer selection, paper size, copies, print mode, and test-print handling.
+- The desktop printer integration and native receipt path remain in `src/hardware-manager.js` and the related receipt modules.
+
+The Studio should continue to use the shared print path rather than introducing a separate receipt implementation, so preview, test print, and real sales receipts remain consistent.
