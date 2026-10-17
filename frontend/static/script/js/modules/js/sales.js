@@ -4644,6 +4644,7 @@ PosnicPro.sales.addSale = {
                     redeem_points: (PosnicPro.loyalty ? PosnicPro.loyalty.redeemPointsForPayload() : 0),
                     coupon_code: (PosnicPro.coupons ? PosnicPro.coupons.codeForPayload() : ''),
                     customer_name: $('#sales_new_customer_name').val(),
+                    cashier_name: String(PosnicPro.sales._cashierName || '').trim().slice(0, 80),
                     customer_address: $('#sales_new_customer_address').val(),
                     customer_phone: $('#sales_new_customer_phone').val(),
                     customer_email: $('#sales_new_customer_email').val(),
@@ -11686,6 +11687,149 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
     var event = new KeyboardEvent('keydown', { key: key, bubbles: true, cancelable: true });
     document.dispatchEvent(event);
 };
+
+/* Cashier attribution: every F1/F2 checkout confirms who is serving this sale.
+ * The authenticated account remains in created_by/user_name; cashier_name is
+ * a separate per-sale field, so shared tills do not lose attribution. */
+(function () {
+    var originalShortcut = PosnicPro.sales.runFunctionShortcut;
+    var bypassNextFunctionKey = false;
+    var selectedCashier = String(PosnicPro.local.get('last_cashier_name') || '').trim();
+    function escapeText(value) { return $('<span>').text(value == null ? '' : String(value)).html(); }
+    function generalSettings() {
+        var raw = PosnicPro.local.get('general_settings');
+        if (raw && typeof raw === 'object') return raw;
+        try { return JSON.parse(raw || '{}') || {}; } catch (_) { return {}; }
+    }
+    function cashierNames() {
+        var settings = generalSettings(), names = settings.cashier_names;
+        if (!Array.isArray(names)) {
+            try { names = JSON.parse(PosnicPro.local.get('cashier_names') || '[]'); } catch (_) { names = []; }
+        }
+        return (Array.isArray(names) ? names : []).map(function (n) { return String(n || '').trim(); })
+            .filter(function (n, i, all) { return n && all.indexOf(n) === i; }).slice(0, 100);
+    }
+    function renderCashierNames() {
+        var $list = $('#cashier-names-list');
+        if (!$list.length) return;
+        var names = cashierNames();
+        $list.html(names.length ? names.map(function (name, i) {
+            return '<span class="badge badge-light border d-inline-flex align-items-center p-2" style="gap:8px;font-size:13px">' +
+                escapeText(name) + '<button type="button" class="close cashier-name-remove" data-index="' + i + '" aria-label="Retirer ' + escapeText(name) + '" style="font-size:18px;line-height:1">&times;</button></span>';
+        }).join('') : '<span class="text-muted">Aucun vendeur enregistré. Ajoutez les noms ci-dessus.</span>');
+    }
+    function saveCashierNames(names) {
+        names = names.map(function (n) { return String(n || '').trim().slice(0, 80); })
+            .filter(function (n, i, all) { return n && all.indexOf(n) === i; }).slice(0, 100);
+        var settings = generalSettings();
+        settings.cashier_names = names;
+        PosnicPro.put({ url: 'setting/updateCommonSettings', data: JSON.stringify({ cashier_names: names }) }, function (response) {
+            if (response && response.type === 'success') {
+                PosnicPro.local.set('general_settings', JSON.stringify(settings));
+                PosnicPro.local.set('cashier_names', JSON.stringify(names));
+                renderCashierNames();
+                PosnicPro.alert('success', 'Liste des vendeurs enregistrée.');
+            } else PosnicPro.alert('error', response && response.message || 'Impossible d’enregistrer les vendeurs.');
+        }, function () { PosnicPro.alert('error', 'Impossible d’enregistrer les vendeurs. Réessayez.'); });
+    }
+    $(document).on('click.cashierSettings', '#v-pills-general-tab, a[href="#core-tab-sale"]', renderCashierNames);
+    $(document).on('click.cashierSettings', '#cashier-name-add', function () {
+        var input = $('#cashier-name-input'), name = String(input.val() || '').trim();
+        if (!name) { input.focus(); return; }
+        var names = cashierNames();
+        if (names.some(function (n) { return n.toLowerCase() === name.toLowerCase(); })) {
+            PosnicPro.alert('warning', 'Ce vendeur existe déjà.'); input.focus(); return;
+        }
+        names.push(name.slice(0, 80)); input.val(''); renderCashierNames();
+        $('#cashier-names-list').data('draftNames', names);
+    });
+    $(document).on('keydown.cashierSettings', '#cashier-name-input', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); $('#cashier-name-add').trigger('click'); }
+    });
+    $(document).on('click.cashierSettings', '.cashier-name-remove', function () {
+        var names = $('#cashier-names-list').data('draftNames') || cashierNames();
+        names.splice(Number($(this).attr('data-index')), 1);
+        $('#cashier-names-list').data('draftNames', names);
+        var settings = generalSettings(); settings.cashier_names = names;
+        $('#cashier-names-list').html(names.length ? names.map(function (name, i) {
+            return '<span class="badge badge-light border d-inline-flex align-items-center p-2" style="gap:8px;font-size:13px">' + escapeText(name) +
+                '<button type="button" class="close cashier-name-remove" data-index="' + i + '" aria-label="Remove cashier" style="font-size:18px;line-height:1">&times;</button></span>';
+        }).join('') : '<span class="text-muted">Aucun vendeur enregistré.</span>');
+    });
+    $(document).on('click.cashierSettings', '#cashier-names-save', function () {
+        var names = $('#cashier-names-list').data('draftNames') || cashierNames();
+        var input = String($('#cashier-name-input').val() || '').trim();
+        if (input && !names.some(function (n) { return n.toLowerCase() === input.toLowerCase(); })) names.push(input);
+        $('#cashier-name-input').val('');
+        saveCashierNames(names);
+        $('#cashier-names-list').removeData('draftNames');
+    });
+
+    function ensureCashierModal() {
+        if ($('#posnic-vendeur-modal').length) return;
+        $('body').append('<div class="modal fade" id="posnic-vendeur-modal" tabindex="-1" role="dialog" aria-labelledby="posnic-vendeur-title" aria-hidden="true" data-backdrop="static" data-keyboard="false">' +
+            '<div class="modal-dialog modal-dialog-centered" role="document"><div class="modal-content" style="border:0;border-radius:18px;overflow:hidden;box-shadow:0 24px 70px rgba(15,23,42,.25)">' +
+            '<div class="modal-header" style="background:#f5f8ff;border-bottom:1px solid #e2e9f4"><div><h5 class="modal-title font-weight-bold" id="posnic-vendeur-title">Vendeur</h5><small class="text-muted">Confirmez qui réalise cette vente.</small></div></div>' +
+            '<div class="modal-body"><div id="posnic-vendeur-options" class="d-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px"></div>' +
+            '<label for="posnic-vendeur-manual" class="small text-muted mt-3 mb-1">Ou saisir un nom ponctuel</label><input id="posnic-vendeur-manual" class="form-control" maxlength="80" placeholder="Nom du vendeur" autocomplete="off">' +
+            '<div class="small text-muted mt-2">La vente ne sera pas validée tant que le vendeur n’est pas confirmé.</div></div>' +
+            '<div class="modal-footer"><button type="button" class="btn btn-light" id="posnic-vendeur-cancel">Annuler</button><button type="button" class="btn btn-primary" id="posnic-vendeur-confirm">Confirmer et continuer</button></div>' +
+            '</div></div></div>');
+    }
+    function askCashier(key) {
+        ensureCashierModal();
+        var names = cashierNames(), $modal = $('#posnic-vendeur-modal'), $options = $('#posnic-vendeur-options');
+        $modal.data('pending-key', key).data('pending-name', selectedCashier || '');
+        $('#posnic-vendeur-manual').val('');
+        $options.html(names.length ? names.map(function (name) {
+            var active = name === selectedCashier;
+            return '<button type="button" class="btn cashier-choice ' + (active ? 'btn-primary' : 'btn-outline-secondary') + '" data-name="' + escapeText(name) + '" style="min-height:54px;border-radius:10px;font-weight:650">' + escapeText(name) + '</button>';
+        }).join('') : '<div class="text-muted small" style="grid-column:1/-1">Aucun vendeur enregistré dans Paramètres. Saisissez un nom ci-dessous.</div>');
+        $options.off('click.cashier').on('click.cashier', '.cashier-choice', function () {
+            $options.find('.cashier-choice').removeClass('btn-primary').addClass('btn-outline-secondary');
+            $(this).removeClass('btn-outline-secondary').addClass('btn-primary');
+            $modal.data('pending-name', $(this).attr('data-name'));
+            $('#posnic-vendeur-manual').val('');
+        });
+        $modal.modal('show');
+    }
+    function continueCheckout() {
+        var $modal = $('#posnic-vendeur-modal');
+        var name = String($('#posnic-vendeur-manual').val() || $modal.data('pending-name') || '').trim();
+        var key = $modal.data('pending-key');
+        if (!name) {
+            $('#posnic-vendeur-manual').focus();
+            PosnicPro.alert('warning', 'Choisissez ou saisissez le nom du vendeur.');
+            return;
+        }
+        selectedCashier = name.slice(0, 80);
+        PosnicPro.sales._cashierName = selectedCashier;
+        PosnicPro.local.set('last_cashier_name', selectedCashier);
+        $modal.one('hidden.bs.modal', function () {
+            bypassNextFunctionKey = true;
+            originalShortcut(key);
+        });
+        $modal.modal('hide');
+    }
+    $(document).on('click.cashier', '#posnic-vendeur-confirm', continueCheckout);
+    $(document).on('click.cashier', '#posnic-vendeur-cancel', function () { $('#posnic-vendeur-modal').modal('hide'); });
+    $(document).on('keydown.cashier', '#posnic-vendeur-manual', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); continueCheckout(); }
+    });
+    PosnicPro.sales.runFunctionShortcut = function (key) {
+        if (key === 'F1' || key === 'F2') { askCashier(key); return; }
+        return originalShortcut(key);
+    };
+    document.addEventListener('keydown', function (e) {
+        if (bypassNextFunctionKey) { bypassNextFunctionKey = false; return; }
+        if (e.key !== 'F1' && e.key !== 'F2') return;
+        if (!/sales\/new/i.test(String(window.location.hash || '')) && !$('#sales_new').is(':visible')) return;
+        if ($('#posnic-vendeur-modal').hasClass('show')) return;
+        e.preventDefault(); e.stopImmediatePropagation();
+        askCashier(e.key);
+    }, true);
+})();
+
 
 
 /* Fix 2 — explicit client assignment window (F5) for the active sale. */
