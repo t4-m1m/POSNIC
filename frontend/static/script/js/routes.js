@@ -17,7 +17,7 @@ function withModule(module, run) {
 }
 
 $(document).ready(function () {
-    var DEFAULT_HASH = 'dashboard';
+    var DEFAULT_HASH = 'sales/new';
     var RECORD_ID = 1;
     crossroads.addRoute('{module}/new', function (module) {
         withModule(module, function () { PosnicPro[module].showAdd(); });
