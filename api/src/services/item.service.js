@@ -445,8 +445,12 @@ class ItemService {
     const parentName = String((data && data.variant_parent_name) || '').trim();
 
     // ---- validate everything before touching anything ----
-    if (rows.length < 2) {
-      return { status: false, data: null, message: 'A family needs at least two variants.' };
+    /* Variant mode may legitimately have one selected value (for example,
+       a shop only carries size M today). The client already routes every
+       non-empty variant selection through createItemFamily, so rejecting a
+       one-row family made Save appear broken even though the form was valid. */
+    if (rows.length < 1) {
+      return { status: false, data: null, message: 'Choose at least one variant.' };
     }
     if (rows.length > 50) {
       return { status: false, data: null, message: 'At most 50 variants per family.' };
