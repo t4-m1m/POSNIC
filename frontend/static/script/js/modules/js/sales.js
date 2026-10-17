@@ -966,7 +966,7 @@ PosnicPro.sales = {
                     + ' data-id="' + esc(r._id) + '" style="cursor:pointer;">'
                     + '<td>' + esc(r.sales_id) + '</td>'
                     + '<td>' + esc(r.customer_name || 'Walk-in') + '</td>'
-                    + '<td class="sl-col-cashier">' + esc(r.cashier_name || r.seller_name || '-') + '</td>'
+                    + '<td class="sl-col-cashier">' + esc(r.cashier_name || r.seller_name || r.user_name || r.created_by || '-') + '</td>'
                     + '<td class="sl-col-date">' + esc(historyTime ? PosnicPro.convertDate(historyTime) : '-') + '</td>'
                     + (restaurant ? '<td>' + esc(r.table_number || '-') + '</td>' : '')
                     + '<td class="text-right sl-col-items">' + esc(r.number_of_items != null ? r.number_of_items : (r.items || []).length) + '</td>'
@@ -1123,7 +1123,7 @@ PosnicPro.sales = {
             + '<div class="q-cust">' + esc(d.customer_name || 'Walk-in customer') + '</div>'
             + (real(d.customer_phone) ? '<div class="q-muted">Phone: ' + esc(d.customer_phone) + '</div>' : '')
             + (real(d.customer_email) ? '<div class="q-muted">' + esc(d.customer_email) + '</div>' : '')
-            + (real(d.cashier_name || d.seller_name) ? '<div class="q-muted sale-cashier-attribution"><strong>Vendeur :</strong> ' + esc(d.cashier_name || d.seller_name) + '</div>' : '')
+            + (real(d.cashier_name || d.seller_name || d.user_name || d.created_by) ? '<div class="q-muted sale-cashier-attribution"><strong>Vendeur :</strong> ' + esc(d.cashier_name || d.seller_name || d.user_name || d.created_by) + '</div>' : '')
             + '</div>';
         var items = '<div class="table-responsive"><table class="q-items"><thead><tr>'
             + '<th>#</th><th><lang class="lang_newitem_title">Item</lang></th><th class="text-right"><lang class="lang_qty_title">Qty</lang></th>'
