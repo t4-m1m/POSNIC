@@ -4832,8 +4832,12 @@ $(document).ready(function () {
     });
     $("#item_image_upload_form").submit(function (event) {
         event.preventDefault();
-        if (PosnicPro.items._saving || !PosnicPro.itemTranslations.ready()) return;
-        if ($('#item_image_upload_form').valid()) {            // checks form for validity
+        if (PosnicPro.items._saving) return;
+        if (!PosnicPro.itemTranslations.ready()) {
+            PosnicPro.alert('warning', 'Item translations are still loading. Wait a moment, then save again.');
+            return;
+        }
+        if ($('#item_image_upload_form').valid()) {
             if ($("#product_with_variant").is(":checked") && $("#load_price_fields").html() === '') {
                 PosnicPro.items.loadVariant();
                 PosnicPro.alert('info', 'Review each variant\'s price below, then Save');
