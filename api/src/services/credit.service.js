@@ -227,12 +227,23 @@ class CreditService {
     for (const row of transactions) {
       const pending = Math.max(0, Number(row.pending) || 0);
       if (pending <= 0 || preflightAmount <= 0) continue;
-      if (row.sale_id) {
-        const saleQuery = ObjectId.isValid(String(row.sale_id))
-          ? { _id: oid(row.sale_id), license: BaseModel.license }
-          : { sales_id: String(row.sale_id), license: BaseModel.license };
-        const originalSale = await db.collection('sales').findOne(saleQuery, { projection: { _id: 1 } });
-        if (!originalSale) throw new Error('Original sale ' + String(row.sale_id) + ' was not found. No payment was collected.');
+      if (!row.sale_id) {
+        throw new Error('This debt has no link to its original POS sale. No payment was collected; reconcile the debt record first.');
+      }
+      const saleQuery = ObjectId.isValid(String(row.sale_id))
+        ? { _id: oid(row.sale_id), license: BaseModel.license }
+        : { sales_id: String(row.sale_id), license: BaseModel.license };
+      if (ctx.branchId) saleQuery.branch_id = oid(ctx.branchId);
+      const originalSale = await db.collection('sales').findOne(saleQuery);
+      if (!originalSale) {
+        throw new Error('Original POS sale ' + String(row.sale_id) + ' was not found in this branch. No payment was collected.');
+      }
+      if (originalSale.customer_id && String(originalSale.customer_id) !== String(customerId)) {
+        throw new Error('The original POS sale belongs to a different customer. No payment was collected.');
+      }
+      const salePending = Number(originalSale.payment_pending);
+      if (Number.isFinite(salePending) && salePending + 0.009 < Math.min(pending, preflightAmount)) {
+        throw new Error('The POS sale balance and debt ledger do not match. No payment was collected; reconcile this sale first.');
       }
       preflightAmount = round2(preflightAmount - Math.min(pending, preflightAmount));
     }
