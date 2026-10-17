@@ -1511,11 +1511,11 @@ PosnicPro.sales = {
             }
         }
         // A dish priced on the day is asked for before it can reach the bill.
-        if (PosnicPro.sales._needsTodaysPrice(params)) {
+        if (!params._barcodeScanned && PosnicPro.sales._needsTodaysPrice(params)) {
             PosnicPro.sales.askTodaysPrice(params);
             return;
         }
-        if (!params._modifiersResolved
+        if (!params._barcodeScanned && !params._modifiersResolved
             && PosnicPro.local.get('table_options') === 'enable'
             && Array.isArray(params.modifier_group_ids) && params.modifier_group_ids.length
             && PosnicPro.sales.SaleAction !== 'return'
@@ -8566,7 +8566,7 @@ PosnicPro.sales.itemsMenu = {
         PosnicPro.sales.itemsMenu.variantPop.close();
         PosnicPro.sales.itemsMenu.addToLineItemsList(item_id);
     },
-    addToLineItemsList: function (item_id) {
+    addToLineItemsList: function (item_id, barcodeScanned) {
         PosnicPro.sales.itemCache.get(item_id, function (item) {
             $("#save_submit").removeClass("disabled");
             let hash = window.location.hash.slice(1);
@@ -8580,6 +8580,11 @@ PosnicPro.sales.itemsMenu = {
                 });
             }
             PosnicPro.sales.itemsMenu.clickEffect();
+            if (barcodeScanned) {
+                item._barcodeScanned = true;
+                item.item_quantity = 1;
+                item._quantityConfirmed = true;
+            }
             PosnicPro.sales.addSalesLineItems(item);
         });
     },
@@ -11173,12 +11178,15 @@ PosnicPro.sales.addScannedItem = function (itemData) {
     $('#sales_new_item_name').focus();
 
     if (itemData.item_id) {
-        PosnicPro.sales.itemsMenu.addToLineItemsList(itemData.item_id);
+        PosnicPro.sales.itemsMenu.addToLineItemsList(itemData.item_id, true);
     } else if (itemData.id) {
-        PosnicPro.sales.itemsMenu.addToLineItemsList(itemData.id);
+        PosnicPro.sales.itemsMenu.addToLineItemsList(itemData.id, true);
     } else if (itemData._id && itemData._id.$oid) {
-        PosnicPro.sales.itemsMenu.addToLineItemsList(itemData._id.$oid);
+        PosnicPro.sales.itemsMenu.addToLineItemsList(itemData._id.$oid, true);
     } else {
+        itemData._barcodeScanned = true;
+        itemData.item_quantity = 1;
+        itemData._quantityConfirmed = true;
         PosnicPro.sales.addSalesLineItems(itemData);
     }
 };
