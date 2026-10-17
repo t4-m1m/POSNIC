@@ -173,8 +173,8 @@
     function generate() {
         var firstValues = selectedValues('values1'), secondValues = selectedValues('values2');
         var names = combinations(firstValues, val('axis2') ? secondValues : []);
-        if (!val('axis1') || firstValues.length === 0 || names.length < 2 || names.length > 50 || (val('axis2') && secondValues.length === 0)) {
-            report('Choose an existing POSNIC variant and at least two of its predefined values. Create between 2 and 50 combinations.'); return;
+        if (!val('axis1') || firstValues.length === 0 || names.length < 1 || names.length > 50 || (val('axis2') && secondValues.length === 0)) {
+            report('Choose an existing POSNIC variant and at least one of its predefined values. Create between 1 and 50 combinations.'); return;
         }
         captureVariants(); var previous = new Map(variants.map(function (r) { return [r.variant_value, r]; }));
         var usedCodes = new Set([val('barcode')].filter(Boolean));
@@ -221,7 +221,7 @@
         if (!validGtin(val('gtin')) && !isFamily()) return error('Enter a valid GTIN with a matching check digit.', 'gtin');
         if (isFamily()) {
             captureVariants();
-            if (variants.length < 2 || variantSignature() !== signature) return error('Generate the variants after choosing their names and values.', 'values1');
+            if (variants.length < 1 || variantSignature() !== signature) return error('Generate the variants after choosing their names and values.', 'values1');
             var codes = new Set();
             for (var i=0;i<variants.length;i++) {
                 var row=variants[i];
