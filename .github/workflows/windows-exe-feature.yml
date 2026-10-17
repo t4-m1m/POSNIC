@@ -1,5 +1,5 @@
 name: Windows EXE - article cost label designer branch
-# Rebuild the latest feature branch and publish installer + portable EXE (no tests).
+# Rebuild the latest feature branch and publish the Windows installer only (no tests).
 
 on:
   push:
@@ -66,15 +66,12 @@ jobs:
           $ErrorActionPreference = 'Stop'
           npm run build -- --publish never
           $installer = Get-ChildItem -Path 'dist' -Filter '*-windows-x64-installer.exe' | Select-Object -First 1
-          $portable = Get-ChildItem -Path 'dist' -Filter '*-windows-x64-portable.exe' | Select-Object -First 1
           if (-not $installer) { throw 'Windows installer was not produced.' }
-          if (-not $portable) { throw 'Windows portable EXE was not produced.' }
-      - name: Upload Windows installer and portable EXE
+      - name: Upload Windows installer only
         uses: actions/upload-artifact@v4
         with:
-          name: POSNIC-Windows-EXE-installer-and-portable-feature-branch
+          name: POSNIC-Windows-EXE-installer-feature-branch
           path: |
             dist/*-windows-x64-installer.exe
-            dist/*-windows-x64-portable.exe
           if-no-files-found: error
           retention-days: 14
