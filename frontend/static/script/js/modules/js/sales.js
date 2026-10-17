@@ -11735,6 +11735,24 @@ $(document).on('click.posnicCreditRules', '#save_btn', function (event) {
     }
 });
 
+/* The on-screen function keys deliberately invoke the exact same handlers as the physical keys. */
+PosnicPro.sales.runFunctionShortcut = function (key) {
+    if (!['F1', 'F2', 'F3', 'F4', 'F8'].includes(key)) return;
+    var event = new KeyboardEvent('keydown', { key: key, bubbles: true, cancelable: true });
+    document.dispatchEvent(event);
+};
+
+/* Customer debt entry point: opens the dedicated debt view for the selected saved customer. */
+PosnicPro.sales.openCustomerDebts = function () {
+    var customerId = String($('#sales_new_customer_id').val() || $('#sales_customer_id').val() || $('#sales_new_customer_name').data('customer-id') || '').trim();
+    var customerName = String($('#sales_new_customer_name').val() || '').trim();
+    if (!customerId || !customerName || /walk.?in|cash customer|comptoir/i.test(customerName)) {
+        PosnicPro.alert('warning', 'Sélectionnez un client enregistré pour consulter ses crédits.');
+        return;
+    }
+    window.location.hash = '#/customerdebts?customer_id=' + encodeURIComponent(customerId);
+};
+
 /* POS keyboard shortcuts: operate only while the sale workspace is visible.
  * F3/F4 act on the focused basket row, or the first basket row if none is focused.
  * Native browser shortcuts are left alone outside the sale screen and in text fields.

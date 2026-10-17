@@ -782,3 +782,13 @@ body.customer-display .contentbar {
     max-width: 100%;
   }
 }
+
+/* POS cashier shortcut bar and prominent customer-credit action */
+.sales-function-shortcuts{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:10px;background:#f6f7fb;border:1px solid #e5e7ef;border-radius:12px}
+.sales-function-key{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:8px 13px;border:1px solid #d9deea;border-radius:9px;background:#fff;color:#26334a;font-weight:700;cursor:pointer;transition:transform .12s,box-shadow .12s}
+.sales-function-key:hover,.sales-function-key:focus{transform:translateY(-1px);box-shadow:0 3px 9px rgba(25,35,55,.12);outline:2px solid #b8c8ff;outline-offset:1px}
+.sales-function-key kbd{font-size:11px;padding:3px 5px;border-radius:5px;background:#eef1f7;color:#35425a}.sales-function-key i{font-size:17px}.sales-function-key span{font-size:13px}
+.sales-key-fast{background:#fff9e8;border-color:#f3c85e}.sales-key-pay{background:#effbf5;border-color:#8bd5b1}.sales-key-price{background:#f3f5ff;border-color:#aebdff}.sales-key-quantity{background:#f2f9ff;border-color:#b9d8f7}.sales-key-exchange{background:#fbf5ff;border-color:#d5b8ef}
+.sales-customer-credit-button{width:100%;display:flex;align-items:center;gap:12px;margin:8px 0 14px;padding:14px 18px;background:#c62828;color:#fff;border:2px solid #a71919;border-radius:10px;box-shadow:0 3px 8px rgba(160,20,20,.2);font-size:17px;cursor:pointer;text-align:left}
+.sales-customer-credit-button:hover,.sales-customer-credit-button:focus{background:#a71919;color:#fff;outline:3px solid rgba(198,40,40,.2);outline-offset:2px}.sales-customer-credit-button .sales-credit-word{font-size:13px;font-weight:800;letter-spacing:.08em}.sales-customer-credit-button strong{font-size:22px;margin-left:auto}.sales-customer-credit-button .sales-credit-currency{font-size:13px}#customerDebtsModule>a{display:flex;align-items:center;gap:10px}#customerDebtsModule>a .feather{font-size:18px;color:#c62828}
+@media(max-width:767px){.sales-function-shortcuts{gap:6px;padding:7px}.sales-function-key{flex:1 1 30%;padding:7px 5px;gap:5px;flex-direction:column}.sales-function-key span{font-size:11px}.sales-customer-credit-button{padding:12px}}
