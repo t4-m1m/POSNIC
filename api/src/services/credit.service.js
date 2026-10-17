@@ -242,10 +242,29 @@ class CreditService {
         if (sale) {
           const oldSalePending = Math.max(0, Number(sale.payment_pending != null ? sale.payment_pending : oldPending) || 0);
           const nextSalePending = round2(Math.max(0, oldSalePending - paid));
+          // Keep tender reporting in sync as well as the sale's balance and
+          // auditable payment history. The sales collection supports both old
+          // array-shaped and newer object-shaped multi-payment values.
+          const multi = {};
+          if (Array.isArray(sale.multi_payment)) {
+            sale.multi_payment.forEach((entry) => {
+              if (!entry || typeof entry !== 'object') return;
+              const key = String(entry.payment_mode || entry.method || '').trim();
+              const value = Number(entry.sale_payment != null ? entry.sale_payment : entry.amount) || 0;
+              if (key) multi[key] = (Number(multi[key]) || 0) + value;
+            });
+          } else if (sale.multi_payment && typeof sale.multi_payment === 'object') {
+            Object.keys(sale.multi_payment).forEach((key) => { multi[key] = Number(sale.multi_payment[key]) || 0; });
+          }
+          const creditKey = Object.keys(multi).find((key) => key.toLowerCase() === 'credit');
+          if (creditKey) multi[creditKey] = round2(Math.max(0, multi[creditKey] - paid));
+          multi[method] = round2((Number(multi[method]) || 0) + paid);
           await db.collection('sales').updateOne(saleQuery, {
             $set: {
               payment_pending: nextSalePending,
               payment_status: nextSalePending <= 0 ? 'Paid' : 'Partialy Paid',
+              payment_mode: Object.keys(multi).filter((key) => Number(multi[key]) > 0).join(',') || method,
+              multi_payment: multi,
               updated_date: now,
               last_debt_payment_date: now,
             },
