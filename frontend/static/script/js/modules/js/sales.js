@@ -2587,7 +2587,7 @@ PosnicPro.sales = {
             // Input editability follows the invoice status, not a customer's
             // partial-credit flag. Any unpaid or part-paid invoice can accept
             // an editable amount received.
-            var isPartialFlow = PosnicPro.sales.SaleAction === 'add' || isUnpaidOrPartialStatus;
+            var isPartialFlow = PosnicPro.sales.SaleAction === 'add' || (PosnicPro.sales.paymentOnlyMode === true && isUnpaidOrPartialStatus);
 
             if (isPartialFlow) {
                 // New-sale checkout must always allow the cashier to enter the actual amount received.
@@ -11792,17 +11792,18 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         if (e.key === 'Enter' && !$('#posnic-vendeur-confirm').prop('disabled')) { e.preventDefault(); continueCheckout(); }
     });
     PosnicPro.sales.runFunctionShortcut = function (key) {
-        // F2 opens payment directly. Cashier attribution belongs to F1 only.
-        if (key === 'F1') { askCashier(key); return; }
+        // Both checkout entry points first attribute the sale to a configured cashier.
+        // F1 then performs fast checkout; F2 opens the editable payment screen.
+        if (key === 'F1' || key === 'F2') { askCashier(key); return; }
         return originalShortcut(key);
     };
     document.addEventListener('keydown', function (e) {
         if (bypassNextFunctionKey) { bypassNextFunctionKey = false; return; }
-        if (e.key !== 'F1') return;
+        if (e.key !== 'F1' && e.key !== 'F2') return;
         if (!/sales\/new/i.test(String(window.location.hash || '')) && !$('#sales_new').is(':visible')) return;
         if ($('#posnic-vendeur-modal').hasClass('show')) return;
         e.preventDefault(); e.stopImmediatePropagation();
-        askCashier('F1');
+        askCashier(e.key);
     }, true);
 })();
 
