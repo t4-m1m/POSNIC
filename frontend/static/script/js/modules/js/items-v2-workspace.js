@@ -7,33 +7,39 @@
     function tabs() { return Array.from(document.querySelectorAll('#items_v2 [role="tab"]')); }
     function select(id, focus) {
         id = id === 'step2' || id === 'details' || id === 'more' || id === 'languages' ? 'step2' : 'step1';
-        var tab = el('tab-' + id); if (!tab) return;
+        var tab = el('tab-' + id);
         active = id;
-        tabs().forEach(function (b) { var yes = b.dataset.section === id; b.setAttribute('aria-selected', String(yes)); b.tabIndex = yes ? 0 : -1; });
+        tabs().forEach(function (b) {
+            var yes = b.dataset.section === id;
+            b.setAttribute('aria-selected', String(yes)); b.tabIndex = yes ? 0 : -1;
+        });
         ['basics','stock','details','more','languages'].forEach(function (panel) {
             var node = el('panel-' + panel);
             if (node) node.hidden = id === 'step1' ? !['basics','stock'].includes(panel) : !['details','more'].includes(panel);
         });
-        el('section-select').value = id;
-        el('prev-step').hidden = id !== 'step2';
-        el('next-step').hidden = id !== 'step1';
-        el('save').hidden = id !== 'step2';
-        el('step-help').textContent = id === 'step1'
+        var picker = el('section-select'), previous = el('prev-step'), next = el('next-step'), saveButton = el('save'), help = el('step-help');
+        if (picker) picker.value = id;
+        if (previous) previous.hidden = id !== 'step2';
+        if (next) next.hidden = id !== 'step1';
+        if (saveButton) saveButton.hidden = id !== 'step2';
+        if (help) help.textContent = id === 'step1'
             ? 'Step 1 of 2 · Enter the article information and all selling prices.'
             : 'Step 2 of 2 · Choose variants, generate unique barcodes, add photos and describe the article.';
-        if (focus) tab.focus();
+        if (focus && tab) tab.focus();
     }
     function reveal(node) { var panel = node && node.closest('.iv2-tab-panel'); if (panel) select(['iv2-panel-details','iv2-panel-more'].includes(panel.id) ? 'step2' : 'step1'); }
     function update(caps) {
         // Restaurant controls are optional and may not be present in the retail editor.
         var restaurantTab = el('tab-restaurant');
         if (restaurantTab) restaurantTab.hidden = !caps.restaurant;
-        var option = el('section-select').querySelector('[value="restaurant"]');
+        var picker = el('section-select');
+        var option = picker && picker.querySelector('[value="restaurant"]');
         if (option) option.hidden = option.disabled = !caps.restaurant;
         if (!caps.restaurant && active === 'restaurant') select('step1');
         var optional = P.i18n.t('lang_optional_2', 'Optional');
         if (el('summary-basics')) el('summary-basics').textContent = el('name').value.trim() ? P.i18n.t('lang_item_name', 'Item name') : P.i18n.t('lang_iv2_start_here', 'Start here');
-        if (el('summary-stock')) el('summary-stock').textContent = document.querySelector('#items_v2 [name="iv2-stock"]:checked').value === 'untracked' ? P.i18n.t('lang_iv2_not_tracked', 'Stock not tracked') : P.i18n.t('lang_opening_stock', 'Opening stock') + ': ' + (el('quantity').value || '0');
+        var stockChoice = document.querySelector('#items_v2 [name="iv2-stock"]:checked');
+        if (el('summary-stock')) el('summary-stock').textContent = stockChoice && stockChoice.value === 'untracked' ? P.i18n.t('lang_iv2_not_tracked', 'Stock not tracked') : P.i18n.t('lang_opening_stock', 'Opening stock') + ': ' + (el('quantity') ? el('quantity').value || '0' : '0');
         if (el('summary-details')) el('summary-details').textContent = el('photo-list').children.length ? P.i18n.t('lang_item_photos_title', 'Photos') + ': ' + el('photo-list').children.length : optional;
         var count = P.itemTranslationsV2.data().translations.length;
         if (el('summary-languages')) el('summary-languages').textContent = count ? P.i18n.t('lang_item_translations', 'Translations') + ': ' + count : optional;
