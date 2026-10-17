@@ -64,7 +64,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          npm run build
+          npm run build -- --publish never
           $installer = Get-ChildItem -Path 'dist' -Filter '*-windows-x64-installer.exe' | Select-Object -First 1
           if (-not $installer) { throw 'Windows installer was not produced.' }
       - name: Upload Windows installer only
