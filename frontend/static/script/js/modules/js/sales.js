@@ -11733,7 +11733,8 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
             } else PosnicPro.alert('error', response && response.message || 'Impossible d’enregistrer les vendeurs.');
         }, function () { PosnicPro.alert('error', 'Impossible d’enregistrer les vendeurs. Réessayez.'); });
     }
-    $(document).on('click.cashierSettings', '#v-pills-general-tab, a[href="#core-tab-sale"]', renderCashierNames);
+    $(document).on('shown.bs.tab.cashierSettings', '#v-pills-general-tab, a[href="#core-tab-sale"]', renderCashierNames);
+    $(function () { window.setTimeout(renderCashierNames, 0); });
     $(document).on('click.cashierSettings', '#cashier-name-add', function () {
         var input = $('#cashier-name-input'), name = String(input.val() || '').trim();
         if (!name) { input.focus(); return; }
@@ -11793,11 +11794,11 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
     }
     function continueCheckout() {
         var $modal = $('#posnic-vendeur-modal');
-        var name = String($('#posnic-vendeur-manual').val() || $modal.data('pending-name') || '').trim();
+        var name = String($('#posnic-vendeur-select').val() || $modal.data('pending-name') || '').trim();
         var key = $modal.data('pending-key');
         if (!name) {
-            $('#posnic-vendeur-manual').focus();
-            PosnicPro.alert('warning', 'Choisissez ou saisissez le nom du vendeur.');
+            $('#posnic-vendeur-select').trigger('focus');
+            PosnicPro.alert('warning', 'Sélectionnez un vendeur dans Paramètres > Général > Vente.');
             return;
         }
         selectedCashier = name.slice(0, 80);
@@ -11811,8 +11812,8 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
     }
     $(document).on('click.cashier', '#posnic-vendeur-confirm', continueCheckout);
     $(document).on('click.cashier', '#posnic-vendeur-cancel', function () { $('#posnic-vendeur-modal').modal('hide'); });
-    $(document).on('keydown.cashier', '#posnic-vendeur-manual', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); continueCheckout(); }
+    $(document).on('keydown.cashier', '#posnic-vendeur-select', function (e) {
+        if (e.key === 'Enter' && !$('#posnic-vendeur-confirm').prop('disabled')) { e.preventDefault(); continueCheckout(); }
     });
     PosnicPro.sales.runFunctionShortcut = function (key) {
         if (key === 'F1' || key === 'F2') { askCashier(key); return; }
