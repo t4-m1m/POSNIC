@@ -394,6 +394,7 @@ PosnicPro.quickreport = {
           qty: safeNum(qty),
           subtotal: safeNum(price),
           total: safeNum(total),
+          outstanding: safeNum(response.data && response.data.outstanding_amount),
           payments: paymentAllDataRow.map(function (row) {
             return { label: row[0], amount: safeNum(row[1]) };
           }),
@@ -410,7 +411,7 @@ PosnicPro.quickreport = {
         });
         var summary = $('#daily-payment-summary').empty().addClass('d-flex flex-wrap');
         summary.css('gap', '16px');
-        [['Cash received', summaryCash], ['Card received', summaryCard], ['Total payments received', tenderTotal]].forEach(function (entry) {
+        [['Cash received', summaryCash], ['Card received', summaryCard], ['Total payments received', tenderTotal], ['Customer debts (not received)', PosnicPro.quickreport.lastReport.outstanding]].forEach(function (entry) {
           var card = $('<div class="card p-3 mb-1">');
           $('<span>').text(entry[0]).appendTo(card);
           $('<strong class="h4 mb-0">').text((PosnicPro.local.get('currencySign') || '') + safeNum(entry[1]).toFixed(2)).appendTo(card);
@@ -423,7 +424,8 @@ PosnicPro.quickreport = {
           var money = function (n) { return Number(n || 0).toFixed(2); };
           var rows = '<tr><td><lang class="lang_total_sales">Total sales</lang></td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.total) + '</td></tr>'
             + '<tr><td><lang class="lang_items_sold">Items sold</lang></td><td class="text-right">' + PosnicPro.quickreport.lastReport.qty + '</td></tr>'
-            + '<tr><td><lang class="lang_payments_received">Payments received</lang></td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.tenderTotal) + '</td></tr>';
+            + '<tr><td><lang class="lang_payments_received">Payments received</lang></td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.tenderTotal) + '</td></tr>'
+            + '<tr><td>Customer debts (not received)</td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.outstanding) + '</td></tr>';
           PosnicPro.quickreport.lastReport.payments.forEach(function (p) {
             rows += '<tr><td>' + $('<i>').text(p.label).html() + '</td><td class="text-right">' + money(p.amount) + '</td></tr>';
           });
