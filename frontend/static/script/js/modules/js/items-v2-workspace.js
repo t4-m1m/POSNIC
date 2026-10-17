@@ -1,7 +1,7 @@
 /* Navigation and recovery for the item editor. Business validation stays in items_v2. */
 (function () {
     'use strict';
-    var P = window.PosnicPro, active = 'basics', bound = false, callbacks, timer, key, restoring = false, pending = [], pendingVariants = null, locked = false;
+    var P = window.PosnicPro, active = 'step1', bound = false, callbacks, timer, key, restoring = false, pending = [], pendingVariants = null, locked = false;
     function el(id) { return document.getElementById('iv2-' + id); }
     function scope() { var user = P.local.get('username'), branch = P.local.get('branch_id_set'); return user && branch ? 'posnic.item-v2.draft:' + JSON.stringify([user, branch]) : null; }
     function tabs() { return Array.from(document.querySelectorAll('#items_v2 [role="tab"]')); }
@@ -25,8 +25,11 @@
     }
     function reveal(node) { var panel = node && node.closest('.iv2-tab-panel'); if (panel) select(['iv2-panel-details','iv2-panel-more'].includes(panel.id) ? 'step2' : 'step1'); }
     function update(caps) {
-        el('tab-restaurant').hidden = !caps.restaurant;
-        var option = el('section-select').querySelector('[value="restaurant"]'); option.hidden = option.disabled = !caps.restaurant;
+        // Restaurant controls are optional and may not be present in the retail editor.
+        var restaurantTab = el('tab-restaurant');
+        if (restaurantTab) restaurantTab.hidden = !caps.restaurant;
+        var option = el('section-select').querySelector('[value="restaurant"]');
+        if (option) option.hidden = option.disabled = !caps.restaurant;
         if (!caps.restaurant && active === 'restaurant') select('step1');
         var optional = P.i18n.t('lang_optional_2', 'Optional');
         el('summary-basics').textContent = el('name').value.trim() ? P.i18n.t('lang_item_name', 'Item name') : P.i18n.t('lang_iv2_start_here', 'Start here');
@@ -35,7 +38,9 @@
         var count = P.itemTranslationsV2.data().translations.length;
         el('summary-languages').textContent = count ? P.i18n.t('lang_item_translations', 'Translations') + ': ' + count : optional;
         el('summary-more').textContent = el('has-variants').checked ? P.i18n.t('lang_variants_2', 'Variants') : el('sku').value || optional;
-        el('summary-restaurant').textContent = optional;
+        if (el('summary-step1')) el('summary-step1').textContent = el('name').value.trim() ? 'Name & prices' : 'Start here';
+        if (el('summary-step2')) el('summary-step2').textContent = el('has-variants').checked ? 'Variants selected' : (el('photo-list').children.length ? 'Photos selected' : optional);
+        if (el('summary-restaurant')) el('summary-restaurant').textContent = optional;
     }
     function controls() { return Array.from(el('fields').querySelectorAll('input,select,textarea')).filter(function (e) { return e.type !== 'file' && e.id !== 'iv2-section-select' && !e.id.startsWith('iv2-item_') && !e.closest('#iv2-variant-rows'); }); }
     function snapshot() {
