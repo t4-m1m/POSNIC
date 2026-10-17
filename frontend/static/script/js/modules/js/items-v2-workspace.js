@@ -6,18 +6,28 @@
     function scope() { var user = P.local.get('username'), branch = P.local.get('branch_id_set'); return user && branch ? 'posnic.item-v2.draft:' + JSON.stringify([user, branch]) : null; }
     function tabs() { return Array.from(document.querySelectorAll('#items_v2 [role="tab"]')); }
     function select(id, focus) {
-        var tab = el('tab-' + id); if (!tab || tab.hidden) return;
+        id = id === 'step2' || id === 'details' || id === 'more' || id === 'languages' ? 'step2' : 'step1';
+        var tab = el('tab-' + id); if (!tab) return;
         active = id;
-        tabs().forEach(function (b) { var yes = b.dataset.section === id; b.setAttribute('aria-selected', String(yes)); b.tabIndex = yes ? 0 : -1; el('panel-' + b.dataset.section).hidden = !yes; });
+        tabs().forEach(function (b) { var yes = b.dataset.section === id; b.setAttribute('aria-selected', String(yes)); b.tabIndex = yes ? 0 : -1; });
+        ['basics','stock','details','more','languages'].forEach(function (panel) {
+            var node = el('panel-' + panel);
+            if (node) node.hidden = id === 'step1' ? !['basics','stock'].includes(panel) : !['details','more'].includes(panel);
+        });
         el('section-select').value = id;
-        if (id === 'languages') { el('item_translation_panel').hidden = false; el('item_translation_toggle').setAttribute('aria-expanded', 'true'); }
+        el('prev-step').hidden = id !== 'step2';
+        el('next-step').hidden = id !== 'step1';
+        el('save').hidden = id !== 'step2';
+        el('step-help').textContent = id === 'step1'
+            ? 'Step 1 of 2 · Enter the article information and all selling prices.'
+            : 'Step 2 of 2 · Choose variants, generate unique barcodes, add photos and describe the article.';
         if (focus) tab.focus();
     }
-    function reveal(node) { var panel = node && node.closest('.iv2-tab-panel'); if (panel) select(panel.id.slice(10)); }
+    function reveal(node) { var panel = node && node.closest('.iv2-tab-panel'); if (panel) select(['iv2-panel-details','iv2-panel-more'].includes(panel.id) ? 'step2' : 'step1'); }
     function update(caps) {
         el('tab-restaurant').hidden = !caps.restaurant;
         var option = el('section-select').querySelector('[value="restaurant"]'); option.hidden = option.disabled = !caps.restaurant;
-        if (!caps.restaurant && active === 'restaurant') select('basics');
+        if (!caps.restaurant && active === 'restaurant') select('step1');
         var optional = P.i18n.t('lang_optional_2', 'Optional');
         el('summary-basics').textContent = el('name').value.trim() ? P.i18n.t('lang_item_name', 'Item name') : P.i18n.t('lang_iv2_start_here', 'Start here');
         el('summary-stock').textContent = document.querySelector('#items_v2 [name="iv2-stock"]:checked').value === 'untracked' ? P.i18n.t('lang_iv2_not_tracked', 'Stock not tracked') : P.i18n.t('lang_opening_stock', 'Opening stock') + ': ' + (el('quantity').value || '0');
@@ -55,12 +65,14 @@
         if (pendingVariants.some(function (row) { return row.unit_id && !available.includes(row.unit_id); })) return;
         var rows = pendingVariants; pendingVariants = null; P.itemsV2Details.restoreDraft(rows);
     }
-    function reset() { clear(); locked = false; el('layout').hidden = false; el('success').hidden = true; el('draft-notice').hidden = true; el('draft-note').textContent = ''; select('basics'); }
+    function reset() { clear(); locked = false; el('layout').hidden = false; el('success').hidden = true; el('draft-notice').hidden = true; el('draft-note').textContent = ''; select('step1'); }
     function button(text, action) { var b = document.createElement('button'); b.type = 'button'; b.textContent = text; b.onclick = action; return b; }
     function init(actions) {
         callbacks = actions; if (bound) return; bound = true;
         document.querySelector('#items_v2 .iv2-layout').id = 'iv2-layout';
         el('section-select').addEventListener('change', function () { select(this.value); });
+        el('next-step').addEventListener('click', function () { select('step2', true); });
+        el('prev-step').addEventListener('click', function () { select('step1', true); });
         tabs().forEach(function (b) {
             b.onclick = function () { select(b.dataset.section); };
             b.onkeydown = function (e) {
@@ -111,6 +123,6 @@
             price.textContent = r && r.type === 'success' && r.data && Number.isFinite(Number(r.data.total)) ? (P.local.get('currencySign') || '') + Number(r.data.total).toFixed(2) : '—';
         }, function () { price.textContent = '—'; });
     }
-    function edit() { clear(); locked = true; el('layout').hidden = false; el('success').hidden = true; el('draft-note').textContent = P.i18n.t('lang_iv2_edit_draft_note', 'Editing a saved item. Save your changes before leaving.'); select('details', true); }
+    function edit() { clear(); locked = true; el('layout').hidden = false; el('success').hidden = true; el('draft-note').textContent = P.i18n.t('lang_iv2_edit_draft_note', 'Editing a saved item. Save your changes before leaving.'); select('step1', true); }
     P.itemsV2Workspace = { edit: edit, init: init, update: update, reveal: reveal, reset: reset, ready: ready, saved: saved };
 }());
