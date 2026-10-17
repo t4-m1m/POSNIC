@@ -2216,7 +2216,19 @@ PosnicPro.sales = {
         }
         $(".infobar-settings-sidebar-overlay").css({ "background": "rgba(0,0,0,0.4)", "position": "fixed" });
         $("#infobar-settings-sidebar-tender-details").addClass("sidebarview");
-        $('#tenderpage').show();
+        var fastPayRequested = window.__posnicFastPayPending === true &&
+            PosnicPro.sales.SaleAction === 'add' && PosnicPro.sales.paymentOnlyMode !== true;
+        if (fastPayRequested) {
+            // Fast pay always starts as a full Cash sale; it never creates debt.
+            $('#Partial_amount').val(saleNewTot.toFixed(2));
+            $('#sales_new_customer_partial_balance').val('false');
+            $('#unpaid_payment_toggle').prop('checked', true).trigger('change');
+            $('#tenderpage').hide();
+            $('#newsalespage').show();
+        } else {
+            $('#tenderpage').show();
+            $('#newsalespage').hide();
+        }
         if (PosnicPro.sales.SaleAction === 'return') {
             $('.cancel-save-hide-show').hide();
         } else {
@@ -2526,7 +2538,9 @@ PosnicPro.sales = {
         // For payment-only flow from Unpaid list, keep simple single-payment UI
         // if ((PosnicPro.sales.EditRecentSaleParams && PosnicPro.sales.EditRecentSaleParams.sale_process === 'KOT') ||
         var isKotPaymentOnlyFlow = (PosnicPro.sales.kotPaymentMode === true && PosnicPro.sales.paymentOnlyMode === true);
-        var enableMulti = (PosnicPro.local.get('enable_multi_payment') === 'enable' || Object.keys(multi_payment).length !== 0);
+        // New-sale checkout needs split tender so the unpaid remainder can be
+        // explicitly represented as Credit, even if the branch had multi-pay off.
+        var enableMulti = (PosnicPro.local.get('enable_multi_payment') === 'enable' || Object.keys(multi_payment).length !== 0 || (PosnicPro.sales.SaleAction === 'add' && PosnicPro.sales.paymentOnlyMode !== true));
 
         if (enableMulti) {
             PosnicPro.sales.showMultiPaymentMode();
@@ -2542,9 +2556,26 @@ PosnicPro.sales = {
             PosnicPro.sales.addSale.cartOrderSubmit(data);
         } else {
             $('.tables-list-hide-show').show();
-            $('#infobar-settings-sidebar-tender-details').show();
+            $('#infobar-settings-sidebar-tender-details').toggle(!fastPayRequested);
             if (PosnicPro.askposnic) PosnicPro.askposnic.checkoutPaymentReady();
-            if (focusTender) $('#tendered_amount').focus();
+            if (focusTender && !fastPayRequested) $('#tendered_amount').focus();
+            if (fastPayRequested) {
+                // Wait until the payment tiles exist, then submit through the same
+                // validation/idempotency/save path as an ordinary checkout.
+                setTimeout(function () {
+                    if (window.__posnicFastPayPending !== true || !$('#sales_new').is(':visible')) return;
+                    $('.payment-amount-input').each(function () {
+                        const method = String($(this).closest('.payment-method-card').find('.payment_mode').attr('id') || '').trim().toLowerCase();
+                        $(this).val(method === 'cash' ? saleNewTot.toFixed(2) : '0.00');
+                    });
+                    $('#Partial_amount').val(saleNewTot.toFixed(2));
+                    $('#sales_new_customer_partial_balance').val('false');
+                    $('#unpaid_payment_toggle').prop('checked', true).trigger('change');
+                    window.__posnicFastPayPending = false;
+                    PosnicPro.sales.initPaymentValidation();
+                    if (!$('#save_btn').prop('disabled')) $('#save_btn').trigger('click');
+                }, 180);
+            }
         }
     },
     paymentMethodEnabled: function (name) {
@@ -3111,10 +3142,10 @@ PosnicPro.sales = {
             let allPaymentsTotal = 0;
             let nonZeroPaymentCount = 0;
             $('.payment-amount-input').each(function () {
+                const method = String($(this).closest('.payment-method-card').find('.payment_mode').attr('id') || '').trim().toLowerCase();
+                if (method === 'credit') return;
                 let val = parseFloat($(this).val()) || 0;
-                if (val > 0) {
-                    nonZeroPaymentCount++;
-                }
+                if (val > 0) nonZeroPaymentCount++;
                 allPaymentsTotal += val;
             });
             
@@ -13050,6 +13081,8 @@ $('#Partial_amount').keyup(
             let nonZeroCount = 0;
             let $lastNonZero = null;
             $multiInputs.each(function () {
+                const method = String($(this).closest('.payment-method-card').find('.payment_mode').attr('id') || '').trim().toLowerCase();
+                if (method === 'credit') return;
                 let v = parseFloat($(this).val()) || 0;
                 if (v > 0) {
                     nonZeroCount++;
