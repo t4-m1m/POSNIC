@@ -12009,20 +12009,22 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
             return;
         }
 
-        // Use the checkout button's normal validation path; it opens the tender
-        // page without submitting a sale or forcing a cash payment.
-        var checkout = document.querySelector('#check_button');
-        if (!checkout || checkout.disabled) {
+        // Open the payment screen directly. The checkout button may be disabled
+        // by unrelated pending-state validation even though the basket is ready;
+        // routing F2 through it was the reason the shortcut could silently do nothing.
+        var basketHasItems = $('#sales_new_items_tbody tr[id^="touch_row_"]').length > 0 ||
+            $('#sales_new .touch-table-tbody tr').has('input[name="addSalesLineItemQty"]').length > 0;
+        if (!basketHasItems) {
             PosnicPro.alert('warning', 'Add an item to the basket before opening payment.');
             return;
         }
-        checkout.click();
-        window.setTimeout(function () {
-            if (!$('#tenderpage').is(':visible') && $('#sales_new').is(':visible') &&
-                typeof PosnicPro.sales.openTenderModel === 'function') {
-                PosnicPro.sales.openTenderModel(false, true);
-            }
-        }, 120);
+        if (typeof PosnicPro.sales.openTenderModel === 'function') {
+            PosnicPro.sales.openTenderModel(false, true);
+        } else {
+            var checkout = document.querySelector('#check_button');
+            if (checkout && !checkout.disabled) checkout.click();
+            else PosnicPro.alert('error', 'The payment screen could not be opened.');
+        }
         return;
     }
     // F1: ask for the cashier first, then complete one full-cash checkout.
