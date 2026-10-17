@@ -846,3 +846,27 @@ body.customer-display .contentbar {
     line-height: 1.1;
     text-shadow: 0 1px 0 rgba(255,255,255,.9);
 }
+
+/* Single quick action in the blue icon rail, directly under the Posnic logo. */
+.posnic-new-sale-quicklink{
+    display:flex!important;
+    align-items:center;
+    justify-content:center;
+    width:42px;
+    height:42px;
+    margin:8px auto 10px;
+    padding:0!important;
+    border-radius:10px;
+    color:#fff!important;
+    background:rgba(255,255,255,.14);
+    border:1px solid rgba(255,255,255,.3);
+    transition:background .15s ease,transform .15s ease;
+}
+.posnic-new-sale-quicklink .feather{font-size:23px;stroke-width:2.8}
+.posnic-new-sale-quicklink:hover,.posnic-new-sale-quicklink:focus{
+    background:#fff!important;
+    color:#2457d6!important;
+    transform:scale(1.04);
+    outline:2px solid rgba(255,255,255,.45);
+    outline-offset:2px;
+}
