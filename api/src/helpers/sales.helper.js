@@ -1075,6 +1075,8 @@ const formatSaleListEntry = (saleDoc) => {
       saleDate,
     updated_date: parseSaleDate(doc.updated_date) || parseSaleDate(doc.updatedAt) || null,
     created_by: doc.created_by || doc.user_name || undefined,
+    // The selected till seller is separate from the signed-in account; return it in the history list API.
+    cashier_name: String(doc.cashier_name || doc.seller_name || '').trim(),
     branch_name: doc.branch_name,
     // KOT-specific fields required by frontend kot.js
     items: Array.isArray(doc.items)

@@ -238,3 +238,42 @@ body.rd-workspace-open { overflow: hidden; }
 #receipt-designer .rd-print-options summary{padding:3px 0;color:var(--theme-text-color,#334155)}
 @media(max-width:1000px){#receipt-designer .rs-work{grid-template-columns:155px minmax(0,1fr) 245px}}
 @media(max-width:760px){#receipt-designer .rs-work{grid-template-columns:1fr}#receipt-designer .rs-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}#receipt-designer .rs-tools h4,#receipt-designer .rs-tools p{grid-column:1/-1}#receipt-designer .rs-inspector{grid-column:auto}#receipt-designer .rs-head{align-items:flex-start}}
+
+
+/* Receipt Printing Studio (RPS) — match the POSNIC theme and button system. */
+#receipt-designer .rps-actions { gap:8px!important; }
+#receipt-designer .rps-btn,
+#receipt-designer .rps-add,
+#receipt-designer .rps-format,
+#receipt-designer .rps-block-row button,
+#receipt-designer .rps-delete {
+  min-height:36px!important; border:1px solid var(--theme-border-color,#dbe3ed)!important;
+  border-radius:8px!important; background:var(--theme-card-bg,#fff)!important;
+  color:var(--theme-text-color,#334155)!important; box-shadow:none!important;
+  font:inherit; font-size:12px!important; font-weight:650!important; line-height:1.35;
+  transition:background-color .15s ease,border-color .15s ease,color .15s ease,transform .15s ease;
+}
+#receipt-designer .rps-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:8px 12px!important; white-space:nowrap; }
+#receipt-designer .rps-btn:hover:not(:disabled),
+#receipt-designer .rps-add:hover,
+#receipt-designer .rps-format:not(.active):hover,
+#receipt-designer .rps-block-row button:hover { border-color:var(--theme-primary-color,#2563eb)!important; background:var(--theme-table-header-bg,#f5f8fc)!important; color:var(--theme-primary-color,#2563eb)!important; transform:translateY(-1px); }
+#receipt-designer .rps-btn.primary { border-color:var(--theme-primary-color,#2563eb)!important; background:var(--theme-primary-color,#2563eb)!important; color:#fff!important; }
+#receipt-designer .rps-btn.primary:hover:not(:disabled) { filter:brightness(.96); color:#fff!important; }
+#receipt-designer .rps-btn:disabled { opacity:.48; cursor:not-allowed; transform:none; }
+#receipt-designer .rps-btn:focus-visible,
+#receipt-designer .rps-add:focus-visible,
+#receipt-designer .rps-format:focus-visible,
+#receipt-designer .rps-block-row button:focus-visible,
+#receipt-designer .rps-delete:focus-visible { outline:2px solid var(--theme-primary-color,#2563eb)!important; outline-offset:2px; }
+#receipt-designer .rps-formats { gap:8px!important; padding:12px 16px!important; background:var(--theme-card-bg,#fff); }
+#receipt-designer .rps-format { padding:8px 12px!important; }
+#receipt-designer .rps-format.active { border-color:var(--theme-primary-color,#2563eb)!important; background:var(--theme-primary-color,#2563eb)!important; color:#fff!important; }
+#receipt-designer .rps-add { display:flex!important; align-items:center; justify-content:flex-start; gap:8px; width:100%; min-height:38px!important; margin:0 0 7px!important; padding:9px 11px!important; text-align:left; }
+#receipt-designer .rps-block-row button { min-height:30px!important; padding:5px 8px!important; }
+#receipt-designer .rps-delete { border-color:#efc3c3!important; background:var(--theme-card-bg,#fff)!important; color:#b42318!important; }
+#receipt-designer .rps-delete:hover { border-color:#d92d20!important; background:#fff5f5!important; color:#b42318!important; }
+#receipt-designer .rps-preview-tools .rps-btn { min-height:30px!important; padding:5px 9px!important; }
+#receipt-designer .rps-head { background:var(--theme-card-bg,#fff)!important; }
+#receipt-designer .rps-status { border:1px solid var(--theme-border-color,#dbe3ed); border-radius:7px; padding:6px 9px; background:var(--theme-table-header-bg,#f5f8fc); color:var(--theme-text-muted,#64748b); }
+@media(max-width:650px) { #receipt-designer .rps-actions { width:100%; } #receipt-designer .rps-actions .rps-btn { flex:1 1 auto; } }
