@@ -265,6 +265,7 @@ class CreditService {
         const saleQuery = ObjectId.isValid(String(row.sale_id))
           ? { _id: oid(row.sale_id), license: BaseModel.license }
           : { sales_id: String(row.sale_id), license: BaseModel.license };
+        if (ctx.branchId) saleQuery.branch_id = oid(ctx.branchId);
         const sale = await db.collection('sales').findOne(saleQuery);
         if (sale) {
           const oldSalePending = Math.max(0, Number(sale.payment_pending != null ? sale.payment_pending : oldPending) || 0);
