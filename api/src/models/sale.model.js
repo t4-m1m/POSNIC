@@ -366,6 +366,13 @@ const saleSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    // The cashier selected at the till can differ from the signed-in account.
+    // Preserve that attribution independently for reports and receipt reprints.
+    cashier_name: {
+      type: String,
+      trim: true,
+      maxlength: 80,
+    },
 
     category_id: {
       type: String,
@@ -1137,6 +1144,7 @@ class LegacySaleModel {
     client: { type: 'Object', select: true },
     user_id: { type: 'String', select: true },
     user_name: { type: 'String', select: true },
+    cashier_name: { type: 'String', select: true },
     sales_id: { type: 'String', select: true },
     date: { type: 'Date', select: true },
     items: { type: 'Array', select: true },
