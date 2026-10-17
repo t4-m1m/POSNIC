@@ -4666,8 +4666,17 @@ PosnicPro.sales.addSale = {
                     window.__posnicFastPrintPending = false;
                     if (PosnicPro.askposnic) PosnicPro.askposnic.checkout = null;
                     $('#ask_checkout_payment').remove();
-                    if (PosnicPro.sales.saleProcess !== 'KOT' && (response.data.print === true || askPrint)) {
-                        PosnicPro.sales.view.printSale(response.data.sales_id, 'sale');
+                    // Cashier checkout always prints immediately after a successful save.
+                    // Do not route through the post-sale print-choice screen.
+                    if (PosnicPro.sales.saleProcess !== 'KOT') {
+                        try {
+                            PosnicPro.sales.view.printSale(response.data.sales_id, 'sale');
+                        } catch (printError) {
+                            PosnicPro.alert('warning', PosnicPro.i18n.t('lang_sale_saved_print_failed', 'Sale saved, but automatic receipt printing failed. You can reprint it from sales history.'));
+                        }
+                        $('#infobar-settings-sidebar-tender-details').removeClass('sidebarview').hide();
+                        $('.infobar-settings-sidebar-overlay').css({ background: 'none', position: 'relative' });
+                        $('#newsalespage').show();
                     }
                     if (isKotNewSale && PosnicPro.kotPrint) PosnicPro.kotPrint.afterSave(response.data.sales_id);
                     if (response.data.mail === true && $('#sales_new_customer_email').val() !== "") {
