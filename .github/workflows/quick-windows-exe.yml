@@ -44,6 +44,8 @@ on:
       - "frontend/static/script/js/core/receipt-designer.js"
       - "frontend/static/script/js/core/print-settings.js"
       - "frontend/static/script/js/modules/js/receipt-designer-editor.js"
+      - "frontend/static/style/css/receipt-designer.css"
+      - "frontend/modules/settings_write.html"
       - "frontend/static/script/js/modules/js/sales.js"
       - "frontend/modules/sales_write.html"
       - "frontend/static/script/js/core/PosnicPro.js"
