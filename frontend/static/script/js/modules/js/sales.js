@@ -11711,59 +11711,6 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         return (Array.isArray(names) ? names : []).map(function (n) { return String(n || '').trim(); })
             .filter(function (n, i, all) { return n && all.indexOf(n) === i; }).slice(0, 100);
     }
-    function renderCashierNames(overrideNames) {
-        var $list = $('#cashier-names-list');
-        if (!$list.length) return;
-        var names = (Array.isArray(overrideNames) ? overrideNames : ($list.data('draftNames') || cashierNames())).slice();
-        $list.data('draftNames', names);
-        $list.html(names.length ? names.map(function (name, i) {
-            return '<span class="badge badge-light border d-inline-flex align-items-center p-2" style="gap:8px;font-size:13px">' +
-                escapeText(name) + '<button type="button" class="close cashier-name-remove" data-index="' + i + '" aria-label="Retirer ' + escapeText(name) + '" style="font-size:18px;line-height:1">&times;</button></span>';
-        }).join('') : '<span class="text-muted">Aucun vendeur enregistré. Ajoutez les noms ci-dessus.</span>');
-    }
-    function saveCashierNames(names) {
-        names = names.map(function (n) { return String(n || '').trim().slice(0, 80); })
-            .filter(function (n, i, all) { return n && all.indexOf(n) === i; }).slice(0, 100);
-        var settings = generalSettings();
-        settings.cashier_names = names;
-        PosnicPro.put({ url: 'setting/updateCommonSettings', data: JSON.stringify({ cashier_names: names }) }, function (response) {
-            if (response && response.type === 'success') {
-                PosnicPro.local.set('general_settings', JSON.stringify(settings));
-                PosnicPro.local.set('cashier_names', JSON.stringify(names));
-                renderCashierNames();
-                PosnicPro.alert('success', 'Liste des vendeurs enregistrée.');
-            } else PosnicPro.alert('error', response && response.message || 'Impossible d’enregistrer les vendeurs.');
-        }, function () { PosnicPro.alert('error', 'Impossible d’enregistrer les vendeurs. Réessayez.'); });
-    }
-    $(document).on('shown.bs.tab.cashierSettings', '#v-pills-general-tab, a[href="#core-tab-sale"]', renderCashierNames);
-    $(function () { window.setTimeout(renderCashierNames, 0); });
-    $(document).on('posnic:general-settings-loaded', renderCashierNames);
-    $(document).on('click.cashierSettings', '#cashier-name-add', function () {
-        var input = $('#cashier-name-input'), name = String(input.val() || '').trim();
-        if (!name) { input.focus(); return; }
-        var names = ($('#cashier-names-list').data('draftNames') || cashierNames()).slice();
-        if (names.some(function (n) { return n.toLowerCase() === name.toLowerCase(); })) {
-            PosnicPro.alert('warning', 'Ce vendeur existe déjà.'); input.focus(); return;
-        }
-        names.push(name.slice(0, 80)); input.val(''); renderCashierNames(names);
-    });
-    $(document).on('keydown.cashierSettings', '#cashier-name-input', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); $('#cashier-name-add').trigger('click'); }
-    });
-    $(document).on('click.cashierSettings', '.cashier-name-remove', function () {
-        var names = $('#cashier-names-list').data('draftNames') || cashierNames();
-        names.splice(Number($(this).attr('data-index')), 1);
-        renderCashierNames(names);
-    });
-    $(document).on('click.cashierSettings', '#cashier-names-save', function () {
-        var names = $('#cashier-names-list').data('draftNames') || cashierNames();
-        var input = String($('#cashier-name-input').val() || '').trim();
-        if (input && !names.some(function (n) { return n.toLowerCase() === input.toLowerCase(); })) names.push(input);
-        $('#cashier-name-input').val('');
-        saveCashierNames(names);
-        $('#cashier-names-list').removeData('draftNames');
-    });
-
     function ensureCashierModal() {
         if ($('#posnic-vendeur-modal').length) return;
         $('body').append('<div class="modal fade" id="posnic-vendeur-modal" tabindex="-1" role="dialog" aria-labelledby="posnic-vendeur-title" aria-hidden="true" data-backdrop="static" data-keyboard="false">' +
