@@ -6509,29 +6509,15 @@ class ItemRepository extends BaseModel {
       const page = parseInt(options.page, 10) || 1;
       const skip = Math.max(0, (page - 1) * limit);
 
+      // This is a current-stock valuation report. Items must remain visible
+      // even when older records lack the legacy track_inventory flag.
       const filter = {
         'branch_access.branch_id': { $in: branchObjectIds },
-        track_inventory: true,
       };
 
       const licenseId = context.licenseId;
       if (licenseId) {
         filter.license = ObjectId.isValid(licenseId) ? new ObjectId(licenseId) : licenseId;
-      }
-
-      // Apply session filter dates to the query
-      if (data.starting_date || data.ending_date) {
-        if (data.starting_date) {
-          filter.createdAt = { $gte: new Date(data.starting_date) };
-        }
-
-        if (data.ending_date) {
-          if (filter.createdAt) {
-            filter.createdAt.$lte = new Date(data.ending_date);
-          } else {
-            filter.createdAt = { $lte: new Date(data.ending_date) };
-          }
-        }
       }
 
       console.log('\ud83d\udd0d itemStockReportTable - Filter:', JSON.stringify(filter, null, 2));
