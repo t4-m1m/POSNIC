@@ -190,8 +190,14 @@
         if (P.aclLoaded && P.aclLoaded() && !P.checkAccess('item', 'write')) { fail('You don’t have permission to create items.'); return false; }
         if (editing && savedBranch !== P.local.get('branch_id_set')) { fail(P.i18n.t('lang_iv2_edit_branch_changed', 'The active branch changed. Open the item again before editing.')); return false; }
         attempted = true; render();
-        if (!P.itemsV2Workspace.ready()) { fail(P.i18n.t('lang_iv2_draft_lists', 'Some draft selections are unavailable. Reload to retry, or discard the draft before saving.')); return false; }
         var f = fields(), a = assess(f);
+        // Missing optional draft-list selections must not block a normal item
+        // save. Only pause a variant-family save when its pending variant draft
+        // cannot be restored, since saving that family incomplete would lose rows.
+        if (f.family && !P.itemsV2Workspace.ready()) {
+            fail(P.i18n.t('lang_iv2_draft_lists', 'Some variant draft selections are unavailable. Reload to retry, or discard the draft before saving.'));
+            return false;
+        }
         if (a.error) { fail(a.error, a.field); return false; }
         var advancedError = P.itemsV2Details.validate();
         if (advancedError) { fail(advancedError.error, advancedError.field); return false; }
