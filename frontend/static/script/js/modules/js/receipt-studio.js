@@ -14,7 +14,8 @@ function sample(){
  return Object.assign({},branch,{receipt_designs:design,sales_id:'SAMPLE-2026-1042',created_date:new Date().toLocaleString(),receipt_date:new Date().toLocaleString(),customer_name:'Sample Customer',customer_phone:'0550 00 00 00',user_name:'Cashier',created_by:'Cashier',items:[item('Example product',1200,2),item('Second item',850,1)],items_subtotal:3250,items_total:3250,tax:0,discount:0,charges:[],payment_mode:'Cash',partial_check:'false',sales_description:'Returns accepted within 7 days with receipt.'});
 }
 function seed(data){
- design=engine.defaults(data||{});format=design.defaultFormat||'80';
+ try{design=data&&data.receipt_designs?schema.normalize(data.receipt_designs):engine.defaults(data||{});}catch(_){design=engine.defaults(data||{});}
+ format=design.defaultFormat||'80';
  Object.keys(design.layouts).forEach(function(f){
   var l=design.layouts[f],cursor=8;l.canvas=true;
   l.canvasHeight=Math.max(480,Number(l.canvasHeight)||((f==='a4'?1100:f==='a5'?780:560)));
