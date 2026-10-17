@@ -286,7 +286,12 @@ class CreditService {
           const creditKey = Object.keys(multi).find((key) => key.toLowerCase() === 'credit');
           if (creditKey) multi[creditKey] = round2(Math.max(0, multi[creditKey] - paid));
           multi[method] = round2((Number(multi[method]) || 0) + paid);
-          await db.collection('sales').updateOne(saleQuery, {
+          // Optimistic compare-and-set on the original sale prevents two
+          // simultaneous collections from spending the same outstanding balance.
+          const guardedSaleQuery = { ...saleQuery };
+          if (sale.payment_pending == null) guardedSaleQuery.payment_pending = { $exists: false };
+          else guardedSaleQuery.payment_pending = sale.payment_pending;
+          const saleChanged = await db.collection('sales').updateOne(guardedSaleQuery, {
             $set: {
               payment_pending: nextSalePending,
               payment_status: nextSalePending <= 0 ? 'Paid' : 'Partialy Paid',
@@ -298,6 +303,18 @@ class CreditService {
             $inc: { paid_amount: paid },
             $push: { payments: { amount: paid, date: now, method, notes: 'Customer debt settlement', origin: { type: 'credit_settlement', transaction_id: String(row._id) } } },
           });
+          if (!saleChanged.matchedCount) {
+            // We already reduced the ledger row above. Restore it before
+            // returning an error so no payment is silently half-applied.
+            const restored = await db.collection('transaction').updateOne(
+              { _id: row._id, license: BaseModel.license, pending: nextPending },
+              { $set: { pending: oldPending, updated_date: now, last_payment_date: row.last_payment_date || null } }
+            );
+            if (!restored.matchedCount) {
+              throw new Error('POS sale changed during collection and the debt ledger could not be restored automatically. Stop collecting and reconcile this customer account.');
+            }
+            throw new Error('The original POS sale changed during collection. No payment was recorded; refresh and retry.');
+          }
         }
       }
       allocations.push({ transaction_id: String(row._id), sale_id: row.sale_id ? String(row.sale_id) : '', amount: paid, remaining: nextPending });
