@@ -942,7 +942,7 @@ PosnicPro.sales = {
             var historySort = PosnicPro.listSort.value('sales');
             var timeLabel = historySort === 'recent' ? PosnicPro.i18n.t('lang_order_created', 'Order created') : historySort === 'updated_desc' ? PosnicPro.i18n.t('lang_last_updated', 'Last updated') : PosnicPro.i18n.t('lang_sale_date_time', 'Sale date & time');
             var html = '<div class="table-responsive"><table class="table table-borderless">'
-                + '<thead><tr><th><lang class="lang_bill">Bill #</lang></th><th><lang class="lang_newcustomer_title">Customer</lang></th><th class="sl-col-date">' + esc(timeLabel) + '</th>'
+                + '<thead><tr><th><lang class="lang_bill">Bill #</lang></th><th><lang class="lang_newcustomer_title">Customer</lang></th><th>Vendeur</th><th class="sl-col-date">' + esc(timeLabel) + '</th>'
                 + (restaurant ? '<th><lang class="lang_table">Table</lang></th>' : '')
                 + '<th class="text-right sl-col-items"><lang class="lang_itemdetail_title">Items</lang></th><th class="text-right"><lang class="lang_total_title">Total</lang></th>'
                 + '<th class="text-center"><lang class="lang_userstatus">Status</lang></th></tr></thead><tbody>';
@@ -966,6 +966,7 @@ PosnicPro.sales = {
                     + ' data-id="' + esc(r._id) + '" style="cursor:pointer;">'
                     + '<td>' + esc(r.sales_id) + '</td>'
                     + '<td>' + esc(r.customer_name || 'Walk-in') + '</td>'
+                    + '<td class="sl-col-cashier">' + esc(r.cashier_name || r.seller_name || '-') + '</td>'
                     + '<td class="sl-col-date">' + esc(historyTime ? PosnicPro.convertDate(historyTime) : '-') + '</td>'
                     + (restaurant ? '<td>' + esc(r.table_number || '-') + '</td>' : '')
                     + '<td class="text-right sl-col-items">' + esc(r.number_of_items != null ? r.number_of_items : (r.items || []).length) + '</td>'
