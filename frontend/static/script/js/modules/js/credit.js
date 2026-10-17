@@ -7,6 +7,7 @@
  * numbers in the branch's own currency.
  */
 PosnicPro.credit = {
+  selectedCustomerId: null,
   esc: function (s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (m) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m];
@@ -74,11 +75,76 @@ PosnicPro.credit = {
             '<td>' + PosnicPro.credit.esc(r.name) + '</td>' +
             '<td>' + PosnicPro.credit.esc(r.phone || '') + '</td>' +
             '<td class="text-right text-danger">' + sign + (Number(r.due) || 0).toFixed(2) + '</td>' +
-            '<td class="text-center"><a href="javascript:void(0)" class="btn btn-sm btn-outline-primary credit-remind-one" data-id="' + r.customer_id + '">Remind</a></td>' +
+            '<td class="text-center text-nowrap"><button type="button" class="btn btn-sm btn-primary credit-open-ledger" data-id="' + r.customer_id + '" data-name="' + PosnicPro.credit.esc(r.name) + '">Debt / Collect</button> <a href="javascript:void(0)" class="btn btn-sm btn-outline-primary credit-remind-one" data-id="' + r.customer_id + '">Remind</a></td>' +
           '</tr>'
         );
       });
       $('#credit_outstanding_total').text(sign + total.toFixed(2));
+    });
+  },
+
+  loadLedger: function (customerId, customerName) {
+    PosnicPro.credit.selectedCustomerId = customerId;
+    $('#credit_ledger_title').text('Debt ledger — ' + (customerName || 'Customer'));
+    $('#credit_ledger_panel').show();
+    $('#credit_ledger_status').text('Loading debt details…');
+    $('#credit_ledger_body').empty();
+    PosnicPro.get('credit/ledger/' + encodeURIComponent(customerId), function (res) {
+      if (!res || res.type !== 'success') {
+        $('#credit_ledger_status').text((res && res.message) || 'Could not load debt details.');
+        return;
+      }
+      var rows = res.data || [], sign = PosnicPro.credit.sign(), body = $('#credit_ledger_body').empty();
+      if (!rows.length) {
+        body.append('<tr><td colspan="5" class="text-center text-muted py-3">No unpaid sale balances for this customer.</td></tr>');
+        $('#credit_ledger_due').text(sign + '0.00');
+        $('#credit_ledger_status').text('No outstanding debt.');
+        $('#credit_settle_amount').val('');
+        return;
+      }
+      var due = 0;
+      rows.forEach(function (r) {
+        due += Number(r.pending) || 0;
+        var date = r.date ? new Date(r.date).toLocaleDateString() : '—';
+        body.append('<tr><td>' + PosnicPro.credit.esc(date) + '</td><td>' + PosnicPro.credit.esc(r.receipt_number || r.sale_id || '—') + '</td><td>' + PosnicPro.credit.esc(r.description || 'Credit sale') + '</td><td class="text-right">' + sign + (Number(r.sale_total) || 0).toFixed(2) + '</td><td class="text-right text-danger">' + sign + (Number(r.pending) || 0).toFixed(2) + '</td></tr>');
+      });
+      $('#credit_ledger_due').text(sign + due.toFixed(2));
+      $('#credit_settle_amount').attr('max', due.toFixed(2)).val(due.toFixed(2));
+      $('#credit_ledger_status').text(rows.length + ' unpaid sale balance(s). Payments are applied oldest-first.');
+    });
+  },
+
+  settle: function () {
+    var customerId = PosnicPro.credit.selectedCustomerId;
+    var amount = Number($('#credit_settle_amount').val());
+    if (!customerId || !(amount > 0)) {
+      PosnicPro.alert('error', 'Enter a valid payment amount.');
+      return;
+    }
+    var dueText = String($('#credit_ledger_due').text() || '').replace(/[^0-9,.-]/g, '').replace(',', '.');
+    var due = Number(dueText);
+    if (Number.isFinite(due) && amount > due + 0.009) {
+      PosnicPro.alert('error', 'Payment cannot exceed the outstanding balance.');
+      return;
+    }
+    var button = $('#credit_settle_submit').prop('disabled', true);
+    PosnicPro.post({ url: 'credit/settle/' + encodeURIComponent(customerId), data: JSON.stringify({
+      amount: amount,
+      method: $('#credit_settle_method').val() || 'cash',
+      note: $('#credit_settle_note').val() || ''
+    }) }, function (res) {
+      button.prop('disabled', false);
+      if (!res || res.type !== 'success') {
+        PosnicPro.alert('error', (res && res.message) || 'Debt payment failed.');
+        return;
+      }
+      PosnicPro.alert('success', 'Payment recorded: ' + PosnicPro.credit.sign() + Number((res.data || {}).amount || amount).toFixed(2));
+      $('#credit_settle_note').val('');
+      PosnicPro.credit.loadOutstanding();
+      PosnicPro.credit.loadLedger(customerId, $('#credit_ledger_title').text().replace(/^Debt ledger — /, ''));
+    }, function (xhr) {
+      button.prop('disabled', false);
+      PosnicPro.alert('error', (xhr && xhr.responseJSON && xhr.responseJSON.message) || 'Debt payment failed.');
     });
   },
 
@@ -118,4 +184,15 @@ $(document).on('click', '#credit_remind_all', function () {
 });
 $(document).on('click', '#credit_remind_test', function () {
   PosnicPro.credit.remindAll(true);
+});
+
+$(document).on('click', '.credit-open-ledger', function () {
+  PosnicPro.credit.loadLedger($(this).data('id'), $(this).data('name'));
+});
+$(document).on('click', '#credit_settle_submit', function () {
+  PosnicPro.credit.settle();
+});
+$(document).on('click', '#credit_ledger_close', function () {
+  $('#credit_ledger_panel').hide();
+  PosnicPro.credit.selectedCustomerId = null;
 });
