@@ -8,46 +8,28 @@
     var copy = function (v) { return JSON.parse(JSON.stringify(v)); };
     function label(value) { return PosnicPro.receiptDesignLabel ? PosnicPro.receiptDesignLabel(value) : value; }
     function block(type, extra) { return Object.assign({ id: 'b' + Math.random().toString(36).slice(2), type: type, align: 'left' }, extra || {}); }
-    // Blank starting template: only the four structural receipt sections remain.
-    // Optional logo, customer fields, separators, text and footer blocks are added by the user.
-    // Existing saved designs are not migrated or overwritten by this template.
+    // A useful, shop-ready thermal template rather than a blank four-block skeleton.
+    // Existing saved designs are preserved; this template is used for new designs
+    // and when the owner explicitly chooses Reset template for a paper format.
     function standardLayout(format) {
         var sheet = !!contract.formats[format].height;
         var align = sheet ? 'left' : 'center';
-        return {
-            fontSize: contract.formats[format].font,
-            blocks: [
-                block('store', { align: align, fssaiInHeader: !sheet }),
-                block('transaction', sheet ? {} : { showTitle: false, fontSize: 10 }),
-                block('items', sheet ? {} : { itemLayout: 'columns', nameMaxChars: 20, lineStyle: 'dotted', fontSize: format === '58' ? 9 : 11 }),
-                block('totals')
-            ]
-        };
+        var blocks = [
+            block('logo', { align: 'center', width: sheet ? 22 : 45 }),
+            block('store', { align: align, fssaiInHeader: !sheet }),
+            block('transaction', { align: sheet ? 'right' : 'left', showTitle: false, fontSize: 10 }),
+            block('items', { itemLayout: sheet ? 'detailed' : 'columns', nameMaxChars: format === '58' ? 16 : 24, lineStyle: 'dotted', fontSize: sheet ? undefined : format === '58' ? 9 : 11 }),
+            block('totals', { align: 'left' }),
+            block('barcode', { align: 'center' }),
+            block('text', { text: 'Merci pour votre achat !', align: 'center', fontSize: 10 })
+        ];
+        if (contract.fieldAvailable('sale_note', {})) blocks.push(block('field', { field: 'sale_note', align: 'center' }));
+        return { fontSize: contract.formats[format].font, blocks: blocks };
     }
     function defaults(branch) {
         var result = { version: 1, defaultFormat: branch.print_type === 'a4' ? 'a4' : ['58', '80', '112'].indexOf(branch.print_width) !== -1 ? branch.print_width : '80', layouts: {} };
         Object.keys(contract.formats).forEach(function (format) {
-            var sheet = !!contract.formats[format].height;
-            var blocks = [];
-            if (on(branch.print_logoimg)) blocks.push(block('logo', { align: sheet ? 'left' : 'center' }));
-            if (branch.header_print && branch.header_print !== 'default') blocks.push(block('text', { text: plain(branch.header_print), align: 'center' }));
-            blocks.push(block('store', { align: sheet ? 'left' : 'center', fssaiInHeader: !sheet }), block('transaction', sheet ? {} : { showTitle: false, fontSize: 10 }));
-            if (branch.customer_print == null || on(branch.customer_print)) ['customer_name', 'customer_phone', 'customer_address'].forEach(function (field) { blocks.push(block('field', { field: field })); });
-            Object.keys({ table: 1, order_type: 1, covers: 1, steward: 1, session: 1, fssai: 1, source: 1 }).forEach(function (field) {
-                var key = { order_type: 'dine_type' }[field] || field;
-                if (contract.fieldAvailable(field, branch) && on(branch['bill_print_' + key])) blocks.push(block('field', { field: field }));
-            });
-            blocks.push(block('items', { hsn: on(branch.bill_print_hsn), itemLayout: sheet ? 'detailed' : 'columns', nameMaxChars: 20, lineStyle: 'dotted', fontSize: sheet ? undefined : format === '58' ? 9 : 11 }), block('totals'));
-            if (on(branch.bill_print_total_qty) || (!sheet && branch.bill_print_total_qty == null)) blocks.push(block('field', { field: 'total_quantity' }));
-            if (on(branch.print_sale_notes)) blocks.push(block('field', { field: 'sale_note' }));
-            if (branch.footer_print == null) blocks.push(block('text', { text: 'Thank you! Visit again.', align: 'center' }));
-            if (branch.footer_print) blocks.push(block('text', { text: plain(branch.footer_print), align: 'center' }));
-            if (branch.footer_image_caption) blocks.push(block('text', { text: branch.footer_image_caption, align: 'center' }));
-            if (branch.footer_qr_url) blocks.push(block('qr', { text: branch.footer_qr_url, src: branch.footer_image || '', width: sheet ? 20 : 50, align: 'center' }));
-            else if (contract.image(branch.footer_image)) blocks.push(block('image', { src: branch.footer_image, width: sheet ? 25 : 65, align: 'center' }));
-            if (on(branch.receipt_barcode)) blocks.push(block('barcode', { align: 'center' }));
-            if (on(branch.print_url)) blocks.push(block('field', { field: 'brand_url', align: 'center' }));
-            result.layouts[format] = { fontSize: contract.formats[format].font, blocks: blocks };
+            result.layouts[format] = standardLayout(format);
         });
         return result;
     }
