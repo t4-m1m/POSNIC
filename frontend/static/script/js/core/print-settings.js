@@ -88,28 +88,7 @@
             (desktop() ? '<button type="button" class="btn btn-outline-primary btn-sm mr-2" data-print-add>' + esc(PosnicPro.i18n.t('lang_print_add_sales_printer', 'Add sales printer')) + '</button>' : '') +
             '<button type="button" class="btn btn-primary btn-sm" data-print-save>' + esc(PosnicPro.i18n.t('lang_print_save_settings', 'Save print settings')) + '</button><span class="small ml-2" role="status" data-print-status></span></div></section>');
         features(featureState);
-        // Mount the visual Studio in the real Core Settings > Receipt Printing tab.
-        // Printer routing remains here; the obsolete receipt-content form is removed from the UI.
-        $('#receipt-print-behaviour').closest('section').hide();
-        var studio = $('#core-tab-print #receipt-designer');
-        if (!studio.length) {
-            $('#core-tab-print #print-printers').append('<div id="receipt-designer" class="mt-4"></div>');
-            studio = $('#core-tab-print #receipt-designer');
-        }
-        if (PosnicPro.receiptDesignerEditor) {
-            PosnicPro.receiptDesignerEditor.load(featureState);
-        } else if (!studio.data('studioLoading')) {
-            studio.data('studioLoading', true).html('<p class="text-muted">Loading Receipt Printing Studio…</p>');
-            $.getScript('static/script/js/modules/js/receipt-studio.js')
-                .done(function () {
-                    studio.removeData('studioLoading');
-                    if (PosnicPro.receiptDesignerEditor) PosnicPro.receiptDesignerEditor.load(featureState);
-                    else studio.text('Receipt Printing Studio could not initialize.');
-                })
-                .fail(function () {
-                    studio.removeData('studioLoading').html('<p class="text-danger">Receipt Printing Studio failed to load. Printer settings remain available above.</p>');
-                });
-        }
+
     }
     function collect() {
         var next = { sales: [], invoice: state.invoice, quotation: state.quotation, itemLanguages: { receipt: $('#print-item-receipt').val() || '', kot: $('#print-item-kot').val() || '', bilingual: $('#print-item-bilingual').prop('checked') === true } };
