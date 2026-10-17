@@ -13470,33 +13470,34 @@ $('#Partial_amount').keyup(
 
         let $multiInputs = $('.payment-amount-input');
         if ($multiInputs.length > 0) {
-            let nonZeroCount = 0;
-            let $lastNonZero = null;
-            $multiInputs.each(function () {
-                const method = String($(this).closest('.payment-method-card').find('.payment_mode').attr('id') || '').trim().toLowerCase();
-                if (method === 'credit') return;
-                let v = parseFloat($(this).val()) || 0;
-                if (v > 0) {
-                    nonZeroCount++;
-                    $lastNonZero = $(this);
-                }
-            });
-
-            const payAmount = isNaN(Partial_amount) ? 0 : Partial_amount;
-
-            if (!isNaN(payAmount)) {
-                if (nonZeroCount === 1 && $lastNonZero) {
-                    $lastNonZero.data('programmatic-change', true);
-                    $lastNonZero.val(payAmount.toFixed(2));
-                } else if (nonZeroCount === 0) {
-                    let $activeInput = $('.payment-method-card.payment-active').find('.payment-amount-input');
-                    if ($activeInput.length) {
-                        $activeInput.data('programmatic-change', true);
-                        $activeInput.val(payAmount.toFixed(2));
-                    }
-                }
+            const payAmount = Math.max(0, isNaN(Partial_amount) ? 0 : Partial_amount);
+            const $creditInput = $multiInputs.filter(function () {
+                return String($(this).closest('.payment-method-card').find('.payment_mode').attr('id') || '').trim().toLowerCase() === 'credit';
+            }).first();
+            let $activeInput = $('.payment-method-card.payment-active').find('.payment-amount-input').not($creditInput).first();
+            if (!$activeInput.length) {
+                $activeInput = $multiInputs.filter(function () {
+                    return String($(this).closest('.payment-method-card').find('.payment_mode').attr('id') || '').trim().toLowerCase() !== 'credit';
+                }).first();
             }
 
+            // "Montant payé" is the actual amount received, not the invoice total.
+            // Keep any other non-credit tender amounts and adjust the active one
+            // to the new received total. Credit is then the remaining invoice debt.
+            let otherReceived = 0;
+            $multiInputs.each(function () {
+                const method = String($(this).closest('.payment-method-card').find('.payment_mode').attr('id') || '').trim().toLowerCase();
+                if (method === 'credit' || ( $activeInput.length && this === $activeInput[0])) return;
+                otherReceived += Math.max(0, Number($(this).val()) || 0);
+            });
+            if ($activeInput.length) {
+                $activeInput.val(Math.max(0, payAmount - otherReceived).toFixed(2));
+            }
+            if ($creditInput.length) {
+                const total = Number(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot) || 0;
+                const due = Math.max(0, total - payAmount);
+                $creditInput.val($('#unpaid_payment_toggle').is(':checked') && due > 0.01 ? due.toFixed(2) : '0.00');
+            }
             PosnicPro.sales.initPaymentValidation();
         }
     }, 300)
