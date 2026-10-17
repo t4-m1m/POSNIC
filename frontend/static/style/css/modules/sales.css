@@ -784,6 +784,9 @@ body.customer-display .contentbar {
 }
 
 /* POS cashier shortcut bar and prominent customer-credit action */
+#touchsales_page > .sales-function-shortcuts{display:flex;clear:both;width:100%;max-width:100%;box-sizing:border-box;flex:0 0 100%;order:0;margin:0 0 12px;position:relative;z-index:1}
+#touchsales_page > .row:has(#instance-view, #items_view_hide){width:100%;margin-left:0;margin-right:0}
+#sales_customer_credit_button[hidden]{display:none!important}
 .sales-function-shortcuts{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:10px;background:#f6f7fb;border:1px solid #e5e7ef;border-radius:12px}
 .sales-function-key{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:8px 13px;border:1px solid #d9deea;border-radius:9px;background:#fff;color:#26334a;font-weight:700;cursor:pointer;transition:transform .12s,box-shadow .12s}
 .sales-function-key:hover,.sales-function-key:focus{transform:translateY(-1px);box-shadow:0 3px 9px rgba(25,35,55,.12);outline:2px solid #b8c8ff;outline-offset:1px}

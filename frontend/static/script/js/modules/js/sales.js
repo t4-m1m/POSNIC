@@ -11743,6 +11743,10 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
 };
 
 /* Customer debt entry point: opens the dedicated debt view for the selected saved customer. */
+$(document).on('input.posnicCustomerDebt', '#sales_new_customer_name', function () {
+    $('#sales_new_customer_id').val('');
+    PosnicPro.sales.refreshCustomerDebtButton(null);
+});
 PosnicPro.sales.openCustomerDebts = function () {
     var customerId = String($('#sales_new_customer_id').val() || $('#sales_customer_id').val() || $('#sales_new_customer_name').data('customer-id') || '').trim();
     var customerName = String($('#sales_new_customer_name').val() || '').trim();
@@ -12463,8 +12467,23 @@ PosnicPro.sales.refreshCustomerAccount = function () {
         target.append($('<a>').attr('href', '#/customers/' + id).text(t('lang_view_details', 'View details')));
     }, failed);
 };
+PosnicPro.sales.refreshCustomerDebtButton = function (data) {
+    var button = $('#sales_customer_credit_button');
+    if (!button.length) return;
+    var id = String(data && (data.id || data.customer_id) || $('#sales_new_customer_id').val() || '').trim();
+    var name = String(data && data.name || $('#sales_new_customer_name').val() || '').trim();
+    var raw = data && data.balance != null ? data.balance : $('#customer_current_balance').val();
+    var balance = Number(String(raw == null ? '0' : raw).replace(/,/g, ''));
+    var partial = data && (data.partial_balance === true || data.partial_balance === 'true' || data.partial_balance === 1 || data.partial_balance === '1');
+    var walkin = !id || !name || /walk.?in|cash customer|comptoir/i.test(name);
+    if (walkin || !partial || !Number.isFinite(balance) || balance <= 0) { button.prop('hidden', true).hide(); return; }
+    $('#sales_customer_credit_amount').text(balance.toLocaleString('fr-DZ', {minimumFractionDigits:2, maximumFractionDigits:2}));
+    button.find('.sales-credit-currency').text(String(PosnicPro.local.get('currencySign') || ''));
+    button.prop('hidden', false).show();
+};
 PosnicPro.sales.applyCustomerPick = function (data) {
     var customerRecord = [];
+    PosnicPro.sales.refreshCustomerDebtButton(data);
     PosnicPro.local.set('customerName', data.name);
     PosnicPro.local.set('customerPhone', data.phone);
     PosnicPro.local.set('customerEmail', data.email);
