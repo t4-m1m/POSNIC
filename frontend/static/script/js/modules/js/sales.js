@@ -11737,6 +11737,7 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
     }
     $(document).on('shown.bs.tab.cashierSettings', '#v-pills-general-tab, a[href="#core-tab-sale"]', renderCashierNames);
     $(function () { window.setTimeout(renderCashierNames, 0); });
+    $(document).on('posnic:general-settings-loaded', renderCashierNames);
     $(document).on('click.cashierSettings', '#cashier-name-add', function () {
         var input = $('#cashier-name-input'), name = String(input.val() || '').trim();
         if (!name) { input.focus(); return; }
@@ -11767,16 +11768,16 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         if ($('#posnic-vendeur-modal').length) return;
         $('body').append('<div class="modal fade" id="posnic-vendeur-modal" tabindex="-1" role="dialog" aria-labelledby="posnic-vendeur-title" aria-hidden="true" data-backdrop="static" data-keyboard="false">' +
             '<div class="modal-dialog modal-dialog-centered" role="document"><div class="modal-content posnic-vendeur-content">' +
-            '<div class="modal-header posnic-vendeur-header"><div><h5 class="modal-title font-weight-bold" id="posnic-vendeur-title">Vendeur</h5><span class="posnic-vendeur-eyebrow">VALIDATION DE VENTE</span><small>Choisissez le vendeur responsable de cette vente.</small></div></div>' +
+            '<div class="modal-header posnic-vendeur-header"><div><span class="posnic-vendeur-eyebrow">VALIDATION DE VENTE</span><h5 class="modal-title font-weight-bold" id="posnic-vendeur-title">Vendeur</h5><small>Choisissez le vendeur responsable de cette vente.</small></div></div>' +
             '<div class="modal-body"><label for="posnic-vendeur-select">Vendeur responsable</label><select id="posnic-vendeur-select" class="form-control"><option value="">Sélectionner un vendeur…</option></select>' +
             '<div id="posnic-vendeur-empty" class="posnic-vendeur-empty" hidden>Aucun vendeur configuré. Ajoutez-les dans Paramètres &gt; Général &gt; Vente.</div>' +
-            '<div class="small text-muted mt-2">La vente ne sera pas validée tant que le vendeur n’est pas confirmé.</div></div>' +
+            '<div class="posnic-vendeur-help">La vente ne sera pas validée tant que le vendeur n’est pas confirmé.</div></div>' +
             '<div class="modal-footer"><button type="button" class="btn btn-light" id="posnic-vendeur-cancel">Annuler</button><button type="button" class="btn btn-primary" id="posnic-vendeur-confirm" disabled>Confirmer et continuer</button></div>' +
             '</div></div></div>');
     }
     function askCashier(key) {
         ensureCashierModal();
-        var names = cashierNames(), $modal = $('#posnic-vendeur-modal'), $options = $('#posnic-vendeur-options');
+        var names = cashierNames(), $modal = $('#posnic-vendeur-modal');
         $modal.data('pending-key', key).data('pending-name', selectedCashier || '');
         var $select = $('#posnic-vendeur-select');
         $select.html('<option value="">Sélectionner un vendeur…</option>' + names.map(function (name) {
