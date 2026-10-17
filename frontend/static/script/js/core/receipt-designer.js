@@ -361,7 +361,6 @@
         // positioning once a block has been dragged.
         var html = sheet && !layout.canvas ? composeSheet(rendered) : rendered.map(function (b) { return b.html; }).join('');
         var canvasHeight = Math.max(80, Math.min(8000, Number(layout.canvasHeight) || 0));
-        var canvasTailStyle = layout.canvas ? ' style="position:absolute;left:0;top:' + canvasHeight + 'px;width:100%;text-align:center;"' : '';
         if (designs.showBranding !== false) html += '<section class="rd-block rd-branding" style="' + (layout.canvas ? 'position:absolute;left:0;top:' + canvasHeight + 'px;width:100%;' : '') + 'text-align:center;font-size:10px">Made with Posnic &middot; posnic.com</section>';
         if (pendingGoods) html += '<section class="rd-block rd-payment-status" style="' + (layout.canvas ? 'position:absolute;left:0;top:' + canvasHeight + 'px;width:100%;' : '') + '">' + esc(label('Payment pending')) + '</section>';
         if (sheet) {
