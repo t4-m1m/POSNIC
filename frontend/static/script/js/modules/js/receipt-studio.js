@@ -41,7 +41,7 @@ function render(){
  if(!root||!root.length)return;
  var f=schema.formats[format], l=layout();
  root.find('.rs-format').removeClass('active').filter('[data-format="'+format+'"]').addClass('active');
- root.find('.rs-paper').css({width:Math.min(100, f.height?100:100)+'%',minHeight:Math.max(260,Math.min(650,Number(l.canvasHeight)||320))+'px'});
+ root.find('.rs-paper').css({width:'100%',height:Math.max(260,Math.min(8000,Number(l.canvasHeight)||320))+'px',minHeight:'260px'});
  root.find('.rs-paper').empty();
  l.blocks.forEach(function(b){
    var label=names[b.type]||b.type, el=$('<button type="button" class="rs-object"></button>').attr('data-id',b.id).text(label);
@@ -108,7 +108,7 @@ function load(data){
  .on('change.receiptStudio','[data-prop]',function(){var b=current(),k=this.getAttribute('data-prop');if(!b)return;checkpoint();var v=this.value;b[k]=['x','y','w','h','rotation','fontSize'].indexOf(k)>=0?Number(v):v;render();status('Unsaved changes');})
  .on('change.receiptStudio','#rs-bold',function(){var b=current();if(!b)return;checkpoint();b.bold=this.checked;render();status('Unsaved changes');})
  .on('change.receiptStudio','#rs-image',function(){var file=this.files&&this.files[0],b=current();if(!file||!b)return;if(file.size>5*1024*1024){status('Image must be 5 MB or smaller.',true);return;}var reader=new FileReader();reader.onload=function(){var img=new Image();img.onload=function(){var c=document.createElement('canvas'),scale=Math.min(1,768/img.width,768/img.height);c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);checkpoint();b.src=c.toDataURL('image/png');render();status('Image added. Save to keep it.');};img.onerror=function(){status('Could not load this image.',true);};img.src=reader.result;};reader.readAsDataURL(file);})
- .on('click.receiptStudio','.rs-delete',function(){var i=layout().blocks.findIndex(function(b){return b.id===selected;});if(i<0)return;checkpoint();layout().blocks.splice(i,1);selected=layout().blocks[0]&&layout().blocks[0].id;render();status('Item removed');})
+ .on('click.receiptStudio','.rs-delete',function(){var i=layout().blocks.findIndex(function(b){return b.id===selected;});if(i<0)return;if(schema.required.indexOf(layout().blocks[i].type)!==-1){status('This required receipt section cannot be deleted.',true);return;}checkpoint();layout().blocks.splice(i,1);selected=layout().blocks[0]&&layout().blocks[0].id;render();status('Item removed');})
  .on('change.receiptStudio','.rs-height',function(){checkpoint();layout().canvasHeight=Math.max(240,Math.min(8000,Number(this.value)||320));render();status('Unsaved changes');});
  // Pointer drag and corner resize are confined to the receipt paper.
  root.on('pointerdown.receiptStudio','.rs-object',function(e){
