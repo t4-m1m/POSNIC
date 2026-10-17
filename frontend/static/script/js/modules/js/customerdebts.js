@@ -111,7 +111,7 @@
     selectedCustomerName = '';
   });
   $(function () {
-    if ((window.location.hash || '').replace(/^#\\//, '').split('/')[0] === 'customerdebts') {
+    if ((window.location.hash || '').replace(/^#\//, '').split('/')[0] === 'customerdebts') {
       PosnicPro.customerdebts.load();
     }
   });
