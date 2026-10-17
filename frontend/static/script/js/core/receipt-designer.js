@@ -263,7 +263,7 @@
                         if (Array.from(headerText).length * headerSize * 0.605 + 4 <= contract.formats[format].content * 96 / 25.4) billPrefix = prefix;
                     }
                     var saleNumberLabel = customLabel ? b.labelText : PosnicPro.i18n.t('lang_bill_no', 'Bill no');
-                    var sellerName = data.cashier_name || data.seller_name || data.steward_name || data.steward || data.created_by || data.user_name || '';
+                    var sellerName = data.user_name || data.created_by || data.seller_name || data.steward_name || data.steward || data.cashier_name || '';
                     content = '<div class="rd-transaction rd-sale-details">' +
                         '<div class="rd-sale-meta"><strong>' + esc(saleNumberLabel) + (data.sales_id ? ': ' + headerValue(data.sales_id) : '') + '</strong><span class="rd-transaction-date">' + thermalDate(formattedDate) + '</span></div>' +
                         '<hr class="rd-divider rd-sale-separator" style="width:100%;margin:4px 0">' +
@@ -378,7 +378,7 @@
         // positioning once a block has been dragged.
         var html = sheet && !layout.canvas ? composeSheet(rendered) : rendered.map(function (b) { return b.html; }).join('');
         var canvasHeight = Math.max(80, Math.min(8000, Number(layout.canvasHeight) || 0));
-        if (designs.showBranding !== false) html += '<section class="rd-block rd-branding" style="' + (layout.canvas ? 'position:absolute;left:0;top:' + canvasHeight + 'px;width:100%;' : '') + 'text-align:center;font-size:10px">Made with Posnic &middot; posnic.com</section>';
+        if (designs.showBranding === true) html += '<section class="rd-block rd-branding" style="' + (layout.canvas ? 'position:absolute;left:0;top:' + canvasHeight + 'px;width:100%;' : '') + 'text-align:center;font-size:10px">Made with Posnic &middot; posnic.com</section>';
         if (pendingGoods) html += '<section class="rd-block rd-payment-status" style="' + (layout.canvas ? 'position:absolute;left:0;top:' + canvasHeight + 'px;width:100%;' : '') + '">' + esc(label('Payment pending')) + '</section>';
         var canvasExtraHeight = 0;
         if (sheet) {
