@@ -2609,6 +2609,7 @@ PosnicPro.sales = {
             $('.partial_amount').prop('disabled', false).removeAttr('disabled');
             $('.showhidDue').show();
         }
+        if (PosnicPro.sales.updateWalkInPaymentAmountLock) PosnicPro.sales.updateWalkInPaymentAmountLock();
         let Partial_amount = parseFloat($('#Partial_amount').val());
         Partial_amount = isNaN(Partial_amount) ? 0 : Partial_amount;
         let balanceDue = PosnicPro.sales.sub(saleNewTot, Partial_amount).toFixed(2);
@@ -11818,8 +11819,30 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         var name = String($('#sales_new_customer_name').val() || '').trim();
         return name || 'Client de passage';
     }
+    PosnicPro.sales.updateWalkInPaymentAmountLock = function () {
+        var customerName = String($('#sales_new_customer_name').val() || '').trim();
+        var isWalkIn = !customerName || /walk.?in|cash customer|comptoir|client\s+de\s+passage/i.test(customerName);
+        var isNewCheckout = PosnicPro.sales.SaleAction === 'add' && PosnicPro.sales.paymentOnlyMode !== true;
+        var $amount = $('#Partial_amount');
+        if (!$amount.length || !isNewCheckout) return;
+        if (isWalkIn) {
+            var rawTotal = String($('#sales_new_grand_total').text() || $('.tendered_total').first().text() || '0').trim().replace(/\s/g, '');
+            if (rawTotal.indexOf(',') !== -1 && rawTotal.indexOf('.') !== -1) {
+                rawTotal = rawTotal.lastIndexOf(',') > rawTotal.lastIndexOf('.') ? rawTotal.replace(/\./g, '').replace(',', '.') : rawTotal.replace(/,/g, '');
+            } else if (rawTotal.indexOf(',') !== -1) {
+                rawTotal = rawTotal.replace(',', '.');
+            }
+            var total = parseFloat(rawTotal.replace(/[^0-9.-]/g, ''));
+            if (!isNaN(total) && total >= 0) $amount.val(total.toFixed(2));
+            $amount.prop('disabled', true).attr('aria-disabled', 'true')
+                .attr('title', 'Le montant payé est fixé au total pour un client de passage.');
+        } else {
+            $amount.prop('disabled', false).removeAttr('aria-disabled').removeAttr('title');
+        }
+    };
     PosnicPro.sales.syncCustomerHeader = function () {
         $('#sales-current-customer-name').text(currentClientName());
+        if (PosnicPro.sales.updateWalkInPaymentAmountLock) PosnicPro.sales.updateWalkInPaymentAmountLock();
     };
     function ensurePicker() {
         if (pickerReady) return;
@@ -11916,7 +11939,7 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         event.preventDefault(); event.stopPropagation();
         PosnicPro.sales.openCustomerPicker();
     });
-    $(document).on('input change', '#sales_new_customer_name', function () { PosnicPro.sales.syncCustomerHeader(); });
+    $(document).on('input change', '#sales_new_customer_name,#sales_new_customer_id', function () { PosnicPro.sales.syncCustomerHeader(); });
     $(document).on('click', '#sales_customer_walkin', function () { window.setTimeout(PosnicPro.sales.syncCustomerHeader, 0); });
     $(document).ready(function () { PosnicPro.sales.syncCustomerHeader(); });
 })();

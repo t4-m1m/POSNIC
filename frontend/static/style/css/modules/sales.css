@@ -986,3 +986,25 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
 #posnic-vendeur-modal .modal-footer .btn-light:hover{background:var(--theme-soft-bg,#f8fafc)}
 #posnic-vendeur-modal .modal-footer .btn:focus-visible{outline:2px solid var(--theme-primary-color,#2563eb);outline-offset:2px}
 @media(max-width:480px){#posnic-vendeur-modal .modal-dialog{width:calc(100% - 20px);margin:10px auto}#posnic-vendeur-modal .posnic-vendeur-header,#posnic-vendeur-modal .modal-body{padding-left:18px;padding-right:18px}#posnic-vendeur-modal .modal-footer{padding:12px 18px 18px}}
+
+
+/* Final sale-screen cleanup: remove the empty-basket illustration and legacy PAY action. */
+#sales_new_items_table .sales-cart-image{display:none!important}
+#sales_new .salesBalanceAmount{display:none!important}
+
+/* Vendor selector: neutral white surface with high-contrast, readable text. */
+#posnic-vendeur-modal .posnic-vendeur-content,
+#posnic-vendeur-modal .posnic-vendeur-header,
+#posnic-vendeur-modal .modal-body,
+#posnic-vendeur-modal .modal-footer{background:#fff!important;color:#1f2937!important}
+#posnic-vendeur-modal .modal-title,
+#posnic-vendeur-modal .modal-body label,
+#posnic-vendeur-modal .posnic-vendeur-content,
+#posnic-vendeur-modal #posnic-vendeur-select,
+#posnic-vendeur-modal #posnic-vendeur-cancel{color:#1f2937!important}
+#posnic-vendeur-modal .modal-header small,
+#posnic-vendeur-modal .posnic-vendeur-empty,
+#posnic-vendeur-modal .posnic-vendeur-help{color:#475569!important}
+#posnic-vendeur-modal #posnic-vendeur-select{background:#fff!important;border-color:#cbd5e1!important}
+#posnic-vendeur-modal .posnic-vendeur-empty{background:#f8fafc!important}
+#posnic-vendeur-modal .modal-footer{background:#f8fafc!important}
