@@ -306,6 +306,16 @@ const processSale = async (
     // Require a real customer account only when money remains due or credit is used.
     if (isWalkIn && (pendingBalance > 0.01 || creditTender > 0.01))
       return { status: false, message: 'Partial payment and credit require a registered customer. Collect the full amount for a walk-in sale.' };
+    if (creditTender > 0.01) {
+      // Enforce the shop's credit-module setting on the server as well as in
+      // the cashier UI. Do not rely on client-side controls for account credit.
+      let branchSettings = context.branchSettings;
+      if (!branchSettings && context.branchId) branchSettings = await getBranchById(context.branchId);
+      if (branchSettings && (branchSettings.module_credit_enable === false ||
+          String(branchSettings.module_credit_enable).trim().toLowerCase() === 'false')) {
+        return { status: false, message: 'Customer credit is disabled in settings. Collect the full amount to validate this sale.' };
+      }
+    }
     // 1. Basic Validation
     if ((parseFloat(data.sales_total) || 0) < 0) {
       // PHP checks < 1, but let's say 0 for safety, PHP said < 1
