@@ -4099,6 +4099,7 @@ class SalesRepository {
         branch_name: 1,
         user_id: 1,
         user_name: 1,
+          cashier_name: 1,
         sales_id: 1,
         date: 1,
         items: 1,
