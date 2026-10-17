@@ -8,7 +8,7 @@ var id=function(){return 'studio-'+Math.random().toString(36).slice(2,10);};
 var layout=function(){return design.layouts[format];};
 var current=function(){return layout().blocks.find(function(b){return b.id===selected;});};
 function status(s,bad){root.find('.rps-status').text(s).toggleClass('is-error',!!bad);}
-function checkpoint(){undo.push(engine.copy(design));if(undo.length>30)undo.shift();}
+function checkpoint(){undo.push(engine.copy(design));if(undo.length>30)undo.shift();redo=[];}
 function sample(){
  var item=function(n,p,q){return {item_name:n,item_price:p,item_quantity:q,item_unit:'ea',total_amount:p*q};};
  return Object.assign({},branch,{receipt_designs:design,sales_id:'SAMPLE-2026-1042',created_date:new Date().toLocaleString(),receipt_date:new Date().toLocaleString(),customer_name:'Sample Customer',customer_phone:'0550 00 00 00',user_name:'Logged-in user',created_by:'Logged-in user',cashier_name:'Amira Benali',items:[item('Example product',2500,2),item('Second item',2500,1)],items_subtotal:7500,items_total:7500,tax:0,discount:0,charges:[],payment_mode:'Cash, Credit',multi_payment:{Cash:5000,Credit:2500},partial_check:'true',partial_balance:5000,payment_pending:2500,sales_description:'Returns accepted within 7 days with receipt.'});
@@ -54,7 +54,7 @@ function inspector(b){
  if(b.type==='logo'||b.type==='image')out+='<label class="rps-label">Upload logo / image<input type="file" id="rps-image" accept="image/png,image/jpeg,image/webp"></label><small class="rps-help">PNG with transparent background recommended (max 5 MB).</small>';
  if(b.type==='transaction')out+='<label class="rps-check"><input type="checkbox" data-prop="showCashier" '+(b.showCashier!==false?'checked':'')+'> Show cashier name on receipt</label>';
  if(b.type==='totals')out+='<label class="rps-check"><input type="checkbox" data-prop="showPaymentMethod" '+(b.showPaymentMethod!==false?'checked':'')+'> Show payment method</label>';
- out+='<label class="rps-check"><input type="checkbox" data-prop="bold" '+(b.bold?'checked':'')+'> Bold text</label><button type="button" class="rps-delete">Remove element</button>';
+ out+='<label class="rps-check"><input type="checkbox" data-prop="bold" '+(b.bold?'checked':'')+'> Bold text</label><button type="button" class="rps-btn rps-duplicate" style="width:100%;margin-top:12px">Duplicate element</button><button type="button" class="rps-delete">Remove element</button>';
  return out;
 }
 function render(){
@@ -113,9 +113,19 @@ function load(data){
  .on('click.receiptStudioV2','.rps-up,.rps-down',function(){var row=$(this).closest('.rps-block-row'),i=layout().blocks.findIndex(function(b){return b.id===row.attr('data-id');}),j=i+($(this).hasClass('rps-up')?-1:1);if(j<0||j>=layout().blocks.length)return;checkpoint();var t=layout().blocks[i];layout().blocks[i]=layout().blocks[j];layout().blocks[j]=t;render();status('Unsaved changes');})
  .on('change.receiptStudioV2','[data-prop]',function(){var b=current(),k=this.getAttribute('data-prop');if(!b)return;checkpoint();if(this.type==='checkbox')b[k]=this.checked;else if(['x','y','w','h','rotation','fontSize','nameMaxChars'].includes(k))b[k]=Number(this.value);else b[k]=this.value;render();status('Unsaved changes');})
  .on('change.receiptStudioV2','#rps-image',function(){var file=this.files&&this.files[0],b=current();if(!file||!b)return;if(file.size>5*1024*1024){status('Image must be 5 MB or smaller.',true);return;}var reader=new FileReader();reader.onload=function(){var img=new Image();img.onload=function(){var c=document.createElement('canvas'),scale=Math.min(1,768/img.width,768/img.height);c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);checkpoint();b.src=c.toDataURL('image/png');render();status('Image added. Save to keep it.');};img.src=reader.result;};reader.readAsDataURL(file);})
+ .on('click.receiptStudioV2','.rps-duplicate',function(){var b=current();if(!b)return;checkpoint();var clone=engine.copy(b);clone.id=id();clone.y=Math.max(0,Number(b.y)||0)+(Number(b.h)||32)+8;layout().blocks.splice(layout().blocks.findIndex(function(x){return x.id===b.id;})+1,0,clone);selected=clone.id;layout().canvasHeight=Math.max(layout().canvasHeight,clone.y+(Number(clone.h)||32)+20);render();status('Element duplicated — edit the copy as needed');})
  .on('click.receiptStudioV2','.rps-delete',function(){var i=layout().blocks.findIndex(function(b){return b.id===selected;});if(i<0)return;checkpoint();layout().blocks.splice(i,1);selected=layout().blocks[0]&&layout().blocks[0].id;render();status('Element removed');})
  .on('change.receiptStudioV2','.rps-canvas-height',function(){checkpoint();layout().canvasHeight=Math.max(240,Math.min(8000,Number(this.value)||480));render();status('Unsaved changes');});
  if(!window.__posnicReceiptStudioMessageHandler){window.__posnicReceiptStudioMessageHandler=true;window.addEventListener('message',function(e){var d=e.data||{};if(d.type==='rps-select'){selected=d.id;render();}if(d.type==='rps-geometry'){var b=layout().blocks.find(function(x){return x.id===d.id;});if(b){checkpoint();b.x=Math.round(d.x*10)/10;b.y=Math.round(d.y);b.w=Math.round(d.w*10)/10;b.h=Math.round(d.h);layout().canvasHeight=Math.max(layout().canvasHeight,b.y+b.h+20);selected=b.id;render();status('Unsaved changes');}}});}
+ if(!window.__posnicReceiptStudioKeyboardHandler){window.__posnicReceiptStudioKeyboardHandler=true;document.addEventListener('keydown',function(e){
+  if(!root||!root.length||!root.is(':visible')||!root.find('.rps-app').length)return;
+  var tag=String(e.target&&e.target.tagName||'').toLowerCase();
+  if(['input','textarea','select'].includes(tag)||e.target&&e.target.isContentEditable)return;
+  var mod=e.ctrlKey||e.metaKey,key=String(e.key||'').toLowerCase();
+  if(mod&&key==='z'){e.preventDefault();if(e.shiftKey){if(redo.length){undo.push(engine.copy(design));design=redo.pop();render();status('Change restored');}}else if(undo.length){redo.push(engine.copy(design));design=undo.pop();render();status('Previous change restored');}return;}
+  if(mod&&key==='d'){e.preventDefault();var b=current();if(!b)return;checkpoint();var clone=engine.copy(b);clone.id=id();clone.y=Math.max(0,Number(b.y)||0)+(Number(b.h)||32)+8;layout().blocks.splice(layout().blocks.findIndex(function(x){return x.id===b.id;})+1,0,clone);selected=clone.id;layout().canvasHeight=Math.max(layout().canvasHeight,clone.y+(Number(clone.h)||32)+20);render();status('Element duplicated');return;}
+  if(e.key==='Delete'||e.key==='Backspace'){var i=layout().blocks.findIndex(function(b){return b.id===selected;});if(i>=0){e.preventDefault();checkpoint();layout().blocks.splice(i,1);selected=layout().blocks[0]&&layout().blocks[0].id;render();status('Element removed');}}
+ });}
 }
 PosnicPro.receiptDesignerEditor={load:load,save:persist,printSample:printSample};
 }());
