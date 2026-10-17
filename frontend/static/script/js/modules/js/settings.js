@@ -640,6 +640,7 @@ PosnicPro.settings = {
                     // Store general settings including hardware_weight_machine_enable
                     var generalSettings = {
                         stock_management: response.data['stock_management'] !== false,
+                        cashier_names: Array.isArray(response.data.cashier_names) ? response.data.cashier_names : [],
                         purchase_exchange_rate: Number(response.data['purchase_exchange_rate']) > 0 ? Number(response.data['purchase_exchange_rate']) : 280,
                         purchase_vat_rate: Number.isFinite(Number(response.data['purchase_vat_rate'])) ? Number(response.data['purchase_vat_rate']) : 9,
                         hardware_weight_machine_enable: response.data['hardware_weight_machine_enable'] || false,
@@ -1008,6 +1009,7 @@ PosnicPro.settings = {
                 // Store general settings including hardware_weight_machine_enable
                 var generalSettings = {
                     stock_management: data.stock_management !== false,
+                    cashier_names: Array.isArray(data.cashier_names) ? data.cashier_names : [],
                     purchase_exchange_rate: Number(data.purchase_exchange_rate) > 0 ? Number(data.purchase_exchange_rate) : 280,
                     purchase_vat_rate: Number.isFinite(Number(data.purchase_vat_rate)) ? Number(data.purchase_vat_rate) : 9,
                     hardware_weight_machine_enable: data.hardware_weight_machine_enable || false,
