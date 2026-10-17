@@ -379,6 +379,18 @@ const processSale = async (
     const customerRepository = new CustomerRepository();
     const registerRepository = new RegisterRepository();
 
+    // Verify the account actually exists, not just that the client supplied an
+    // arbitrary customer_id/name pair. Walk-in sales must settle in full.
+    if (pendingBalance > 0.01 || creditTender > 0.01) {
+      if (!data.customer_id || !ObjectId.isValid(String(data.customer_id))) {
+        return { status: false, message: 'Partial payment and credit require a registered customer. Collect the full amount for a walk-in sale.' };
+      }
+      const savedCustomer = await customerRepository.findById(String(data.customer_id));
+      if (!savedCustomer) {
+        return { status: false, message: 'The selected customer account was not found. Select a registered customer or collect the full amount.' };
+      }
+    }
+
     if (data.register_id) {
       const registerSession = await registerRepository.validateSessionOwner(
         data.register_id,
