@@ -15,7 +15,8 @@ var sizes={ '58':{w:48,h:280},'80':{w:72,h:320},'112':{w:104,h:350},a4:{w:186,h:
 function checkpoint(){undo.push(engine.copy(design));if(undo.length>20)undo.shift();}
 function status(s,bad){root.find('.rs-status').text(s).toggleClass('text-danger',!!bad);}
 function seed(data){
- design=data.receipt_designs?schema.normalize(data.receipt_designs):engine.defaults(data);
+ // Start from a fresh built-in layout instead of inheriting the obsolete designer's saved values.
+ design=engine.defaults(data);
  format=design.defaultFormat||'80';
  Object.keys(design.layouts).forEach(function(f){
    var l=design.layouts[f]; l.canvas=true;
