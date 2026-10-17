@@ -676,6 +676,7 @@ PosnicPro.settings = {
                         first_run_decided: PosnicPro.features.keepFirstRunFlag(response.data, 'first_run_decided')
                     };
                     PosnicPro.local.set('general_settings', JSON.stringify(generalSettings));
+                    $(document).trigger('posnic:general-settings-loaded');
                     PosnicPro.shiftWidget.applyEnabled();
                     
                     let branchRecord = [];
