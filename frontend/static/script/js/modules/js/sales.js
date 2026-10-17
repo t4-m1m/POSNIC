@@ -11593,7 +11593,7 @@ $(document).on('click.posnicCreditRules', '#save_btn', function (event) {
     var customerName = String($('#sales_new_customer_name').val() || '').trim();
     var unpaidAllowed = $('#unpaid_payment_toggle').is(':checked');
     if (!unpaidAllowed) return;
-    if (!customerId || !customerName || /walk.?in|cash customer|comptoir|client\\s+de\\s+passage/i.test(customerName)) {
+    if (!customerId || !customerName || /walk.?in|cash customer|comptoir|client\s+de\s+passage/i.test(customerName)) {
         event.preventDefault();
         event.stopImmediatePropagation();
         PosnicPro.alert('warning', 'Partial payment and credit are available only for a registered customer. Select the customer account or collect the full amount.');
@@ -11624,7 +11624,7 @@ $(document).on('input.posnicCustomerDebt', '#sales_new_customer_name', function 
 PosnicPro.sales.openCustomerDebts = function () {
     var customerId = String($('#sales_new_customer_id').val() || $('#sales_customer_id').val() || $('#sales_new_customer_name').data('customer-id') || '').trim();
     var customerName = String($('#sales_new_customer_name').val() || '').trim();
-    if (!customerId || !customerName || /walk.?in|cash customer|comptoir|client\\s+de\\s+passage/i.test(customerName)) {
+    if (!customerId || !customerName || /walk.?in|cash customer|comptoir|client\s+de\s+passage/i.test(customerName)) {
         PosnicPro.alert('warning', 'Sélectionnez un client enregistré pour consulter ses crédits.');
         return;
     }
@@ -12355,7 +12355,7 @@ PosnicPro.sales.refreshCustomerDebtButton = function (data) {
     var id = String(data && (data.id || data.customer_id) || $('#sales_new_customer_id').val() || '').trim();
     var name = String(data && data.name || $('#sales_new_customer_name').val() || '').trim();
     var request = ++PosnicPro.sales._debtButtonRequest;
-    var walkin = !id || !name || /walk.?in|cash customer|comptoir|client\\s+de\\s+passage/i.test(name);
+    var walkin = !id || !name || /walk.?in|cash customer|comptoir|client\s+de\s+passage/i.test(name);
     button.prop('hidden', true).hide();
     $('#sales_customer_credit_amount').text('0,00');
     button.find('.sales-credit-currency').text(String(PosnicPro.local.get('currencySign') || ''));
