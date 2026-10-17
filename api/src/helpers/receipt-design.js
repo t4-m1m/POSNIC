@@ -264,9 +264,11 @@
             throw new Error('Enter content for every QR code.');
           b.bold = block.bold === true;
         }
-        if (block.type === 'image' || block.type === 'qr' || block.type === 'signature') {
+        if (block.type === 'image' || block.type === 'logo' || block.type === 'qr' || block.type === 'signature') {
           if (block.type === 'image' && !image(block.src))
             throw new Error('Upload a PNG, JPEG or WebP image for each image block.');
+          if (block.type === 'logo' && block.src && !image(block.src))
+            throw new Error('Upload a PNG, JPEG or WebP image for the receipt logo.');
           // Signatures always come from the branch, never a stale per-layout copy.
           if (block.type !== 'signature' && image(block.src)) b.src = block.src;
           b.width = Math.max(
