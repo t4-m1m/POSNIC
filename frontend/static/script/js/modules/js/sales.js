@@ -2503,10 +2503,13 @@ PosnicPro.sales = {
                 normalizedStatusForPartial.indexOf('partial') !== -1
             );
 
-            var isPartialFlow = hasPartialCapability && isUnpaidOrPartialStatus;
+            var isPartialFlow = PosnicPro.sales.SaleAction === 'add' || (hasPartialCapability && isUnpaidOrPartialStatus);
 
             if (isPartialFlow) {
-                $('.partial_amount').removeAttr('disabled');
+                // New-sale checkout must always allow the cashier to enter the actual amount received.
+                // The balance and credit logic listens to #Partial_amount; disabling it here made
+                // normal cash sales appear locked when payment-only state leaked between screens.
+                $('.partial_amount').prop('disabled', false).removeAttr('disabled');
                 $('.showhidDue').show();
             } else {
                 // For normal customers (no partial flag) or fully paid
