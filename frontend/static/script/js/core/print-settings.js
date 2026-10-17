@@ -88,10 +88,27 @@
             (desktop() ? '<button type="button" class="btn btn-outline-primary btn-sm mr-2" data-print-add>' + esc(PosnicPro.i18n.t('lang_print_add_sales_printer', 'Add sales printer')) + '</button>' : '') +
             '<button type="button" class="btn btn-primary btn-sm" data-print-save>' + esc(PosnicPro.i18n.t('lang_print_save_settings', 'Save print settings')) + '</button><span class="small ml-2" role="status" data-print-status></span></div></section>');
         features(featureState);
-        // The legacy Receipt Studio UI is retired. Keep printer destination,
-        // paper, copies, and test-print handling here; the replacement editor
-        // will be added separately without changing this working print path.
-        $('#print-design #receipt-designer').empty();
+        // Mount the independent visual Studio below the existing printer controls.
+        // It edits the shared receipt design but keeps the established print adapter intact.
+        var studio = $('#print-design #receipt-designer');
+        if (!studio.length) {
+            $('#print-design').append('<div id="receipt-designer" class="mt-4"></div>');
+            studio = $('#print-design #receipt-designer');
+        }
+        if (PosnicPro.receiptDesignerEditor) {
+            PosnicPro.receiptDesignerEditor.load(featureState);
+        } else if (!studio.data('studioLoading')) {
+            studio.data('studioLoading', true).html('<p class="text-muted">Loading Receipt Printing Studio…</p>');
+            $.getScript('static/script/js/modules/js/receipt-studio.js')
+                .done(function () {
+                    studio.removeData('studioLoading');
+                    if (PosnicPro.receiptDesignerEditor) PosnicPro.receiptDesignerEditor.load(featureState);
+                    else studio.text('Receipt Printing Studio could not initialize.');
+                })
+                .fail(function () {
+                    studio.removeData('studioLoading').html('<p class="text-danger">Receipt Printing Studio failed to load. Printer settings remain available above.</p>');
+                });
+        }
     }
     function collect() {
         var next = { sales: [], invoice: state.invoice, quotation: state.quotation, itemLanguages: { receipt: $('#print-item-receipt').val() || '', kot: $('#print-item-kot').val() || '', bilingual: $('#print-item-bilingual').prop('checked') === true } };
