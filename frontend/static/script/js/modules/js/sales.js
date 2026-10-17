@@ -12012,7 +12012,7 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
 
         // F2 is the "open payment" action, never the fast/full-cash action.
         // If payment is already open, take the cashier directly to the amount field.
-        if ($('#tenderpage').is(':visible')) {
+        if ($('#infobar-settings-sidebar-tender-details').hasClass('sidebarview') && $('#tenderpage').length) {
             var amountField = document.getElementById('Partial_amount') || document.getElementById('tendered_amount');
             if (amountField) { amountField.focus(); if (amountField.select) amountField.select(); }
             return;
@@ -12088,7 +12088,7 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
             }, 100);
         }
 
-        if ($('#tenderpage').is(':visible')) {
+        if ($('#infobar-settings-sidebar-tender-details').hasClass('sidebarview') && $('#tenderpage').length) {
             submitVisiblePayment();
         } else {
             var checkout = document.querySelector('#check_button');
