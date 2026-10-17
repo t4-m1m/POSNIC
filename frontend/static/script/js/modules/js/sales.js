@@ -111,10 +111,10 @@ PosnicPro.sales = {
             state.placeholder.style.height = Math.max(toolbar.offsetHeight, 1) + 'px';
         }
         function schedulePin() {
-            if (state.frame) return;
-            state.frame = true;
-            if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(updatePin);
-            else updatePin();
+            // Scroll events are already coalesced by the browser. Run the
+            // geometry check immediately so nested POS scroll panes cannot
+            // defer pinning until scrolling stops.
+            updatePin();
         }
         if (!state.installed) {
             // Capture catches scroll events from nested scrollable POS containers,
