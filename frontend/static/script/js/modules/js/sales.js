@@ -11754,7 +11754,8 @@ PosnicPro.sales.openCustomerDebts = function () {
         PosnicPro.alert('warning', 'Sélectionnez un client enregistré pour consulter ses crédits.');
         return;
     }
-    window.location.hash = '#/customerdebts?customer_id=' + encodeURIComponent(customerId);
+    PosnicPro.sales._debtCustomerToOpen = { id: customerId, name: customerName };
+    window.location.hash = '#/customerdebts';
 };
 
 /* POS keyboard shortcuts: operate only while the sale workspace is visible.
