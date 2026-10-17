@@ -41,6 +41,11 @@
           body.append('<tr><td><strong>' + esc(row.name || 'Customer') + '</strong></td><td>' + esc(row.phone || '—') + '</td><td class="text-right text-danger">' + money(due) + '</td><td class="text-center text-nowrap"><button type="button" class="btn btn-sm btn-primary debts-open-ledger" data-id="' + esc(row.customer_id) + '" data-name="' + esc(row.name || 'Customer') + '">Debt / Collect</button></td></tr>');
         });
         $('#debts_outstanding_total').text(money(total));
+        var pendingCustomer = PosnicPro.sales && PosnicPro.sales._debtCustomerToOpen;
+        if (pendingCustomer && pendingCustomer.id) {
+          PosnicPro.sales._debtCustomerToOpen = null;
+          PosnicPro.customerdebts.openLedger(pendingCustomer.id, pendingCustomer.name);
+        }
       });
     },
     openLedger: function (customerId, name) {
