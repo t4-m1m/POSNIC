@@ -127,63 +127,67 @@
                 host.css({ width: width * scale, height: height * scale });
             };
             fit(); $(doc).find('img').on('load error', fit);
-            // The ticket preview is a direct-manipulation canvas: click a block to inspect it,
-            // then drag it onto another block to position it in the printed reading order.
-            // The receipt renderer remains flow-based so thermal printers never overlap text.
+            // Free-position canvas: on first drag, preserve current rendered positions,
+            // then save each element's coordinates so preview and print share the layout.
             var previewBlocks = $(doc).find('[data-block-id]');
-            previewBlocks.attr('draggable', 'true').on('click', function (event) {
-                event.preventDefault();
-                selected = this.getAttribute('data-block-id');
-                renderList();
-            }).on('dragstart', function (event) {
-                drag = { id: this.getAttribute('data-block-id'), format: format };
-                try { event.originalEvent.dataTransfer.setData('text/plain', drag.id); } catch (_) {}
-                if (event.originalEvent.dataTransfer) event.originalEvent.dataTransfer.effectAllowed = 'move';
-                this.style.opacity = '0.45';
-            }).on('dragend', function () {
-                this.style.opacity = '';
-                previewBlocks.removeClass('rd-drop-target');
-            }).on('dragover', function (event) {
-                if (!drag || drag.format !== format) return;
-                event.preventDefault();
-                if (event.originalEvent.dataTransfer) event.originalEvent.dataTransfer.dropEffect = 'move';
-                previewBlocks.removeClass('rd-drop-target');
-                this.classList.add('rd-drop-target');
-            }).on('dragleave', function () {
-                this.classList.remove('rd-drop-target');
-            }).on('drop', function (event) {
-                if (!drag || drag.format !== format) return;
-                event.preventDefault();
-                var fromId = drag.id;
-                var toId = this.getAttribute('data-block-id');
-                drag = null;
-                previewBlocks.removeClass('rd-drop-target');
-                if (!fromId || !toId) return;
+            var article = doc.querySelector('.rd-document');
+            var canvasLayout = layout();
+            if (article && canvasLayout.canvas) {
+                article.style.position = 'relative';
+                article.style.height = (Number(canvasLayout.canvasHeight) || article.scrollHeight) + 'px';
+                previewBlocks.each(function () {
+                    var b = canvasLayout.blocks.find(function (x) { return x.id === this.getAttribute('data-block-id'); }, this);
+                    if (!b) return;
+                    this.style.position = 'absolute'; this.style.left = (Number(b.x) || 0) + '%';
+                    this.style.top = (Number(b.y) || 0) + 'px'; this.style.width = (Number(b.w) || 100) + '%';
+                    this.style.margin = '0';
+                });
+            }
+            previewBlocks.attr('draggable', 'false').on('click', function (event) {
+                event.preventDefault(); selected = this.getAttribute('data-block-id'); renderList();
+            }).on('pointerdown', function (event) {
+                if (event.button !== 0 || !article) return;
+                var id = this.getAttribute('data-block-id');
+                selected = id;
                 var blocks = layout().blocks;
-                var from = blocks.findIndex(function (b) { return b.id === fromId; });
-                var to = blocks.findIndex(function (b) { return b.id === toId; });
-                if (from < 0 || to < 0) return;
-                // Horizontal drop position sets the selected block's alignment;
-                // vertical drop position reorders it in the receipt. The flow
-                // renderer intentionally avoids absolute overlap on thermal paper.
-                var rect = doc.body.getBoundingClientRect();
-                var x = event.originalEvent.clientX - rect.left;
-                var ratio = rect.width ? x / rect.width : 0.5;
-                var alignment = ratio < 0.34 ? 'left' : ratio > 0.66 ? 'right' : 'center';
-                var next = blocks.slice();
-                var moved = next.splice(from, 1)[0];
-                next.splice(to, 0, moved);
-                if (next.findIndex(function (b) { return b.type === 'totals'; }) < next.findIndex(function (b) { return b.type === 'items'; })) {
-                    status(t('Keep totals below the items.'), true);
-                    return;
+                if (!layout().canvas) {
+                    var ar = article.getBoundingClientRect();
+                    blocks.forEach(function (b) {
+                        var node = doc.querySelector('[data-block-id="' + b.id + '"]');
+                        if (!node) return;
+                        var r = node.getBoundingClientRect();
+                        b.x = Math.max(0, (r.left - ar.left) / Math.max(1, ar.width) * 100);
+                        b.y = Math.max(0, r.top - ar.top); b.w = Math.min(100, r.width / Math.max(1, ar.width) * 100);
+                        b.h = Math.max(1, r.height);
+                    });
+                    layout().canvas = true; layout().canvasHeight = Math.max(article.scrollHeight, ar.height);
+                    article.style.position = 'relative'; article.style.height = layout().canvasHeight + 'px';
+                    previewBlocks.each(function () {
+                        var b = blocks.find(function (x) { return x.id === this.getAttribute('data-block-id'); }, this);
+                        if (!b) return;
+                        this.style.position = 'absolute'; this.style.left = b.x + '%'; this.style.top = b.y + 'px';
+                        this.style.width = b.w + '%'; this.style.margin = '0';
+                    });
                 }
-                if (moved.align === alignment && from === to) return;
+                var b = blocks.find(function (x) { return x.id === id; });
+                if (!b) return;
                 checkpoint();
-                moved.align = alignment;
-                layout().blocks = next;
-                selected = fromId;
-                renderList();
-                changed();
+                drag = { id: id, format: format, startX: event.clientX, startY: event.clientY,
+                    x: Number(b.x) || 0, y: Number(b.y) || 0, width: article.getBoundingClientRect().width };
+                try { this.setPointerCapture(event.pointerId); } catch (_) {}
+                event.preventDefault();
+            }).on('pointermove', function (event) {
+                if (!drag || drag.format !== format || drag.id !== this.getAttribute('data-block-id')) return;
+                var b = layout().blocks.find(function (x) { return x.id === drag.id; });
+                if (!b) return;
+                b.x = Math.max(0, Math.min(100 - (Number(b.w) || 20), drag.x + (event.clientX - drag.startX) / Math.max(1, drag.width) * 100));
+                b.y = Math.max(0, drag.y + event.clientY - drag.startY);
+                this.style.left = b.x + '%'; this.style.top = b.y + 'px';
+                layout().canvasHeight = Math.max(Number(layout().canvasHeight) || 0, b.y + (Number(b.h) || 24));
+                article.style.height = layout().canvasHeight + 'px';
+            }).on('pointerup pointercancel', function (event) {
+                if (!drag || drag.format !== format || drag.id !== this.getAttribute('data-block-id')) return;
+                drag = null; renderList(); changed();
             });
             if (observer) observer.disconnect();
             if (window.ResizeObserver) { observer = new ResizeObserver(fit); observer.observe(box.find('.rd-preview-stage')[0]); }
