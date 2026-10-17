@@ -2224,6 +2224,8 @@ PosnicPro.sales = {
             $('#sales_new_customer_partial_balance').val('false');
             $('#unpaid_payment_toggle').prop('checked', true).trigger('change');
             $('#tenderpage').hide();
+            $('#infobar-settings-sidebar-tender-details').removeClass('sidebarview').hide();
+            $('.infobar-settings-sidebar-overlay').css({ background: 'none', position: 'relative' });
             $('#newsalespage').show();
         } else {
             $('#tenderpage').show();
@@ -4701,6 +4703,7 @@ PosnicPro.sales.addSale = {
                     var askPrint = (PosnicPro.askposnic && PosnicPro.askposnic.checkout && PosnicPro.askposnic.checkout.print === true)
                         || window.__posnicFastPrintPending === true;
                     window.__posnicFastPrintPending = false;
+                    window.__posnicFastPayPending = false;
                     if (PosnicPro.askposnic) PosnicPro.askposnic.checkout = null;
                     $('#ask_checkout_payment').remove();
                     // Cashier checkout always prints immediately after a successful save.
