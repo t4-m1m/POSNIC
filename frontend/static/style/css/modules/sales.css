@@ -805,3 +805,10 @@ body.customer-display .contentbar {
 #sales_new .touch-table-tbody tr.posnic-selected-sale-line > td:first-child {
     box-shadow: inset 3px 0 0 var(--primary, #506fe4), inset 0 2px 0 var(--primary, #506fe4), inset 0 -2px 0 var(--primary, #506fe4);
 }
+
+/* The checkout total stays visible alongside the cashier function keys. */
+#sales-function-shortcuts{align-items:center}
+.sales-shortcut-total{margin-left:auto;display:flex;align-items:flex-end;justify-content:center;flex-direction:column;min-width:180px;padding:6px 14px;border:1px solid #b7c7f5;border-radius:10px;background:#eef3ff;color:#1c2d50;line-height:1.2}
+.sales-shortcut-total>span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a6a88}
+.sales-shortcut-total strong{font-size:26px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+@media(max-width:767.98px){.sales-shortcut-total{flex:1 1 100%;min-width:0;align-items:flex-end}.sales-shortcut-total strong{font-size:22px}}
