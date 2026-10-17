@@ -11775,16 +11775,19 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         ensureCashierModal();
         var names = cashierNames(), $modal = $('#posnic-vendeur-modal'), $options = $('#posnic-vendeur-options');
         $modal.data('pending-key', key).data('pending-name', selectedCashier || '');
-        $('#posnic-vendeur-manual').val('');
-        $options.html(names.length ? names.map(function (name) {
-            var active = name === selectedCashier;
-            return '<button type="button" class="btn cashier-choice ' + (active ? 'btn-primary' : 'btn-outline-secondary') + '" data-name="' + escapeText(name) + '" style="min-height:54px;border-radius:10px;font-weight:650">' + escapeText(name) + '</button>';
-        }).join('') : '<div class="text-muted small" style="grid-column:1/-1">Aucun vendeur enregistré dans Paramètres. Saisissez un nom ci-dessous.</div>');
-        $options.off('click.cashier').on('click.cashier', '.cashier-choice', function () {
-            $options.find('.cashier-choice').removeClass('btn-primary').addClass('btn-outline-secondary');
-            $(this).removeClass('btn-outline-secondary').addClass('btn-primary');
-            $modal.data('pending-name', $(this).attr('data-name'));
-            $('#posnic-vendeur-manual').val('');
+        var $select = $('#posnic-vendeur-select');
+        $select.html('<option value="">Sélectionner un vendeur…</option>' + names.map(function (name) {
+            return '<option value="' + escapeText(name) + '">' + escapeText(name) + '</option>';
+        }).join(''));
+        var initial = names.indexOf(selectedCashier) !== -1 ? selectedCashier : '';
+        $select.val(initial);
+        $modal.data('pending-name', initial);
+        $('#posnic-vendeur-empty').prop('hidden', names.length > 0);
+        $('#posnic-vendeur-confirm').prop('disabled', !initial || !names.length);
+        $select.off('change.cashier').on('change.cashier', function () {
+            var value = String($(this).val() || '');
+            $modal.data('pending-name', value);
+            $('#posnic-vendeur-confirm').prop('disabled', !value);
         });
         $modal.modal('show');
     }
