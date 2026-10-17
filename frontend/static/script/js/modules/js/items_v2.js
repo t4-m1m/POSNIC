@@ -262,7 +262,12 @@
     }
     function bind() {
         if (bound) return; bound = true;
-        var form = document.getElementById('iv2-form'); form.addEventListener('submit', save);
+        var form = document.getElementById('iv2-form');
+        // The editor is multi-step: native browser validation tries to validate
+        // required controls in hidden panels before submit fires, preventing the
+        // custom validator/save handler from running at all. Validate in save().
+        form.noValidate = true;
+        form.addEventListener('submit', save);
         form.addEventListener('focusout', function (event) { touched.add(event.target.id); if (!saved && !busy) render(); });
         form.addEventListener('input', function (event) {
             if (event.target.id === 'iv2-name' || event.target.id === 'iv2-price') document.getElementById('iv2-confirm-zero').checked = false;
