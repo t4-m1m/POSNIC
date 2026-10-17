@@ -295,8 +295,15 @@ const processSale = async (
     )
       return { status: false, message: 'Unsupported decision preview' };
     // Name-only checkout keeps a bill snapshot without inventing a customer account.
-    if (!data.customer_id && [true, 'true'].includes(data.partial_check))
-      return { status: false, message: 'Choose a saved customer for customer credit.' };
+    const partialFlag = data.partial_check === true ||
+      String(data.partial_check == null ? '' : data.partial_check).trim().toLowerCase() === 'true' ||
+      String(data.partial_check == null ? '' : data.partial_check).trim().toLowerCase() === 'partial';
+    const paymentMap = data.multi_payment && typeof data.multi_payment === 'object' ? data.multi_payment : {};
+    const creditTender = Object.keys(paymentMap).reduce((sum, method) =>
+      String(method).trim().toLowerCase() === 'credit' ? sum + Math.max(0, Number(paymentMap[method]) || 0) : sum, 0);
+    if ((!data.customer_id || !String(data.customer_name || '').trim()) &&
+      (partialFlag || creditTender > 0.01 || Number(data.payment_pending || 0) > 0.01))
+      return { status: false, message: 'Partial payment and credit require a saved customer account. Collect the full amount for a walk-in sale.' };
     // 1. Basic Validation
     if ((parseFloat(data.sales_total) || 0) < 0) {
       // PHP checks < 1, but let's say 0 for safety, PHP said < 1
