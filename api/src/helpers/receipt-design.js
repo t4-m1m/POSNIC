@@ -223,6 +223,21 @@
         if (block.type === 'store' && block.showEmail === false) b.showEmail = false;
         if (textTypes.includes(block.type)) {
           b.bold = block.bold === true;
+          // Keep the visual editor's per-element font choice across API saves.
+          // The renderer accepts only this allow-list, so saved designs cannot inject CSS.
+          const fontFamilies = [
+            'Arial, sans-serif',
+            'Tahoma, sans-serif',
+            'Verdana, sans-serif',
+            'Georgia, serif',
+            'Courier New, monospace',
+            'monospace',
+          ];
+          if (block.fontFamily != null) {
+            if (!fontFamilies.includes(block.fontFamily))
+              throw new Error('Choose a supported receipt font.');
+            b.fontFamily = block.fontFamily;
+          }
           if (block.fontSize != null && block.fontSize !== '') {
             const fontSize = Number(block.fontSize);
             if (!Number.isFinite(fontSize) || fontSize < 8 || fontSize > 32)
