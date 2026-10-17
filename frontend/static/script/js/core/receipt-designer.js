@@ -329,7 +329,7 @@
                 }
                 content += '</div>';
             } else if (b.type === 'field') {
-                var value = b.field === 'sale_note' && Object.prototype.hasOwnProperty.call(b, 'text') ? b.text : values[b.field];
+                var value = b.field === 'sale_note' && typeof b.text === 'string' && b.text.trim() ? b.text : values[b.field];
                 if (!present(value)) return '';
                 content = '<div class="rd-text">' + (b.field === 'brand_url' ? '' : '<strong class="rd-field-label">' + esc(fieldLabel(b.field)) + ':</strong> ') + esc(String(value).trim()) + '</div>';
             } else if (b.type === 'text') {
