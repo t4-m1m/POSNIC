@@ -105,9 +105,13 @@
     }
     function render() {
         var dishChoice = document.querySelector('#items_v2 input[name="iv2-kind"][value="dish"]');
-        dishChoice.closest('label').hidden = !capabilities.restaurant;
-        dishChoice.disabled = !capabilities.restaurant;
-        document.querySelector('#items_v2 .iv2-types').style.gridTemplateColumns = 'repeat(' + (capabilities.restaurant ? 3 : 2) + ', minmax(0, 1fr))';
+        if (dishChoice) {
+            var dishLabel = dishChoice.closest('label');
+            if (dishLabel) dishLabel.hidden = !capabilities.restaurant;
+            dishChoice.disabled = !capabilities.restaurant;
+        }
+        var typeGrid = document.querySelector('#items_v2 .iv2-types');
+        if (typeGrid) typeGrid.style.gridTemplateColumns = 'repeat(' + (capabilities.restaurant ? 3 : 2) + ', minmax(0, 1fr))';
         if (dishChoice && !capabilities.restaurant && dishChoice.checked) {
             document.querySelector('#items_v2 input[name="iv2-kind"][value="product"]').checked = true;
             document.querySelector('#items_v2 input[name="iv2-stock"][value="tracked"]').checked = true;
