@@ -306,7 +306,7 @@ const processSale = async (
     // Require a real customer account only when money remains due or credit is used.
     if (isWalkIn && (pendingBalance > 0.01 || creditTender > 0.01))
       return { status: false, message: 'Partial payment and credit require a registered customer. Collect the full amount for a walk-in sale.' };
-    if (creditTender > 0.01) {
+    if (pendingBalance > 0.01 || creditTender > 0.01) {
       // Enforce the shop's credit-module setting on the server as well as in
       // the cashier UI. Do not rely on client-side controls for account credit.
       let branchSettings = context.branchSettings;
