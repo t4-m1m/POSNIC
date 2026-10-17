@@ -138,6 +138,19 @@
           type: block.type,
           align: ['left', 'center', 'right'].includes(block.align) ? block.align : 'left',
         };
+        // Preserve visual-editor geometry. Dropping these fields during API
+        // normalization made every save silently reset drag, resize and rotation.
+        for (const [key, min, max] of [
+          ['x', 0, 100], ['y', 0, 5000], ['w', 2, 100], ['h', 8, 2000],
+          ['rotation', -180, 180],
+        ]) {
+          if (block[key] != null && block[key] !== '') {
+            const value = Number(block[key]);
+            if (!Number.isFinite(value) || value < min || value > max)
+              throw new Error('Invalid receipt block ' + key + ' value.');
+            b[key] = value;
+          }
+        }
         if (block.type === 'field') {
           if (!Object.prototype.hasOwnProperty.call(fields, block.field))
             throw new Error('Unknown receipt field.');
@@ -262,7 +275,12 @@
         blocks.findIndex((b) => b.type === 'totals') < blocks.findIndex((b) => b.type === 'items')
       )
         throw new Error('Place totals after the items.');
-      out.layouts[format] = { fontSize: size, blocks: blocks };
+      const canvasHeight = Number(layout.canvasHeight);
+      out.layouts[format] = {
+        fontSize: size,
+        blocks: blocks,
+        ...(layout.canvas === true ? { canvas: true, canvasHeight: Number.isFinite(canvasHeight) ? Math.max(80, Math.min(8000, canvasHeight)) : 0 } : {}),
+      };
     });
     return out;
   }
