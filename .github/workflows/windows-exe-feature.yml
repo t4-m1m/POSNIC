@@ -55,15 +55,17 @@ jobs:
           Remove-Item mongodb.zip -Force
           Remove-Item mongodb-temp -Recurse -Force
           node scripts/check-mongodb-binaries.js
-      - name: Build Windows EXE only (no tests)
-        run: npm run build
+      - name: Build Windows installer and portable EXE (no tests)
+        run: |
+          npm run build
+          npm run build:portable
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload Windows installer artifact
+      - name: Upload Windows installer and standalone EXE
         uses: actions/upload-artifact@v4
         with:
           name: POSNIC-Windows-EXE-feature-branch
           path: |
-            dist/*-windows-x64-installer.exe
+            dist/*.exe
           if-no-files-found: error
           retention-days: 14
