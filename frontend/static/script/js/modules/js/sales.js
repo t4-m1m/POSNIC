@@ -14428,13 +14428,28 @@ $(document).ready(function () {
             var self = this;
             bar.innerHTML = '';
             this.sessions.forEach(function (session) {
+                var tab = document.createElement('div');
+                tab.className = 'posnic-basket-tab-wrap' + (session.id === self.activeId ? ' is-active' : '');
                 var button = document.createElement('button');
                 button.type = 'button';
                 button.className = 'posnic-basket-tab' + (session.id === self.activeId ? ' is-active' : '');
                 button.setAttribute('aria-pressed', session.id === self.activeId ? 'true' : 'false');
                 button.textContent = session.label;
                 button.addEventListener('click', function () { self.switchTo(session.id); });
-                bar.appendChild(button);
+                tab.appendChild(button);
+                var close = document.createElement('button');
+                close.type = 'button';
+                close.className = 'posnic-basket-close';
+                close.setAttribute('aria-label', 'Fermer ' + session.label);
+                close.setAttribute('title', 'Fermer ce panier');
+                close.textContent = '×';
+                close.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    self.close(session.id);
+                });
+                tab.appendChild(close);
+                bar.appendChild(tab);
             });
             var add = document.createElement('button');
             add.type = 'button';
@@ -14471,6 +14486,31 @@ $(document).ready(function () {
             if (!next) return;
             this.activeId = id;
             this.restore(next.snapshot);
+            this.render();
+        },
+        close: function (id) {
+            if (this.sessions.length <= 1) {
+                PosnicPro.alert('warning', 'Gardez au moins un panier ouvert.');
+                return;
+            }
+            var session = this.sessions.find(function (item) { return item.id === id; });
+            if (!session) return;
+            if (id === this.activeId) session.snapshot = this.snapshot();
+            var snap = session.snapshot || {};
+            var values = snap.values || {};
+            var hasLines = ['SaleTableLineItems', 'sale_offlineadditems', 'addSalesLineTable', 'addLineTable']
+                .some(function (key) { return Array.isArray(values[key]) && values[key].length > 0; });
+            if (!hasLines && typeof snap.cartHtml === 'string') {
+                hasLines = /<tr\\b[^>]*data-(?:item|id|product)|<tr\\b[^>]*class=["'][^"']*(?:sale|item|product)/i.test(snap.cartHtml);
+            }
+            if (hasLines && !window.confirm('Ce panier contient des articles. Fermer ce client et abandonner son panier ?')) return;
+            var index = this.sessions.findIndex(function (item) { return item.id === id; });
+            this.sessions.splice(index, 1);
+            if (id === this.activeId) {
+                var next = this.sessions[Math.min(index, this.sessions.length - 1)];
+                this.activeId = next.id;
+                this.restore(next.snapshot);
+            }
             this.render();
         },
         create: function () {
