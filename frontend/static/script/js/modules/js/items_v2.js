@@ -68,7 +68,7 @@
     var bound = false, taxReady = false, taxLoading = false, busy = false, saved = false, attempted = false;
     function value(id) { return document.getElementById(id).value; }
     function selected(name) { var el = document.querySelector('#items_v2 input[name="' + name + '"]:checked'); return el ? el.value : ''; }
-    function show(id, yes) { document.getElementById(id).hidden = !yes; }
+    function show(id, yes) { var node = document.getElementById(id); if (node) node.hidden = !yes; }
     function text(id, message) { document.getElementById(id).textContent = message; }
     function fields() {
         var tax = document.getElementById('iv2-tax').selectedOptions[0];
@@ -108,7 +108,7 @@
         dishChoice.closest('label').hidden = !capabilities.restaurant;
         dishChoice.disabled = !capabilities.restaurant;
         document.querySelector('#items_v2 .iv2-types').style.gridTemplateColumns = 'repeat(' + (capabilities.restaurant ? 3 : 2) + ', minmax(0, 1fr))';
-        if (!capabilities.restaurant && dishChoice.checked) {
+        if (dishChoice && !capabilities.restaurant && dishChoice.checked) {
             document.querySelector('#items_v2 input[name="iv2-kind"][value="product"]').checked = true;
             document.querySelector('#items_v2 input[name="iv2-stock"][value="tracked"]').checked = true;
         }
@@ -311,7 +311,7 @@
             document.getElementById('iv2-fields').disabled = false; document.getElementById('iv2-save').disabled = false;
             P.itemsV2Workspace.edit(); render();
         },duplicate:prepareCopy        });
-        show('iv2-tax-field', capabilities.tax); document.getElementById('iv2-tax-type').hidden = !capabilities.tax;
+        show('iv2-tax-field', capabilities.tax); var taxType = document.getElementById('iv2-tax-type'); if (taxType) taxType.hidden = !capabilities.tax;
         if (!bound) applyBusinessContext();
         if (capabilities.restaurant) loadRestaurantOptions();
         bind(); document.querySelectorAll('#items_v2 .iv2-currency').forEach(function (el) { el.textContent = P.local.get('currencySign') || ''; });
