@@ -1135,6 +1135,7 @@ PosnicPro.users = {
                     PosnicPro.local.set('branch_has_no_registers', 'true');
                     $('.loginform_card').hide();
                     PosnicPro.users.createCookie('loginuser', 'yes', 1);
+                    try { sessionStorage.setItem('posnic_force_new_sale', '1'); } catch (e) {}
                     window.location = 'dashboard.html#/sales/new';
                     return;
                 }
@@ -1144,6 +1145,7 @@ PosnicPro.users = {
                     // Continue to dashboard without showing modal
                     $('.loginform_card').hide();
                     PosnicPro.users.createCookie('loginuser', 'yes', 1);
+                    try { sessionStorage.setItem('posnic_force_new_sale', '1'); } catch (e) {}
                     window.location = 'dashboard.html#/sales/new';
                 } else if (data.register_data.length > 0) {
                     // No open register - show modal to select one
@@ -1158,6 +1160,7 @@ PosnicPro.users = {
                     PosnicPro.local.set('RegisterId', '');
                     $('.loginform_card').hide();
                     PosnicPro.users.createCookie('loginuser', 'yes', 1);
+                    try { sessionStorage.setItem('posnic_force_new_sale', '1'); } catch (e) {}
                     window.location = 'dashboard.html#/sales/new';
                 }
             } else {
@@ -1191,7 +1194,8 @@ PosnicPro.users = {
                 PosnicPro.local.set('hourAlertregister', 'false');
                 $('.loginform_card').hide();
                 PosnicPro.users.createCookie('loginuser', 'yes', 1);
-                window.location = 'dashboard.html#/sales/new';
+                try { sessionStorage.setItem('posnic_force_new_sale', '1'); } catch (e) {}
+                    window.location = 'dashboard.html#/sales/new';
             } else {
                 PosnicPro.alert(response.type, response.message);
             }
@@ -1306,6 +1310,7 @@ PosnicPro.users = {
                     PosnicPro.users.selectedRegisterActiveBranchUser(response.data.branch_id);
                 } else {
                     PosnicPro.users.createCookie('loginuser', 'yes', 1);
+                    try { sessionStorage.setItem('posnic_force_new_sale', '1'); } catch (e) {}
                     window.location = 'dashboard.html#/sales/new';
                 }
             }).catch(function () {

@@ -31,7 +31,13 @@
     try { fn.call(PosnicPro,opts,success,failure); }
     catch(e) { failure({responseJSON:{message:e&&e.message}}); }
   }
+  function isAdmin(){var role=String(PosnicPro.local.get('usertype')||'').trim().toLowerCase();return role==='admin'||role==='super_admin';}
   function notice(message,kind) { $('#hr_notice').removeClass('alert-success alert-danger alert-info').addClass('alert-'+(kind||'info')).text(message).show(); }
+  if(!isAdmin()){
+    $(function(){ $('#hrModule').hide(); if(String(window.location.hash||'')==='#/hr'){ if(window.hasher&&typeof window.hasher.setHash==='function')window.hasher.setHash('sales/new');else window.location.hash='#/sales/new'; } });
+    PosnicPro.hr={showDataTablePage:function(){if(window.hasher&&typeof window.hasher.setHash==='function')window.hasher.setHash('sales/new');else window.location.hash='#/sales/new';}};
+    return;
+  }
   function showPanel(which) {
     $('#hr_workers_panel,#hr_payroll_panel,#hr_transactions_panel').hide();
     $('#hr_'+which+'_panel').show();

@@ -1190,5 +1190,21 @@
             });
         }
     </script>
+    <script>
+      /* A successful login wins over any stale route restored by the SPA. */
+      try {
+        if (sessionStorage.getItem('posnic_force_new_sale') === '1') {
+          sessionStorage.removeItem('posnic_force_new_sale');
+          if (window.hasher && typeof window.hasher.setHash === 'function') window.hasher.setHash('sales/new');
+          else window.location.hash = '#/sales/new';
+          setTimeout(function () {
+            if (window.location.hash !== '#/sales/new') {
+              if (window.hasher && typeof window.hasher.setHash === 'function') window.hasher.setHash('sales/new');
+              else window.location.hash = '#/sales/new';
+            }
+          }, 500);
+        }
+      } catch (e) { window.location.hash = '#/sales/new'; }
+    </script>
     </body>       
 </html>

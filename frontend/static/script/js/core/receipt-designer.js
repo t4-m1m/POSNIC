@@ -453,7 +453,7 @@
             if (options.sample) throw error;
             PosnicPro.alert('error', error.message || label('Print failed'));
         };
-        if (printer && printer.print) {
+        if (printer && printer.print && options.showDialog !== true) {
             return Promise.resolve(PosnicPro.syncPrinterPreferences ? PosnicPro.syncPrinterPreferences() : null)
                 .catch(function () {})
                 .then(function () {

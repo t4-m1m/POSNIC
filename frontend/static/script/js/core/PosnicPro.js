@@ -2877,6 +2877,10 @@ PosnicPro = {
         $('#viewkotreport_page').closest('li')
             .toggle(PosnicPro.local.get('table_options') === 'enable');
 
+        // Payroll contains confidential salary data: hide its entry from cashiers.
+        var role = String(PosnicPro.local.get('usertype') || '').trim().toLowerCase();
+        $('#hrModule').toggle(role === 'admin' || role === 'super_admin');
+
         /*
          * Fields that only mean something to a restaurant: serving periods,
          * preparation time, the kitchen note. A grocer has no breakfast menu,
