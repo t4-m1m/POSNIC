@@ -219,7 +219,7 @@
             customer_address: data.customer_address, sale_note: data.sales_description, brand_url: data.website || PosnicPro.BRAND_URL,
             total_quantity: receiptItems.reduce(function (n, i) { return n + Number(i.item_quantity || 0); }, 0),
             table: data.table_number, order_type: data.dine_type, covers: data.covers || data.person_count,
-            steward: data.steward_name || data.steward || data.created_by || data.user_name, session: data.serving_session || data.session_name,
+            steward: data.cashier_name || data.seller_name || data.steward_name || data.steward || data.created_by || data.user_name, session: data.serving_session || data.session_name,
             fssai: (layout.blocks.find(function (block) { return block.type === 'store'; }) || {}).fssaiText || data.branch_fssai_number, source: data.order_source || data.source,
         };
         var fixedItems = !sheet && layout.blocks.find(function (b) { return b.type === 'items' && b.itemLayout === 'columns'; });
@@ -265,6 +265,9 @@
                     content = '<div class="rd-transaction"' + (b.showTitle === false ? ' style="column-gap:4px"' : '') + '><strong>' + (customLabel ? esc(b.labelText) + (b.labelText ? ' ' : '') : b.showTitle === false ? esc(billPrefix) : esc(documentTitle)) + (data.sales_id ? (customLabel || b.showTitle === false ? '' : ' ') + headerValue(data.sales_id) : '') + '</strong><span class="rd-transaction-date">' + thermalDate(formattedDate) + '</span></div>';
                 }
                 if (!data.sales_id && !pendingGoods) content += '<p class="rd-pending-number">' + esc(PosnicPro.i18n.t('lang_receipt_number_after_save', 'Receipt number is assigned after saving the sale.')) + '</p>';
+                if (present(data.cashier_name || data.seller_name) && b.showCashier !== false) {
+                    content += '<div class="rd-cashier"><strong>' + esc(label('Vendeur')) + ':</strong> ' + esc(data.cashier_name || data.seller_name) + '</div>';
+                }
                 if (present(taxNumber) && !hasField('customer_tax_number')) content += '<p class="rd-customer-tax">' + esc(fieldLabel('customer_tax_number')) + ': ' + esc(String(taxNumber).trim()) + '</p>';
             } else if (b.type === 'items') {
                 var compact = !sheet && b.itemLayout === 'compact';
