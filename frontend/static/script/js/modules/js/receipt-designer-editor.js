@@ -520,7 +520,7 @@
         }).on('input.receiptDesigner change.receiptDesigner', '[data-prop]', function (event) {
             if (event.type === 'change' && this.tagName === 'TEXTAREA') return;
             var b = layout().blocks.find(function (v) { return v.id === selected; }); if (!b) return;
-            var key = this.getAttribute('data-prop'); var value = this.type === 'checkbox' ? this.checked : ['width', 'thickness', 'fontSize', 'nameMaxChars'].indexOf(key) !== -1 ? (this.value === '' ? undefined : Number(this.value)) : this.value;
+            var key = this.getAttribute('data-prop'); var value = this.type === 'checkbox' ? this.checked : ['width', 'thickness', 'fontSize', 'nameMaxChars', 'w', 'h', 'rotation'].indexOf(key) !== -1 ? (this.value === '' ? undefined : Number(this.value)) : this.value;
             if (b[key] === value) return;
             checkpoint(); b[key] = value;
             if (key === 'labelText' && !value.trim()) delete b.labelText;
