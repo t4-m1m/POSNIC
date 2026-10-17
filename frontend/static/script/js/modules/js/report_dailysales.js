@@ -912,6 +912,9 @@ PosnicPro.quickreport = {
             return { label: p.label, value: money(p.amount) };
           }),
           total: { label: PosnicPro.i18n.t('lang_total_received', 'Total received'), value: money(report.tenderTotal) } },
+        { type: 'pairs', name: 'CUSTOMER CREDIT / DEBT', rows: [
+          { label: 'Outstanding from sales in this period', value: money(report.outstanding) }
+        ] },
         /*
          * The cash figure sits at the head of the handover block, directly
          * above the line the count goes on, because that is the comparison
