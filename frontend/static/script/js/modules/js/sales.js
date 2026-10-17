@@ -11762,13 +11762,33 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
                     { tier: 2, price: Number(itemText.selling_price_2) },
                     { tier: 3, price: Number(itemText.selling_price_3) }
                 ].filter(function (entry) { return Number.isFinite(entry.price) && entry.price > 0; });
-                if (prices.length < 2) {
-                    PosnicPro.alert('info', 'This item has no alternative selling prices.');
+                if (!prices.length) {
+                    PosnicPro.alert('info', 'This item has no available selling prices.');
                 } else {
                     var currentTier = Number(itemText.price_tier) || 1;
-                    var currentIndex = prices.findIndex(function (entry) { return entry.tier === currentTier; });
-                    var nextTier = prices[(currentIndex + 1) % prices.length].tier;
-                    PosnicPro.sales.changeLinePriceTier(id, nextTier);
+                    var dialog = document.getElementById('posnic-price-tier-dialog');
+                    if (dialog) dialog.remove();
+                    dialog = document.createElement('dialog');
+                    dialog.id = 'posnic-price-tier-dialog';
+                    dialog.className = 'posnic-price-tier-dialog';
+                    dialog.innerHTML = '<form method="dialog"><h3>Choose selling price</h3><p class="posnic-price-tier-item"></p><div class="posnic-price-tier-options"></div><button class="btn btn-light" value="cancel">Cancel</button></form>';
+                    dialog.querySelector('.posnic-price-tier-item').textContent = String(itemText.item_name || itemText.name || 'Selected item');
+                    var options = dialog.querySelector('.posnic-price-tier-options');
+                    prices.forEach(function (entry) {
+                        var button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = 'posnic-price-tier-option' + (entry.tier === currentTier ? ' is-current' : '');
+                        button.innerHTML = '<strong>Price ' + entry.tier + '</strong><span></span>' + (entry.tier === currentTier ? '<small>Current price</small>' : '');
+                        button.querySelector('span').textContent = entry.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                        button.addEventListener('click', function () {
+                            if (typeof PosnicPro.sales.changeLinePriceTier === 'function') PosnicPro.sales.changeLinePriceTier(id, entry.tier);
+                            dialog.close(); dialog.remove();
+                        });
+                        options.appendChild(button);
+                    });
+                    document.body.appendChild(dialog);
+                    dialog.addEventListener('close', function () { dialog.remove(); }, { once: true });
+                    if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
                 }
             }
         } else {

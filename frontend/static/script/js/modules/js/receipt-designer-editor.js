@@ -256,6 +256,7 @@
         }
         if (['items', 'totals', 'transaction'].indexOf(b.type) === -1) html += '<label for="rd-align">' + esc(t('Alignment')) + '</label><select id="rd-align" data-prop="align">' + ['left', 'center', 'right'].map(function (a) { return '<option value="' + a + '"' + (b.align === a ? ' selected' : '') + '>' + esc(t(a.charAt(0).toUpperCase() + a.slice(1))) + '</option>'; }).join('') + '</select>';
         if (b.type === 'image' || b.type === 'qr' || b.type === 'signature') html += '<label for="rd-image-width">' + esc(t('Width (% of printable area)')) + '</label><input id="rd-image-width" type="range" min="15" max="100" step="5" data-prop="width" value="' + (b.width || 45) + '"><output class="rd-width-value">' + (b.width || 45) + '%</output>';
+        if (b.type === 'image' || b.type === 'logo') html += '<label for="rd-image-rotation">' + esc(t('Rotation (degrees)')) + '</label><input id="rd-image-rotation" type="number" min="-180" max="180" step="1" data-prop="rotation" value="' + (Number(b.rotation) || 0) + '"><small>' + esc(t('Rotate the selected logo or image.')) + '</small>';
         return html + '</div>';
     }
     function renderList() {
