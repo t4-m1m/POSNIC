@@ -93,7 +93,7 @@ function printSample(){
  catch(e){status(e.message||'Could not prepare test receipt.',true);}
 }
 function load(data){
- branch=data||{};engine=PosnicPro.receiptDesigner;schema=engine.contract;root=$('#document-print-settings #receipt-designer');if(!root.length)return;
+ branch=data||{};engine=PosnicPro.receiptDesigner;schema=engine.contract;root=$('#print-design #receipt-designer');if(!root.length)return;
  seed(branch);
  root.html('<div class="rs-head"><div><h3>Receipt Studio</h3><p>Drag elements on the blank receipt, resize, rotate and set each element’s font independently.</p></div><div class="rs-actions"><span class="rs-status" role="status">New designer ready</span><button class="btn btn-outline-primary rs-undo" type="button">Undo</button><button class="btn btn-outline-primary rs-test" type="button">Print test</button><button class="btn btn-primary rs-save" type="button">Save design</button></div></div>'+
  '<div class="rs-formats">'+Object.keys(schema.formats).map(function(f){return '<button type="button" class="btn btn-outline-secondary rs-format" data-format="'+f+'">'+esc(schema.formats[f].name)+'</button>';}).join('')+'</div>'+
