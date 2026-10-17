@@ -187,6 +187,7 @@
     function save(event) {
         if (event) event.preventDefault();
         if (busy || saved) return false;
+        if (P.itemsV2Workspace.currentStep() === 'step1') { P.itemsV2Workspace.goToStep('step2', true); return false; }
         if (P.aclLoaded && P.aclLoaded() && !P.checkAccess('item', 'write')) { fail('You don’t have permission to create items.'); return false; }
         if (editing && savedBranch !== P.local.get('branch_id_set')) { fail(P.i18n.t('lang_iv2_edit_branch_changed', 'The active branch changed. Open the item again before editing.')); return false; }
         attempted = true; render();
@@ -201,8 +202,12 @@
         if (a.error) { fail(a.error, a.field); return false; }
         var advancedError = P.itemsV2Details.validate();
         if (advancedError) { fail(advancedError.error, advancedError.field); return false; }
+        // Validate explicitly and reveal the owning step before focusing a field.
+        // Native reportValidity() on the whole multi-step form can fail on a required
+        // control inside a hidden panel, making Save appear to do nothing.
+        var invalidField = document.querySelector('#iv2-fields input:invalid, #iv2-fields select:invalid, #iv2-fields textarea:invalid');
+        if (invalidField) { fail(invalidField.validationMessage || 'Check this field.', invalidField.id); return false; }
         var form = document.getElementById('iv2-form');
-        if (!form.reportValidity()) return false;
         if (capabilities.tax && !taxReady) { fail('Wait for tax settings to load, or choose Try again above.', 'iv2-tax-error'); return false; }
         var data = Object.assign(payload(f), P.itemsV2Details.data());
         // Retail item creation intentionally has no tax field. Ignore stale
