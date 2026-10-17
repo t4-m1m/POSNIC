@@ -2584,7 +2584,10 @@ PosnicPro.sales = {
                 normalizedStatusForPartial.indexOf('partial') !== -1
             );
 
-            var isPartialFlow = PosnicPro.sales.SaleAction === 'add' || (hasPartialCapability && isUnpaidOrPartialStatus);
+            // Input editability follows the invoice status, not a customer's
+            // partial-credit flag. Any unpaid or part-paid invoice can accept
+            // an editable amount received.
+            var isPartialFlow = PosnicPro.sales.SaleAction === 'add' || isUnpaidOrPartialStatus;
 
             if (isPartialFlow) {
                 // New-sale checkout must always allow the cashier to enter the actual amount received.
@@ -3204,97 +3207,48 @@ PosnicPro.sales = {
             '</div>';
         $('#payment_id').append(addButton);
         // --- Click handler with complete multi-payment logic ---
-        $(document).off('click', '.btn-payment-method').on('click', '.btn-payment-method', function () {
-            // ✅ Don't process if already active (prevents clearing on initial click)
-            if ($(this).hasClass('active')) {
-                return;
-            }
-            
-            // Use Pay amount field as the target amount for multipayment
-            const payAmount = parseFloat($('#Partial_amount').val()) || 0;
-            
-            // Calculate total from ALL inputs BEFORE switching
-            let allPaymentsTotal = 0;
-            let nonZeroPaymentCount = 0;
-            $('.payment-amount-input').each(function () {
-                const method = String($(this).closest('.payment-method-card').find('.payment_mode').attr('id') || '').trim().toLowerCase();
-                if (method === 'credit') return;
-                let val = parseFloat($(this).val()) || 0;
-                if (val > 0) nonZeroPaymentCount++;
-                allPaymentsTotal += val;
+        $(document).off('click.posnicPaymentMethod', '.btn-payment-method').on('click.posnicPaymentMethod', '.btn-payment-method', function () {
+            // Keep every tender editable and preserve values while switching.
+            var $button = $(this);
+            var $input = $button.closest('.payment-method-card').find('.payment-amount-input');
+            var billTotal = Number(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot) || 0;
+            var otherTotal = 0;
+            $('.payment-amount-input').not($input).each(function () {
+                otherTotal += Math.max(0, Number($(this).val()) || 0);
             });
-            
-            // Check if current total equals pay amount AND only one payment has value (full amount scenario)
-            const billTotalForSwitch = parseFloat(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot) || payAmount;
-            let isFullAmountScenario = payAmount >= billTotalForSwitch - 0.01 &&
-                (Math.abs(allPaymentsTotal - payAmount) < 0.01) && (nonZeroPaymentCount === 1);
-            
-            // Deactivate all buttons and cards
             $('.btn-payment-method').removeClass('active').css({
-                'background': 'transparent',
-                'color': '#495057',
-                'border': '2px solid #dee2e6'
+                'background': 'transparent', 'color': '#495057', 'border': '2px solid #dee2e6'
             });
             $('.payment-method-card').removeClass('payment-active').css('border', '2px solid #e9ecef');
-            $('.payment-amount-input').prop('disabled', true);
-            
-            // Only clear all inputs if it's a full amount scenario (switching from one full payment to another)
-            if (isFullAmountScenario) {
-                $('.payment-amount-input').each(function() {
-                    $(this).data('programmatic-change', true);
-                    $(this).val('0.00');
-                });
-            }
-            
-            // Activate clicked button and its card
-            $(this).addClass('active').css({
-                'background': '#5f63f2',
-                'color': '#fff',
-                'border': '2px solid #5f63f2'
+            $('.payment-amount-input').prop('disabled', false);
+            $button.addClass('active').css({
+                'background': '#5f63f2', 'color': '#fff', 'border': '2px solid #5f63f2'
             });
-            $(this).closest('.payment-method-card').addClass('payment-active').css('border', '2px solid #5f63f2');
-            
-            let $input = $(this).closest('.payment-method-card').find('.payment-amount-input');
-            $input.prop('disabled', false);
-            
-            // Calculate remaining balance based on Pay amount
-            let currentTotal = 0;
-            $('.payment-amount-input').each(function () {
-                currentTotal += parseFloat($(this).val()) || 0;
-            });
-            let remainingBalance = payAmount - currentTotal;
-            
-            // Fill clicked input based on scenario
-            if (isFullAmountScenario) {
-                // Full amount scenario: Fill with pay amount
-                $input.data('programmatic-change', true);
-                $input.val(payAmount.toFixed(2));
-            } else {
-                // Partial payment scenario: Fill with remaining balance from pay amount
-                if (remainingBalance > 0) {
-                    $input.data('programmatic-change', true);
-                    $input.val(remainingBalance.toFixed(2));
-                }
-                // If no remaining balance, keep current value (don't change)
+            $button.closest('.payment-method-card').addClass('payment-active').css('border', '2px solid #5f63f2');
+            if (String($input.val() || '').trim() === '' || (Number($input.val()) || 0) <= 0) {
+                $input.val(Math.max(0, billTotal - otherTotal).toFixed(2));
             }
-            
-            $input.focus();
-            
-            // ✅ Trigger validation
+            $input.trigger('input').focus().select();
             PosnicPro.sales.initPaymentValidation();
         });
 
         // --- Input change handler: Trigger validation when multipayment input changes ---
-        $(document).off('input', '.payment-amount-input').on('input', '.payment-amount-input', function () {
-            // Skip if this is a programmatic change (from clicking payment button)
-            if ($(this).data('programmatic-change')) {
-                $(this).removeData('programmatic-change');
-                return;
-            }
-            
-            // Trigger validation to check if multipayment total matches Pay amount
-            PosnicPro.sales.initPaymentValidation();
-        });
+        $(document).off('input.posnicPaymentAmounts change.posnicPaymentAmounts', '.payment-amount-input')
+            .on('input.posnicPaymentAmounts change.posnicPaymentAmounts', '.payment-amount-input', function () {
+                var received = 0, credit = 0;
+                $('.payment-amount-input').each(function () {
+                    var method = String($(this).closest('.payment-method-card').find('.payment_mode').attr('id') || '').trim().toLowerCase();
+                    var value = Math.max(0, Number($(this).val()) || 0);
+                    if (method === 'credit') credit += value;
+                    else received += value;
+                });
+                var total = Number(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot) || 0;
+                $('#Partial_amount').val(received.toFixed(2));
+                $('.balanceDue').text(Math.max(0, total - received).toFixed(2));
+                if (credit > 0.009) $('#unpaid_payment_toggle').prop('checked', true);
+                $('#sales_new_customer_partial_balance').val((credit > 0.009 || received < total - 0.01) ? 'true' : 'false');
+                PosnicPro.sales.initPaymentValidation();
+            });
 
         // ✅ Trigger initial validation after Cash is auto-filled
         setTimeout(function() {
@@ -11776,16 +11730,15 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
     }
     function ensureCashierModal() {
         if (!$('#posnic-vendeur-style').length) {
-            $('head').append('<style id="posnic-vendeur-style">#posnic-vendeur-modal{--pv-line:var(--posnic-border,var(--theme-border-color,#dbe3ed));--pv-panel:var(--posnic-surface,var(--theme-card-bg,#fff));--pv-soft:var(--posnic-soft,var(--theme-table-header-bg,#f5f8fc));--pv-text:var(--posnic-text,var(--theme-text-color,var(--theme-text-primary,#243247)));--pv-muted:var(--posnic-muted,var(--theme-text-muted,#64748b));--pv-primary:var(--posnic-accent,var(--theme-primary-color,#2563eb))}#posnic-vendeur-modal .modal-dialog{width:calc(100% - 28px);max-width:400px;margin:1.25rem auto}#posnic-vendeur-modal .posnic-vendeur-content{overflow:hidden;border:1px solid var(--pv-line);border-radius:14px;background:var(--pv-panel);color:var(--pv-text);box-shadow:0 20px 60px rgba(15,23,42,.2)}#posnic-vendeur-modal .posnic-vendeur-header{padding:18px 20px 16px;border-bottom:1px solid var(--pv-line);background:var(--pv-panel)}#posnic-vendeur-modal .posnic-vendeur-eyebrow{display:inline-flex;align-items:center;margin-bottom:8px;padding:4px 8px;border:1px solid var(--pv-line);border-radius:999px;background:var(--pv-soft);color:var(--pv-primary);font-size:10px;font-weight:750;letter-spacing:.04em}#posnic-vendeur-modal .modal-title{margin:0;color:var(--pv-text);font-size:19px;font-weight:700;letter-spacing:-.02em}#posnic-vendeur-modal .posnic-vendeur-header small{display:block;margin-top:6px;color:var(--pv-muted);font-size:12px;line-height:1.5}#posnic-vendeur-modal .modal-body{padding:20px 22px}#posnic-vendeur-modal .modal-body label{display:block;margin-bottom:8px;color:var(--pv-text);font-size:12px;font-weight:700}#posnic-vendeur-modal #posnic-vendeur-select{width:100%;min-height:44px;padding:9px 12px;border:1px solid var(--pv-line);border-radius:9px;background:var(--theme-input-bg,var(--pv-panel));color:var(--pv-text);box-shadow:none;font-size:14px}#posnic-vendeur-modal #posnic-vendeur-select:focus{border-color:var(--pv-primary);outline:0;box-shadow:0 0 0 3px color-mix(in srgb,var(--pv-primary) 16%,transparent)}#posnic-vendeur-modal .posnic-vendeur-help{margin-top:12px;padding:10px 12px;border:1px solid var(--pv-line);border-radius:8px;background:var(--pv-soft);color:var(--pv-muted);font-size:11px;line-height:1.5}#posnic-vendeur-modal .posnic-vendeur-empty{margin-top:12px;padding:11px 12px;border:1px solid #f0c6a4;border-radius:8px;background:#fff7ed;color:#9a3412;font-size:12px;line-height:1.5}#posnic-vendeur-modal .modal-footer{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px 16px;border-top:1px solid var(--pv-line);background:var(--pv-soft)}#posnic-vendeur-modal .modal-footer .btn{min-height:38px;margin:0;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;box-shadow:none}#posnic-vendeur-modal #posnic-vendeur-cancel{border:1px solid var(--pv-line);background:var(--pv-panel);color:var(--pv-text)}#posnic-vendeur-modal #posnic-vendeur-cancel:hover{background:var(--pv-soft)}#posnic-vendeur-modal #posnic-vendeur-confirm{border:1px solid var(--pv-primary);background:var(--pv-primary);color:#fff}#posnic-vendeur-modal #posnic-vendeur-confirm:disabled{opacity:.48;cursor:not-allowed}#posnic-vendeur-modal .modal-footer .btn:focus-visible{outline:2px solid var(--pv-primary);outline-offset:2px}@media(max-width:480px){#posnic-vendeur-modal .modal-dialog{width:calc(100% - 20px);margin:10px auto}#posnic-vendeur-modal .posnic-vendeur-header,#posnic-vendeur-modal .modal-body{padding-left:16px;padding-right:16px}#posnic-vendeur-modal .modal-footer{padding:12px 16px 16px}}</style>');
+            $('head').append('<style id="posnic-vendeur-style">#posnic-vendeur-modal .modal-dialog{max-width:360px;margin:1.5rem auto}#posnic-vendeur-modal .posnic-vendeur-content{border:1px solid var(--theme-border-color,#e5e7eb);border-radius:10px;overflow:hidden;background:var(--theme-card-bg,#fff);color:var(--theme-text-color,#263244);box-shadow:0 12px 32px rgba(20,35,55,.16)}#posnic-vendeur-modal .posnic-vendeur-header{padding:16px 18px;border-bottom:1px solid var(--theme-border-color,#e5e7eb)}#posnic-vendeur-modal .modal-title{margin:0;font-size:16px;font-weight:650;color:inherit}#posnic-vendeur-modal .posnic-vendeur-header small{display:block;margin-top:4px;color:var(--theme-text-muted,#6b7280);font-size:12px}#posnic-vendeur-modal .modal-body{padding:18px}#posnic-vendeur-modal .modal-body label{display:block;margin-bottom:6px;font-size:12px;font-weight:600}#posnic-vendeur-modal #posnic-vendeur-select{height:40px;border:1px solid var(--theme-border-color,#d8dee8);border-radius:7px;background:var(--theme-input-bg,#fff);color:inherit;box-shadow:none}#posnic-vendeur-modal #posnic-vendeur-select:focus{border-color:var(--theme-primary-color,#5f63f2);box-shadow:0 0 0 2px rgba(95,99,242,.12)}#posnic-vendeur-modal .posnic-vendeur-empty{margin-top:10px;padding:9px 10px;border-radius:6px;background:#fff7ed;color:#9a3412;font-size:12px}#posnic-vendeur-modal .modal-footer{padding:12px 18px;border-top:1px solid var(--theme-border-color,#e5e7eb);gap:8px}#posnic-vendeur-modal .modal-footer .btn{margin:0;border-radius:6px;font-size:12px;font-weight:600}#posnic-vendeur-modal #posnic-vendeur-confirm{background:var(--theme-primary-color,#5f63f2);border-color:var(--theme-primary-color,#5f63f2);color:#fff}#posnic-vendeur-modal #posnic-vendeur-confirm:disabled{opacity:.45}@media(max-width:480px){#posnic-vendeur-modal .modal-dialog{margin:10px}}</style>');
         }
         if ($('#posnic-vendeur-modal').length) return;
         $('body').append('<div class="modal fade" id="posnic-vendeur-modal" tabindex="-1" role="dialog" aria-labelledby="posnic-vendeur-title" aria-hidden="true" data-backdrop="static" data-keyboard="false">' +
             '<div class="modal-dialog modal-dialog-centered" role="document"><div class="modal-content posnic-vendeur-content">' +
-            '<div class="modal-header posnic-vendeur-header"><div><span class="posnic-vendeur-eyebrow">POSNIC · POINT DE VENTE</span><h5 class="modal-title font-weight-bold" id="posnic-vendeur-title">Choisir un vendeur</h5><small>Choisissez le vendeur responsable de cette vente.</small></div></div>' +
-            '<div class="modal-body"><label for="posnic-vendeur-select">Vendeur responsable</label><select id="posnic-vendeur-select" class="form-control"><option value="">Sélectionner un vendeur…</option></select>' +
-            '<div id="posnic-vendeur-empty" class="posnic-vendeur-empty" hidden>Aucun vendeur configuré. Ajoutez-les dans Paramètres &gt; Général &gt; Vente.</div>' +
-            '<div class="posnic-vendeur-help">La vente ne sera pas validée tant que le vendeur n’est pas confirmé.</div></div>' +
-            '<div class="modal-footer"><button type="button" class="btn btn-light" id="posnic-vendeur-cancel">Annuler</button><button type="button" class="btn btn-primary" id="posnic-vendeur-confirm" disabled>Confirmer et continuer</button></div>' +
+            '<div class="modal-header posnic-vendeur-header"><div><h5 class="modal-title" id="posnic-vendeur-title">Choisir un vendeur</h5><small>Attribuer cette vente à un vendeur.</small></div></div>' +
+            '<div class="modal-body"><label for="posnic-vendeur-select">Vendeur</label><select id="posnic-vendeur-select" class="form-control"><option value="">Sélectionner un vendeur…</option></select>' +
+            '<div id="posnic-vendeur-empty" class="posnic-vendeur-empty" hidden>Aucun vendeur configuré. Ajoutez-en un dans Paramètres &gt; Général &gt; Vente.</div></div>' +
+            '<div class="modal-footer"><button type="button" class="btn btn-light" id="posnic-vendeur-cancel">Annuler</button><button type="button" class="btn btn-primary" id="posnic-vendeur-confirm" disabled>Continuer</button></div>' +
             '</div></div></div>');
     }
     function askCashier(key) {
@@ -11832,26 +11785,17 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         if (e.key === 'Enter' && !$('#posnic-vendeur-confirm').prop('disabled')) { e.preventDefault(); continueCheckout(); }
     });
     PosnicPro.sales.runFunctionShortcut = function (key) {
-        if (key === 'F1' || key === 'F2') {
-            if (key === 'F2' && $('#tenderpage').is(':visible')) return originalShortcut(key);
-            askCashier(key);
-            return;
-        }
+        // F2 opens payment directly. Cashier attribution belongs to F1 only.
+        if (key === 'F1') { askCashier(key); return; }
         return originalShortcut(key);
     };
     document.addEventListener('keydown', function (e) {
         if (bypassNextFunctionKey) { bypassNextFunctionKey = false; return; }
-        if (e.key !== 'F1' && e.key !== 'F2') return;
+        if (e.key !== 'F1') return;
         if (!/sales\/new/i.test(String(window.location.hash || '')) && !$('#sales_new').is(':visible')) return;
         if ($('#posnic-vendeur-modal').hasClass('show')) return;
-        if (e.key === 'F2' && $('#tenderpage').is(':visible')) {
-            e.preventDefault(); e.stopImmediatePropagation();
-            var amountField = document.getElementById('Partial_amount') || document.getElementById('tendered_amount');
-            if (amountField) { amountField.focus(); if (amountField.select) amountField.select(); }
-            return;
-        }
         e.preventDefault(); e.stopImmediatePropagation();
-        askCashier(e.key);
+        askCashier('F1');
     }, true);
 })();
 
@@ -13419,8 +13363,8 @@ $(document).ready(function () {
     });
 });
 
-$('#Partial_amount').keyup(
-    PosnicPro.delayKeyUp(function () {
+$(document).off('input.posnicPartialAmount keyup.posnicPartialAmount', '#Partial_amount')
+    .on('input.posnicPartialAmount keyup.posnicPartialAmount', '#Partial_amount', PosnicPro.delayKeyUp(function () {
         const saleNewTot = PosnicPro.sales.extraDiscount.sale_new_tot;
         // Parse input values
         let Partial_amount = parseFloat($('#Partial_amount').val());
@@ -13500,8 +13444,7 @@ $('#Partial_amount').keyup(
             }
             PosnicPro.sales.initPaymentValidation();
         }
-    }, 300)
-);
+    }, 180));
 
 $(".sms-modal-close").click(function () {
     hasher.changed.active = false;
