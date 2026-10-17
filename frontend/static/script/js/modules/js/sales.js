@@ -66,6 +66,71 @@ PosnicPro.sales = {
         var sub = value1 - value2;
         return sub;
     },
+    pinFunctionToolbar: function () {
+        var toolbar = document.getElementById('sales-function-shortcuts');
+        var salesPage = document.getElementById('sales_new');
+        if (!toolbar || !salesPage) return;
+
+        var state = PosnicPro.sales._functionToolbarPinState;
+        if (!state) {
+            state = PosnicPro.sales._functionToolbarPinState = { placeholder: null, installed: false };
+        }
+
+        function clearPin() {
+            toolbar.classList.remove('sales-function-toolbar-pinned');
+            toolbar.style.position = '';
+            toolbar.style.top = '';
+            toolbar.style.left = '';
+            toolbar.style.width = '';
+            toolbar.style.zIndex = '';
+            toolbar.style.boxSizing = '';
+            if (state.placeholder && state.placeholder.parentNode) {
+                state.placeholder.parentNode.removeChild(state.placeholder);
+            }
+            state.placeholder = null;
+        }
+
+        function updatePin() {
+            if (!document.documentElement.contains(toolbar) ||
+                window.getComputedStyle(salesPage).display === 'none') {
+                clearPin();
+                return;
+            }
+
+            if (!state.placeholder) {
+                var initialRect = toolbar.getBoundingClientRect();
+                if (initialRect.top > 0) return;
+                state.placeholder = document.createElement('div');
+                state.placeholder.className = 'sales-function-toolbar-placeholder';
+                state.placeholder.setAttribute('aria-hidden', 'true');
+                state.placeholder.style.height = toolbar.offsetHeight + 'px';
+                state.placeholder.style.width = '100%';
+                toolbar.parentNode.insertBefore(state.placeholder, toolbar);
+            }
+
+            var rect = state.placeholder.getBoundingClientRect();
+            if (rect.top > 0) {
+                clearPin();
+                return;
+            }
+
+            toolbar.classList.add('sales-function-toolbar-pinned');
+            toolbar.style.position = 'fixed';
+            toolbar.style.top = '0';
+            toolbar.style.left = rect.left + 'px';
+            toolbar.style.width = rect.width + 'px';
+            toolbar.style.zIndex = '1050';
+            toolbar.style.boxSizing = 'border-box';
+            state.placeholder.style.height = toolbar.offsetHeight + 'px';
+        }
+
+        if (!state.installed) {
+            window.addEventListener('scroll', updatePin, true);
+            window.addEventListener('resize', updatePin);
+            state.installed = true;
+        }
+        updatePin();
+    },
     showAdd: function () {
         PosnicPro.sales.resetOrderRequest();
         // A drawer opened by the previous screen must never leave its full-screen
@@ -156,6 +221,7 @@ PosnicPro.sales = {
         /*New Sales*/
         var displayPage = 'sales';
         $('#' + displayPage + '_new').show();
+        PosnicPro.sales.pinFunctionToolbar();
         db.saleAutoFocus.get('1').then(function (data) {
             if (data && data.addSale === true) {
                 $('#sales_new_item_name').focus();
