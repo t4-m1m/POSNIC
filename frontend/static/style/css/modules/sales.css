@@ -962,3 +962,27 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
 #posnic-vendeur-modal .modal-footer{padding:13px 22px;border-top:1px solid var(--theme-border-color,#e2e8f0);gap:8px}
 #posnic-vendeur-modal .modal-footer .btn{border-radius:7px;min-height:38px;padding:8px 13px;font-weight:600;box-shadow:none}
 #posnic-vendeur-modal .modal-footer .btn:disabled{opacity:.45;cursor:not-allowed}
+
+
+/* Refined POSNIC cashier confirmation: quiet surfaces, clear hierarchy, one accent. */
+#posnic-vendeur-modal .modal-dialog{width:calc(100% - 32px);max-width:440px;margin:1.75rem auto}
+#posnic-vendeur-modal .posnic-vendeur-content{border:1px solid var(--theme-border-color,#d9e1ec);border-radius:14px;background:var(--theme-card-bg,#fff);box-shadow:0 24px 70px rgba(15,23,42,.2)}
+#posnic-vendeur-modal .posnic-vendeur-header{position:relative;display:flex;align-items:flex-start;gap:14px;padding:22px 24px 18px;border-bottom:1px solid var(--theme-border-color,#e5eaf1);background:var(--theme-card-bg,#fff)}
+#posnic-vendeur-modal .posnic-vendeur-header:before{content:"";display:block;flex:0 0 40px;width:40px;height:40px;border-radius:11px;background:var(--theme-soft-bg,#f1f5f9);border:1px solid var(--theme-border-color,#e2e8f0);background-image:var(--posnic-cashier-icon,none);background-repeat:no-repeat;background-position:center}
+#posnic-vendeur-modal .posnic-vendeur-eyebrow{margin:0 0 5px;color:var(--theme-muted-color,#718096);font-size:10px;font-weight:700;letter-spacing:.09em}
+#posnic-vendeur-modal .modal-title{font-size:19px;line-height:1.25;font-weight:700;color:var(--theme-text-color,#1e293b);margin:0 0 5px}
+#posnic-vendeur-modal .posnic-vendeur-header small{display:block;font-size:12px;line-height:1.5;color:var(--theme-muted-color,#64748b)}
+#posnic-vendeur-modal .modal-body{padding:22px 24px 20px}
+#posnic-vendeur-modal .modal-body>label{font-size:12px;font-weight:650;color:var(--theme-text-color,#334155);margin-bottom:8px}
+#posnic-vendeur-modal #posnic-vendeur-select{height:46px;padding:0 13px;border:1px solid var(--theme-border-color,#cbd5e1);border-radius:9px;background-color:var(--theme-input-bg,#fff);color:var(--theme-text-color,#1e293b);font-size:14px;box-shadow:none}
+#posnic-vendeur-modal #posnic-vendeur-select:focus{border-color:var(--theme-primary-color,#2563eb);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+#posnic-vendeur-modal .posnic-vendeur-empty{padding:12px 13px;background:var(--theme-soft-bg,#f8fafc);border:1px solid var(--theme-border-color,#e2e8f0);border-radius:9px;color:var(--theme-muted-color,#64748b);font-size:12px;line-height:1.5}
+#posnic-vendeur-modal .posnic-vendeur-help{font-size:11px;line-height:1.5;color:var(--theme-muted-color,#64748b);margin-top:11px}
+#posnic-vendeur-modal .modal-footer{padding:14px 24px 20px;border:0;gap:9px;background:var(--theme-card-bg,#fff)}
+#posnic-vendeur-modal .modal-footer .btn{min-height:40px;padding:9px 15px;border-radius:8px;font-size:12px;font-weight:650;box-shadow:none;transition:background-color .15s,border-color .15s,transform .15s}
+#posnic-vendeur-modal .modal-footer .btn-primary{background:var(--theme-primary-color,#2563eb);border-color:var(--theme-primary-color,#2563eb);color:#fff}
+#posnic-vendeur-modal .modal-footer .btn-primary:not(:disabled):hover{filter:brightness(.96);transform:translateY(-1px)}
+#posnic-vendeur-modal .modal-footer .btn-light{background:var(--theme-card-bg,#fff);border:1px solid var(--theme-border-color,#dbe3ed);color:var(--theme-text-color,#334155)}
+#posnic-vendeur-modal .modal-footer .btn-light:hover{background:var(--theme-soft-bg,#f8fafc)}
+#posnic-vendeur-modal .modal-footer .btn:focus-visible{outline:2px solid var(--theme-primary-color,#2563eb);outline-offset:2px}
+@media(max-width:480px){#posnic-vendeur-modal .modal-dialog{width:calc(100% - 20px);margin:10px auto}#posnic-vendeur-modal .posnic-vendeur-header,#posnic-vendeur-modal .modal-body{padding-left:18px;padding-right:18px}#posnic-vendeur-modal .modal-footer{padding:12px 18px 18px}}
