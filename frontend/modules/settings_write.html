@@ -3162,6 +3162,31 @@
                                             <tbody id="credit_outstanding_body"></tbody>
                                         </table>
                                     </div>
+                                    <section id="credit_ledger_panel" class="card mt-4 border-primary" style="display:none">
+                                        <div class="card-header d-flex align-items-center justify-content-between">
+                                            <h5 id="credit_ledger_title" class="mb-0">Debt ledger</h5>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" id="credit_ledger_close">Close</button>
+                                        </div>
+                                        <div class="card-body">
+                                            <p id="credit_ledger_status" class="text-muted" role="status">Select a customer to view their unpaid sales.</p>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-striped">
+                                                    <thead><tr><th>Date</th><th>Sale / Receipt</th><th>Description</th><th class="text-right">Original total</th><th class="text-right">Remaining</th></tr></thead>
+                                                    <tbody id="credit_ledger_body"><tr><td colspan="5" class="text-center text-muted">Select a customer above.</td></tr></tbody>
+                                                    <tfoot><tr><th colspan="4" class="text-right">Outstanding balance</th><th id="credit_ledger_due" class="text-right text-danger">0.00</th></tr></tfoot>
+                                                </table>
+                                            </div>
+                                            <hr>
+                                            <h6>Collect a payment</h6>
+                                            <div class="form-row align-items-end">
+                                                <div class="form-group col-md-3"><label for="credit_settle_amount">Amount received</label><input id="credit_settle_amount" class="form-control" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
+                                                <div class="form-group col-md-3"><label for="credit_settle_method">Payment method</label><select id="credit_settle_method" class="form-control"><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank transfer</option><option value="other">Other</option></select></div>
+                                                <div class="form-group col-md-4"><label for="credit_settle_note">Note (optional)</label><input id="credit_settle_note" class="form-control" maxlength="500" placeholder="Payment note"></div>
+                                                <div class="form-group col-md-2"><button id="credit_settle_submit" type="button" class="btn btn-success btn-block"><i class="feather icon-check mr-1"></i>Collect</button></div>
+                                            </div>
+                                            <small class="text-muted">A collection is applied to the oldest unpaid sale first, updates its remaining balance, and records a payment entry. Cash collections are added to the current cashier’s open till cash-in journal when one is available.</small>
+                                        </div>
+                                    </section>
                                 </div>
                             </div>
                         </div>
