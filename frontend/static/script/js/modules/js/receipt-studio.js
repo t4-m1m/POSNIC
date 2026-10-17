@@ -1,0 +1,108 @@
+(function () {
+'use strict';
+var engine, schema, root, branch={}, design, format='80', selected=null, undo=[], busy=false;
+var names={logo:'Store logo',store:'Store name & address',transaction:'Sale details',items:'Basket items',totals:'Totals & payment',text:'Custom text',field:'Dynamic field',qr:'QR code',image:'Image',barcode:'Sale barcode',divider:'Separator',signature:'Signature'};
+var palette=[['store','Store details'],['transaction','Date / cashier / client'],['items','Basket items'],['totals','Totals & payment'],['logo','PNG logo'],['barcode','Sale barcode'],['divider','Separator'],['text','Custom text'],['field','Dynamic field'],['image','Image'],['qr','QR code'],['signature','Signature']];
+var esc=function(v){return PosnicPro.escapeHtml(String(v==null?'':v));};
+var id=function(){return 'studio-'+Math.random().toString(36).slice(2,10);};
+var layout=function(){return design.layouts[format];};
+var current=function(){return layout().blocks.find(function(b){return b.id===selected;});};
+function status(s,bad){root.find('.rps-status').text(s).toggleClass('is-error',!!bad);}
+function checkpoint(){undo.push(engine.copy(design));if(undo.length>30)undo.shift();}
+function sample(){
+ var item=function(n,p,q){return {item_name:n,item_price:p,item_quantity:q,item_unit:'ea',total_amount:p*q};};
+ return Object.assign({},branch,{receipt_designs:design,sales_id:'SAMPLE-2026-1042',created_date:new Date().toLocaleString(),receipt_date:new Date().toLocaleString(),customer_name:'Sample Customer',customer_phone:'0550 00 00 00',user_name:'Cashier',created_by:'Cashier',items:[item('Example product',1200,2),item('Second item',850,1)],items_subtotal:3250,items_total:3250,tax:0,discount:0,charges:[],payment_mode:'Cash',partial_check:'false',sales_description:'Returns accepted within 7 days with receipt.'});
+}
+function seed(data){
+ design=engine.defaults(data||{});format=design.defaultFormat||'80';
+ Object.keys(design.layouts).forEach(function(f){
+  var l=design.layouts[f],cursor=8;l.canvas=true;
+  l.canvasHeight=Math.max(300,Number(l.canvasHeight)||((f==='a4'?980:f==='a5'?680:480)));
+  l.blocks.forEach(function(b){
+   if(!Number.isFinite(Number(b.x)))b.x=4;
+   if(!Number.isFinite(Number(b.y)))b.y=cursor;
+   if(!Number.isFinite(Number(b.w)))b.w=['items','totals','store','transaction'].includes(b.type)?92:70;
+   if(!Number.isFinite(Number(b.h)))b.h=b.type==='items'?100:b.type==='totals'?70:b.type==='logo'?46:32;
+   if(!Number.isFinite(Number(b.rotation)))b.rotation=0;
+   cursor=Math.max(cursor,b.y+b.h+8);
+  });
+  l.canvasHeight=Math.min(8000,Math.max(l.canvasHeight,cursor+20));
+ });
+ selected=layout().blocks[0]&&layout().blocks[0].id;
+}
+function renderPreview(){
+ var frame=root.find('.rps-preview')[0];if(!frame||!engine)return;
+ try{
+  var html=engine.render(sample(),format,true);
+  frame.srcdoc='<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;background:#fff}body{padding:8px}.rd-document{margin:0 auto!important}.rd-block{cursor:move;outline:1px dashed transparent}.rd-block:hover{outline:1px dashed #2877e8}.rd-block.rps-selected{outline:2px solid #2877e8!important;z-index:1000}.rps-resize{position:absolute;right:0;bottom:0;width:13px;height:13px;background:#2877e8;cursor:nwse-resize;display:block;z-index:1001}</style></head><body>'+html+'<script>document.addEventListener("click",function(e){var b=e.target.closest("[data-block-id]");if(b){e.preventDefault();parent.postMessage({type:"rps-select",id:b.getAttribute("data-block-id")},"*");}});document.addEventListener("pointerdown",function(e){var b=e.target.closest("[data-block-id]");if(!b)return;var doc=document.documentElement,rect=doc.getBoundingClientRect(),startX=e.clientX,startY=e.clientY,br=b.getBoundingClientRect(),resizing=e.target.classList.contains("rps-resize"),start={x:parseFloat(b.style.left)||0,y:parseFloat(b.style.top)||0,w:parseFloat(b.style.width)||100,h:parseFloat(b.style.minHeight)||br.height};if(!resizing){parent.postMessage({type:"rps-select",id:b.getAttribute("data-block-id")},"*");}function move(ev){if(resizing){b.style.width=Math.max(5,Math.min(100,start.w+(ev.clientX-startX)/doc.clientWidth*100))+"%";b.style.minHeight=Math.max(8,Math.min(1200,start.h+ev.clientY-startY))+"px";}else{b.style.left=Math.max(0,Math.min(100,start.x+(ev.clientX-startX)/doc.clientWidth*100))+"%";b.style.top=Math.max(0,start.y+ev.clientY-startY)+"px";}}function up(){document.removeEventListener("pointermove",move);document.removeEventListener("pointerup",up);parent.postMessage({type:"rps-geometry",id:b.getAttribute("data-block-id"),x:parseFloat(b.style.left)||0,y:parseFloat(b.style.top)||0,w:parseFloat(b.style.width)||100,h:parseFloat(b.style.minHeight)||b.getBoundingClientRect().height},"*");}document.addEventListener("pointermove",move);document.addEventListener("pointerup",up,{once:true});e.preventDefault();});window.addEventListener("message",function(e){if(e.data&&e.data.type==="rps-highlight"){document.querySelectorAll("[data-block-id]").forEach(function(b){b.classList.toggle("rps-selected",b.getAttribute("data-block-id")===e.data.id);var h=b.querySelector(".rps-resize");if(h)h.remove();if(b.getAttribute("data-block-id")===e.data.id){h=document.createElement("span");h.className="rps-resize";b.appendChild(h);}});}});<\/script></body></html>';
+ }catch(e){status('Preview could not render: '+e.message,true);}
+}
+function inspector(b){
+ if(!b)return '<div class="rps-empty">Select an element in the preview or add one from the library.</div>';
+ var fieldOptions=Object.keys(schema.fields).map(function(k){return '<option value="'+esc(k)+'" '+(b.field===k?'selected':'')+'>'+esc(schema.fields[k])+'</option>';}).join('');
+ var out='<div class="rps-inspector-title"><span>Selected element</span><strong>'+esc(names[b.type]||b.type)+'</strong></div>';
+ out+='<div class="rps-grid"><label>Left (%)<input data-prop="x" type="number" min="0" max="100" value="'+esc(b.x||0)+'"></label><label>Top (px)<input data-prop="y" type="number" min="0" max="8000" value="'+esc(b.y||0)+'"></label><label>Width (%)<input data-prop="w" type="number" min="5" max="100" value="'+esc(b.w||90)+'"></label><label>Height (px)<input data-prop="h" type="number" min="8" max="2000" value="'+esc(b.h||32)+'"></label><label>Rotation (°)<input data-prop="rotation" type="number" min="-180" max="180" value="'+esc(b.rotation||0)+'"></label><label>Font size (px)<input data-prop="fontSize" type="number" min="8" max="32" value="'+esc(b.fontSize||12)+'"></label></div>';
+ out+='<label class="rps-label">Font family<select data-prop="fontFamily"><option value="Arial, sans-serif">Arial</option><option value="Tahoma, sans-serif">Tahoma</option><option value="Verdana, sans-serif">Verdana</option><option value="Georgia, serif">Georgia</option><option value="Courier New, monospace">Courier New</option><option value="monospace">Monospace</option></select></label>';
+ out+='<label class="rps-label">Alignment<select data-prop="align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label>';
+ if(b.type==='text')out+='<label class="rps-label">Text<textarea data-prop="text" rows="3">'+esc(b.text||'Merci pour votre achat !')+'</textarea></label>';
+ if(b.type==='field')out+='<label class="rps-label">Dynamic field<select data-prop="field">'+fieldOptions+'</select></label>';
+ if(b.type==='transaction')out+='<label class="rps-label">Receipt heading<input data-prop="labelText" value="'+esc(b.labelText||'')+'" placeholder="Receipt"></label>';
+ if(b.type==='items')out+='<label class="rps-label">Items layout<select data-prop="itemLayout"><option value="detailed">Detailed</option><option value="columns">Compact columns</option><option value="compact">Name and quantity</option></select></label><label class="rps-label">Item name length<input data-prop="nameMaxChars" type="number" min="8" max="80" value="'+esc(b.nameMaxChars||24)+'"></label>';
+ if(b.type==='divider')out+='<label class="rps-label">Line style<select data-prop="lineStyle"><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option></select></label>';
+ if(b.type==='logo'||b.type==='image')out+='<label class="rps-label">Upload logo / image<input type="file" id="rps-image" accept="image/png,image/jpeg,image/webp"></label><small class="rps-help">PNG with transparent background recommended (max 5 MB).</small>';
+ if(b.type==='totals')out+='<label class="rps-check"><input type="checkbox" data-prop="showPaymentMethod" '+(b.showPaymentMethod!==false?'checked':'')+'> Show payment method</label>';
+ out+='<label class="rps-check"><input type="checkbox" data-prop="bold" '+(b.bold?'checked':'')+'> Bold text</label><button type="button" class="rps-delete">Remove element</button>';
+ return out;
+}
+function render(){
+ if(!root||!root.length)return;
+ root.find('.rps-format').removeClass('active').filter('[data-format="'+format+'"]').addClass('active');
+ root.find('.rps-blocks').html(layout().blocks.map(function(b,i){return '<div class="rps-block-row '+(b.id===selected?'selected':'')+'" data-id="'+esc(b.id)+'"><button class="rps-select" type="button">'+esc(names[b.type]||b.type)+'</button><button class="rps-up" type="button" title="Move up" '+(i===0?'disabled':'')+'>↑</button><button class="rps-down" type="button" title="Move down" '+(i===layout().blocks.length-1?'disabled':'')+'>↓</button></div>';}).join(''));
+ root.find('.rps-inspector').html(inspector(current()));
+ var b=current();if(b){root.find('[data-prop="fontFamily"]').val(b.fontFamily||'Arial, sans-serif');root.find('[data-prop="align"]').val(b.align||'left');root.find('[data-prop="itemLayout"]').val(b.itemLayout||'detailed');root.find('[data-prop="lineStyle"]').val(b.lineStyle||'dashed');}
+ root.find('.rps-canvas-height').val(layout().canvasHeight);
+ renderPreview();
+}
+function add(type){
+ if(layout().blocks.length>=40){status('A receipt can contain at most 40 elements.',true);return;}
+ var y=layout().blocks.reduce(function(n,b){return Math.max(n,Number(b.y||0)+Number(b.h||24)+8);},8);
+ var b=engine.block(type,{id:id(),align:type==='logo'||type==='barcode'?'center':'left',x:4,y:y,w:['items','totals','store','transaction','divider'].includes(type)?92:70,h:type==='items'?100:type==='totals'?70:type==='logo'?44:30,fontSize:12,rotation:0});
+ if(type==='text')b.text='Merci pour votre achat !';if(type==='field')b.field='customer_name';if(type==='items')b.itemLayout='detailed';if(type==='divider')b.lineStyle='dashed';if(type==='totals')b.showPaymentMethod=true;
+ checkpoint();layout().blocks.push(b);layout().canvasHeight=Math.max(layout().canvasHeight,y+b.h+20);selected=b.id;render();status('Unsaved changes');
+}
+function persist(){
+ if(busy)return;var payload;
+ try{payload=schema.normalize(engine.copy(design));}catch(e){status(e.message,true);return;}
+ busy=true;root.find('.rps-save').prop('disabled',true);status('Saving receipt design…');
+ PosnicPro.put({url:'setting/updateCommonSettings',data:JSON.stringify({receipt_designs:payload,print_type:schema.formats[payload.defaultFormat].height?'a4':'standard'})},function(res){
+  busy=false;root.find('.rps-save').prop('disabled',false);
+  if(!res||res.type!=='success'||!res.data||!res.data.receipt_designs){status(res&&res.message||'Could not save receipt design.',true);return;}
+  branch.receipt_designs=res.data.receipt_designs;design=schema.normalize(res.data.receipt_designs);status('Receipt design saved.');render();
+ },function(xhr){busy=false;root.find('.rps-save').prop('disabled',false);status(xhr&&xhr.responseJSON&&xhr.responseJSON.message||'Save failed. Your edits are still here.',true);});
+}
+function printSample(){
+ try{var html=engine.render(sample(),format,false);engine.print(html,format,{sample:true}).then(function(r){status(r&&r.success?'Test receipt sent to printer.':'Test print finished.');}).catch(function(e){status(e.message||'Test print failed.',true);});}catch(e){status(e.message||'Could not prepare test receipt.',true);}
+}
+function load(data){
+ branch=data||{};engine=PosnicPro.receiptDesigner;schema=engine&&engine.contract;root=$('#print-design #receipt-designer');if(!root.length||!engine||!schema)return;
+ if(!design)seed(branch);
+ if(!root.find('.rps-app').length){
+  var css='<style id="rps-style">#receipt-designer{color:#24344b}#receipt-designer .rps-app{font:13px/1.4 Arial,sans-serif;border:1px solid #dbe3ef;border-radius:10px;overflow:hidden;background:#fff}#receipt-designer .rps-head{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap;padding:16px;border-bottom:1px solid #e4eaf2}#receipt-designer .rps-head h3{font-size:20px;margin:0 0 4px;font-weight:700}#receipt-designer .rps-head p{margin:0;color:#6d7c91;font-size:12px}#receipt-designer .rps-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}#receipt-designer .rps-status{font-size:11px;color:#65748a}#receipt-designer .rps-status.is-error{color:#b42318}#receipt-designer .rps-formats{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid #e4eaf2}#receipt-designer .rps-format{border:1px solid #cbd6e4;border-radius:5px;padding:7px 10px;background:#fff;color:#344761;cursor:pointer}#receipt-designer .rps-format.active{background:#eaf2ff;border-color:#3478d4;color:#1457ad;font-weight:700}#receipt-designer .rps-layout{display:grid;grid-template-columns:180px minmax(300px,1fr) 280px;min-height:640px}#receipt-designer .rps-library{padding:14px;background:#f8fafc;border-right:1px solid #e2e8f0}#receipt-designer .rps-library h4{margin:0 0 10px;font-size:13px}#receipt-designer .rps-add{display:block;width:100%;text-align:left;padding:8px;border:0;border-radius:5px;background:transparent;cursor:pointer;color:#344761}#receipt-designer .rps-add:hover{background:#eaf2ff;color:#1457ad}#receipt-designer .rps-center{padding:14px;min-width:0;background:#f0f3f8}#receipt-designer .rps-preview-wrap{height:600px;overflow:auto;background:#dfe5ed;border-radius:6px;padding:12px}#receipt-designer .rps-preview{display:block;width:100%;height:1100px;border:0;background:#fff;box-shadow:0 3px 12px #1c2d4518}#receipt-designer .rps-side{padding:14px;min-width:0;border-left:1px solid #e2e8f0}#receipt-designer .rps-blocks{display:grid;gap:5px;margin-bottom:14px}#receipt-designer .rps-block-row{display:flex;align-items:center;gap:2px;border:1px solid #dfe6ef;border-radius:5px;background:#fff;padding:3px}#receipt-designer .rps-block-row.selected{border-color:#3478d4;box-shadow:0 0 0 1px #3478d4}#receipt-designer .rps-block-row button{border:0;background:transparent;color:#40536d;cursor:pointer;padding:5px}#receipt-designer .rps-block-row .rps-select{flex:1;text-align:left;font-size:11px}#receipt-designer .rps-block-row button:disabled{opacity:.25;cursor:default}#receipt-designer .rps-inspector-title{display:grid;gap:3px;margin:12px 0;font-size:11px;color:#6c7a8d}#receipt-designer .rps-inspector-title strong{font-size:14px;color:#26364d}#receipt-designer .rps-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}#receipt-designer .rps-grid label,#receipt-designer .rps-label{display:block;font-size:11px;color:#52637a;margin:8px 0}#receipt-designer input:not([type=checkbox]):not([type=file]),#receipt-designer select,#receipt-designer textarea{display:block;width:100%;margin-top:4px;border:1px solid #cbd5e1;border-radius:4px;padding:6px;background:#fff;color:#24344b;font:12px Arial,sans-serif}#receipt-designer .rps-check{display:flex;gap:7px;align-items:center;margin:10px 0;font-size:11px}#receipt-designer .rps-delete{width:100%;margin-top:12px;border:1px solid #e5b8b8;border-radius:5px;background:#fff6f6;color:#a62929;padding:8px;cursor:pointer}#receipt-designer .rps-empty{font-size:12px;color:#6b7b90;line-height:1.6;padding:14px;background:#f8fafc;border-radius:6px}#receipt-designer .rps-help{display:block;font-size:10px;color:#687a91;margin:5px 0}#receipt-designer .rps-foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 14px;border-top:1px solid #e4eaf2;color:#6d7c91;font-size:11px}#receipt-designer .rps-foot input{width:90px!important}#receipt-designer .rps-btn{border:1px solid #cbd6e4;border-radius:5px;background:#fff;padding:8px 12px;cursor:pointer}#receipt-designer .rps-btn.primary{background:#1768d2;border-color:#1768d2;color:white}#receipt-designer .rps-btn:disabled{opacity:.55}@media(max-width:1100px){#receipt-designer .rps-layout{grid-template-columns:145px minmax(250px,1fr)}#receipt-designer .rps-side{grid-column:1/-1;border-left:0;border-top:1px solid #e2e8f0}}@media(max-width:650px){#receipt-designer .rps-layout{grid-template-columns:1fr}#receipt-designer .rps-library{border-right:0;border-bottom:1px solid #e2e8f0}#receipt-designer .rps-center{padding:8px}}</style>';
+  root.html(css+'<div class="rps-app"><header class="rps-head"><div><h3>Receipt Printing Studio</h3><p>Customize the actual receipt preview. Select an element to edit it; drag to move and use the corner handle to resize.</p></div><div class="rps-actions"><span class="rps-status" role="status">Ready</span><button type="button" class="rps-btn rps-undo">Undo</button><button type="button" class="rps-btn rps-test">Test print</button><button type="button" class="rps-btn primary rps-save">Save design</button></div></header><div class="rps-formats">'+Object.keys(schema.formats).map(function(f){return '<button type="button" class="rps-format" data-format="'+f+'">'+esc(schema.formats[f].name)+'</button>';}).join('')+'</div><div class="rps-layout"><aside class="rps-library"><h4>Element library</h4>'+palette.map(function(p){return '<button type="button" class="rps-add" data-type="'+p[0]+'">＋ '+p[1]+'</button>';}).join('')+'</aside><section class="rps-center"><div class="rps-preview-wrap"><iframe class="rps-preview" title="Live receipt preview"></iframe></div></section><aside class="rps-side"><h4>Receipt elements</h4><div class="rps-blocks"></div><h4>Properties</h4><div class="rps-inspector"></div></aside></div><footer class="rps-foot"><label>Canvas height <input class="rps-canvas-height" type="number" min="240" max="8000" value="480"></label><span>Changes are a draft until you choose Save design.</span></footer></div>');
+ }
+ render();
+ root.off('.receiptStudioV2')
+ .on('click.receiptStudioV2','.rps-add',function(){add(this.getAttribute('data-type'));})
+ .on('click.receiptStudioV2','.rps-format',function(){format=this.getAttribute('data-format');selected=layout().blocks[0]&&layout().blocks[0].id;render();})
+ .on('click.receiptStudioV2','.rps-save',persist).on('click.receiptStudioV2','.rps-test',printSample)
+ .on('click.receiptStudioV2','.rps-undo',function(){if(undo.length){design=undo.pop();render();status('Previous change restored');}})
+ .on('click.receiptStudioV2','.rps-block-row .rps-select',function(){selected=$(this).closest('.rps-block-row').attr('data-id');render();})
+ .on('click.receiptStudioV2','.rps-up,.rps-down',function(){var row=$(this).closest('.rps-block-row'),i=layout().blocks.findIndex(function(b){return b.id===row.attr('data-id');}),j=i+($(this).hasClass('rps-up')?-1:1);if(j<0||j>=layout().blocks.length)return;checkpoint();var t=layout().blocks[i];layout().blocks[i]=layout().blocks[j];layout().blocks[j]=t;render();status('Unsaved changes');})
+ .on('change.receiptStudioV2','[data-prop]',function(){var b=current(),k=this.getAttribute('data-prop');if(!b)return;checkpoint();if(this.type==='checkbox')b[k]=this.checked;else if(['x','y','w','h','rotation','fontSize','nameMaxChars'].includes(k))b[k]=Number(this.value);else b[k]=this.value;render();status('Unsaved changes');})
+ .on('change.receiptStudioV2','#rps-image',function(){var file=this.files&&this.files[0],b=current();if(!file||!b)return;if(file.size>5*1024*1024){status('Image must be 5 MB or smaller.',true);return;}var reader=new FileReader();reader.onload=function(){var img=new Image();img.onload=function(){var c=document.createElement('canvas'),scale=Math.min(1,768/img.width,768/img.height);c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);checkpoint();b.src=c.toDataURL('image/png');render();status('Image added. Save to keep it.');};img.src=reader.result;};reader.readAsDataURL(file);})
+ .on('click.receiptStudioV2','.rps-delete',function(){var i=layout().blocks.findIndex(function(b){return b.id===selected;});if(i<0)return;if(schema.required.includes(layout().blocks[i].type)){status('Required receipt section cannot be removed.',true);return;}checkpoint();layout().blocks.splice(i,1);selected=layout().blocks[0]&&layout().blocks[0].id;render();status('Element removed');})
+ .on('change.receiptStudioV2','.rps-canvas-height',function(){checkpoint();layout().canvasHeight=Math.max(240,Math.min(8000,Number(this.value)||480));render();status('Unsaved changes');});
+ window.addEventListener('message',function(e){var d=e.data||{};if(d.type==='rps-select'){selected=d.id;render();}if(d.type==='rps-geometry'){var b=layout().blocks.find(function(x){return x.id===d.id;});if(b){checkpoint();b.x=Math.round(d.x*10)/10;b.y=Math.round(d.y);b.w=Math.round(d.w*10)/10;b.h=Math.round(d.h);layout().canvasHeight=Math.max(layout().canvasHeight,b.y+b.h+20);selected=b.id;render();status('Unsaved changes');}}});
+}
+PosnicPro.receiptDesignerEditor={load:load,save:persist,printSample:printSample};
+}());
