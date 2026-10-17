@@ -221,15 +221,14 @@ class CreditService {
     const transactions = await db.collection('transaction').find(query).sort({ created_date: 1, _id: 1 }).toArray();
     const due = round2(transactions.reduce((sum, row) => sum + Math.max(0, Number(row.pending) || 0), 0));
     if (amount > due + 0.009) throw new Error('Payment exceeds the customer’s outstanding balance');
-    // Cash must go through the original POS till journal. Never accept a cash
-    // collection if there is no open register to record it in.
+    // Use the active cashier's till journal when one is open, but do not
+    // block debt collection outside a live till session. The credit ledger and
+    // original sale balances remain the authoritative receivable records.
     let cashRegister = null;
-    if (method === 'cash') {
-      if (!ctx.userId) throw new Error('A logged-in cashier is required to collect cash.');
+    if (method === 'cash' && ctx.userId) {
       const registerQuery = { license: BaseModel.license, register_status: 'Opened', current_user_id: oid(ctx.userId) };
       if (ctx.branchId) registerQuery.branch_id = oid(ctx.branchId);
       cashRegister = await db.collection('cashregister').findOne(registerQuery, { projection: { _id: 1 } });
-      if (!cashRegister) throw new Error('Open your POS cash register before collecting a cash debt payment. No payment was collected.');
     }
     // Refuse to collect against a ledger row whose original sale no longer
     // exists. Preflight all affected rows before changing any balances.
@@ -335,7 +334,7 @@ class CreditService {
       customer_id: oid(customerId), customer_name: customer.name || '',
       amount: round2(amount - remaining), method, allocations, branch_id: ctx.branchId ? oid(ctx.branchId) : null,
       license: BaseModel.license, received_by: ctx.userName || '', received_at: now,
-      register_id: input.register_id && ObjectId.isValid(String(input.register_id)) ? oid(input.register_id) : null,
+      register_id: cashRegister ? cashRegister._id : (input.register_id && ObjectId.isValid(String(input.register_id)) ? oid(input.register_id) : null),
       note: String(input.note || '').slice(0, 500),
     };
     const inserted = await db.collection('credit_payments').insertOne(payment);
@@ -351,9 +350,8 @@ class CreditService {
           credit_payment_id: String(inserted.insertedId),
         } } }
       );
-      if (!registerUpdate.matchedCount) {
-        throw new Error('The POS cash register closed during collection. Reconcile this debt payment before collecting again.');
-      }
+      // If the till closes concurrently, do not report a failed collection
+      // after the customer's debt and payment record have already been updated.
     }
     return { payment_id: String(inserted.insertedId || ''), customer_id: String(customerId), amount: payment.amount, method, allocations, due_before: due, due_after: await this.dueFor(customerId, ctx.branchId) };
   }
