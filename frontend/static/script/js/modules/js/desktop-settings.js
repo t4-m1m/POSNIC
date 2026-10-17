@@ -168,57 +168,11 @@
             var receiptFields = '<div class="desktop-settings-grid">' +
                 field('receiptPrinter', 'Receipt printer', select('receiptPrinter', printerChoices(printers, receipt.printerName || ''), receipt.printerName || '')) +
                 field('receiptPaper', 'Receipt roll width', select('receiptPaper', receiptPaper, receipt.paperWidth || '80mm')) +
-                field('receiptStoreName', 'Store name', input('receiptStoreName', receipt.storeName || '')) +
-                field('receiptTitle', 'Receipt heading', input('receiptTitle', receipt.receiptTitle || 'SALE RECEIPT')) +
-                field('receiptAddress', 'Store address', input('receiptAddress', receipt.storeAddress || '')) +
-                field('receiptPhone', 'Phone', input('receiptPhone', receipt.storePhone || '')) +
-                field('receiptEmail', 'Email', input('receiptEmail', receipt.storeEmail || '')) +
-                field('receiptFooter', 'Footer message', input('receiptFooter', receipt.footer || 'Thank you, please visit again')) +
                 '</div>' +
-                check('receiptShowCashier', 'Show cashier', receipt.showCashier !== false) +
-                check('receiptShowCustomer', 'Show customer', receipt.showCustomer !== false) +
-                check('receiptShowBranch', 'Show branch', !!receipt.showBranch) +
                 check('receiptOpenDrawer', 'Open cash drawer after sale', !!receipt.openDrawer, 'Enable only if the printer cash-drawer cable is connected.') +
-                '<hr><h4>Receipt designer</h4><p class="text-muted">These options apply to the live basket receipt and the sample print. Ticket and barcode are generated from the actual sale.</p>' +
-                '<div class="desktop-settings-grid">' +
-                field('receiptLogoText', 'Logo / shop name text (one line per row)', '<textarea class="form-control" id="desktop-receiptLogoText" data-field="receiptLogoText" rows="2">' + esc((receipt.design || {}).logoText || '') + '</textarea>') +
-                field('receiptAlignment', 'Default text alignment', select('receiptAlignment', { left: 'Left', center: 'Centered', right: 'Right' }, (receipt.design || {}).alignment || 'left')) +
-                field('receiptTitleAlignment', 'Receipt title alignment', select('receiptTitleAlignment', { left: 'Left', center: 'Centered', right: 'Right' }, (receipt.design || {}).titleAlignment || 'center')) +
-                field('receiptTitleSize', 'Title size', select('receiptTitleSize', { normal: 'Normal', large: 'Large', extra: 'Extra large' }, (receipt.design || {}).titleSize || 'large')) +
-                field('receiptTotalSize', 'Total amount size', select('receiptTotalSize', { normal: 'Normal', large: 'Large', extra: 'Extra large' }, (receipt.design || {}).totalSize || 'large')) +
-                field('receiptSeparator', 'Divider character', select('receiptSeparator', { '-': 'Thin line —', '=': 'Double line =', '*': 'Stars *', '.': 'Dots .' }, (receipt.design || {}).separator || '-')) +
-                field('receiptBarcodeWidth', 'Ticket barcode thickness', select('receiptBarcodeWidth', { '2': 'Fine', '3': 'Medium', '4': 'Thick' }, String((receipt.design || {}).barcodeWidth || 2))) +
-                field('receiptBarcodeHeight', 'Ticket barcode height', select('receiptBarcodeHeight', { '40': 'Short', '55': 'Normal', '80': 'Tall', '100': 'Extra tall' }, String((receipt.design || {}).barcodeHeight || 55))) +
-                field('receiptNote', 'Note above footer', '<textarea class="form-control" id="desktop-receiptNote" data-field="receiptNote" rows="2">' + esc((receipt.design || {}).note || 'Please keep this receipt for your records.') + '</textarea>') +
-                '</div>' +
-                check('receiptTitleBold', 'Bold receipt title', (receipt.design || {}).titleBold !== false) +
-                check('receiptTotalBold', 'Bold total amount', (receipt.design || {}).totalBold !== false) +
-                check('receiptShowTitle', 'Show receipt heading', (receipt.design || {}).showTitle !== false) +
-                check('receiptShowAddress', 'Show store address', (receipt.design || {}).showAddress !== false) +
-                check('receiptShowPhone', 'Show store phone', (receipt.design || {}).showPhone !== false) +
-                check('receiptShowEmail', 'Show store email', !!(receipt.design || {}).showEmail) +
-                check('receiptShowTicket', 'Show ticket number', (receipt.design || {}).showTicket !== false) +
-                check('receiptShowDate', 'Show date and time', (receipt.design || {}).showDate !== false) +
-                check('receiptShowCashierDesign', 'Show cashier on receipt', (receipt.design || {}).showCashier !== false) +
-                check('receiptShowCustomerDesign', 'Show customer on receipt', (receipt.design || {}).showCustomer !== false) +
-                check('receiptShowBranchDesign', 'Show branch', !!(receipt.design || {}).showBranch) +
-                check('receiptItemsHeader', 'Show basket column heading', (receipt.design || {}).itemsHeader !== false) +
-                check('receiptShowVariant', 'Show item variant under article name', (receipt.design || {}).showVariant !== false) +
-                check('receiptShowUnitPrice', 'Show unit price beside quantity', (receipt.design || {}).showUnitPrice !== false) +
-                check('receiptShowSubtotal', 'Show subtotal', (receipt.design || {}).showSubtotal !== false) +
-                check('receiptShowTaxes', 'Show taxes', (receipt.design || {}).showTaxes !== false) +
-                check('receiptShowDiscount', 'Show discounts', (receipt.design || {}).showDiscount !== false) +
-                check('receiptShowRoundOff', 'Show rounding adjustment', !!(receipt.design || {}).showRoundOff) +
-                check('receiptShowTotalQty', 'Show total quantity', !!(receipt.design || {}).showTotalQty) +
-                check('receiptShowPayments', 'Show payment method and amount', (receipt.design || {}).showPayments !== false) +
-                check('receiptShowChange', 'Show change due', (receipt.design || {}).showChange !== false) +
-                check('receiptShowBarcode', 'Print barcode for the ticket number', (receipt.design || {}).showBarcode !== false) +
-                check('receiptShowBarcodeText', 'Print ticket number under barcode', (receipt.design || {}).showBarcodeText !== false) +
-                check('receiptShowNote', 'Show note above footer', (receipt.design || {}).showNote !== false) +
-                check('receiptHeaderRule', 'Show header divider', (receipt.design || {}).headerRule !== false) +
-                check('receiptTotalRule', 'Show dividers around total', (receipt.design || {}).totalRule !== false) +
-                '<div class="desktop-actions">' + button('save-receipt-settings', 'Save receipt design', true) + ' ' + button('test-receipt', 'Print sample receipt') + '</div>' +
-                '<p class="text-muted">The sample uses a demo basket and never opens the cash drawer. Live receipts read item names, variants, quantities, unit prices, discounts, taxes, total and payment data from the sale.</p>';
+                '<div class="desktop-actions">' + button('save-receipt-settings', 'Save printer settings', true) + ' ' + button('test-receipt', 'Print sample receipt') + '</div>' +
+                '<p class="text-muted">Receipt content and layout are edited in Receipt Printing Studio below. Printer routing and paper width remain device-specific.</p>' +
+                '<div id="desktop-receipt-designer" class="mt-3"></div>';
             var labelPrinterFields = '<p class="text-muted">Shelf labels use the Windows print dialog. Set this printer as the Windows default so it is preselected for label printing; receipt printing keeps its own independent printer choice above.</p>' +
                 field('labelPrinter', 'Default printer for label printing', select('labelPrinter', printerChoices(printers, receiptResult.defaultPrinter || ''), receiptResult.defaultPrinter || '')) +
                 button('set-label-printer', 'Set default label printer');
@@ -278,6 +232,7 @@
             var body = await content(key);
             if (revision[key] !== stamp) return;
             host(key).html('<div class="desktop-page-heading"><div><h4>' + esc(t(key, sections[key][0])) + '</h4><p>' + esc(t(key + '_help', sections[key][1])) + '</p></div><span class="badge badge-light">' + esc(t('this_computer', 'This computer')) + '</span></div>' + body + '<p data-desktop-status role="status" aria-live="polite"></p>');
+            if (key === 'devices' && PosnicPro.receiptDesignerEditor) PosnicPro.receiptDesignerEditor.load();
             frequency(key);
             if (key === 'kitchen') host(key).find('input,select,[data-desktop-action="save-kitchen"]').prop('disabled', kitchenRunning);
         } catch (error) { host(key).html('<p role="alert">' + esc(error.message) + '</p>' + button('refresh', t('retry', 'Try again'))); }
