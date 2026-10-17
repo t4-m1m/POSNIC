@@ -598,11 +598,11 @@
                                                     </span>
 
                                                 </td>
-                                                <td class="payable-total pay_amount_total pay_amount_total"
+                                                <td class="payable-total pay_amount_total pay_amount_total posnic-total-focus-label"
                                                     id="pay_hide">
                                                     <lang class="lang_paytotal_title">Pay Total</lang>
                                                 </td>
-                                                <td class="payable-total text-warning total-amount-size"
+                                                <td class="payable-total text-warning total-amount-size posnic-total-focus-value"
                                                     id="pay_total_hide">
                                                     <span class="pull-right"><span
                                                             class="sign display-currency"></span>&nbsp;<span
@@ -1221,4 +1221,42 @@
 #save_btn .changeSalesBtnText,#save_btn .save_text{font-size:0}
 #save_btn .changeSalesBtnText:after,#save_btn .save_text:after{content:'PAYER';font-size:14px}
 #tendered_amount{pointer-events:auto!important;user-select:text!important;-webkit-user-select:text!important;background:#fff!important;opacity:1!important;cursor:text!important}
+
+/* Make the live basket total the visual anchor of the sale screen. */
+#sales_new #pay_hide.posnic-total-focus-label,
+#sales_new #pay_total_hide.posnic-total-focus-value{
+    background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 52%,#e0e7ff 100%)!important;
+    border-top:2px solid #2563eb!important;
+    border-bottom:2px solid #2563eb!important;
+    padding:14px 18px!important;
+    vertical-align:middle;
+}
+#sales_new #pay_hide.posnic-total-focus-label{
+    border-left:2px solid #2563eb!important;
+    border-radius:14px 0 0 14px;
+    color:#1d4ed8!important;
+    font-size:clamp(15px,1.3vw,19px)!important;
+    font-weight:850!important;
+    letter-spacing:.015em;
+}
+#sales_new #pay_total_hide.posnic-total-focus-value{
+    border-right:2px solid #2563eb!important;
+    border-radius:0 14px 14px 0;
+    color:#1d4ed8!important;
+    min-width:190px;
+}
+#sales_new #pay_total_hide #sales_new_grand_total{
+    color:#1e40af!important;
+    font-size:clamp(27px,2.5vw,40px)!important;
+    line-height:1.05;
+    font-weight:950!important;
+    letter-spacing:-.04em;
+    text-shadow:0 1px 0 rgba(255,255,255,.85);
+    font-variant-numeric:tabular-nums;
+}
+#sales_new #pay_total_hide .display-currency{color:#2563eb!important;font-size:clamp(18px,1.5vw,24px);font-weight:850}
+@media(max-width:768px){
+    #sales_new #pay_hide.posnic-total-focus-label,#sales_new #pay_total_hide.posnic-total-focus-value{padding:10px!important}
+    #sales_new #pay_total_hide.posnic-total-focus-value{min-width:0}
+}
 </style>
