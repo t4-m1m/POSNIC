@@ -129,5 +129,5 @@
         }, function () { price.textContent = '—'; });
     }
     function edit() { clear(); locked = true; el('layout').hidden = false; el('success').hidden = true; el('draft-note').textContent = P.i18n.t('lang_iv2_edit_draft_note', 'Editing a saved item. Save your changes before leaving.'); select('step1', true); }
-    P.itemsV2Workspace = { edit: edit, init: init, update: update, reveal: reveal, reset: reset, ready: ready, saved: saved };
+    P.itemsV2Workspace = { edit: edit, init: init, update: update, reveal: reveal, reset: reset, ready: ready, saved: saved, currentStep: function () { return active; }, goToStep: select };
 }());
