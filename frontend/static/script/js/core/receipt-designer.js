@@ -521,9 +521,11 @@
             for (var target of targets) {
                 var paper = target ? target.pageSize.replace('mm', '') : null;
                 var chosen = formatFor(data, requested === 'standard' && paper ? paper : requested || paper);
-                diagnostic({ stage: 'sale-document-render', format: chosen });
+                var configuredPrinter = String((target && target.name) || PosnicPro.resolveReceiptPrinter() || '');
+                var pdfTarget = /pdf/i.test(configuredPrinter);
+                diagnostic({ stage: 'sale-document-render', format: chosen, pdfTarget: pdfTarget });
                 // A format explicitly selected for this print takes precedence.
-                if (window.electronAPI && window.electronAPI.printer && typeof window.electronAPI.printer.printReceipt === 'function' && ['58', '80', '112'].indexOf(chosen) !== -1 && (!target || ['a4', 'a5', 'letter'].indexOf(String(target.pageSize || '').replace('mm', '')) === -1)) {
+                if (!pdfTarget && window.electronAPI && window.electronAPI.printer && typeof window.electronAPI.printer.printReceipt === 'function' && ['58', '80', '112'].indexOf(chosen) !== -1 && (!target || ['a4', 'a5', 'letter'].indexOf(String(target.pageSize || '').replace('mm', '')) === -1)) {
                     /*
                      * Thermal sample/designer receipts use the same native
                      * ESC/POS byte renderer and spooler as the known-good
@@ -540,7 +542,7 @@
                     });
                     if (!nativeResult || !nativeResult.success) throw new Error(nativeResult && nativeResult.error || label('Print failed'));
                 } else {
-                    await print(render(data, chosen, kitchenBill), chosen, { target: target, batch: true, sample: true, receiptLog: { saleId: data.sales_id, total: data.items_total, title: kitchenBill ? label('Bill') : label('Receipt'), source: 'Till' } });
+                    await print(render(data, chosen, kitchenBill), chosen, { target: target, batch: true, sample: true, showDialog: pdfTarget, receiptLog: { saleId: data.sales_id, total: data.items_total, title: kitchenBill ? label('Bill') : label('Receipt'), source: 'Till' } });
                 }
             }
             if (!options.preserveWorkspace) PosnicPro.afterPrint();
