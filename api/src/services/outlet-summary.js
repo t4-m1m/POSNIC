@@ -85,7 +85,7 @@ function summarize(sales, branch, day) {
       sum += minor;
       validated.push([method, minor]);
     }
-    if (!validated.length || sum !== amount) {
+    if (sum !== amount) {
       result.unresolved.push(String(sale.sales_id || sale._id));
       continue;
     }
