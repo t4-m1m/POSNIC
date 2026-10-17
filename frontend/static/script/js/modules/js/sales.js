@@ -11984,15 +11984,8 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
     // F1/F2 must work even when the cashier last clicked a basket/input area.
     // Modals keep their own keyboard controls and are intentionally excluded.
     if ($(event.target).closest('.modal').length) return;
-    if (event.key === 'F4') {
-        event.preventDefault();
-        var holdButton = document.getElementById('holdSaleButton');
-        if (holdButton && !holdButton.disabled) holdButton.click();
-        else PosnicPro.alert('warning', 'Hold sale is not available right now.');
-        return;
-    }
     var $rows = $('#sales_new .touch-table-tbody tr').has('input[name="addSalesLineItemQty"]');
-    if (event.key === 'F3') {
+    if (event.key === 'F3' || event.key === 'F4') {
         var $row = $(event.target).closest('tr');
         var selectedId = String(PosnicPro.sales._selectedPriceTierLineId || '');
         var $selectedRow = selectedId ? $('#touch_row_' + selectedId) : $();
@@ -12043,6 +12036,9 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
                     if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
                 }
             }
+        } else {
+            var $qty = $row.find('input[name="addSalesLineItemQty"]').first();
+            if ($qty.length) { $qty.focus().select(); }
         }
         event.preventDefault();
         return;
