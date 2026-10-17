@@ -339,9 +339,12 @@
                 var src = b.type === 'logo' ? safeImage(b.src || (!logo || logo === 'store.png' ? 'static/images/default/store.png' : logo)) : b.type === 'barcode' ? barcode(data.sales_id || 'PREVIEW-RECEIPT-0001') : safeImage(b.src);
                 if (!src) return '';
                 var imageWidth = b.type === 'logo' ? (sheet ? 22 : 45) : b.type === 'barcode' ? 90 : b.width;
-                content = '<img src="' + esc(src) + '" alt="' + esc(label(b.type === 'qr' ? 'QR code' : b.type === 'logo' ? 'Store logo' : b.type === 'barcode' ? PosnicPro.i18n.t('lang_rd_receipt_barcode', 'Receipt barcode') : PosnicPro.i18n.t('lang_image', 'Image'))) + '" style="width:' + (sheet ? contract.formats[format].content * imageWidth / 100 + 'mm' : imageWidth + '%') + ';max-height:' + (b.type === 'logo' ? '100px' : 'none') + ';transform:rotate(' + Math.max(-180, Math.min(180, Number(b.rotation) || 0)) + 'deg);transform-origin:center center;">';
+                content = '<img src="' + esc(src) + '" alt="' + esc(label(b.type === 'qr' ? 'QR code' : b.type === 'logo' ? 'Store logo' : b.type === 'barcode' ? PosnicPro.i18n.t('lang_rd_receipt_barcode', 'Receipt barcode') : PosnicPro.i18n.t('lang_image', 'Image'))) + '" style="width:' + (sheet ? contract.formats[format].content * imageWidth / 100 + 'mm' : imageWidth + '%') + ';max-height:' + (b.type === 'logo' ? '100px' : 'none') + ';">';
             }
             var style = 'text-align:' + b.align;
+            if (b.rotation != null && Number.isFinite(Number(b.rotation)) && Number(b.rotation) !== 0) {
+                style += ';transform:rotate(' + Math.max(-180, Math.min(180, Number(b.rotation))) + 'deg);transform-origin:center center;';
+            }
             if (layout.canvas && Number.isFinite(Number(b.x)) && Number.isFinite(Number(b.y))) {
                 style += ';position:absolute;left:' + Math.max(0, Math.min(100, Number(b.x))) + '%;top:' + Math.max(0, Number(b.y)) + 'px;width:' + Math.max(5, Math.min(100, Number(b.w) || 100)) + '%;margin:0;';
                 if (Number.isFinite(Number(b.h)) && Number(b.h) > 0) style += 'min-height:' + Math.min(2000, Number(b.h)) + 'px;';
