@@ -88,12 +88,10 @@
             (desktop() ? '<button type="button" class="btn btn-outline-primary btn-sm mr-2" data-print-add>' + esc(PosnicPro.i18n.t('lang_print_add_sales_printer', 'Add sales printer')) + '</button>' : '') +
             '<button type="button" class="btn btn-primary btn-sm" data-print-save>' + esc(PosnicPro.i18n.t('lang_print_save_settings', 'Save print settings')) + '</button><span class="small ml-2" role="status" data-print-status></span></div></section>');
         features(featureState);
-        var studioRoot = $('#print-design #receipt-designer');
-        if (studioRoot.length && PosnicPro.receiptDesignerEditor && typeof PosnicPro.receiptDesignerEditor.load === 'function') {
-            PosnicPro.receiptDesignerEditor.load(featureState);
-        } else if (studioRoot.length) {
-            studioRoot.html('<div class="alert alert-danger" role="alert">Receipt Studio failed to initialize. Reload Settings or update the desktop app.</div>');
-        }
+        // The legacy Receipt Studio UI is retired. Keep printer destination,
+        // paper, copies, and test-print handling here; the replacement editor
+        // will be added separately without changing this working print path.
+        $('#print-design #receipt-designer').empty();
     }
     function collect() {
         var next = { sales: [], invoice: state.invoice, quotation: state.quotation, itemLanguages: { receipt: $('#print-item-receipt').val() || '', kot: $('#print-item-kot').val() || '', bilingual: $('#print-item-bilingual').prop('checked') === true } };
