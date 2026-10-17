@@ -1474,7 +1474,7 @@ if ($wrapper.length) {
                     footer_qr_url: data.footer_qr_url,
                     footer_image_caption: data.footer_image_caption
                 });
-                // Receipt Studio is mounted inside Devices & Printing by print-settings.js.
+                // Keep printer destinations and test-print settings mounted independently of the retired designer UI.
                 if (PosnicPro.printSettings) PosnicPro.printSettings.mount(data);
                 if (PosnicPro.kotPrint) PosnicPro.kotPrint.loadSettings();
 
