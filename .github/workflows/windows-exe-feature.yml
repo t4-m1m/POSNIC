@@ -59,25 +59,17 @@ jobs:
           Remove-Item mongodb.zip -Force
           Remove-Item mongodb-temp -Recurse -Force
           node scripts/check-mongodb-binaries.js
-      - name: Build Windows installer and portable EXE (no tests)
+      - name: Build Windows installer only (no tests)
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           npm run build
           $installer = Get-ChildItem -Path 'dist' -Filter '*-windows-x64-installer.exe' | Select-Object -First 1
           if (-not $installer) { throw 'Windows installer was not produced.' }
-          $savedInstaller = Join-Path $env:RUNNER_TEMP $installer.Name
-          Copy-Item -LiteralPath $installer.FullName -Destination $savedInstaller -Force
-          npm run build:portable
-          New-Item -ItemType Directory -Force -Path 'dist' | Out-Null
-          Copy-Item -LiteralPath $savedInstaller -Destination (Join-Path 'dist' $installer.Name) -Force
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload Windows installer and standalone EXE
+      - name: Upload Windows installer only
         uses: actions/upload-artifact@v4
         with:
-          name: POSNIC-Windows-EXE-feature-branch
-          path: |
-            dist/*.exe
+          name: POSNIC-Windows-Installer-feature-branch
+          path: dist/*-windows-x64-installer.exe
           if-no-files-found: error
           retention-days: 14
