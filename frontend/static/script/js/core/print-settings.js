@@ -81,9 +81,12 @@
     }
     function render() {
         var host = $('#document-print-settings');
-        // Replace the previous receipt editor entirely. The Studio is the only
-        // receipt-design UI shown under Devices & Printing; the shared renderer
-        // in core/receipt-designer.js remains the production print engine.
+        // Keep an already-mounted Studio across printer-setting refreshes so
+        // unsaved design edits are not discarded. Never preserve the legacy
+        // editor root: only a root containing Studio's own header is reusable.
+        var studio = host.find('#receipt-designer').filter(function () {
+            return $(this).find('.rs-head').length > 0;
+        }).detach();
         host.find('#receipt-designer').remove();
         host.html('<section class="print-settings-panel"><h5>' + esc(PosnicPro.i18n.t('lang_print_printers_paper', 'Printers & paper')) + '</h5><p class="small text-muted">' + esc(PosnicPro.i18n.t('lang_print_this_device', 'Saved on this computer')) + '</p><p class="small text-muted mt-2">' +
             esc(desktop() ? PosnicPro.i18n.t('lang_print_device_help', 'Choose a printer and paper for each document. Other computers keep their own choices.') : PosnicPro.i18n.t('lang_print_browser_help', 'Paper choices are saved in this browser. Choose the printer and copies in the browser print dialog.')) + '</p><div class="table-responsive"><table class="table table-sm mb-2"><thead><tr><th>' + esc(PosnicPro.i18n.t('lang_print_document', 'Document')) + '</th><th>' + esc(PosnicPro.i18n.t('lang_printer', 'Printer')) + '</th><th>' + esc(PosnicPro.i18n.t('lang_print_paper_size', 'Paper size')) + '</th><th>' + esc(PosnicPro.i18n.t('lang_print_mode', 'Print mode')) + '</th><th>' + esc(PosnicPro.i18n.t('lang_print_copies', 'Copies')) + '</th><th></th></tr></thead><tbody>' +
@@ -93,7 +96,9 @@
             '<button type="button" class="btn btn-primary btn-sm" data-print-save>' + esc(PosnicPro.i18n.t('lang_print_save_settings', 'Save print settings')) + '</button><span class="small ml-2" role="status" data-print-status></span></div></section>');
         host.append('<section class="receipt-studio-panel mt-4"><h5>Receipt Studio</h5><p class="small text-muted">Edit the receipt here. Printing continues through the existing receipt renderer and printer pipeline.</p><div id="receipt-designer"></div></section>');
         features(featureState);
-        if (PosnicPro.receiptDesignerEditor && typeof PosnicPro.receiptDesignerEditor.load === 'function') {
+        if (studio.length) {
+            host.find('#receipt-designer').replaceWith(studio);
+        } else if (PosnicPro.receiptDesignerEditor && typeof PosnicPro.receiptDesignerEditor.load === 'function') {
             PosnicPro.receiptDesignerEditor.load(featureState);
         } else {
             host.find('#receipt-designer').html('<div class="alert alert-danger" role="alert">Receipt Studio did not load. Refresh the application after updating the desktop build.</div>');
