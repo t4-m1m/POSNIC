@@ -4833,11 +4833,25 @@ $(document).ready(function () {
     $("#item_image_upload_form").submit(function (event) {
         event.preventDefault();
         if (PosnicPro.items._saving) return;
-        if (!PosnicPro.itemTranslations.ready()) {
-            PosnicPro.alert('warning', 'Item translations are still loading. Wait a moment, then save again.');
+        // Translations are optional metadata. A slow or failed translation
+        // bootstrap must never block saving the core item record.
+        var $itemForm = $('#item_image_upload_form');
+        if (!$itemForm.valid()) {
+            var $invalid = $itemForm.find(':input').filter(function () {
+                return this.willValidate && !this.checkValidity() && $(this).is(':visible');
+            }).first();
+            if ($invalid.length) {
+                var $pane = $invalid.closest('.tab-pane');
+                if ($pane.length && !$pane.hasClass('active')) {
+                    var paneId = $pane.attr('id');
+                    $('#item_form_tabs a[href="#' + paneId + '"]').tab('show');
+                }
+                $invalid.trigger('focus');
+            }
+            PosnicPro.alert('warning', 'Please complete the required item fields before saving.');
             return;
         }
-        if ($('#item_image_upload_form').valid()) {
+        if ($itemForm.valid()) {
             if ($("#product_with_variant").is(":checked") && $("#load_price_fields").html() === '') {
                 PosnicPro.items.loadVariant();
                 PosnicPro.alert('info', 'Review each variant\'s price below, then Save');
