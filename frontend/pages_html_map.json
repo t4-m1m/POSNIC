@@ -23,6 +23,7 @@
         "modules/categoryReport.html",
         "modules/customer_categories.html",
         "modules/customers.html",
+        "modules/customerdebts.html",
         "modules/customersReport.html",
         "modules/dailyReport.html",
         "modules/dashboard.html",
