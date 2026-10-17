@@ -10342,7 +10342,7 @@ $(document).on('click','#save_captain_tables',function(){
             try { names = JSON.parse(PosnicPro.local.get('cashier_names') || '[]'); } catch (_) { names = []; }
         }
         return (Array.isArray(names) ? names : []).map(function (n) { return String(n || '').trim(); })
-            .filter(function (n, i, all) { return n && all.indexOf(n.toLowerCase()) === i; }).slice(0, 100);
+            .filter(function (n, i, all) { return n && all.findIndex(function (value) { return String(value).toLowerCase() === n.toLowerCase(); }) === i; }).slice(0, 100);
     }
     function esc(value) { return $('<span>').text(value == null ? '' : String(value)).html().replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); }
     function render(names) {
