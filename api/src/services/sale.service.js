@@ -1169,32 +1169,62 @@ const processSale = async (
       typeof data.multi_payment === 'object' &&
       Object.keys(data.multi_payment).length > 0
     ) {
-      const amounts = Array.isArray(data.multi_payment)
-        ? data.multi_payment.map((payment) => payment?.amount)
-        : Object.values(data.multi_payment);
-      const invalid = amounts.some(
-        (amount) =>
+      const entries = Array.isArray(data.multi_payment)
+        ? data.multi_payment.map((payment) => [
+            String(payment?.method || payment?.payment_mode || '').trim(),
+            payment?.amount,
+          ])
+        : Object.entries(data.multi_payment);
+      const invalid = entries.some(
+        ([, amount]) =>
           (typeof amount !== 'number' && typeof amount !== 'string') ||
           String(amount).trim() === '' ||
           !Number.isFinite(Number(amount)) ||
           Number(amount) < 0
       );
-      const tenderMinor = amounts.reduce(
-        (sum, amount) => sum + Math.round(Number(amount) * 100),
+      const creditMinor = entries.reduce(
+        (sum, [method, amount]) =>
+          sum + (/^credit$/i.test(String(method).trim()) ? Math.round(Number(amount || 0) * 100) : 0),
         0
       );
-      const expectedTender = partialCheck ? partialBalance : effectiveDue;
-      const dueMinor = Math.round(expectedTender * 100);
-      if (invalid || !Number.isSafeInteger(tenderMinor) || tenderMinor !== dueMinor) {
+      const receivedMinor = entries.reduce(
+        (sum, [method, amount]) =>
+          sum + (/^credit$/i.test(String(method).trim()) ? 0 : Math.round(Number(amount || 0) * 100)),
+        0
+      );
+      const totalTenderMinor = entries.reduce(
+        (sum, [, amount]) => sum + Math.round(Number(amount || 0) * 100),
+        0
+      );
+      const expectedReceived = Math.round((partialCheck ? partialBalance : effectiveDue) * 100);
+      const dueMinor = Math.round(Math.max(0, effectiveDue - (partialCheck ? partialBalance : effectiveDue)) * 100);
+      const billMinor = Math.round(effectiveDue * 100);
+      if (!Number.isSafeInteger(totalTenderMinor) || invalid) {
         return {
           status: false,
-          // This validation precedes every sale, stock and payment write. The
-          // desktop may release this request from uncertain-submit recovery.
-          data:
-            id === '' && typeof data.idempotencyKey === 'string'
+          data: id === '' && typeof data.idempotencyKey === 'string'
+            ? { submission_outcome: 'not_saved', request_id: data.idempotencyKey }
+            : null,
+          message: 'Enter valid non-negative amounts for each payment method.',
+        };
+      }
+      if (partialCheck && dueMinor > 0) {
+        if (receivedMinor !== expectedReceived || creditMinor !== dueMinor || totalTenderMinor !== billMinor) {
+          return {
+            status: false,
+            data: id === '' && typeof data.idempotencyKey === 'string'
               ? { submission_outcome: 'not_saved', request_id: data.idempotencyKey }
               : null,
-          message: `Payment total does not match the ${partialCheck ? 'payment amount' : 'bill total'} (${expectedTender.toFixed(2)}). Review the payment amount before saving.`,
+            message: 'For a partial payment, the received tenders must equal the paid amount and Credit must equal the remaining balance.',
+          };
+        }
+      } else if (creditMinor !== 0 || receivedMinor !== expectedReceived || totalTenderMinor !== expectedReceived) {
+        return {
+          status: false,
+          data: id === '' && typeof data.idempotencyKey === 'string'
+            ? { submission_outcome: 'not_saved', request_id: data.idempotencyKey }
+            : null,
+          message: 'Payment total does not match the amount due. Credit is only valid for the unpaid remainder.',
         };
       }
     }
