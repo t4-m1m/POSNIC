@@ -172,6 +172,102 @@ class CreditService {
     return { ...r, error: r.allowed ? null : 'Credit limit exceeded' };
   }
 
+  // ============================ customer debt ledger ============================
+
+  async ledger(customerId, branchId) {
+    if (!ObjectId.isValid(String(customerId || ''))) throw new Error('Invalid customer ID');
+    const db = await BaseModel.getDb();
+    const query = { customer_id: oid(customerId), license: BaseModel.license };
+    if (branchId) query.branch_id = oid(branchId);
+    const rows = await db.collection('transaction').find(query).sort({ created_date: 1, _id: 1 }).toArray();
+    const sales = db.collection('sales');
+    const result = [];
+    for (const row of rows) {
+      const pending = round2(row.pending);
+      if (pending <= 0) continue;
+      let sale = null;
+      if (row.sale_id) {
+        const saleQuery = ObjectId.isValid(String(row.sale_id))
+          ? { _id: oid(row.sale_id), license: BaseModel.license }
+          : { sales_id: String(row.sale_id), license: BaseModel.license };
+        sale = await sales.findOne(saleQuery, { projection: { sales_id: 1, created_date: 1, sales_total: 1, total: 1, payment_pending: 1, payment_status: 1 } });
+      }
+      result.push({
+        transaction_id: String(row._id),
+        sale_id: row.sale_id ? String(row.sale_id) : '',
+        receipt_number: (sale && sale.sales_id) || String(row.sale_id || ''),
+        date: (row.created_date || (sale && sale.created_date) || row.updated_date || null),
+        sale_total: round2(row.sale_total != null ? row.sale_total : (sale && (sale.sales_total || sale.total))),
+        pending,
+        description: row.description || 'Credit sale',
+      });
+    }
+    return result;
+  }
+
+  async settleDebt(customerId, input = {}, ctx = {}) {
+    if (!ObjectId.isValid(String(customerId || ''))) throw new Error('Invalid customer ID');
+    const amount = round2(input.amount);
+    if (!(amount > 0)) throw new Error('Enter a payment amount greater than zero');
+    const methodMap = { cash: 'cash', card: 'card', bank_transfer: 'bank_transfer', other: 'other' };
+    const method = methodMap[String(input.method || 'cash').toLowerCase()];
+    if (!method) throw new Error('Choose a valid payment method');
+    const db = await BaseModel.getDb();
+    const customer = await db.collection('customers').findOne({ _id: oid(customerId), license: BaseModel.license, is_deleted: { $ne: true } });
+    if (!customer) throw new Error('Customer not found');
+    const query = { customer_id: oid(customerId), license: BaseModel.license };
+    if (ctx.branchId) query.branch_id = oid(ctx.branchId);
+    const transactions = await db.collection('transaction').find(query).sort({ created_date: 1, _id: 1 }).toArray();
+    const due = round2(transactions.reduce((sum, row) => sum + Math.max(0, Number(row.pending) || 0), 0));
+    if (amount > due + 0.009) throw new Error('Payment exceeds the customer’s outstanding balance');
+    let remaining = amount;
+    const now = new Date();
+    const allocations = [];
+    for (const row of transactions) {
+      if (remaining <= 0) break;
+      const oldPending = Math.max(0, Number(row.pending) || 0);
+      if (!oldPending) continue;
+      const paid = round2(Math.min(oldPending, remaining));
+      const nextPending = round2(oldPending - paid);
+      const changed = await db.collection('transaction').updateOne(
+        { _id: row._id, license: BaseModel.license, pending: row.pending },
+        { $set: { pending: nextPending, updated_date: now, last_payment_date: now } }
+      );
+      if (!changed.matchedCount) throw new Error('A debt changed during collection. Refresh the debt page and retry.');
+      if (row.sale_id) {
+        const saleQuery = ObjectId.isValid(String(row.sale_id))
+          ? { _id: oid(row.sale_id), license: BaseModel.license }
+          : { sales_id: String(row.sale_id), license: BaseModel.license };
+        const sale = await db.collection('sales').findOne(saleQuery);
+        if (sale) {
+          const oldSalePending = Math.max(0, Number(sale.payment_pending != null ? sale.payment_pending : oldPending) || 0);
+          const nextSalePending = round2(Math.max(0, oldSalePending - paid));
+          await db.collection('sales').updateOne(saleQuery, {
+            $set: {
+              payment_pending: nextSalePending,
+              payment_status: nextSalePending <= 0 ? 'Paid' : 'Partialy Paid',
+              updated_date: now,
+              last_debt_payment_date: now,
+            },
+            $inc: { paid_amount: paid },
+            $push: { payments: { amount: paid, date: now, method, notes: 'Customer debt settlement', origin: { type: 'credit_settlement', transaction_id: String(row._id) } } },
+          });
+        }
+      }
+      allocations.push({ transaction_id: String(row._id), sale_id: row.sale_id ? String(row.sale_id) : '', amount: paid, remaining: nextPending });
+      remaining = round2(remaining - paid);
+    }
+    const payment = {
+      customer_id: oid(customerId), customer_name: customer.name || '',
+      amount: round2(amount - remaining), method, allocations, branch_id: ctx.branchId ? oid(ctx.branchId) : null,
+      license: BaseModel.license, received_by: ctx.userName || '', received_at: now,
+      register_id: input.register_id && ObjectId.isValid(String(input.register_id)) ? oid(input.register_id) : null,
+      note: String(input.note || '').slice(0, 500),
+    };
+    await db.collection('credit_payments').insertOne(payment);
+    return { payment_id: String(payment._id || ''), customer_id: String(customerId), amount: payment.amount, method, allocations, due_before: due, due_after: await this.dueFor(customerId) };
+  }
+
   // ============================ reminders ============================
 
   async _send(branchId, channel, phone, message) {
