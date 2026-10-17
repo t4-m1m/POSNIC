@@ -4458,7 +4458,40 @@ PosnicPro.sales.addSale = {
         var partial_check = (partial_check_value === 'true' || partial_check_value === 'Partial') ? 'true' : 'false';
         var partial = $('#Partial_amount').val();
         let payments = PosnicPro.sales.getPaymentObject();
-        
+
+        // A walk-in sale can use split tenders only when the entire bill is
+        // collected now. Credit is permitted only against a saved customer.
+        var creditAmountForGuard = parseFloat(payments.Credit || payments.credit || 0) || 0;
+        var checkoutDueForGuard = Math.max(0, (parseFloat(PosnicPro.sales.extraDiscount.sale_new_tot) || 0) - (parseFloat(PosnicPro.sales.payableCap()) || 0));
+        var creditRequestedForGuard = creditAmountForGuard > 0.01 ||
+            ($('#unpaid_payment_toggle').is(':checked') && checkoutDueForGuard > 0.01);
+        if (creditRequestedForGuard) {
+            var selectedCustomerId = String($('#sales_new_customer_id').val() || '').trim();
+            var selectedCustomerName = String($('#sales_new_customer_name').val() || '').trim();
+            var isWalkInCustomer = !selectedCustomerId || !selectedCustomerName ||
+                /walk.?in|cash customer|comptoir|client\s+de\s+passage/i.test(selectedCustomerName);
+            var checkoutSettings = {};
+            try {
+                var rawCheckoutSettings = PosnicPro.local.get('general_settings');
+                checkoutSettings = rawCheckoutSettings && typeof rawCheckoutSettings === 'object'
+                    ? rawCheckoutSettings : JSON.parse(rawCheckoutSettings || '{}');
+            } catch (_) {}
+            if (isWalkInCustomer) {
+                PosnicPro.sales.submissionInProgress = false;
+                $('#save_btn').prop('disabled', false);
+                $('#save_submit').removeClass('disabled');
+                PosnicPro.alert('warning', 'Partial payment is available only for a registered customer. Select a customer or collect the full amount.');
+                return false;
+            }
+            if (checkoutSettings.module_credit_enable === false) {
+                PosnicPro.sales.submissionInProgress = false;
+                $('#save_btn').prop('disabled', false);
+                $('#save_submit').removeClass('disabled');
+                PosnicPro.alert('warning', 'Customer credit is disabled in settings. Collect the full amount to validate this sale.');
+                return false;
+            }
+        }
+
         // Final validation: separate actual received tenders from the Credit receivable.
         if (PosnicPro.local.get('enable_multi_payment') === 'enable' || Object.prototype.hasOwnProperty.call(payments, 'Credit')) {
             var multipaymentTotal = 0, receivedTotal = 0;
@@ -11987,9 +12020,31 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
         return;
     }
     if (event.key === 'F2') {
-        var checkout = document.querySelector('#check_button');
-        if (checkout && !checkout.disabled) checkout.click();
         event.preventDefault();
+        event.stopPropagation();
+
+        // F2 is the "open payment" action, never the fast/full-cash action.
+        // If payment is already open, take the cashier directly to the amount field.
+        if ($('#tenderpage').is(':visible')) {
+            var amountField = document.getElementById('Partial_amount') || document.getElementById('tendered_amount');
+            if (amountField) { amountField.focus(); if (amountField.select) amountField.select(); }
+            return;
+        }
+
+        // Use the checkout button's normal validation path; it opens the tender
+        // page without submitting a sale or forcing a cash payment.
+        var checkout = document.querySelector('#check_button');
+        if (!checkout || checkout.disabled) {
+            PosnicPro.alert('warning', 'Add an item to the basket before opening payment.');
+            return;
+        }
+        checkout.click();
+        window.setTimeout(function () {
+            if (!$('#tenderpage').is(':visible') && $('#sales_new').is(':visible') &&
+                typeof PosnicPro.sales.openTenderModel === 'function') {
+                PosnicPro.sales.openTenderModel(false, true);
+            }
+        }, 120);
         return;
     }
     // F1: ask for the cashier first, then complete one full-cash checkout.
