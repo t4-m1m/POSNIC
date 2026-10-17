@@ -17,6 +17,7 @@ class CreditController extends BaseController {
       branchId: t.branchId || u.branch_id || u.branchId || BaseModel.currentBranch || null,
       branchName: t.branchName || u.branch_name || BaseModel.currentBranchName || '',
       userName: u.name || u.username || u.email || '',
+      userId: u._id || u.id || null,
       currency: t.currency || u.currency_type || '',
     };
   }
