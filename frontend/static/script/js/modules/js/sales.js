@@ -11701,11 +11701,21 @@ $(document).on('keydown.posnicReceiptEditShortcut', function (event) {
 $(document).on('click.posnicCreditRules', '#save_btn', function (event) {
     var dueText = String($('.balanceDue').first().text() || '0').replace(/[^0-9,.-]/g, '').replace(/,/g, '');
     var due = parseFloat(dueText);
-    if (!isFinite(due) || due <= 0.009) return;
+    if (!isFinite(due)) due = 0;
+    var creditTender = 0;
+    $('#payment_id .payment-method-card').each(function () {
+        var method = String($(this).find('.payment_mode').attr('id') || '').trim().toLowerCase();
+        if (method === 'credit') {
+            var amount = Number(String($(this).find('.payment-amount-input').val() || '0').replace(/,/g, ''));
+            if (isFinite(amount) && amount > 0) creditTender += amount;
+        }
+    });
+    var unpaidAllowed = $('#unpaid_payment_toggle').is(':checked');
+    var hasOutstanding = (unpaidAllowed && due > 0.009) || creditTender > 0.009;
+    if (!hasOutstanding) return;
+
     var customerId = String($('#sales_new_customer_id').val() || '').trim();
     var customerName = String($('#sales_new_customer_name').val() || '').trim();
-    var unpaidAllowed = $('#unpaid_payment_toggle').is(':checked');
-    if (!unpaidAllowed) return;
     if (!customerId || !customerName || /walk.?in|cash customer|comptoir|client\s+de\s+passage/i.test(customerName)) {
         event.preventDefault();
         event.stopImmediatePropagation();
@@ -11713,8 +11723,12 @@ $(document).on('click.posnicCreditRules', '#save_btn', function (event) {
         return false;
     }
     var general = {};
-    try { general = JSON.parse(PosnicPro.local.get('general_settings') || '{}'); } catch (_) {}
-    if (general.module_credit_enable === false) {
+    try {
+        var raw = PosnicPro.local.get('general_settings');
+        general = raw && typeof raw === 'object' ? raw : JSON.parse(raw || '{}');
+    } catch (_) {}
+    var creditSetting = general.module_credit_enable;
+    if (creditSetting === false || String(creditSetting).trim().toLowerCase() === 'false' || String(creditSetting).trim().toLowerCase() === 'disable') {
         event.preventDefault();
         event.stopImmediatePropagation();
         PosnicPro.alert('warning', 'Customer credit is disabled in settings. Collect the full amount to validate this sale.');
@@ -11808,7 +11822,11 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         if (e.key === 'Enter' && !$('#posnic-vendeur-confirm').prop('disabled')) { e.preventDefault(); continueCheckout(); }
     });
     PosnicPro.sales.runFunctionShortcut = function (key) {
-        if (key === 'F1' || key === 'F2') { askCashier(key); return; }
+        if (key === 'F1' || key === 'F2') {
+            if (key === 'F2' && $('#tenderpage').is(':visible')) return originalShortcut(key);
+            askCashier(key);
+            return;
+        }
         return originalShortcut(key);
     };
     document.addEventListener('keydown', function (e) {
@@ -11816,6 +11834,12 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         if (e.key !== 'F1' && e.key !== 'F2') return;
         if (!/sales\/new/i.test(String(window.location.hash || '')) && !$('#sales_new').is(':visible')) return;
         if ($('#posnic-vendeur-modal').hasClass('show')) return;
+        if (e.key === 'F2' && $('#tenderpage').is(':visible')) {
+            e.preventDefault(); e.stopImmediatePropagation();
+            var amountField = document.getElementById('Partial_amount') || document.getElementById('tendered_amount');
+            if (amountField) { amountField.focus(); if (amountField.select) amountField.select(); }
+            return;
+        }
         e.preventDefault(); e.stopImmediatePropagation();
         askCashier(e.key);
     }, true);
@@ -11960,8 +11984,15 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
     // F1/F2 must work even when the cashier last clicked a basket/input area.
     // Modals keep their own keyboard controls and are intentionally excluded.
     if ($(event.target).closest('.modal').length) return;
+    if (event.key === 'F4') {
+        event.preventDefault();
+        var holdButton = document.getElementById('holdSaleButton');
+        if (holdButton && !holdButton.disabled) holdButton.click();
+        else PosnicPro.alert('warning', 'Hold sale is not available right now.');
+        return;
+    }
     var $rows = $('#sales_new .touch-table-tbody tr').has('input[name="addSalesLineItemQty"]');
-    if (event.key === 'F3' || event.key === 'F4') {
+    if (event.key === 'F3') {
         var $row = $(event.target).closest('tr');
         var selectedId = String(PosnicPro.sales._selectedPriceTierLineId || '');
         var $selectedRow = selectedId ? $('#touch_row_' + selectedId) : $();
@@ -12012,9 +12043,6 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
                     if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
                 }
             }
-        } else {
-            var $qty = $row.find('input[name="addSalesLineItemQty"]').first();
-            if ($qty.length) { $qty.focus().select(); }
         }
         event.preventDefault();
         return;
