@@ -13159,24 +13159,20 @@ $('#wallet_balance').click(function () {
     $('.balanceDue').text(balanceDue);
 });
 
-$('#tendered_amount').on('keyup keydown', function () {
-    let tenderedAmountInput = $('#tendered_amount').val();
-    let tenderedAmount = Number(tenderedAmountInput);
-    let tenderTotalText = $('#tendered_payment').text().replace(/,/g, '');
-    let tenderTotal = Number(tenderTotalText);
-
-    tenderedAmount = tenderedAmount.toFixed(2);
-    tenderTotal = tenderTotal.toFixed(2);
-    let balance = PosnicPro.sales.sub(Number(tenderedAmount), Number(tenderTotal));
-    let showBalance = isNaN(balance) ? 0.00 : Number(balance).toFixed(2);
-    if (Number(tenderedAmount) < Number(tenderTotal)) {
-        $('#tendered_balance').val(0.00);
-    } else {
-        $('#tendered_balance').text(showBalance);
+$(document).on('input change', '#tendered_amount', function () {
+    // The received amount is a real editable field; calculate the outstanding
+    // amount from the current value after each edit (not on keydown, which
+    // reads the previous value).
+    var raw = String($(this).val() == null ? '' : $(this).val()).replace(/,/g, '').trim();
+    var tendered = raw === '' ? 0 : Number(raw);
+    var total = Number(String($('#tendered_payment').text() || '0').replace(/,/g, '')) || 0;
+    if (!Number.isFinite(tendered) || tendered < 0) tendered = 0;
+    var remainder = Math.max(0, total - tendered);
+    $('#tendered_balance').text(remainder.toFixed(2));
+    PosnicPro.sales.showTenderStatus(tendered, total);
+    if (typeof PosnicPro.sales.calculateDenominations === 'function') {
+        PosnicPro.sales.calculateDenominations(tendered);
     }
-    
-    // Auto-calculate denominations when user types amount
-    PosnicPro.sales.calculateDenominations(Number(tenderedAmountInput));
 });
 // Denomination render_mode click handler moved to initDenominationCounter function
 $('#extraDisc').on('change', function () {
