@@ -13178,6 +13178,9 @@ $(document).on('input change', '#tendered_amount', function () {
     if (!Number.isFinite(tendered) || tendered < 0) tendered = 0;
     var remainder = Math.max(0, total - tendered);
     $('#tendered_balance').text(remainder.toFixed(2));
+    // The API payload's partial_balance is sourced from this field. Keep it
+    // synchronized with the amount the cashier actually enters.
+    if ($('#Partial_amount').length) $('#Partial_amount').val(tendered.toFixed(2));
     PosnicPro.sales.showTenderStatus(tendered, total);
     if (typeof PosnicPro.sales.calculateDenominations === 'function') {
         PosnicPro.sales.calculateDenominations(tendered);
