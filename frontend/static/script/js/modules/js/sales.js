@@ -2602,6 +2602,13 @@ PosnicPro.sales = {
                 $('.partial_amount').attr('disabled', 'disabled');
             }
         }
+        // On a new checkout, "Montant payé" is always editable. The older code
+        // only unlocked it in payment-only mode, leaving the new-sale field
+        // disabled on some customer/payment states.
+        if (PosnicPro.sales.SaleAction === 'add') {
+            $('.partial_amount').prop('disabled', false).removeAttr('disabled');
+            $('.showhidDue').show();
+        }
         let Partial_amount = parseFloat($('#Partial_amount').val());
         Partial_amount = isNaN(Partial_amount) ? 0 : Partial_amount;
         let balanceDue = PosnicPro.sales.sub(saleNewTot, Partial_amount).toFixed(2);
@@ -3121,7 +3128,7 @@ PosnicPro.sales = {
 
         // --- Helper function to create each payment block ---
         function createPaymentBlock(id, title, isActive) {
-            let disabledAttr = isActive ? '' : 'disabled';
+            let disabledAttr = ''; // Every tender amount must be editable for split payments.
             let activeClass = isActive ? 'active' : '';
             let inputId = id.toLowerCase().replace(/\s+/g, '') + '_input';
 
