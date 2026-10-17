@@ -872,11 +872,16 @@ body.customer-display .contentbar {
 }
 
 
-/* Fix 2: cashier toolbar remains visible while the sale form scrolls. */
-#sales_new #sales-function-shortcuts{
- position:sticky!important;top:0;z-index:1040;isolation:isolate;
- box-shadow:0 6px 18px rgba(18,35,70,.12);
+/* The sales toolbar is pinned by the scroll handler because nested app
+   scroll containers prevent CSS sticky from consistently reaching the viewport. */
+#sales_new #sales-function-shortcuts{position:relative;isolation:isolate;}
+#sales_new #sales-function-shortcuts.sales-function-toolbar-pinned{
+ margin:0 0 12px!important;
+ box-shadow:0 6px 18px rgba(18,35,70,.18);
 }
+.sales-function-toolbar-placeholder{display:block;min-height:1px;pointer-events:none;}
+/* The plus action must exist only once, in the blue icon rail. */
+a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
 #sales_new .sales-customer-entry{display:none!important}
 #sales-function-shortcuts .sales-current-customer{
  display:flex;align-items:center;gap:9px;min-height:48px;min-width:140px;max-width:240px;
@@ -898,7 +903,7 @@ body.customer-display .contentbar {
 #posnic-customer-picker .posnic-customer-debt-preview{margin-top:12px;padding:12px 14px;border-radius:10px;background:#fff7ed;border:1px solid #fed7aa;min-height:64px;color:#7c2d12}
 #posnic-customer-picker .posnic-customer-debt-preview strong{font-size:18px}
 @media(max-width:767.98px){
- #sales_new #sales-function-shortcuts{top:0;gap:5px;padding:7px}
+ #sales_new #sales-function-shortcuts{gap:5px;padding:7px}
  #sales-function-shortcuts .sales-current-customer{order:0;flex:1 1 100%;max-width:none;min-width:0}
  #sales-function-shortcuts .sales-key-payer{flex:1 1 30%}
  #sales-function-shortcuts .sales-shortcut-total{flex:1 1 100%}
