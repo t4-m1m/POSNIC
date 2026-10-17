@@ -502,6 +502,13 @@
             if (event.type === 'pointerup' && ended.target) move(ended.id, layout().blocks.findIndex(function (b) { return b.id === ended.target; }));
         });
         box.find('.rd-preview-fit').val(previewFit);
+        // A receipt design tab can be mounted while hidden inside Settings.
+        // Repaint after Bootstrap reveals it so the preview gets real dimensions
+        // and the uploaded logo / current selection are immediately visible.
+        $(document).off('shown.bs.tab.receiptDesignerPreview', '#print-design-tab')
+            .on('shown.bs.tab.receiptDesignerPreview', '#print-design-tab', function () {
+                if (design && box && box.length) renderEditor();
+            });
         $(window).off('hashchange.receiptDesignerWorkspace').on('hashchange.receiptDesignerWorkspace', closeWorkspace);
         $(window).off('posnic:signature-saved.receiptDesigner').on('posnic:signature-saved.receiptDesigner', function (_event, data) {
             if (data.branchId !== String(branch._id || branch.id || PosnicPro.local.get('branch_id_set'))) return;
