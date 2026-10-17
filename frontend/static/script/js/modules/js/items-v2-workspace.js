@@ -32,12 +32,12 @@
         if (option) option.hidden = option.disabled = !caps.restaurant;
         if (!caps.restaurant && active === 'restaurant') select('step1');
         var optional = P.i18n.t('lang_optional_2', 'Optional');
-        el('summary-basics').textContent = el('name').value.trim() ? P.i18n.t('lang_item_name', 'Item name') : P.i18n.t('lang_iv2_start_here', 'Start here');
-        el('summary-stock').textContent = document.querySelector('#items_v2 [name="iv2-stock"]:checked').value === 'untracked' ? P.i18n.t('lang_iv2_not_tracked', 'Stock not tracked') : P.i18n.t('lang_opening_stock', 'Opening stock') + ': ' + (el('quantity').value || '0');
-        el('summary-details').textContent = el('photo-list').children.length ? P.i18n.t('lang_item_photos_title', 'Photos') + ': ' + el('photo-list').children.length : optional;
+        if (el('summary-basics')) el('summary-basics').textContent = el('name').value.trim() ? P.i18n.t('lang_item_name', 'Item name') : P.i18n.t('lang_iv2_start_here', 'Start here');
+        if (el('summary-stock')) el('summary-stock').textContent = document.querySelector('#items_v2 [name="iv2-stock"]:checked').value === 'untracked' ? P.i18n.t('lang_iv2_not_tracked', 'Stock not tracked') : P.i18n.t('lang_opening_stock', 'Opening stock') + ': ' + (el('quantity').value || '0');
+        if (el('summary-details')) el('summary-details').textContent = el('photo-list').children.length ? P.i18n.t('lang_item_photos_title', 'Photos') + ': ' + el('photo-list').children.length : optional;
         var count = P.itemTranslationsV2.data().translations.length;
-        el('summary-languages').textContent = count ? P.i18n.t('lang_item_translations', 'Translations') + ': ' + count : optional;
-        el('summary-more').textContent = el('has-variants').checked ? P.i18n.t('lang_variants_2', 'Variants') : el('sku').value || optional;
+        if (el('summary-languages')) el('summary-languages').textContent = count ? P.i18n.t('lang_item_translations', 'Translations') + ': ' + count : optional;
+        if (el('summary-more')) el('summary-more').textContent = el('has-variants').checked ? P.i18n.t('lang_variants_2', 'Variants') : el('sku').value || optional;
         if (el('summary-step1')) el('summary-step1').textContent = el('name').value.trim() ? 'Name & prices' : 'Start here';
         if (el('summary-step2')) el('summary-step2').textContent = el('has-variants').checked ? 'Variants selected' : (el('photo-list').children.length ? 'Photos selected' : optional);
         if (el('summary-restaurant')) el('summary-restaurant').textContent = optional;
