@@ -2640,9 +2640,15 @@ PosnicPro.sales = {
                     $('#Partial_amount').val(saleNewTot.toFixed(2));
                     $('#sales_new_customer_partial_balance').val('false');
                     $('#unpaid_payment_toggle').prop('checked', true).trigger('change');
-                    window.__posnicFastPayPending = false;
                     PosnicPro.sales.initPaymentValidation();
-                    if (!$('#save_btn').prop('disabled')) $('#save_btn').trigger('click');
+                    var $fastSave = $('#save_btn');
+                    if ($fastSave.length && !$fastSave.prop('disabled')) {
+                        $fastSave.trigger('click');
+                    } else {
+                        window.__posnicFastPayPending = false;
+                        window.__posnicFastPrintPending = false;
+                        PosnicPro.alert('error', 'Fast checkout could not validate the payment. Press F2 to review payment details.');
+                    }
                 }, 180);
             }
         }
@@ -11712,10 +11718,10 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
             .filter(function (n, i, all) { return n && all.indexOf(n) === i; }).slice(0, 100);
     }
     function ensureCashierModal() {
-        if ($('#posnic-vendeur-modal').length) return;
         if (!$('#posnic-vendeur-style').length) {
-            $('head').append('<style id="posnic-vendeur-style">#posnic-vendeur-modal{--pv-line:var(--theme-border-color,#dbe3ed);--pv-panel:var(--theme-card-bg,#fff);--pv-soft:var(--theme-table-header-bg,#f5f8fc);--pv-text:var(--theme-text-color,var(--theme-text-primary,#243247));--pv-muted:var(--theme-text-muted,#64748b);--pv-primary:var(--theme-primary-color,#2563eb)}#posnic-vendeur-modal .modal-dialog{width:calc(100% - 28px);max-width:420px;margin:1.25rem auto}#posnic-vendeur-modal .posnic-vendeur-content{overflow:hidden;border:1px solid var(--pv-line);border-radius:14px;background:var(--pv-panel);color:var(--pv-text);box-shadow:0 20px 60px rgba(15,23,42,.2)}#posnic-vendeur-modal .posnic-vendeur-header{padding:20px 22px 17px;border-bottom:1px solid var(--pv-line);background:var(--pv-soft)}#posnic-vendeur-modal .posnic-vendeur-eyebrow{display:inline-block;margin-bottom:7px;color:var(--pv-primary);font-size:10px;font-weight:800;letter-spacing:.1em}#posnic-vendeur-modal .modal-title{margin:0;color:var(--pv-text);font-size:20px;font-weight:750;letter-spacing:-.02em}#posnic-vendeur-modal .posnic-vendeur-header small{display:block;margin-top:6px;color:var(--pv-muted);font-size:12px;line-height:1.5}#posnic-vendeur-modal .modal-body{padding:20px 22px}#posnic-vendeur-modal .modal-body label{display:block;margin-bottom:8px;color:var(--pv-text);font-size:12px;font-weight:700}#posnic-vendeur-modal #posnic-vendeur-select{width:100%;min-height:44px;padding:9px 12px;border:1px solid var(--pv-line);border-radius:9px;background:var(--theme-input-bg,var(--pv-panel));color:var(--pv-text);box-shadow:none;font-size:14px}#posnic-vendeur-modal #posnic-vendeur-select:focus{border-color:var(--pv-primary);outline:0;box-shadow:0 0 0 3px color-mix(in srgb,var(--pv-primary) 16%,transparent)}#posnic-vendeur-modal .posnic-vendeur-help{margin-top:12px;padding:10px 12px;border:1px solid var(--pv-line);border-radius:8px;background:var(--pv-soft);color:var(--pv-muted);font-size:11px;line-height:1.5}#posnic-vendeur-modal .posnic-vendeur-empty{margin-top:12px;padding:11px 12px;border:1px solid #f0c6a4;border-radius:8px;background:#fff7ed;color:#9a3412;font-size:12px;line-height:1.5}#posnic-vendeur-modal .modal-footer{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px 18px;border-top:1px solid var(--pv-line);background:var(--pv-panel)}#posnic-vendeur-modal .modal-footer .btn{min-height:38px;margin:0;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;box-shadow:none}#posnic-vendeur-modal #posnic-vendeur-cancel{border:1px solid var(--pv-line);background:var(--pv-panel);color:var(--pv-text)}#posnic-vendeur-modal #posnic-vendeur-cancel:hover{background:var(--pv-soft)}#posnic-vendeur-modal #posnic-vendeur-confirm{border:1px solid var(--pv-primary);background:var(--pv-primary);color:#fff}#posnic-vendeur-modal #posnic-vendeur-confirm:disabled{opacity:.48;cursor:not-allowed}#posnic-vendeur-modal .modal-footer .btn:focus-visible{outline:2px solid var(--pv-primary);outline-offset:2px}@media(max-width:480px){#posnic-vendeur-modal .modal-dialog{width:calc(100% - 20px);margin:10px auto}#posnic-vendeur-modal .posnic-vendeur-header,#posnic-vendeur-modal .modal-body{padding-left:16px;padding-right:16px}#posnic-vendeur-modal .modal-footer{padding:12px 16px 16px}}</style>');
+            $('head').append('<style id="posnic-vendeur-style">#posnic-vendeur-modal{--pv-line:var(--posnic-border,var(--theme-border-color,#dbe3ed));--pv-panel:var(--posnic-surface,var(--theme-card-bg,#fff));--pv-soft:var(--posnic-soft,var(--theme-table-header-bg,#f5f8fc));--pv-text:var(--posnic-text,var(--theme-text-color,var(--theme-text-primary,#243247)));--pv-muted:var(--posnic-muted,var(--theme-text-muted,#64748b));--pv-primary:var(--posnic-accent,var(--theme-primary-color,#2563eb))}#posnic-vendeur-modal .modal-dialog{width:calc(100% - 28px);max-width:420px;margin:1.25rem auto}#posnic-vendeur-modal .posnic-vendeur-content{overflow:hidden;border:1px solid var(--pv-line);border-radius:14px;background:var(--pv-panel);color:var(--pv-text);box-shadow:0 20px 60px rgba(15,23,42,.2)}#posnic-vendeur-modal .posnic-vendeur-header{padding:20px 22px 17px;border-bottom:1px solid var(--pv-line);background:var(--pv-soft)}#posnic-vendeur-modal .posnic-vendeur-eyebrow{display:inline-block;margin-bottom:7px;color:var(--pv-primary);font-size:10px;font-weight:800;letter-spacing:.1em}#posnic-vendeur-modal .modal-title{margin:0;color:var(--pv-text);font-size:20px;font-weight:750;letter-spacing:-.02em}#posnic-vendeur-modal .posnic-vendeur-header small{display:block;margin-top:6px;color:var(--pv-muted);font-size:12px;line-height:1.5}#posnic-vendeur-modal .modal-body{padding:20px 22px}#posnic-vendeur-modal .modal-body label{display:block;margin-bottom:8px;color:var(--pv-text);font-size:12px;font-weight:700}#posnic-vendeur-modal #posnic-vendeur-select{width:100%;min-height:44px;padding:9px 12px;border:1px solid var(--pv-line);border-radius:9px;background:var(--theme-input-bg,var(--pv-panel));color:var(--pv-text);box-shadow:none;font-size:14px}#posnic-vendeur-modal #posnic-vendeur-select:focus{border-color:var(--pv-primary);outline:0;box-shadow:0 0 0 3px color-mix(in srgb,var(--pv-primary) 16%,transparent)}#posnic-vendeur-modal .posnic-vendeur-help{margin-top:12px;padding:10px 12px;border:1px solid var(--pv-line);border-radius:8px;background:var(--pv-soft);color:var(--pv-muted);font-size:11px;line-height:1.5}#posnic-vendeur-modal .posnic-vendeur-empty{margin-top:12px;padding:11px 12px;border:1px solid #f0c6a4;border-radius:8px;background:#fff7ed;color:#9a3412;font-size:12px;line-height:1.5}#posnic-vendeur-modal .modal-footer{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px 18px;border-top:1px solid var(--pv-line);background:var(--pv-panel)}#posnic-vendeur-modal .modal-footer .btn{min-height:38px;margin:0;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;box-shadow:none}#posnic-vendeur-modal #posnic-vendeur-cancel{border:1px solid var(--pv-line);background:var(--pv-panel);color:var(--pv-text)}#posnic-vendeur-modal #posnic-vendeur-cancel:hover{background:var(--pv-soft)}#posnic-vendeur-modal #posnic-vendeur-confirm{border:1px solid var(--pv-primary);background:var(--pv-primary);color:#fff}#posnic-vendeur-modal #posnic-vendeur-confirm:disabled{opacity:.48;cursor:not-allowed}#posnic-vendeur-modal .modal-footer .btn:focus-visible{outline:2px solid var(--pv-primary);outline-offset:2px}@media(max-width:480px){#posnic-vendeur-modal .modal-dialog{width:calc(100% - 20px);margin:10px auto}#posnic-vendeur-modal .posnic-vendeur-header,#posnic-vendeur-modal .modal-body{padding-left:16px;padding-right:16px}#posnic-vendeur-modal .modal-footer{padding:12px 16px 16px}}</style>');
         }
+        if ($('#posnic-vendeur-modal').length) return;
         $('body').append('<div class="modal fade" id="posnic-vendeur-modal" tabindex="-1" role="dialog" aria-labelledby="posnic-vendeur-title" aria-hidden="true" data-backdrop="static" data-keyboard="false">' +
             '<div class="modal-dialog modal-dialog-centered" role="document"><div class="modal-content posnic-vendeur-content">' +
             '<div class="modal-header posnic-vendeur-header"><div><span class="posnic-vendeur-eyebrow">VALIDATION DE VENTE</span><h5 class="modal-title font-weight-bold" id="posnic-vendeur-title">Vendeur</h5><small>Choisissez le vendeur responsable de cette vente.</small></div></div>' +
@@ -11986,21 +11992,69 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
         event.preventDefault();
         return;
     }
-    // F1 deliberately follows the normal checkout preparation before submitting,
-    // so payment validation and the existing duplicate-submit guard remain in force.
+    // F1: ask for the cashier first, then complete one full-cash checkout.
+    // When the basket is still open, openTenderModel owns the delayed payment setup;
+    // do not schedule a second submit here (that caused racing/double-submit behaviour).
     if (event.key === 'F1') {
         event.preventDefault();
-        window.__posnicFastPrintPending = true; window.__posnicFastPayPending = true;
-        function submitFastCashSale() {
-            if (!window.__posnicFastPayPending || !$('#sales_new').is(':visible')) return;
-            var total=Number($('#sales_new_total_amount').val())||Number($('#grand_total').val())||Number(String($('#sales_new_subtotal').text()||'').replace(/,/g,''))||0;
-            if(total>0){$('#Partial_amount').val(total.toFixed(2)).trigger('input').trigger('change');$('#tendered_amount').val(total.toFixed(2)).trigger('input').trigger('change');$('#sales_new_customer_partial_balance').val('false');$('#unpaid_payment_toggle').prop('checked',true).trigger('change');}
-            var $save=$('#save_btn');
-            if($save.length&&!$save.prop('disabled'))$save.trigger('click');
-            else{window.__posnicFastPayPending=false;window.__posnicFastPrintPending=false;PosnicPro.alert('error','Fast checkout could not start. Press F2 to open payment.');}
+        if (window.__posnicFastPayPending === true) return;
+        window.__posnicFastPrintPending = true;
+        window.__posnicFastPayPending = true;
+
+        function resetFastCheckout(message, type) {
+            window.__posnicFastPayPending = false;
+            window.__posnicFastPrintPending = false;
+            window.__posnicFastCheckoutSubmitting = false;
+            if (message) PosnicPro.alert(type || 'error', message);
         }
-        if($('#tenderpage').is(':visible'))submitFastCashSale();
-        else{var checkout=document.querySelector('#check_button');if(!checkout||checkout.disabled){window.__posnicFastPayPending=false;window.__posnicFastPrintPending=false;PosnicPro.alert('warning','Add an item to the basket before completing the sale.');return;}checkout.click();window.setTimeout(submitFastCashSale,250);}
+        function submitVisiblePayment() {
+            if (window.__posnicFastPayPending !== true || !$('#sales_new').is(':visible')) return;
+            if (window.__posnicFastCheckoutSubmitting) return;
+            window.__posnicFastCheckoutSubmitting = true;
+            var total = Number($('#sales_new_total_amount').val()) ||
+                Number($('#grand_total').val()) ||
+                Number(String($('#sales_new_subtotal').text() || '').replace(/,/g, '')) || 0;
+            if (!(total > 0)) {
+                resetFastCheckout('Add an item to the basket before completing the sale.', 'warning');
+                return;
+            }
+            $('#Partial_amount').val(total.toFixed(2)).trigger('input').trigger('change');
+            $('#tendered_amount').val(total.toFixed(2)).trigger('input').trigger('change');
+            $('#sales_new_customer_partial_balance').val('false');
+            $('#unpaid_payment_toggle').prop('checked', true).trigger('change');
+            $('.payment-amount-input').each(function () {
+                var method = String($(this).closest('.payment-method-card').find('.payment_mode').attr('id') || '').trim().toLowerCase();
+                $(this).val(method === 'cash' ? total.toFixed(2) : '0.00').trigger('input').trigger('change');
+            });
+            if (typeof PosnicPro.sales.initPaymentValidation === 'function') PosnicPro.sales.initPaymentValidation();
+            window.setTimeout(function () {
+                if (window.__posnicFastPayPending !== true) return;
+                if (!$('#sales_new').is(':visible')) {
+                    resetFastCheckout('The sale screen closed before payment could be submitted.', 'error');
+                    return;
+                }
+                if (typeof PosnicPro.sales.initPaymentValidation === 'function') PosnicPro.sales.initPaymentValidation();
+                var $save = $('#save_btn');
+                if ($save.length && !$save.prop('disabled')) {
+                    window.__posnicFastCheckoutSubmitting = false;
+                    $save.trigger('click');
+                } else {
+                    resetFastCheckout('Fast checkout could not validate the payment. Press F2 to review payment details.', 'error');
+                }
+            }, 100);
+        }
+
+        if ($('#tenderpage').is(':visible')) {
+            submitVisiblePayment();
+        } else {
+            var checkout = document.querySelector('#check_button');
+            if (!checkout || checkout.disabled) {
+                resetFastCheckout('Add an item to the basket before completing the sale.', 'warning');
+                return;
+            }
+            checkout.click();
+            // The openTenderModel fast-pay branch fills payment tiles and submits once.
+        }
     }
 });
 
