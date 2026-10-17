@@ -908,3 +908,30 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
  #sales-function-shortcuts .sales-key-payer{flex:1 1 30%}
  #sales-function-shortcuts .sales-shortcut-total{flex:1 1 100%}
 }
+
+/* Simultaneous walk-in baskets: each tab preserves its own customer and cart. */
+#posnic-multi-baskets{
+ display:flex;align-items:center;gap:7px;flex-wrap:wrap;width:100%;
+ margin:0 0 9px;padding:7px 9px;border:1px solid #dbe3f2;border-radius:10px;
+ background:#f8faff;box-sizing:border-box;
+}
+#posnic-multi-baskets .posnic-basket-tab,
+#posnic-multi-baskets .posnic-basket-add{
+ display:inline-flex;align-items:center;justify-content:center;gap:7px;
+ min-height:36px;padding:7px 13px;border:1px solid #cbd5e1;border-radius:8px;
+ background:#fff;color:#24324b;font-size:13px;font-weight:750;cursor:pointer;
+}
+#posnic-multi-baskets .posnic-basket-tab.is-active{
+ background:#2457d6;border-color:#2457d6;color:#fff;
+ box-shadow:0 2px 7px rgba(36,87,214,.22);
+}
+#posnic-multi-baskets .posnic-basket-add{
+ border-style:dashed;border-color:#93a4c5;color:#2457d6;background:#f0f5ff;
+}
+#posnic-multi-baskets .posnic-basket-hint{
+ margin-left:auto;color:#64748b;font-size:11px;font-weight:600;
+}
+@media(max-width:767.98px){
+ #posnic-multi-baskets .posnic-basket-hint{flex:1 1 100%;margin-left:0}
+ #posnic-multi-baskets .posnic-basket-tab,#posnic-multi-baskets .posnic-basket-add{flex:1 1 auto}
+}
