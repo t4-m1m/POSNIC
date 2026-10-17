@@ -311,9 +311,17 @@
                 content += pair('Total', money(data.items_total), true);
                 if (!beforePayment && data.sales_id) {
                     var paymentRows = PosnicSalePayments.rows(data);
-                    if (b.showPaymentMethod !== false && paymentRows.length) paymentRows.forEach(function (row) { content += pair(row.method, money(row.amount)); });
-                    else if (b.showPaymentMethod !== false && data.payment_mode) content += pair('Payment', esc(data.payment_mode));
-                    if (data.partial_check === true || data.partial_check === 'true') content += pair('Payments / credits', money(data.partial_balance)) + pair('Balance due', money(data.payment_pending));
+                    var hasCreditAllocation = paymentRows.some(function (row) { return String(row.method || '').trim().toLowerCase() === 'credit'; });
+                    if (b.showPaymentMethod !== false && paymentRows.length) {
+                        paymentRows.forEach(function (row) { content += pair(row.method, money(row.amount)); });
+                    } else if (b.showPaymentMethod !== false && data.payment_mode) {
+                        content += pair('Payment', esc(data.payment_mode));
+                    }
+                    // When the tender rows already show Credit, don't repeat the same
+                    // unpaid remainder as both "Payments / credits" and "Balance due".
+                    if ((data.partial_check === true || data.partial_check === 'true') && !hasCreditAllocation) {
+                        content += pair('Payments / credits', money(data.partial_balance)) + pair('Balance due', money(data.payment_pending));
+                    }
                 }
                 content += '</div>';
             } else if (b.type === 'field') {
