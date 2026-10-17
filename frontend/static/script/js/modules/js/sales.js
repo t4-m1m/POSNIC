@@ -3085,6 +3085,10 @@ PosnicPro.sales = {
             });
         }
 
+        // Credit is a built-in receivable method. It is the debt portion of a
+        // partially paid bill, never money collected into the cash drawer.
+        addPaymentBlock('Credit', 'Credit', normalizeKey(activePaymentMethod) === normalizeKey('Credit'));
+
         // --- Add Button ---
         let addButton =
             '<div class="col-lg-6 col-md-6 mb-3">' +
@@ -3492,66 +3496,51 @@ PosnicPro.sales = {
         const totalAmount = parseFloat(PosnicPro.sales.extraDiscount.sale_new_tot) || 0;
         const payAmount = PosnicPro.sales.payableCap();
         const isPaid = $('#unpaid_payment_toggle').is(':checked');
-        var sum = 0;
+        const payAmountRounded = parseFloat(payAmount.toFixed(2));
+        const creditDue = parseFloat(Math.max(0, totalAmount - payAmountRounded).toFixed(2));
+        const isPartialCredit = isPaid && payAmountRounded < totalAmount - 0.01;
+        const creditInput = $('.payment-method-card').filter(function () {
+            return String($(this).find('.payment_mode').attr('id') || '').trim().toLowerCase() === 'credit';
+        }).find('.payment-amount-input');
 
-        // Calculate sum from multipayment inputs
+        if (creditInput.length) creditInput.val(isPartialCredit ? creditDue.toFixed(2) : '0.00');
+
+        let sum = 0, creditSum = 0, receivedSum = 0;
         $('.payment-amount-input').each(function () {
-            let val = parseFloat($(this).val()) || 0;
+            const val = parseFloat($(this).val()) || 0;
+            const method = String($(this).closest('.payment-method-card').find('.payment_mode').attr('id') || '').trim().toLowerCase();
+            if (method === 'credit') creditSum += val;
+            else receivedSum += val;
             sum += val;
         });
-
-        // Round to 2 decimal places to avoid floating point issues
         sum = parseFloat(sum.toFixed(2));
-        const payAmountRounded = parseFloat(payAmount.toFixed(2));
+        creditSum = parseFloat(creditSum.toFixed(2));
+        receivedSum = parseFloat(receivedSum.toFixed(2));
 
-        /*
-         * No bill to measure against. Either the tender is not open or the cart
-         * has been cleared, and the tiles are still carrying the figures of the
-         * sale just settled. Refusing here is how a finished table threw an
-         * overpayment toast across the KOT screen.
-         */
-        if (payAmountRounded <= 0) {
+        if (payAmountRounded <= 0) return;
+        if (!isPaid) {
+            $('#save_btn').prop('disabled', false);
             return;
         }
 
-        // Always validate multipayment total against Pay amount
-        // Check if multipayment total exceeds Pay amount (with 0.01 tolerance)
-        if (sum > payAmountRounded + 0.01) {
-            PosnicPro.alert('error', 'Total payment (₹' + sum.toFixed(2) + ') cannot exceed Pay amount (₹' + payAmountRounded.toFixed(2) + ')');
+        const expectedAll = isPartialCredit ? totalAmount : payAmountRounded;
+        if (receivedSum > payAmountRounded + 0.01 || sum > expectedAll + 0.01) {
+            PosnicPro.alert('error', 'Payment amounts exceed the amount due. Check the Credit balance and amount received.');
+            $('#save_btn').prop('disabled', true);
+            return;
+        }
+        if (receivedSum < payAmountRounded - 0.01 ||
+            Math.abs(creditSum - (isPartialCredit ? creditDue : 0)) > 0.01 ||
+            Math.abs(sum - expectedAll) > 0.01) {
+            $('#return_balance_amount').text(Math.max(0, expectedAll - sum).toFixed(2));
             $('#save_btn').prop('disabled', true);
             return;
         }
 
-        // If multipayment total < Pay amount (with 0.01 tolerance), disable save only if Paid toggle is ON
-        if (isPaid && sum < payAmountRounded - 0.01) {
-            let remaining = (payAmountRounded - sum).toFixed(2);
-            $('#return_balance_amount').text(remaining);
-            $('#save_btn').prop('disabled', true);
-            return;
-        }
-
-        // If multipayment total matches Pay amount (within 0.01 tolerance)
-        if (Math.abs(sum - payAmountRounded) <= 0.01) {
-            $('#return_balance_amount').text('0.00');
-            
-            // If Pay amount < Total, auto-set customer to Partial
-            if (payAmountRounded < totalAmount - 0.01) {
-                $('#sales_new_customer_partial_balance').val('true');
-            } else {
-                // Full payment, set to Paid
-                $('#sales_new_customer_partial_balance').val('false');
-            }
-            
-            // Update payment status label
-            if (typeof updatePaymentStatusLabel === 'function') {
-                updatePaymentStatusLabel();
-            }
-            
-            $('#save_btn').prop('disabled', false);
-        } else if (!isPaid) {
-            // Unpaid mode - enable save even if amounts don't match
-            $('#save_btn').prop('disabled', false);
-        }
+        $('#return_balance_amount').text('0.00');
+        $('#sales_new_customer_partial_balance').val(isPartialCredit ? 'true' : 'false');
+        if (typeof updatePaymentStatusLabel === 'function') updatePaymentStatusLabel();
+        $('#save_btn').prop('disabled', false);
     },
 
 
@@ -4362,20 +4351,34 @@ PosnicPro.sales.addSale = {
         var partial = $('#Partial_amount').val();
         let payments = PosnicPro.sales.getPaymentObject();
         
-        // Final validation: Check if multipayment total exceeds Pay amount
-        if (PosnicPro.local.get('enable_multi_payment') === 'enable') {
-            var multipaymentTotal = 0;
+        // Final validation: separate actual received tenders from the Credit receivable.
+        if (PosnicPro.local.get('enable_multi_payment') === 'enable' || Object.prototype.hasOwnProperty.call(payments, 'Credit')) {
+            var multipaymentTotal = 0, receivedTotal = 0;
             for (var mode in payments) {
-                multipaymentTotal += parseFloat(payments[mode]) || 0;
+                var value = parseFloat(payments[mode]) || 0;
+                multipaymentTotal += value;
+                if (String(mode).trim().toLowerCase() !== 'credit') receivedTotal += value;
             }
             multipaymentTotal = parseFloat(multipaymentTotal.toFixed(2));
+            receivedTotal = parseFloat(receivedTotal.toFixed(2));
             var payAmount = PosnicPro.sales.payableCap();
+            var billTotal = parseFloat(PosnicPro.sales.extraDiscount.sale_new_tot) || 0;
+            var due = Math.max(0, billTotal - payAmount);
+            var creditAmount = parseFloat(payments.Credit || payments.credit || 0) || 0;
+            var partialCredit = $('#unpaid_payment_toggle').is(':checked') && due > 0.01;
 
-            if (payAmount > 0 && multipaymentTotal > payAmount + 0.01) {
+            if (partialCredit && (Math.abs(creditAmount - due) > 0.01 || Math.abs(receivedTotal - payAmount) > 0.01 || Math.abs(multipaymentTotal - billTotal) > 0.01)) {
                 PosnicPro.sales.submissionInProgress = false;
                 $("#save_btn").prop('disabled', false);
                 $("#save_submit").removeClass('disabled');
-                PosnicPro.alert('error', 'Total payment (₹' + multipaymentTotal.toFixed(2) + ') cannot exceed Pay amount (₹' + payAmount.toFixed(2) + ')');
+                PosnicPro.alert('error', 'The received amount and Credit debt must add up to the full sale total.');
+                return false;
+            }
+            if (!partialCredit && payAmount > 0 && receivedTotal > payAmount + 0.01) {
+                PosnicPro.sales.submissionInProgress = false;
+                $("#save_btn").prop('disabled', false);
+                $("#save_submit").removeClass('disabled');
+                PosnicPro.alert('error', 'Total payment cannot exceed the amount due.');
                 return false;
             }
         }
@@ -11703,9 +11706,8 @@ $(document).on('click.posnicCreditRules', '#save_btn', function (event) {
 $(document).on('keydown.posnicSaleShortcuts', function (event) {
     if (!$('#sales_new').is(':visible') || event.altKey || event.ctrlKey || event.metaKey) return;
     if (!['F1', 'F2', 'F3', 'F4'].includes(event.key)) return;
-    var inEditor = $(event.target).closest('input,textarea,select,[contenteditable="true"],.modal').length > 0;
-    // F3/F4 are intentionally available while a basket quantity/price control has focus.
-    if (inEditor && event.key !== 'F3' && event.key !== 'F4') return;
+    // F1/F2 must work even when the cashier last clicked a basket/input area.
+    // Modals keep their own keyboard controls and are intentionally excluded.
     if ($(event.target).closest('.modal').length) return;
     var $rows = $('#sales_new .touch-table-tbody tr').has('input[name="addSalesLineItemQty"]');
     if (event.key === 'F3' || event.key === 'F4') {
@@ -11752,6 +11754,7 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
         // Fast payment opts into immediate receipt printing after the existing
         // validated save flow succeeds; never print before the sale is saved.
         window.__posnicFastPrintPending = true;
+        window.__posnicFastPayPending = true;
         var $save = $('#save_btn');
         if ($('#tenderpage').is(':visible')) {
             if (!$save.prop('disabled')) $save.trigger('click');
