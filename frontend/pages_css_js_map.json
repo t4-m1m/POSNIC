@@ -142,7 +142,7 @@
             "static/script/js/core/printable-menu-renderer.js",
             "static/script/js/modules/js/printable-menu.js",
             "static/script/js/core/branch-signature.js",
-            "static/script/js/modules/js/receipt-designer-editor.js",
+            "static/script/js/modules/js/receipt-studio.js",
             "static/script/js/modules/js/invoices.js",
             "static/script/js/core/captain-money.js",
             "static/script/js/core/captain-payments.js",
