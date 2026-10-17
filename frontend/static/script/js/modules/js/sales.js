@@ -14015,3 +14015,22 @@ $(document).on('focusin click', '#sales_new input[name="addSalesLineItemQty"], #
 /* POSNIC payment keypad: edit the existing tender field so all established
    payment/accounting listeners continue to run. Sale validation remains owned
    by cartOrderSubmit; this UI never creates a sale by itself. */
+
+/* Keep a one-click Nouvelle vente entry in every sidebar menu. Some layouts
+   render a different vertical-menu for the dashboard and module pages; adding
+   it to each menu prevents the shortcut disappearing when the section changes.
+   Existing links are preserved and the guard avoids duplicate entries. */
+$(document).ready(function () {
+    $('.vertical-menu').each(function () {
+        var $menu = $(this);
+        if ($menu.find('a[href="#/sales/new"]').length) return;
+        var $entry = $('<li class="sales-new-sidebar-entry"></li>');
+        var $link = $('<a href="#/sales/new" class="sales_new_shortcut"></a>')
+            .attr('data-module', 'sales')
+            .attr('data-access', 'write');
+        $link.append($('<i class="feather icon-plus-circle"></i>'));
+        $link.append($('<span></span>').text('Nouvelle vente'));
+        $entry.append($link);
+        $menu.prepend($entry);
+    });
+});
