@@ -155,16 +155,33 @@
             $(doc).find('[data-resize-id]').on('pointerdown', function (event) {
                 event.preventDefault(); event.stopPropagation();
                 var id = this.getAttribute('data-resize-id'), b = layout().blocks.find(function (x) { return x.id === id; });
-                if (!b || !article) return; selected = id; checkpoint();
-                resizeState = { id:id, x:event.clientX, y:event.clientY, w:Number(b.w)||100, h:Number(b.h)||this.parentElement.getBoundingClientRect().height, articleWidth:article.getBoundingClientRect().width };
-            }).on('pointermove', function (event) {
+                if (!b || !article) return;
+                selected = id; checkpoint();
+                var node = doc.querySelector('[data-block-id="' + id + '"]');
+                var rect = node ? node.getBoundingClientRect() : this.parentElement.getBoundingClientRect();
+                var articleRect = article.getBoundingClientRect();
+                resizeState = { id:id, x:event.clientX, y:event.clientY,
+                    w:Number(b.w) || (rect.width / Math.max(1, articleRect.width) * 100),
+                    h:Number(b.h) || rect.height, articleWidth:articleRect.width,
+                    pointerId:event.pointerId };
+                try { this.setPointerCapture(event.pointerId); } catch (_) {}
+            });
+            // Pointer capture keeps resizing alive after the pointer leaves the small
+            // corner handle; listening only on the handle made resizing stop mid-drag.
+            $(doc).on('pointermove.posnicReceiptResize', function (event) {
                 if (!resizeState) return;
                 var b = layout().blocks.find(function (x) { return x.id === resizeState.id; }), node = doc.querySelector('[data-block-id="' + resizeState.id + '"]');
                 if (!b || !node) return;
                 b.w = Math.max(2, Math.min(100, resizeState.w + (event.clientX-resizeState.x)/Math.max(1,resizeState.articleWidth)*100));
                 b.h = Math.max(8, Math.min(1200, resizeState.h + event.clientY-resizeState.y));
                 node.style.width = b.w + '%'; node.style.height = b.h + 'px';
-            }).on('pointerup pointercancel', function () { if (resizeState) { resizeState = null; renderList(); changed(); } });
+                layout().canvas = true;
+                layout().canvasHeight = Math.max(Number(layout().canvasHeight) || 0, (Number(b.y) || 0) + b.h);
+                article.style.height = layout().canvasHeight + 'px';
+            }).on('pointerup.posnicReceiptResize pointercancel.posnicReceiptResize', function () {
+                if (!resizeState) return;
+                resizeState = null; renderList(); changed();
+            });
             previewBlocks.attr('draggable', 'false').on('click', function (event) {
                 event.preventDefault(); selected = this.getAttribute('data-block-id'); renderList(); schedulePreview();
             }).on('pointerdown', function (event) {
