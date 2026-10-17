@@ -221,6 +221,21 @@ class CreditService {
     const transactions = await db.collection('transaction').find(query).sort({ created_date: 1, _id: 1 }).toArray();
     const due = round2(transactions.reduce((sum, row) => sum + Math.max(0, Number(row.pending) || 0), 0));
     if (amount > due + 0.009) throw new Error('Payment exceeds the customer’s outstanding balance');
+    // Refuse to collect against a ledger row whose original sale no longer
+    // exists. Preflight all affected rows before changing any balances.
+    let preflightAmount = amount;
+    for (const row of transactions) {
+      const pending = Math.max(0, Number(row.pending) || 0);
+      if (pending <= 0 || preflightAmount <= 0) continue;
+      if (row.sale_id) {
+        const saleQuery = ObjectId.isValid(String(row.sale_id))
+          ? { _id: oid(row.sale_id), license: BaseModel.license }
+          : { sales_id: String(row.sale_id), license: BaseModel.license };
+        const originalSale = await db.collection('sales').findOne(saleQuery, { projection: { _id: 1 } });
+        if (!originalSale) throw new Error('Original sale ' + String(row.sale_id) + ' was not found. No payment was collected.');
+      }
+      preflightAmount = round2(preflightAmount - Math.min(pending, preflightAmount));
+    }
     let remaining = amount;
     const now = new Date();
     const allocations = [];
