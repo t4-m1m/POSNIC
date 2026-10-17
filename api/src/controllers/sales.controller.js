@@ -837,6 +837,9 @@ class SalesController extends BaseController {
         }
       }
 
+      // Normalize the till-selected seller before pricing/persistence. Keep this separate from the authenticated account.
+      payload.cashier_name = String(payload.cashier_name || payload.seller_name || payload.vendeur || '').trim().slice(0, 80);
+
       // Build Context for Service
       const context = await this.buildSaleContext(req);
 

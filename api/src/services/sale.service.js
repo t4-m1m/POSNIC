@@ -1260,7 +1260,7 @@ const processSale = async (
       created_by_id: userId,
       // Persist the selected till vendor on the sale document itself. Keep it
       // distinct from the authenticated account stored in created_by/user_name.
-      cashier_name: String(data.cashier_name ?? existingSale?.cashier_name ?? '').trim().slice(0, 80),
+      cashier_name: String(data.cashier_name ?? data.seller_name ?? data.vendeur ?? existingSale?.cashier_name ?? existingSale?.seller_name ?? '').trim().slice(0, 80),
       license: licenseId,
 
       // Node-only field (not present in PHP) appended after core PHP keys
