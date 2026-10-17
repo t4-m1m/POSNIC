@@ -356,9 +356,14 @@
             return { type: b.type, half: b.type === 'field' && b.width === 50, customer: b.type === 'field' && /^customer_/.test(b.field), supporting: b.type === 'text' || b.type === 'field' || ((b.type === 'qr' || b.type === 'image') && b.width <= 40), html: '<section class="rd-block rd-block-' + b.type + (b.type === 'field' ? ' rd-field-' + b.field : '') + '" data-block-id="' + esc(b.id) + '" style="' + style + '">' + content + '</section>' };
         }).filter(Boolean);
         rendered = pairFields(rendered);
-        var html = sheet ? composeSheet(rendered) : rendered.map(function (b) { return b.html; }).join('');
-        if (designs.showBranding !== false) html += '<section class="rd-block rd-branding" style="text-align:center;font-size:10px">Made with Posnic &middot; posnic.com</section>';
-        if (pendingGoods) html += '<section class="rd-block rd-payment-status">' + esc(label('Payment pending')) + '</section>';
+        // Free-position mode must use the same absolute canvas for preview and
+        // print. Sheet composition wraps blocks in grids, which breaks x/y
+        // positioning once a block has been dragged.
+        var html = sheet && !layout.canvas ? composeSheet(rendered) : rendered.map(function (b) { return b.html; }).join('');
+        var canvasHeight = Math.max(80, Math.min(8000, Number(layout.canvasHeight) || 0));
+        var canvasTailStyle = layout.canvas ? ' style="position:absolute;left:0;top:' + canvasHeight + 'px;width:100%;text-align:center;"' : '';
+        if (designs.showBranding !== false) html += '<section class="rd-block rd-branding" style="' + (layout.canvas ? 'position:absolute;left:0;top:' + canvasHeight + 'px;width:100%;' : '') + 'text-align:center;font-size:10px">Made with Posnic &middot; posnic.com</section>';
+        if (pendingGoods) html += '<section class="rd-block rd-payment-status" style="' + (layout.canvas ? 'position:absolute;left:0;top:' + canvasHeight + 'px;width:100%;' : '') + '">' + esc(label('Payment pending')) + '</section>';
         if (sheet) {
             var notes = '';
             if ((data.branch_gstin_number || on(data.gst)) && PosnicPro.sales && PosnicPro.sales.view && PosnicPro.sales.view._amountInWords) {
@@ -367,7 +372,8 @@
             if (data.invoice_terms) notes += '<div class="rd-terms"><strong>' + esc(PosnicPro.i18n.t('lang_terms_conditions', 'Terms & conditions')) + '</strong><br>' + esc(data.invoice_terms) + '</div>';
             if (notes) html += '<div class="rd-invoice-end"><div class="rd-invoice-end-notes">' + notes + '</div></div>';
         }
-        return '<style>' + css(format, layout.fontSize) + (fixedItems ? '.rd-fixed-columns .rd-number{white-space:nowrap;}.rd-fixed-columns td{border-bottom:0;padding-top:2px;padding-bottom:2px;}.rd-fixed-columns th,.rd-total-quantity td,.rd-grand-total{border-color:#333;border-top-style:' + (fixedItems.lineStyle || 'dotted') + ';border-bottom-style:' + (fixedItems.lineStyle || 'dotted') + ';}.rd-transaction{border-bottom-style:' + (fixedItems.lineStyle || 'dotted') + ';}.rd-total-quantity td{border-top:1px ' + (fixedItems.lineStyle || 'dotted') + ' #333;padding-top:6px;}.rd-grand-total{border-top-width:1px;border-bottom:1px ' + (fixedItems.lineStyle || 'dotted') + ' #333;padding-bottom:6px;}' : '') + '</style><article class="rd-document' + (sheet ? ' rd-sheet' : '') + '" data-receipt-design="' + format + '">' + html + '</article>';
+        var canvasCss = layout.canvas ? '.rd-document{position:relative;height:' + canvasHeight + 'px;min-height:' + canvasHeight + 'px;overflow:visible;}.rd-document>.rd-block{box-sizing:border-box;}' : '';
+        return '<style>' + css(format, layout.fontSize) + canvasCss + (fixedItems ? '.rd-fixed-columns .rd-number{white-space:nowrap;}.rd-fixed-columns td{border-bottom:0;padding-top:2px;padding-bottom:2px;}.rd-fixed-columns th,.rd-total-quantity td,.rd-grand-total{border-color:#333;border-top-style:' + (fixedItems.lineStyle || 'dotted') + ';border-bottom-style:' + (fixedItems.lineStyle || 'dotted') + ';}.rd-transaction{border-bottom-style:' + (fixedItems.lineStyle || 'dotted') + ';}.rd-total-quantity td{border-top:1px ' + (fixedItems.lineStyle || 'dotted') + ' #333;padding-top:6px;}.rd-grand-total{border-top-width:1px;border-bottom:1px ' + (fixedItems.lineStyle || 'dotted') + ' #333;padding-bottom:6px;}' : '') + '</style><article class="rd-document' + (sheet ? ' rd-sheet' : '') + '" data-receipt-design="' + format + '">' + html + '</article>';
     }
     var activeSale = false;
     var printCount = 0;
