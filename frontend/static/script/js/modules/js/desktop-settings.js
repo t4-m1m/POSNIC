@@ -172,7 +172,7 @@
                 check('receiptOpenDrawer', 'Open cash drawer after sale', !!receipt.openDrawer, 'Enable only if the printer cash-drawer cable is connected.') +
                 '<div class="desktop-actions">' + button('save-receipt-settings', 'Save printer settings', true) + ' ' + button('test-receipt', 'Print sample receipt') + '</div>' +
                 '<p class="text-muted">Receipt content and layout are edited in Receipt Printing Studio below. Printer routing and paper width remain device-specific.</p>' +
-                '<div id="desktop-receipt-designer" class="mt-3"></div>';
+                '<div id="desktop-receipt-designer" class="mt-3"><div id="receipt-designer"></div></div>';
             var labelPrinterFields = '<p class="text-muted">Shelf labels use the Windows print dialog. Set this printer as the Windows default so it is preselected for label printing; receipt printing keeps its own independent printer choice above.</p>' +
                 field('labelPrinter', 'Default printer for label printing', select('labelPrinter', printerChoices(printers, receiptResult.defaultPrinter || ''), receiptResult.defaultPrinter || '')) +
                 button('set-label-printer', 'Set default label printer');
@@ -232,7 +232,14 @@
             var body = await content(key);
             if (revision[key] !== stamp) return;
             host(key).html('<div class="desktop-page-heading"><div><h4>' + esc(t(key, sections[key][0])) + '</h4><p>' + esc(t(key + '_help', sections[key][1])) + '</p></div><span class="badge badge-light">' + esc(t('this_computer', 'This computer')) + '</span></div>' + body + '<p data-desktop-status role="status" aria-live="polite"></p>');
-            if (key === 'devices' && PosnicPro.receiptDesignerEditor) PosnicPro.receiptDesignerEditor.load();
+            if (key === 'devices') {
+                var mountReceiptStudio = function () {
+                    if (PosnicPro.receiptDesignerEditor) PosnicPro.receiptDesignerEditor.load();
+                    else host(key).find('#receipt-designer').html('<p class="text-muted">Receipt Printing Studio is unavailable. Reload the page after updating Posnic.</p>');
+                };
+                if (PosnicPro.receiptDesignerEditor) mountReceiptStudio();
+                else $.getScript('static/script/js/modules/js/receipt-studio.js').done(mountReceiptStudio);
+            }
             frequency(key);
             if (key === 'kitchen') host(key).find('input,select,[data-desktop-action="save-kitchen"]').prop('disabled', kitchenRunning);
         } catch (error) { host(key).html('<p role="alert">' + esc(error.message) + '</p>' + button('refresh', t('retry', 'Try again'))); }
