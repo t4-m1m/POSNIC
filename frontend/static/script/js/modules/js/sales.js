@@ -11709,10 +11709,11 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         return (Array.isArray(names) ? names : []).map(function (n) { return String(n || '').trim(); })
             .filter(function (n, i, all) { return n && all.indexOf(n) === i; }).slice(0, 100);
     }
-    function renderCashierNames() {
+    function renderCashierNames(overrideNames) {
         var $list = $('#cashier-names-list');
         if (!$list.length) return;
-        var names = cashierNames();
+        var names = (Array.isArray(overrideNames) ? overrideNames : ($list.data('draftNames') || cashierNames())).slice();
+        $list.data('draftNames', names);
         $list.html(names.length ? names.map(function (name, i) {
             return '<span class="badge badge-light border d-inline-flex align-items-center p-2" style="gap:8px;font-size:13px">' +
                 escapeText(name) + '<button type="button" class="close cashier-name-remove" data-index="' + i + '" aria-label="Retirer ' + escapeText(name) + '" style="font-size:18px;line-height:1">&times;</button></span>';
@@ -11740,8 +11741,7 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         if (names.some(function (n) { return n.toLowerCase() === name.toLowerCase(); })) {
             PosnicPro.alert('warning', 'Ce vendeur existe déjà.'); input.focus(); return;
         }
-        names.push(name.slice(0, 80)); input.val(''); renderCashierNames();
-        $('#cashier-names-list').data('draftNames', names);
+        names.push(name.slice(0, 80)); input.val(''); renderCashierNames(names);
     });
     $(document).on('keydown.cashierSettings', '#cashier-name-input', function (e) {
         if (e.key === 'Enter') { e.preventDefault(); $('#cashier-name-add').trigger('click'); }
@@ -11749,12 +11749,7 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
     $(document).on('click.cashierSettings', '.cashier-name-remove', function () {
         var names = $('#cashier-names-list').data('draftNames') || cashierNames();
         names.splice(Number($(this).attr('data-index')), 1);
-        $('#cashier-names-list').data('draftNames', names);
-        var settings = generalSettings(); settings.cashier_names = names;
-        $('#cashier-names-list').html(names.length ? names.map(function (name, i) {
-            return '<span class="badge badge-light border d-inline-flex align-items-center p-2" style="gap:8px;font-size:13px">' + escapeText(name) +
-                '<button type="button" class="close cashier-name-remove" data-index="' + i + '" aria-label="Remove cashier" style="font-size:18px;line-height:1">&times;</button></span>';
-        }).join('') : '<span class="text-muted">Aucun vendeur enregistré.</span>');
+        renderCashierNames(names);
     });
     $(document).on('click.cashierSettings', '#cashier-names-save', function () {
         var names = $('#cashier-names-list').data('draftNames') || cashierNames();
