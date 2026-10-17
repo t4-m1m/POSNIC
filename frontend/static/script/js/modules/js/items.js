@@ -4842,9 +4842,11 @@ $(document).ready(function () {
            so required controls in inactive panes must not block submission. */
         var formIsValid = true;
         var formElement = $itemForm[0];
-        if (typeof $itemForm.valid === 'function') {
-            formIsValid = $itemForm.valid();
-        } else if (formElement) {
+        /* Always validate the controls the cashier can actually see. The
+           jQuery Validate plugin's form-wide check can reject hidden required
+           controls in inactive item tabs / variant templates, leaving Save
+           looking dead even though the visible fields are complete. */
+        if (formElement) {
             formIsValid = Array.prototype.every.call(formElement.elements, function (field) {
                 if (!field.willValidate || field.disabled) return true;
                 var $field = $(field);
@@ -4873,7 +4875,7 @@ $(document).ready(function () {
             return;
         }
         if (formIsValid) {
-            if ($("#product_with_variant").is(":checked") && $("#load_price_fields").html() === '') {
+            if ($("#product_with_variant").is(":checked") && !$("#load_price_fields").children().length) {
                 PosnicPro.items.loadVariant();
                 PosnicPro.alert('info', 'Review each variant\'s price below, then Save');
             } else {
