@@ -63,6 +63,31 @@ class CreditController extends BaseController {
     }
   }
 
+  /** GET /credit/ledger/:customerId - unpaid sale balances for one customer. */
+  async ledger(req, res) {
+    try {
+      const ctx = this._ctx(req);
+      const rows = await this.service.ledger(req.params.customerId, ctx.branchId);
+      return this.success(res, rows, 'Customer debt ledger');
+    } catch (e) {
+      console.error('Error in credit.ledger:', e);
+      return this.error(res, e.message, 400);
+    }
+  }
+
+  /** POST /credit/settle/:customerId - collect money against original sale balances. */
+  async settle(req, res) {
+    try {
+      if (!this._canWrite(req)) return this.error(res, 'Unauthorized', 403);
+      const ctx = this._ctx(req);
+      const data = await this.service.settleDebt(req.params.customerId, req.body || {}, ctx);
+      return this.success(res, data, 'Debt payment recorded');
+    } catch (e) {
+      console.error('Error in credit.settle:', e);
+      return this.error(res, e.message, /changed during collection/.test(e.message) ? 409 : 400);
+    }
+  }
+
   /** GET /credit/check-limit?customerId=&amount= - would this credit sale fit? */
   async checkLimit(req, res) {
     try {
