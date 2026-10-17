@@ -88,12 +88,13 @@
             (desktop() ? '<button type="button" class="btn btn-outline-primary btn-sm mr-2" data-print-add>' + esc(PosnicPro.i18n.t('lang_print_add_sales_printer', 'Add sales printer')) + '</button>' : '') +
             '<button type="button" class="btn btn-primary btn-sm" data-print-save>' + esc(PosnicPro.i18n.t('lang_print_save_settings', 'Save print settings')) + '</button><span class="small ml-2" role="status" data-print-status></span></div></section>');
         features(featureState);
-        // Mount the independent visual Studio below the existing printer controls.
-        // It edits the shared receipt design but keeps the established print adapter intact.
-        var studio = $('#print-design #receipt-designer');
+        // Mount the visual Studio in the real Core Settings > Receipt Printing tab.
+        // Printer routing remains here; the obsolete receipt-content form is removed from the UI.
+        $('#receipt-print-behaviour').closest('section').hide();
+        var studio = $('#core-tab-print #receipt-designer');
         if (!studio.length) {
-            $('#print-design').append('<div id="receipt-designer" class="mt-4"></div>');
-            studio = $('#print-design #receipt-designer');
+            $('#core-tab-print #print-printers').append('<div id="receipt-designer" class="mt-4"></div>');
+            studio = $('#core-tab-print #receipt-designer');
         }
         if (PosnicPro.receiptDesignerEditor) {
             PosnicPro.receiptDesignerEditor.load(featureState);
