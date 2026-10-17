@@ -264,8 +264,26 @@ class CreditService {
       register_id: input.register_id && ObjectId.isValid(String(input.register_id)) ? oid(input.register_id) : null,
       note: String(input.note || '').slice(0, 500),
     };
-    await db.collection('credit_payments').insertOne(payment);
-    return { payment_id: String(payment._id || ''), customer_id: String(customerId), amount: payment.amount, method, allocations, due_before: due, due_after: await this.dueFor(customerId) };
+    const inserted = await db.collection('credit_payments').insertOne(payment);
+    // Keep the physical till's cash-in journal in step with a cash debt collection.
+    // Non-cash tenders remain in the credit payment ledger and never inflate drawer cash.
+    if (method === 'cash' && ctx.userId) {
+      const registerQuery = { license: BaseModel.license, register_status: 'Opened', current_user_id: oid(ctx.userId) };
+      if (ctx.branchId) registerQuery.branch_id = oid(ctx.branchId);
+      const register = await db.collection('cashregister').findOne(registerQuery, { projection: { _id: 1 } });
+      if (register) {
+        await db.collection('cashregister').updateOne(
+          { _id: register._id, license: BaseModel.license, register_status: 'Opened', current_user_id: oid(ctx.userId) },
+          { $push: { cashInOutDetail: {
+            cashin_amount: payment.amount, cashout_amount: 0,
+            cashin_description: 'Customer debt payment - ' + (customer.name || customerId),
+            cashout_description: '', date: now, source: 'credit_settlement',
+            credit_payment_id: String(inserted.insertedId),
+          } } }
+        );
+      }
+    }
+    return { payment_id: String(inserted.insertedId || ''), customer_id: String(customerId), amount: payment.amount, method, allocations, due_before: due, due_after: await this.dueFor(customerId) };
   }
 
   // ============================ reminders ============================
