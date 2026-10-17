@@ -157,7 +157,7 @@ PosnicPro.receiptDesignLabel = function (value) {
     case "Starting from your current receipt settings": return PosnicPro.i18n.t('lang_rd_starting_from_your_current_receipt_settings', 'Starting from your current receipt settings');
     case "Steward": return PosnicPro.i18n.t('lang_bill_print_steward', 'Steward');
     case "Store details": return PosnicPro.i18n.t('lang_rd_store_details', 'Store details');
-    case "Store details, receipt details, items and totals are always included.": return PosnicPro.i18n.t('lang_rd_store_details_receipt_details_items_and_totals_are_always_included_', 'Store details, receipt details, items and totals are always included.');
+    case "Receipt elements are fully customizable. Add only the blocks you need.": return PosnicPro.i18n.t('lang_rd_fully_customizable_blocks', 'Receipt elements are fully customizable. Add only the blocks you need.');
     case "Store logo": return PosnicPro.i18n.t('lang_rd_store_logo', 'Store logo');
     case "Subtotal": return PosnicPro.i18n.t('lang_subtotal', 'Subtotal');
     case "Table": return PosnicPro.i18n.t('lang_table', 'Table');
