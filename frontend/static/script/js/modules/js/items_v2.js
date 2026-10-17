@@ -352,7 +352,7 @@
             var f=fields();editBaseline=Object.assign(payload(f),P.itemsV2Details.data());
             if(capabilities.restaurant){editBaseline.diet=value('iv2-diet');editBaseline.daypart_ids=checkedValues('iv2-periods');editBaseline.modifier_group_ids=checkedValues('iv2-modifiers');editBaseline.show_on_menu=document.getElementById('iv2-menu').checked;}
             if(capabilities.online)editBaseline.ecommerce=document.getElementById('iv2-orderable').checked;
-            document.getElementById('iv2-tab-basics').click();document.getElementById('iv2-name').focus();
+            document.getElementById('iv2-tab-step1').click();document.getElementById('iv2-name').focus();
             if (duplicate) prepareCopy();
         },function(){failed();});
     }
