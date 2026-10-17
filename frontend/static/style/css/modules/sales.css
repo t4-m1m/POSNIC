@@ -945,3 +945,20 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
 #posnic-multi-baskets .posnic-basket-close{width:32px;flex:0 0 32px;border:0;border-left:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:21px;line-height:1;cursor:pointer}
 #posnic-multi-baskets .posnic-basket-close:hover,#posnic-multi-baskets .posnic-basket-close:focus-visible{background:#fff1f2;color:#be123c;outline:0}
 #posnic-multi-baskets .posnic-basket-tab-wrap.is-active .posnic-basket-close{background:#eff6ff}
+
+
+/* Quiet, native POSNIC-style cashier confirmation dialog. */
+#posnic-vendeur-modal .posnic-vendeur-content{border:1px solid var(--theme-border-color,#dce3eb);border-radius:12px;overflow:hidden;box-shadow:0 18px 55px rgba(15,23,42,.16);background:var(--theme-card-bg,#fff)}
+#posnic-vendeur-modal .posnic-vendeur-header{padding:20px 22px;background:var(--theme-card-bg,#fff);border-bottom:1px solid var(--theme-border-color,#e2e8f0)}
+#posnic-vendeur-modal .posnic-vendeur-eyebrow{display:block;margin-bottom:5px;color:var(--theme-muted-color,#64748b);font-size:10px;font-weight:700;letter-spacing:.1em}
+#posnic-vendeur-modal .modal-title{font-size:20px;font-weight:700;color:var(--theme-text-color,#1e293b);margin-bottom:4px}
+#posnic-vendeur-modal .posnic-vendeur-header small{font-size:12px;color:var(--theme-muted-color,#64748b)}
+#posnic-vendeur-modal .modal-body{padding:22px}
+#posnic-vendeur-modal .modal-body>label{display:block;margin-bottom:7px;font-size:12px;font-weight:650;color:var(--theme-text-color,#334155)}
+#posnic-vendeur-modal #posnic-vendeur-select{height:44px;border:1px solid var(--theme-border-color,#cbd5e1);border-radius:8px;background:var(--theme-input-bg,#fff);color:var(--theme-text-color,#1e293b);box-shadow:none}
+#posnic-vendeur-modal #posnic-vendeur-select:focus{border-color:var(--theme-primary-color,#2563eb);box-shadow:0 0 0 3px color-mix(in srgb,var(--theme-primary-color,#2563eb) 14%,transparent)}
+#posnic-vendeur-modal .posnic-vendeur-empty{margin-top:10px;padding:10px 12px;border:1px solid var(--theme-border-color,#e2e8f0);border-radius:8px;color:var(--theme-muted-color,#64748b);font-size:12px;background:var(--theme-soft-bg,#f8fafc)}
+#posnic-vendeur-modal .posnic-vendeur-help{margin-top:10px;font-size:11px;color:var(--theme-muted-color,#64748b);line-height:1.5}
+#posnic-vendeur-modal .modal-footer{padding:13px 22px;border-top:1px solid var(--theme-border-color,#e2e8f0);gap:8px}
+#posnic-vendeur-modal .modal-footer .btn{border-radius:7px;min-height:38px;padding:8px 13px;font-weight:600;box-shadow:none}
+#posnic-vendeur-modal .modal-footer .btn:disabled{opacity:.45;cursor:not-allowed}
