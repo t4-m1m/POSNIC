@@ -54,7 +54,10 @@
 <button type="button" class="sales-function-key sales-key-pay" onclick="PosnicPro.sales.runFunctionShortcut('F2')" title="F2 — Encaisser"><kbd>F2</kbd><i class="feather icon-dollar-sign"></i><span>Encaisser</span></button>
 <button type="button" class="sales-function-key sales-key-price" onclick="PosnicPro.sales.runFunctionShortcut('F3')" title="F3 — Choisir le prix"><kbd>F3</kbd><i class="feather icon-tag"></i><span>Prix</span></button>
 <button type="button" class="sales-function-key sales-key-quantity" onclick="PosnicPro.sales.runFunctionShortcut('F4')" title="F4 — Modifier la quantité"><kbd>F4</kbd><i class="feather icon-edit-2"></i><span>Quantité</span></button>
+<button type="button" class="sales-function-key sales-key-customer" onclick="PosnicPro.sales.runFunctionShortcut('F5')" title="F5 — Choisir un client"><kbd>F5</kbd><i class="feather icon-users"></i><span>Client</span></button>
 <button type="button" class="sales-function-key sales-key-exchange" onclick="PosnicPro.sales.runFunctionShortcut('F8')" title="F8 — Échange / ticket"><kbd>F8</kbd><i class="feather icon-repeat"></i><span>Échange ticket</span></button>
+<div class="sales-current-customer" id="sales-current-customer" role="status" title="Client de la vente"><i class="feather icon-user"></i><span id="sales-current-customer-name">Client de passage</span></div>
+<button type="button" class="sales-function-key sales-key-payer" id="sales-toolbar-payer" onclick="PosnicPro.sales.openTenderModel()" title="Payer la vente"><i class="feather icon-credit-card"></i><span>PAYER</span></button>
 <div class="sales-shortcut-total" role="status" aria-live="polite"><span>Total</span><strong><span class="display-currency"></span> <span id="sales-shortcut-total-value">0.00</span></strong></div>
 </div>
                     <div class="row">

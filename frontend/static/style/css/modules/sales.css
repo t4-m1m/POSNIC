@@ -870,3 +870,36 @@ body.customer-display .contentbar {
     outline:2px solid rgba(255,255,255,.45);
     outline-offset:2px;
 }
+
+
+/* Fix 2: cashier toolbar remains visible while the sale form scrolls. */
+#sales_new #sales-function-shortcuts{
+ position:sticky!important;top:0;z-index:1040;isolation:isolate;
+ box-shadow:0 6px 18px rgba(18,35,70,.12);
+}
+#sales_new .sales-customer-entry{display:none!important}
+#sales-function-shortcuts .sales-current-customer{
+ display:flex;align-items:center;gap:9px;min-height:48px;min-width:140px;max-width:240px;
+ padding:8px 13px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;
+ color:#172554;font-weight:800;overflow:hidden;
+}
+#sales-function-shortcuts .sales-current-customer .feather{flex:0 0 auto;font-size:17px;color:#2563eb}
+#sales-function-shortcuts #sales-current-customer-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sales-function-shortcuts .sales-key-payer{background:#dcfce7;border-color:#86efac;color:#14532d;min-width:105px}
+#sales-function-shortcuts .sales-key-customer{background:#eff6ff;border-color:#93c5fd}
+#sales-function-shortcuts .sales-key-payer span{font-weight:900;letter-spacing:.03em}
+#posnic-customer-picker .modal-dialog{max-width:760px}
+#posnic-customer-picker .posnic-customer-picker-list{max-height:48vh;overflow:auto;border:1px solid #e2e8f0;border-radius:10px}
+#posnic-customer-picker .posnic-customer-picker-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-bottom:1px solid #edf0f5;cursor:pointer;background:#fff}
+#posnic-customer-picker .posnic-customer-picker-row:last-child{border-bottom:0}
+#posnic-customer-picker .posnic-customer-picker-row:hover,#posnic-customer-picker .posnic-customer-picker-row:focus{background:#eff6ff;outline:0}
+#posnic-customer-picker .posnic-customer-picker-row strong{display:block;color:#172554}
+#posnic-customer-picker .posnic-customer-picker-row small{display:block;color:#64748b}
+#posnic-customer-picker .posnic-customer-debt-preview{margin-top:12px;padding:12px 14px;border-radius:10px;background:#fff7ed;border:1px solid #fed7aa;min-height:64px;color:#7c2d12}
+#posnic-customer-picker .posnic-customer-debt-preview strong{font-size:18px}
+@media(max-width:767.98px){
+ #sales_new #sales-function-shortcuts{top:0;gap:5px;padding:7px}
+ #sales-function-shortcuts .sales-current-customer{order:0;flex:1 1 100%;max-width:none;min-width:0}
+ #sales-function-shortcuts .sales-key-payer{flex:1 1 30%}
+ #sales-function-shortcuts .sales-shortcut-total{flex:1 1 100%}
+}

@@ -11621,10 +11621,122 @@ $(document).on('click.posnicCreditRules', '#save_btn', function (event) {
 
 /* The on-screen function keys deliberately invoke the exact same handlers as the physical keys. */
 PosnicPro.sales.runFunctionShortcut = function (key) {
-    if (!['F1', 'F2', 'F3', 'F4', 'F8'].includes(key)) return;
+    if (!['F1', 'F2', 'F3', 'F4', 'F5', 'F8'].includes(key)) return;
     var event = new KeyboardEvent('keydown', { key: key, bubbles: true, cancelable: true });
     document.dispatchEvent(event);
 };
+
+
+/* Fix 2 — explicit client assignment window (F5) for the active sale. */
+(function () {
+    var pickerReady = false, pickerRows = [], pickerRequest = 0, debtRequest = 0;
+    function esc(value) { return $('<span>').text(value == null ? '' : String(value)).html(); }
+    function currentClientName() {
+        var name = String($('#sales_new_customer_name').val() || '').trim();
+        return name || 'Client de passage';
+    }
+    PosnicPro.sales.syncCustomerHeader = function () {
+        $('#sales-current-customer-name').text(currentClientName());
+    };
+    function ensurePicker() {
+        if (pickerReady) return;
+        pickerReady = true;
+        var markup = '<div class="modal fade" id="posnic-customer-picker" tabindex="-1" role="dialog" aria-labelledby="posnic-customer-picker-title" aria-hidden="true">' +
+          '<div class="modal-dialog modal-dialog-centered" role="document"><div class="modal-content">' +
+          '<div class="modal-header"><h5 class="modal-title" id="posnic-customer-picker-title">Choisir un client — double-cliquez pour sélectionner</h5>' +
+          '<button type="button" class="close" data-dismiss="modal" aria-label="Fermer"><span aria-hidden="true">&times;</span></button></div>' +
+          '<div class="modal-body"><input type="search" class="form-control mb-3" id="posnic-customer-picker-search" placeholder="Rechercher par nom ou téléphone" autocomplete="off">' +
+          '<div class="posnic-customer-picker-list" id="posnic-customer-picker-list"><div class="p-3 text-muted">Chargement des clients…</div></div>' +
+          '<div class="posnic-customer-debt-preview" id="posnic-customer-debt-preview">Survolez un client pour afficher ses dettes en cours.</div></div>' +
+          '<div class="modal-footer"><button type="button" class="btn btn-light" data-dismiss="modal">Annuler</button></div></div></div></div>';
+        $('body').append(markup);
+        $(document).on('input.posnicCustomerPicker', '#posnic-customer-picker-search', function () { paintRows($(this).val()); });
+        $(document).on('mouseenter.posnicCustomerPicker', '.posnic-customer-picker-row', function () { previewDebt($(this).data('id'), $(this).data('name')); });
+        $(document).on('dblclick.posnicCustomerPicker', '.posnic-customer-picker-row', function () {
+            var id = String($(this).data('id') || '');
+            var customer = pickerRows.find(function (row) { return String(row.id || row._id || '') === id; });
+            if (!customer) return;
+            customer.id = customer.id || customer._id;
+            PosnicPro.sales.applyCustomerPick(customer);
+            PosnicPro.sales.syncCustomerHeader();
+            $('#posnic-customer-picker').modal('hide');
+        });
+        $(document).on('click.posnicCustomerPicker', '.posnic-customer-picker-row', function () {
+            // Single click previews only; assignment is deliberately double-click.
+            previewDebt($(this).data('id'), $(this).data('name'));
+        });
+        $('#posnic-customer-picker').on('shown.bs.modal', function () { $('#posnic-customer-picker-search').trigger('focus'); });
+    }
+    function paintRows(query) {
+        var q = String(query || '').trim().toLocaleLowerCase();
+        var rows = pickerRows.filter(function (c) {
+            return !q || String(c.name || '').toLocaleLowerCase().includes(q) || String(c.phone || '').toLocaleLowerCase().includes(q);
+        });
+        var $list = $('#posnic-customer-picker-list');
+        if (!rows.length) { $list.html('<div class="p-3 text-muted">Aucun client trouvé.</div>'); return; }
+        $list.html(rows.map(function (c) {
+            var id = String(c.id || c._id || '');
+            return '<div tabindex="0" role="option" class="posnic-customer-picker-row" data-id="' + esc(id) + '" data-name="' + esc(c.name || '') + '">' +
+              '<div><strong>' + esc(c.name || 'Client sans nom') + '</strong><small>' + esc(c.phone || 'Sans téléphone') + '</small></div>' +
+              '<span class="text-muted">Double-clic pour choisir</span></div>';
+        }).join(''));
+    }
+    function previewDebt(id, name) {
+        var request = ++debtRequest;
+        var $preview = $('#posnic-customer-debt-preview');
+        $preview.text('Vérification des dettes de ' + String(name || 'ce client') + '…');
+        if (!id || !/^[a-f0-9]{24}$/i.test(String(id))) {
+            $preview.text('Aucune dette enregistrée pour ce client de passage.'); return;
+        }
+        PosnicPro.get('credit/ledger/' + encodeURIComponent(id), function (response) {
+            if (request !== debtRequest || !$('#posnic-customer-picker').hasClass('show')) return;
+            if (!response || response.type !== 'success' || !Array.isArray(response.data)) {
+                $preview.text('Les dettes de ce client ne sont pas disponibles pour le moment.'); return;
+            }
+            var rows = response.data.filter(function (row) { return Number(row && row.pending) > 0; });
+            var balance = rows.reduce(function (sum, row) { return sum + Math.max(0, Number(row.pending) || 0); }, 0);
+            var currency = String(PosnicPro.local.get('currencySign') || '');
+            $preview.empty().append($('<div>').text('Dettes en cours — ' + String(name || 'Client')));
+            $('<strong>').text(balance.toLocaleString('fr-DZ', {minimumFractionDigits:2, maximumFractionDigits:2}) + (currency ? ' ' + currency : '')).appendTo($preview);
+            $('<div>').addClass('small').text(rows.length + ' facture(s) avec un reste à payer').appendTo($preview);
+        }, function () {
+            if (request === debtRequest) $preview.text('Impossible de charger les dettes pour le moment.');
+        });
+    }
+    PosnicPro.sales.openCustomerPicker = function () {
+        ensurePicker();
+        $('#posnic-customer-picker-search').val('');
+        $('#posnic-customer-picker-list').html('<div class="p-3 text-muted">Chargement des clients…</div>');
+        $('#posnic-customer-debt-preview').text('Survolez un client pour afficher ses dettes en cours.');
+        $('#posnic-customer-picker').modal('show');
+        var request = ++pickerRequest;
+        PosnicPro.get({url:'customers', data:{page:1, limit:100}}, function (response) {
+            if (request !== pickerRequest) return;
+            var list = (response && response.data && response.data.list) || [];
+            pickerRows = list.map(function (c) {
+                return {
+                    id:c._id || c.id, name:c.name, phone:c.phone, email:c.email, address:c.address,
+                    state:c.state, country:c.country, gst_type:c.gst_type, gst_number:c.gst_number,
+                    partial_balance:c.partial_balance, balance:c.balance, category_id:c.category_id,
+                    price_tier:c.price_tier
+                };
+            }).filter(function (c) { return c.id && c.name && c.name !== 'Walk-In-Customer'; });
+            paintRows('');
+            if (!pickerRows.length) $('#posnic-customer-picker-list').html('<div class="p-3 text-muted">Aucun client enregistré.</div>');
+        }, function () {
+            if (request === pickerRequest) $('#posnic-customer-picker-list').html('<div class="p-3 text-danger">Impossible de charger les clients. Réessayez.</div>');
+        });
+    };
+    $(document).on('keydown.posnicCustomerPickerShortcut', function (event) {
+        if (event.key !== 'F5' || event.altKey || event.ctrlKey || event.metaKey || !$('#sales_new').is(':visible')) return;
+        if ($(event.target).closest('.modal').length) return;
+        event.preventDefault(); event.stopPropagation();
+        PosnicPro.sales.openCustomerPicker();
+    });
+    $(document).on('input change', '#sales_new_customer_name', function () { PosnicPro.sales.syncCustomerHeader(); });
+    $(document).on('click', '#sales_customer_walkin', function () { window.setTimeout(PosnicPro.sales.syncCustomerHeader, 0); });
+    $(document).ready(function () { PosnicPro.sales.syncCustomerHeader(); });
+})();
 
 /* Customer debt entry point: opens the dedicated debt view for the selected saved customer. */
 $(document).on('input.posnicCustomerDebt', '#sales_new_customer_name', function () {
@@ -11648,7 +11760,7 @@ PosnicPro.sales.openCustomerDebts = function () {
  */
 $(document).on('keydown.posnicSaleShortcuts', function (event) {
     if (!$('#sales_new').is(':visible') || event.altKey || event.ctrlKey || event.metaKey) return;
-    if (!['F1', 'F2', 'F3', 'F4'].includes(event.key)) return;
+    if (!['F1', 'F2', 'F3', 'F4', 'F5'].includes(event.key)) return;
     // F1/F2 must work even when the cashier last clicked a basket/input area.
     // Modals keep their own keyboard controls and are intentionally excluded.
     if ($(event.target).closest('.modal').length) return;
@@ -12406,6 +12518,7 @@ PosnicPro.sales.applyCustomerPick = function (data) {
     PosnicPro.local.set('customerAddress', data.address);
     $('#sales_new_customer_id').val(data.id);
     $('#sales_new_customer_name').val(data.name);
+    if (PosnicPro.sales.syncCustomerHeader) PosnicPro.sales.syncCustomerHeader();
     $('#sales_new_customer_address').val(data.address);
     $('#sales_new_customer_phone').val(data.phone);
     $('#sales_new_customer_email').val(data.email);
