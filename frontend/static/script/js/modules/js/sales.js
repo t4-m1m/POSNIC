@@ -14208,3 +14208,179 @@ $(document).ready(function () {
         $menu.prepend($entry);
     });
 });
+
+
+/* Multiple simultaneous walk-in baskets (same till/session, separate carts). */
+(function installPosnicMultiBaskets() {
+    var stateKeys = [
+        'SaleTableLineItems', 'sale_offlineadditems', 'charges', 'extraDiscount',
+        'addSalesLineTable', 'addLineTable', 'returnSalesLineTable',
+        'selectedTable', 'selectedPerson', 'currentItemNoteId', 'dineType',
+        'defaultCustomer', 'SaleAction', 'salesExchange', '_selectedPriceTierLineId'
+    ];
+    function clone(value) {
+        if (value === undefined) return undefined;
+        try { return JSON.parse(JSON.stringify(value)); } catch (_) { return value; }
+    }
+    function currentSalesRoot() { return document.getElementById('sales_new'); }
+    PosnicPro.sales.multiBasket = {
+        sessions: [],
+        activeId: 1,
+        nextId: 2,
+        initialized: false,
+        snapshot: function () {
+            var root = currentSalesRoot();
+            if (!root) return null;
+            var controls = [];
+            Array.prototype.forEach.call(root.querySelectorAll('input,select,textarea'), function (el, index) {
+                controls.push({
+                    id: el.id || '',
+                    name: el.name || '',
+                    index: index,
+                    value: el.value,
+                    checked: !!el.checked,
+                    selectedIndex: typeof el.selectedIndex === 'number' ? el.selectedIndex : -1
+                });
+            });
+            var leaves = [];
+            Array.prototype.forEach.call(root.querySelectorAll('[id]'), function (el) {
+                if (!el.children.length && !/^(INPUT|TEXTAREA|SELECT|OPTION)$/.test(el.tagName)) {
+                    leaves.push({ id: el.id, html: el.innerHTML });
+                }
+            });
+            var body = root.querySelector('#sales_new_items_table tbody');
+            var values = {};
+            stateKeys.forEach(function (key) {
+                if (Object.prototype.hasOwnProperty.call(PosnicPro.sales, key)) values[key] = clone(PosnicPro.sales[key]);
+            });
+            return { controls: controls, leaves: leaves, cartHtml: body ? body.innerHTML : null, values: values };
+        },
+        restore: function (snapshot) {
+            if (!snapshot) return;
+            var root = currentSalesRoot();
+            if (!root) return;
+            Object.keys(snapshot.values || {}).forEach(function (key) {
+                PosnicPro.sales[key] = clone(snapshot.values[key]);
+            });
+            var body = root.querySelector('#sales_new_items_table tbody');
+            if (body && snapshot.cartHtml !== null) body.innerHTML = snapshot.cartHtml;
+            var allControls = Array.prototype.slice.call(root.querySelectorAll('input,select,textarea'));
+            (snapshot.controls || []).forEach(function (saved) {
+                var el = saved.id ? document.getElementById(saved.id) : null;
+                if (!el || !root.contains(el)) {
+                    el = allControls[saved.index];
+                    if (el && saved.name && el.name !== saved.name) el = null;
+                }
+                if (!el) return;
+                if (el.type === 'checkbox' || el.type === 'radio') el.checked = saved.checked;
+                else el.value = saved.value;
+                if (saved.selectedIndex >= 0 && typeof el.selectedIndex === 'number') el.selectedIndex = saved.selectedIndex;
+            });
+            (snapshot.leaves || []).forEach(function (saved) {
+                var el = document.getElementById(saved.id);
+                if (el && root.contains(el) && !el.children.length) el.innerHTML = saved.html;
+            });
+            if (PosnicPro.sales.syncNotesCellSpan) PosnicPro.sales.syncNotesCellSpan();
+            if (PosnicPro.sales.syncActionTooltips) PosnicPro.sales.syncActionTooltips();
+        },
+        render: function () {
+            var bar = document.getElementById('posnic-multi-baskets');
+            if (!bar) return;
+            var self = this;
+            bar.innerHTML = '';
+            this.sessions.forEach(function (session) {
+                var button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'posnic-basket-tab' + (session.id === self.activeId ? ' is-active' : '');
+                button.setAttribute('aria-pressed', session.id === self.activeId ? 'true' : 'false');
+                button.textContent = session.label;
+                button.addEventListener('click', function () { self.switchTo(session.id); });
+                bar.appendChild(button);
+            });
+            var add = document.createElement('button');
+            add.type = 'button';
+            add.className = 'posnic-basket-add';
+            add.textContent = '+ Nouveau client';
+            add.addEventListener('click', function () { self.create(); });
+            bar.appendChild(add);
+            var hint = document.createElement('span');
+            hint.className = 'posnic-basket-hint';
+            hint.textContent = 'Double-cliquez sur Shift ou utilisez les onglets pour basculer';
+            bar.appendChild(hint);
+        },
+        init: function () {
+            if (this.initialized) return;
+            var root = currentSalesRoot();
+            var toolbar = document.getElementById('sales-function-shortcuts');
+            if (!root || !toolbar || !root.contains(toolbar)) return;
+            var bar = document.createElement('div');
+            bar.id = 'posnic-multi-baskets';
+            bar.setAttribute('aria-label', 'Paniers clients simultanés');
+            toolbar.parentNode.insertBefore(bar, toolbar);
+            this.sessions = [{ id: 1, label: 'Client 1', snapshot: null }];
+            this.activeId = 1;
+            this.nextId = 2;
+            this.initialized = true;
+            this.sessions[0].snapshot = this.snapshot();
+            this.render();
+        },
+        switchTo: function (id) {
+            if (id === this.activeId) return;
+            var current = this.sessions.find(function (item) { return item.id === this.activeId; }, this);
+            if (current) current.snapshot = this.snapshot();
+            var next = this.sessions.find(function (item) { return item.id === id; });
+            if (!next) return;
+            this.activeId = id;
+            this.restore(next.snapshot);
+            this.render();
+        },
+        create: function () {
+            if (this.sessions.length >= 8) {
+                PosnicPro.alert('warning', 'Maximum 8 paniers clients simultanés.');
+                return;
+            }
+            var current = this.sessions.find(function (item) { return item.id === this.activeId; }, this);
+            if (current) current.snapshot = this.snapshot();
+            var id = this.nextId++;
+            var session = { id: id, label: 'Client ' + id, snapshot: null };
+            this.sessions.push(session);
+            // Start with a genuinely empty sale using the existing POS reset logic.
+            if (PosnicPro.sales.clear && PosnicPro.sales.clear.cartItems) {
+                PosnicPro.sales.clear.cartItems(false);
+            }
+            session.snapshot = this.snapshot();
+            this.activeId = id;
+            this.render();
+            var search = document.getElementById('sales_new_item_name');
+            if (search) search.focus();
+        }
+    };
+
+    // Observe the lazy-loaded sale workspace and install its tabs when present.
+    function tryInit() { if (PosnicPro.sales && PosnicPro.sales.multiBasket) PosnicPro.sales.multiBasket.init(); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tryInit);
+    else tryInit();
+    if (window.MutationObserver && document.documentElement) {
+        var observer = new MutationObserver(tryInit);
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+    }
+
+    // A deliberate double-tap on Shift switches baskets; a single Shift remains
+    // available for normal uppercase typing. Tabs and the add button always work.
+    var lastShift = 0;
+    document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Shift' || event.repeat || !PosnicPro.sales.multiBasket.initialized) return;
+        if (!currentSalesRoot() || window.getComputedStyle(currentSalesRoot()).display === 'none') return;
+        if (event.target && event.target.closest && event.target.closest('.modal')) return;
+        var now = Date.now();
+        if (now - lastShift <= 450) {
+            event.preventDefault();
+            var sessions = PosnicPro.sales.multiBasket.sessions;
+            var index = sessions.findIndex(function (item) { return item.id === PosnicPro.sales.multiBasket.activeId; });
+            PosnicPro.sales.multiBasket.switchTo(sessions[(index + 1) % sessions.length].id);
+            lastShift = 0;
+        } else {
+            lastShift = now;
+        }
+    }, true);
+})();
