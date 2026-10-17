@@ -4964,12 +4964,8 @@ jQuery.validator.addMethod("lettersonly", function (value, element) {
 }, "Use letters only");
 $("#tax_discount_add").submit(function (event) {
     event.preventDefault();
-    // Only this form owns the selected Core Settings tab. Other pages share
-    // updateCommonSetting, and the hidden Receipt Print tab stays active.
-    if ($('#core-tab-print').hasClass('active') && PosnicPro.receiptDesignerEditor) {
-        PosnicPro.receiptDesignerEditor.save();
-        return;
-    }
+    // Receipt designers are temporarily removed while the replacement is prepared.
+    // Saving this form must continue through the normal Core Settings flow.
     if ($('#tax_discount_add').valid()) {            // checks form for validity
         PosnicPro.settings.updateCommonSetting('Core Settings saved');
     }
