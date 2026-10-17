@@ -812,3 +812,37 @@ body.customer-display .contentbar {
 .sales-shortcut-total>span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a6a88}
 .sales-shortcut-total strong{font-size:26px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
 @media(max-width:767.98px){.sales-shortcut-total{flex:1 1 100%;min-width:0;align-items:flex-end}.sales-shortcut-total strong{font-size:22px}}
+
+
+/* Keep one clear total on the sale-entry screen: the colorful shortcut total. */
+#sales_new #sub_hide,
+#sales_new #sub_total_hide,
+#sales_new #pay_hide,
+#sales_new #pay_total_hide,
+#sales_new #refund_sub_total,
+#sales_new #refund_subtotal,
+#sales_new #refund_pay_total,
+#sales_new #refund_grand_total {
+    display: none !important;
+}
+#sales-function-shortcuts .sales-shortcut-total {
+    background: linear-gradient(135deg, #fff7cc 0%, #ffe0f0 48%, #dbeafe 100%) !important;
+    border: 2px solid #f59e0b !important;
+    border-radius: 14px !important;
+    box-shadow: 0 5px 18px rgba(37, 99, 235, .18), inset 0 1px 0 rgba(255,255,255,.9) !important;
+    color: #172554 !important;
+    padding: 8px 18px !important;
+}
+#sales-function-shortcuts .sales-shortcut-total > span {
+    color: #7c2d12 !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+#sales-function-shortcuts .sales-shortcut-total strong {
+    color: #1d4ed8 !important;
+    font-size: clamp(24px, 2.2vw, 34px) !important;
+    font-weight: 950 !important;
+    line-height: 1.1;
+    text-shadow: 0 1px 0 rgba(255,255,255,.9);
+}
