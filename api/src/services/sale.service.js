@@ -109,6 +109,8 @@ const buildDailyPaymentAggregationPipeline = (match) => [
       split_payments: [
         { $match: { has_split: true, collected_total: { $gt: 0 } } },
         { $unwind: '$payment_entries' },
+        // Credit is an accounts-receivable entry, not money collected.
+        { $match: { $expr: { $ne: [{ $toLower: '$payment_entries.k' }, 'credit'] } } },
         {
           $group: {
             _id: '$payment_entries.k',
@@ -2826,7 +2828,7 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
     salesRepository.aggregate(paymentPipeline, { SaleModel: Model }),
     salesRepository.find(
       match,
-      'dine_type table_id table_number person_count extra_discount sale_extra_discount extra_discount_type items total sales_total',
+      'dine_type table_id table_number person_count extra_discount sale_extra_discount extra_discount_type items total sales_total payment_pending',
       { SaleModel: Model }
     ),
     salesRepository.aggregate(taxPipeline, { SaleModel: Model }),
