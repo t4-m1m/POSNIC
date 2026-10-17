@@ -3152,7 +3152,9 @@ PosnicPro.sales = {
             });
             
             // Check if current total equals pay amount AND only one payment has value (full amount scenario)
-            let isFullAmountScenario = (Math.abs(allPaymentsTotal - payAmount) < 0.01) && (nonZeroPaymentCount === 1);
+            const billTotalForSwitch = parseFloat(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot) || payAmount;
+            let isFullAmountScenario = payAmount >= billTotalForSwitch - 0.01 &&
+                (Math.abs(allPaymentsTotal - payAmount) < 0.01) && (nonZeroPaymentCount === 1);
             
             // Deactivate all buttons and cards
             $('.btn-payment-method').removeClass('active').css({
