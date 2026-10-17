@@ -992,6 +992,14 @@
                                     });
 
 
+                                    /* Default the authenticated POS session to the cashier's
+                                       primary workflow. Keep explicit deep links untouched. */
+                                    try {
+                                        var initialRoute = String(window.location.hash || '').replace(/\/$/, '');
+                                        if (!initialRoute || initialRoute === '#/dashboard') {
+                                            history.replaceState(null, '', window.location.pathname + window.location.search + '#/sales/new');
+                                        }
+                                    } catch (defaultSaleRouteError) { }
                                     PosnicPro.get('users/getUserAccessDetails', function (response) {
                                         PosnicPro.userACL = response.data;
                                         PosnicPro.ACLApplyForAll();
