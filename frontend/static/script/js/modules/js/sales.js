@@ -9,6 +9,7 @@ PosnicPro.sales = {
     EditRecentSaleParams: [],
     submissionInProgress: false,
     _orderRequestId: null,
+    _selectedPriceTierLineId: null,
     orderRequestId: function () {
         if (!PosnicPro.sales._orderRequestId) {
             if (typeof window.crypto.randomUUID === 'function') {
@@ -1453,6 +1454,9 @@ PosnicPro.sales = {
         params.mrp_price = chosenPrice;
         params._priceListApplied = true;
         params.item_quantity = Number($('#touchsale_item_qty' + id).val()) || 1;
+        PosnicPro.sales._selectedPriceTierLineId = String(id);
+        $('#sales_new .touch-table-tbody tr').removeClass('posnic-selected-sale-line');
+        $('#touch_row_' + id).addClass('posnic-selected-sale-line');
         $name.data('itemText', $.extend(true, {}, params));
 
         var $price = $('#addSalesLineItemPrice_' + id);
@@ -1773,8 +1777,8 @@ PosnicPro.sales = {
         var kotHideStyle = (PosnicPro.sales.saleProcess === 'KOT') ? ' style="display:none;" ' : '';
         var colWidth = (PosnicPro.sales.saleProcess === 'KOT') ? 'width="60%"' : 'width="30%"';
         // whole-line editor door (owner ask): one pencil, every field
-        var saleEditIcon = (PosnicPro.local.get('sale_quick_edit') === 'disable') ? '' :
-            '<a href="javascript:void(0)" class="sale-line-act sale-line-edit" data-id="' + id + '" title="Edit price, qty, discount, tax" data-t-title="lang_edit_price_qty_discount_tax"><i class="feather icon-edit-2"></i></a>';
+        // Legacy click-to-open line price editor removed: basket clicks select a line for F3 tier pricing.
+        var saleEditIcon = '';
         var priceTierControl = '';
         if (PosnicPro.sales.SaleAction !== 'return') {
             var tierPrices = [
@@ -1784,7 +1788,7 @@ PosnicPro.sales = {
             ].filter(function (entry) { return Number.isFinite(entry.price) && entry.price > 0; });
             if (tierPrices.length > 1) priceTierControl = '<small class="sale-price-tier-label" title="Press F3 to change selling price">P' + (Number(params.price_tier) || 1) + ' · F3</small>';
         }
-        var rowHTMLLine = '<tr id="touch_row_' + id + '" class="touch-sales-hover-effect border-top pt-3"' + (saleEditIcon ? ' data-sale-edit="' + id + '" tabindex="0"' : '') + '> ' +
+        var rowHTMLLine = '<tr id="touch_row_' + id + '" class="touch-sales-hover-effect border-top pt-3" tabindex="0"> ' +
             '    <td id="addSalesLineItemName_' + id + '" class="font_size14" data-id="' + PosnicPro.escapeHtml(item_name) + '" ' + colWidth + '>' + PosnicPro.escapeHtml(item_name) + inlineNote + '</td>' +
             '    <td id="addSalesLineItemQty_' + id + '" class="text-center add_circle font_size14">' + addLineItemQty + '</td>' +
             '    <td name ="addSalesLineItemUnit" id="addSalesLineItemUnit_' + id + '" class="text-center">' + item_unit + '</td>' +
@@ -7106,16 +7110,21 @@ PosnicPro.sales.lineEdit = {
         }
     }
 };
-$(document).on('click', '.sale-line-edit', function () {
-    PosnicPro.sales.lineEdit.open(String($(this).data('id')));
+$(document).off('click.posnicSelectSaleLine keydown.posnicSelectSaleLine', '#sales_new .touch-table-tbody tr');
+// Clicking a basket row selects it for F3; it must never open the legacy price editor.
+$(document).on('click.posnicSelectSaleLine', '#sales_new .touch-table-tbody tr', function () {
+    if (!$(this).find('input[name="addSalesLineItemQty"]').length) return;
+    PosnicPro.sales._selectedPriceTierLineId = String($(this).find('[id^="addSalesLineItemId_"]').first().text() || '');
+    $('#sales_new .touch-table-tbody tr').removeClass('posnic-selected-sale-line');
+    $(this).addClass('posnic-selected-sale-line');
 });
-// The row opens the same editor as the pencil; embedded controls keep their own action.
-$(document).on('click keydown', 'tr[data-sale-edit]', function (event) {
-    if ($(event.target).closest('a,button,input,select,textarea,label,[onclick],[contenteditable="true"],[role="button"]').length) return;
-    if (event.type === 'keydown' && (event.target !== this || (event.key !== 'Enter' && event.key !== ' '))) return;
-    if (PosnicPro.local.get('sale_quick_edit') === 'disable') return;
-    event.preventDefault();
-    PosnicPro.sales.lineEdit.open(String($(this).attr('data-sale-edit')));
+$(document).on('keydown.posnicSelectSaleLine', '#sales_new .touch-table-tbody tr', function (event) {
+    if ((event.key === 'Enter' || event.key === ' ') && event.target === this && $(this).find('input[name="addSalesLineItemQty"]').length) {
+        event.preventDefault();
+        PosnicPro.sales._selectedPriceTierLineId = String($(this).find('[id^="addSalesLineItemId_"]').first().text() || '');
+        $('#sales_new .touch-table-tbody tr').removeClass('posnic-selected-sale-line');
+        $(this).addClass('posnic-selected-sale-line');
+    }
 });
 /*
  * Is the tax feature actually on for this shop?
@@ -11771,7 +11780,13 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
     var $rows = $('#sales_new .touch-table-tbody tr').has('input[name="addSalesLineItemQty"]');
     if (event.key === 'F3' || event.key === 'F4') {
         var $row = $(event.target).closest('tr');
-        if (!$row.length || !$row.find('input[name="addSalesLineItemQty"]').length) $row = $rows.first();
+        var selectedId = String(PosnicPro.sales._selectedPriceTierLineId || '');
+        var $selectedRow = selectedId ? $('#touch_row_' + selectedId) : $();
+        if ($selectedRow.length && $selectedRow.find('input[name="addSalesLineItemQty"]').length) $row = $selectedRow;
+        else if (!$row.length || !$row.find('input[name="addSalesLineItemQty"]').length) {
+            $row = $('#sales_new .touch-table-tbody tr.posnic-selected-sale-line').has('input[name="addSalesLineItemQty"]');
+            if (!$row.length) $row = $rows.first();
+        }
         if (!$row.length) { PosnicPro.alert('warning', 'Add an item to the basket first.'); event.preventDefault(); return; }
         if (event.key === 'F3') {
             var id = String($row.find('[id^="addSalesLineItemId_"]').first().text() || '');
