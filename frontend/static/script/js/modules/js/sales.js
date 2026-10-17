@@ -11764,8 +11764,8 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
     function ensureCashierModal() {
         if ($('#posnic-vendeur-modal').length) return;
         $('body').append('<div class="modal fade" id="posnic-vendeur-modal" tabindex="-1" role="dialog" aria-labelledby="posnic-vendeur-title" aria-hidden="true" data-backdrop="static" data-keyboard="false">' +
-            '<div class="modal-dialog modal-dialog-centered" role="document"><div class="modal-content" class="posnic-vendeur-content">' +
-            '<div class="modal-header" class="posnic-vendeur-header"><div><h5 class="modal-title font-weight-bold" id="posnic-vendeur-title">Vendeur</h5><small class="text-muted">Confirmez qui réalise cette vente.</small></div></div>' +
+            '<div class="modal-dialog modal-dialog-centered" role="document"><div class="modal-content posnic-vendeur-content">' +
+            '<div class="modal-header posnic-vendeur-header"><div><h5 class="modal-title font-weight-bold" id="posnic-vendeur-title">Vendeur</h5><span class="posnic-vendeur-eyebrow">VALIDATION DE VENTE</span><small>Choisissez le vendeur responsable de cette vente.</small></div></div>' +
             '<div class="modal-body"><label for="posnic-vendeur-select">Vendeur responsable</label><select id="posnic-vendeur-select" class="form-control"><option value="">Sélectionner un vendeur…</option></select>' +
             '<div id="posnic-vendeur-empty" class="posnic-vendeur-empty" hidden>Aucun vendeur configuré. Ajoutez-les dans Paramètres &gt; Général &gt; Vente.</div>' +
             '<div class="small text-muted mt-2">La vente ne sera pas validée tant que le vendeur n’est pas confirmé.</div></div>' +
