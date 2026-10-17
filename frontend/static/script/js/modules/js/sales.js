@@ -2234,7 +2234,7 @@ PosnicPro.sales = {
         } else {
             $('.cancel-save-hide-show').show();
         }
-        $('#newsalespage').hide();
+        if (!fastPayRequested) $('#newsalespage').hide();
         PosnicPro.sales.saleDoneTimer.stop();
         $('#tendered_subtotal').text($('#sales_new_subtotal').text());
         $('#tendered_discount').text($('#discount_sale_amount').text());
