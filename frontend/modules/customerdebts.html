@@ -11,31 +11,31 @@
           <button type="button" class="btn btn-outline-primary btn-sm" id="credit_debts_refresh"><i class="feather icon-refresh-cw mr-1"></i>Refresh</button>
         </div>
         <div class="card-body">
-          <div class="row mb-3"><div class="col-md-4"><div class="border rounded p-3"><small class="text-muted">Total outstanding</small><h3 class="mb-0 text-danger" id="credit_outstanding_total">0.00</h3></div></div></div>
+          <div class="row mb-3"><div class="col-md-4"><div class="border rounded p-3"><small class="text-muted">Total outstanding</small><h3 class="mb-0 text-danger" id="debts_outstanding_total">0.00</h3></div></div></div>
           <div class="table-responsive"><table class="table table-hover">
             <thead><tr><th>Customer</th><th>Phone</th><th class="text-right">Outstanding</th><th class="text-center">Actions</th></tr></thead>
-            <tbody id="credit_outstanding_body"><tr><td colspan="4" class="text-center text-muted py-3">Loading outstanding customers…</td></tr></tbody>
+            <tbody id="debts_outstanding_body"><tr><td colspan="4" class="text-center text-muted py-3">Loading outstanding customers…</td></tr></tbody>
           </table></div>
         </div>
       </div>
-      <section id="credit_ledger_panel" class="card border-primary" style="display:none">
+      <section id="debts_ledger_panel" class="card border-primary" style="display:none">
         <div class="card-header d-flex align-items-center justify-content-between">
-          <h5 id="credit_ledger_title" class="mb-0">Debt ledger</h5>
-          <button type="button" class="btn btn-sm btn-outline-secondary" id="credit_ledger_close">Close</button>
+          <h5 id="debts_ledger_title" class="mb-0">Debt ledger</h5>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="debts_ledger_close">Close</button>
         </div>
         <div class="card-body">
-          <p id="credit_ledger_status" class="text-muted" role="status">Select a customer to view unpaid sales.</p>
+          <p id="debts_ledger_status" class="text-muted" role="status">Select a customer to view unpaid sales.</p>
           <div class="table-responsive"><table class="table table-sm table-striped">
             <thead><tr><th>Date</th><th>Sale / Receipt</th><th>Description</th><th class="text-right">Original total</th><th class="text-right">Remaining</th></tr></thead>
-            <tbody id="credit_ledger_body"><tr><td colspan="5" class="text-center text-muted">Select a customer above.</td></tr></tbody>
-            <tfoot><tr><th colspan="4" class="text-right">Outstanding balance</th><th id="credit_ledger_due" class="text-right text-danger">0.00</th></tr></tfoot>
+            <tbody id="debts_ledger_body"><tr><td colspan="5" class="text-center text-muted">Select a customer above.</td></tr></tbody>
+            <tfoot><tr><th colspan="4" class="text-right">Outstanding balance</th><th id="debts_ledger_due" class="text-right text-danger">0.00</th></tr></tfoot>
           </table></div>
           <hr><h6>Collect a payment</h6>
           <div class="form-row align-items-end">
-            <div class="form-group col-md-3"><label for="credit_settle_amount">Amount received</label><input id="credit_settle_amount" class="form-control" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
-            <div class="form-group col-md-3"><label for="credit_settle_method">Payment method</label><select id="credit_settle_method" class="form-control"><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank transfer</option><option value="other">Other</option></select></div>
-            <div class="form-group col-md-4"><label for="credit_settle_note">Note (optional)</label><input id="credit_settle_note" class="form-control" maxlength="500" placeholder="Payment note"></div>
-            <div class="form-group col-md-2"><button id="credit_settle_submit" type="button" class="btn btn-success btn-block"><i class="feather icon-check mr-1"></i>Collect</button></div>
+            <div class="form-group col-md-3"><label for="debts_settle_amount">Amount received</label><input id="debts_settle_amount" class="form-control" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
+            <div class="form-group col-md-3"><label for="debts_settle_method">Payment method</label><select id="debts_settle_method" class="form-control"><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank transfer</option><option value="other">Other</option></select></div>
+            <div class="form-group col-md-4"><label for="debts_settle_note">Note (optional)</label><input id="debts_settle_note" class="form-control" maxlength="500" placeholder="Payment note"></div>
+            <div class="form-group col-md-2"><button id="debts_settle_submit" type="button" class="btn btn-success btn-block"><i class="feather icon-check mr-1"></i>Collect</button></div>
           </div>
           <small class="text-muted">Payments are allocated to the oldest unpaid sale first. The sale balance and payment history are updated, and cash collections are added to the active cashier’s open till cash-in journal when available.</small>
         </div>
