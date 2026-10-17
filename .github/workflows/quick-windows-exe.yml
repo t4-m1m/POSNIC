@@ -105,9 +105,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: Posnic-Windows-EXE
-          path: |
-            dist/*.exe
-            dist/*.yml
-            dist/*.blockmap
+          path: dist/*-windows-x64-installer.exe
           if-no-files-found: error
           retention-days: 7
