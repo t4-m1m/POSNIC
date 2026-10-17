@@ -221,6 +221,16 @@ class CreditService {
     const transactions = await db.collection('transaction').find(query).sort({ created_date: 1, _id: 1 }).toArray();
     const due = round2(transactions.reduce((sum, row) => sum + Math.max(0, Number(row.pending) || 0), 0));
     if (amount > due + 0.009) throw new Error('Payment exceeds the customer’s outstanding balance');
+    // Cash must go through the original POS till journal. Never accept a cash
+    // collection if there is no open register to record it in.
+    let cashRegister = null;
+    if (method === 'cash') {
+      if (!ctx.userId) throw new Error('A logged-in cashier is required to collect cash.');
+      const registerQuery = { license: BaseModel.license, register_status: 'Opened', current_user_id: oid(ctx.userId) };
+      if (ctx.branchId) registerQuery.branch_id = oid(ctx.branchId);
+      cashRegister = await db.collection('cashregister').findOne(registerQuery, { projection: { _id: 1 } });
+      if (!cashRegister) throw new Error('Open your POS cash register before collecting a cash debt payment. No payment was collected.');
+    }
     // Refuse to collect against a ledger row whose original sale no longer
     // exists. Preflight all affected rows before changing any balances.
     let preflightAmount = amount;
@@ -331,20 +341,18 @@ class CreditService {
     const inserted = await db.collection('credit_payments').insertOne(payment);
     // Keep the physical till's cash-in journal in step with a cash debt collection.
     // Non-cash tenders remain in the credit payment ledger and never inflate drawer cash.
-    if (method === 'cash' && ctx.userId) {
-      const registerQuery = { license: BaseModel.license, register_status: 'Opened', current_user_id: oid(ctx.userId) };
-      if (ctx.branchId) registerQuery.branch_id = oid(ctx.branchId);
-      const register = await db.collection('cashregister').findOne(registerQuery, { projection: { _id: 1 } });
-      if (register) {
-        await db.collection('cashregister').updateOne(
-          { _id: register._id, license: BaseModel.license, register_status: 'Opened', current_user_id: oid(ctx.userId) },
-          { $push: { cashInOutDetail: {
-            cashin_amount: payment.amount, cashout_amount: 0,
-            cashin_description: 'Customer debt payment - ' + (customer.name || customerId),
-            cashout_description: '', date: now, source: 'credit_settlement',
-            credit_payment_id: String(inserted.insertedId),
-          } } }
-        );
+    if (method === 'cash' && cashRegister) {
+      const registerUpdate = await db.collection('cashregister').updateOne(
+        { _id: cashRegister._id, license: BaseModel.license, register_status: 'Opened', current_user_id: oid(ctx.userId) },
+        { $push: { cashInOutDetail: {
+          cashin_amount: payment.amount, cashout_amount: 0,
+          cashin_description: 'Customer debt payment - ' + (customer.name || customerId),
+          cashout_description: '', date: now, source: 'credit_settlement',
+          credit_payment_id: String(inserted.insertedId),
+        } } }
+      );
+      if (!registerUpdate.matchedCount) {
+        throw new Error('The POS cash register closed during collection. Reconcile this debt payment before collecting again.');
       }
     }
     return { payment_id: String(inserted.insertedId || ''), customer_id: String(customerId), amount: payment.amount, method, allocations, due_before: due, due_after: await this.dueFor(customerId, ctx.branchId) };
