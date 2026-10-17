@@ -212,7 +212,8 @@ PosnicPro.quickreport = {
         var qty = 0,
           price = 0,
           total = 0,
-          profit = 0;
+          profit = 0,
+          productDiscountTotal = 0;
         var productHeaderRow = [
           "productName",
           "productSku",
@@ -232,6 +233,7 @@ PosnicPro.quickreport = {
           var pProfit = safeNum(p.product_profit);
           var pDiscount = safeNum(p.product_discount);
           var pTax = safeNum(p.product_tax);
+          productDiscountTotal += pDiscount;
 
           qty += pQty;
           price += pSubtotal;
@@ -394,6 +396,11 @@ PosnicPro.quickreport = {
           qty: safeNum(qty),
           subtotal: safeNum(price),
           total: safeNum(total),
+          // Net profit is the report profit after item discounts. Gross profit
+          // adds item and sale-level discounts back before them. Taxes are not
+          // included in the day-close slip figures.
+          netProfit: safeNum(profit),
+          grossProfit: safeNum(profit + productDiscountTotal + total_sale_extra_discount),
           outstanding: safeNum(response.data && response.data.outstanding_amount),
           payments: paymentAllDataRow.map(function (row) {
             return { label: row[0], amount: safeNum(row[1]) };
@@ -902,18 +909,21 @@ PosnicPro.quickreport = {
         { label: PosnicPro.i18n.t('lang_by', 'By'), value: PosnicPro.local.get('loginuser_name') || '' }
       ],
       sections: [
-        { type: 'pairs', name: 'SALES', rows: [
+        { type: 'pairs', name: 'SALES (EXCLUDING TAX)', rows: [
           { label: PosnicPro.i18n.t('lang_items_sold', 'Items sold'), value: String(report.qty) },
-          { label: PosnicPro.i18n.t('lang_subtotal', 'Subtotal'), value: money(report.subtotal) }
+          { label: 'Sales before tax', value: money(report.subtotal) },
+          { label: 'Gross profit', value: money(report.grossProfit) },
+          { label: 'Net profit', value: money(report.netProfit) }
         ] },
-        { type: 'total', label: PosnicPro.i18n.t('lang_total_sales_2', 'TOTAL SALES'), value: money(report.total) },
+        { type: 'total', label: 'TOTAL SALES EXCLUDING TAX', value: money(report.subtotal) },
         { type: 'pairs', name: 'PAYMENTS',
           rows: report.payments.map(function (p) {
             return { label: p.label, value: money(p.amount) };
           }),
           total: { label: PosnicPro.i18n.t('lang_total_received', 'Total received'), value: money(report.tenderTotal) } },
-        { type: 'pairs', name: 'CUSTOMER CREDIT / DEBT', rows: [
-          { label: 'Outstanding from sales in this period', value: money(report.outstanding) }
+        { type: 'pairs', name: 'CASH & CREDIT TOTALS', rows: [
+          { label: 'Cash received today', value: money(cash) },
+          { label: 'Credit / debt created today', value: money(report.outstanding) }
         ] },
         /*
          * The cash figure sits at the head of the handover block, directly
