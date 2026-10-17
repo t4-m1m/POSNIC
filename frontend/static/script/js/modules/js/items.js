@@ -4836,9 +4836,30 @@ $(document).ready(function () {
         // Translations are optional metadata. A slow or failed translation
         // bootstrap must never block saving the core item record.
         var $itemForm = $('#item_image_upload_form');
-        if (!$itemForm.valid()) {
+        /* Some installations load jQuery Validate and some load only the base
+           form helpers. Do not let a missing .valid() plugin silently abort
+           the Save action. Validate visible controls only: the form is tabbed,
+           so required controls in inactive panes must not block submission. */
+        var formIsValid = true;
+        var formElement = $itemForm[0];
+        if (typeof $itemForm.valid === 'function') {
+            formIsValid = $itemForm.valid();
+        } else if (formElement) {
+            formIsValid = Array.prototype.every.call(formElement.elements, function (field) {
+                if (!field.willValidate || field.disabled) return true;
+                var $field = $(field);
+                var visible = $field.is(':visible') ||
+                    ($field.hasClass('select2-hidden-accessible') && $field.next('.select2-container').is(':visible'));
+                return !visible || field.checkValidity();
+            });
+        }
+        if (!formIsValid) {
             var $invalid = $itemForm.find(':input').filter(function () {
-                return this.willValidate && !this.checkValidity() && $(this).is(':visible');
+                if (!this.willValidate || this.disabled) return false;
+                var $field = $(this);
+                var visible = $field.is(':visible') ||
+                    ($field.hasClass('select2-hidden-accessible') && $field.next('.select2-container').is(':visible'));
+                return visible && !this.checkValidity();
             }).first();
             if ($invalid.length) {
                 var $pane = $invalid.closest('.tab-pane');
@@ -4851,7 +4872,7 @@ $(document).ready(function () {
             PosnicPro.alert('warning', 'Please complete the required item fields before saving.');
             return;
         }
-        if ($itemForm.valid()) {
+        if (formIsValid) {
             if ($("#product_with_variant").is(":checked") && $("#load_price_fields").html() === '') {
                 PosnicPro.items.loadVariant();
                 PosnicPro.alert('info', 'Review each variant\'s price below, then Save');
