@@ -10357,7 +10357,7 @@ $(document).on('click','#save_captain_tables',function(){
     }
     function save(names) {
         names = names.map(function (n) { return String(n || '').trim().slice(0, 80); })
-            .filter(function (n, i, all) { return n && all.indexOf(n.toLowerCase()) === i; }).slice(0, 100);
+            .filter(function (n, i, all) { return n && all.findIndex(function (value) { return String(value).toLowerCase() === n.toLowerCase(); }) === i; }).slice(0, 100);
         var settings = readSettings();
         settings.cashier_names = names;
         PosnicPro.put({ url: 'setting/updateCommonSettings', data: JSON.stringify({ cashier_names: names }) }, function (response) {
