@@ -80,7 +80,8 @@
     'divider',
     'signature',
   ];
-  const required = ['store', 'transaction', 'items', 'totals'];
+  // Receipt blocks are optional; owners may remove any element from a design.
+  const required = [];
   const textTypes = ['store', 'transaction', 'items', 'totals', 'text', 'field', 'signature'];
   function image(value) {
     return (
@@ -278,20 +279,6 @@
         }
         return b;
       });
-      required.forEach(function (type) {
-        if (
-          blocks.filter(function (b) {
-            return b.type === type;
-          }).length !== 1
-        )
-          throw new Error(
-            'Keep one store, receipt details, items and totals block in every design.'
-          );
-      });
-      if (
-        blocks.findIndex((b) => b.type === 'totals') < blocks.findIndex((b) => b.type === 'items')
-      )
-        throw new Error('Place totals after the items.');
       const canvasHeight = Number(layout.canvasHeight);
       out.layouts[format] = {
         fontSize: size,
