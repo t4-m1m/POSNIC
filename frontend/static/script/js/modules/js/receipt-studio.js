@@ -20,12 +20,13 @@ function seed(data){
  Object.keys(design.layouts).forEach(function(f){
    var l=design.layouts[f]; l.canvas=true;
    l.canvasHeight=Math.max(240,Number(l.canvasHeight)||sizes[f].h*3.78);
-   var w=0; l.blocks.forEach(function(b,i){
+   var w=0,cursor=12; l.blocks.forEach(function(b,i){
      if(!Number.isFinite(Number(b.x)))b.x=4;
-     if(!Number.isFinite(Number(b.y)))b.y=12+i*42;
+     if(!Number.isFinite(Number(b.y)))b.y=cursor;
      if(!Number.isFinite(Number(b.w)))b.w=(b.type==='items'||b.type==='totals'||b.type==='store'||b.type==='transaction')?92:70;
      if(!Number.isFinite(Number(b.h)))b.h=b.type==='logo'?54:b.type==='items'?110:b.type==='totals'?72:30;
      if(!Number.isFinite(Number(b.rotation)))b.rotation=0;
+     cursor=Math.max(cursor,Number(b.y)+Number(b.h)+8);
      w=Math.max(w,Number(b.y)+Number(b.h)+12);
    });
    l.canvasHeight=Math.min(8000,Math.max(l.canvasHeight,w));
