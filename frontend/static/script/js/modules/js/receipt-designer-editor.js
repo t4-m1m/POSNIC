@@ -143,8 +143,30 @@
                     this.style.margin = '0';
                 });
             }
+            previewBlocks.each(function () {
+                if (this.getAttribute('data-block-id') !== selected) return;
+                var node = this, id = selected;
+                node.style.outline = '2px solid #2563eb'; node.style.outlineOffset = '2px';
+                node.style.position = node.style.position || 'relative';
+                var handle = doc.createElement('span'); handle.setAttribute('data-resize-id', id); handle.textContent = '↘';
+                handle.style.cssText = 'position:absolute;right:-5px;bottom:-5px;width:18px;height:18px;background:#2563eb;color:white;border:1px solid white;border-radius:3px;display:flex;align-items:center;justify-content:center;font:14px Arial;cursor:nwse-resize;z-index:9999;line-height:1'; node.appendChild(handle);
+            });
+            var resizeState = null;
+            $(doc).find('[data-resize-id]').on('pointerdown', function (event) {
+                event.preventDefault(); event.stopPropagation();
+                var id = this.getAttribute('data-resize-id'), b = layout().blocks.find(function (x) { return x.id === id; });
+                if (!b || !article) return; selected = id; checkpoint();
+                resizeState = { id:id, x:event.clientX, y:event.clientY, w:Number(b.w)||100, h:Number(b.h)||this.parentElement.getBoundingClientRect().height, articleWidth:article.getBoundingClientRect().width };
+            }).on('pointermove', function (event) {
+                if (!resizeState) return;
+                var b = layout().blocks.find(function (x) { return x.id === resizeState.id; }), node = doc.querySelector('[data-block-id="' + resizeState.id + '"]');
+                if (!b || !node) return;
+                b.w = Math.max(2, Math.min(100, resizeState.w + (event.clientX-resizeState.x)/Math.max(1,resizeState.articleWidth)*100));
+                b.h = Math.max(8, Math.min(1200, resizeState.h + event.clientY-resizeState.y));
+                node.style.width = b.w + '%'; node.style.height = b.h + 'px';
+            }).on('pointerup pointercancel', function () { if (resizeState) { resizeState = null; renderList(); changed(); } });
             previewBlocks.attr('draggable', 'false').on('click', function (event) {
-                event.preventDefault(); selected = this.getAttribute('data-block-id'); renderList();
+                event.preventDefault(); selected = this.getAttribute('data-block-id'); renderList(); schedulePreview();
             }).on('pointerdown', function (event) {
                 if (event.button !== 0 || !article) return;
                 var id = this.getAttribute('data-block-id');
@@ -260,6 +282,7 @@
         }
         if (['items', 'totals', 'transaction'].indexOf(b.type) === -1) html += '<label for="rd-align">' + esc(t('Alignment')) + '</label><select id="rd-align" data-prop="align">' + ['left', 'center', 'right'].map(function (a) { return '<option value="' + a + '"' + (b.align === a ? ' selected' : '') + '>' + esc(t(a.charAt(0).toUpperCase() + a.slice(1))) + '</option>'; }).join('') + '</select>';
         if (b.type === 'image' || b.type === 'qr' || b.type === 'signature') html += '<label for="rd-image-width">' + esc(t('Width (% of printable area)')) + '</label><input id="rd-image-width" type="range" min="15" max="100" step="5" data-prop="width" value="' + (b.width || 45) + '"><output class="rd-width-value">' + (b.width || 45) + '%</output>';
+        html += '<label for="rd-block-width">' + esc(t('Width (%)')) + '</label><input id="rd-block-width" type="number" min="2" max="100" step="1" data-prop="w" value="' + (Number(b.w) || 100) + '"><label for="rd-block-height">' + esc(t('Height (px)')) + '</label><input id="rd-block-height" type="number" min="8" max="1200" step="1" data-prop="h" value="' + (Number(b.h) || 24) + '"><small>' + esc(t('Resize the selected block in the preview or enter exact dimensions.')) + '</small>';
         if (b.type === 'image' || b.type === 'logo') html += '<label for="rd-image-rotation">' + esc(t('Rotation (degrees)')) + '</label><input id="rd-image-rotation" type="number" min="-180" max="180" step="1" data-prop="rotation" value="' + (Number(b.rotation) || 0) + '"><small>' + esc(t('Rotate the selected logo or image.')) + '</small>';
         return html + '</div>';
     }
@@ -468,6 +491,11 @@
             else if (action === 'up' || action === 'down') move(id, at + (action === 'up' ? -1 : 1));
         }).on('change.receiptDesigner', '.rd-preview-fit', function () {
             previewFit = this.value; preview();
+        }).on('change.receiptDesigner', '#rd-block-width, #rd-block-height', function () {
+            var b = layout().blocks.find(function (v) { return v.id === selected; }); if (!b) return;
+            checkpoint(); var key = this.id === 'rd-block-width' ? 'w' : 'h';
+            b[key] = Math.max(key === 'w' ? 2 : 8, Math.min(key === 'w' ? 100 : 1200, Number(this.value) || (key === 'w' ? 100 : 24)));
+            changed();
         }).on('change.receiptDesigner', '#rd-text-size', function () {
             checkpoint(); layout().fontSize = Number(this.value); changed();
         }).on('input.receiptDesigner change.receiptDesigner', '#branch_fssai_number, #printall, #bill_print_copies', function () {
