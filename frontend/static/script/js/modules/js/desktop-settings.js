@@ -160,9 +160,25 @@
     async function content(key) {
         var data, html, printers;
         if (key === 'devices') {
-            var loaded = await Promise.all([api.cashDrawer.loadConfig(), api.printer.list()]);
-            data = loaded[0] || {}; printers = loaded[1] || []; states[key] = data;
-            return card(t('receipts', 'Receipts and documents'), '<p>' + esc(t('print_location', 'Choose printers, paper and copies in Core Settings → Print → Printer Settings.')) + '</p>' + button('print-settings', t('printer_settings', 'Printer Settings')) + ' ' + open('hardware:receipt', t('test_printers', 'Test printers & view print history'))) +
+            var loaded = await Promise.all([api.cashDrawer.loadConfig(), api.printer.list(), api.printer.getReceiptSettings()]);
+            data = loaded[0] || {}; printers = loaded[1] || [];
+            var receiptResult = loaded[2] || {}, receipt = receiptResult.settings || {};
+            states[key] = { drawer: data, receipt: receipt };
+            var receiptPaper = { '58mm': '58 mm', '80mm': '80 mm (Tysoo PRP-300)', '112mm': '112 mm' };
+            var receiptFields = '<div class="desktop-settings-grid">' +
+                field('receiptPrinter', 'Receipt printer', select('receiptPrinter', printerChoices(printers, receipt.printerName || ''), receipt.printerName || '')) +
+                field('receiptPaper', 'Receipt roll width', select('receiptPaper', receiptPaper, receipt.paperWidth || '80mm')) +
+                '</div>' +
+                check('receiptOpenDrawer', 'Open cash drawer after sale', !!receipt.openDrawer, 'Enable only if the printer cash-drawer cable is connected.') +
+                '<div class="desktop-actions">' + button('save-receipt-settings', 'Save printer settings', true) + ' ' + button('test-receipt', 'Print sample receipt') + '</div>' +
+                '<p class="text-muted">Receipt content and layout are edited in Receipt Printing Studio below. Printer routing and paper width remain device-specific.</p>' +
+                '<div id="desktop-receipt-designer" class="mt-3"><div id="receipt-designer"></div></div>';
+            var labelPrinterFields = '<p class="text-muted">Shelf labels use the Windows print dialog. Set this printer as the Windows default so it is preselected for label printing; receipt printing keeps its own independent printer choice above.</p>' +
+                field('labelPrinter', 'Default printer for label printing', select('labelPrinter', printerChoices(printers, receiptResult.defaultPrinter || ''), receiptResult.defaultPrinter || '')) +
+                button('set-label-printer', 'Set default label printer');
+            return card('Receipt Printer', receiptFields) +
+                card('Label Printer', labelPrinterFields) +
+                card(t('receipts', 'Receipts and documents'), '<p>' + esc(t('print_location', 'Choose printers, paper and copies in Core Settings → Print → Printer Settings.')) + '</p>' + button('print-settings', t('printer_settings', 'Printer Settings')) + ' ' + open('hardware:receipt', t('test_printers', 'Test printers & view print history'))) +
                 card(t('cash_drawer', 'Cash drawer'), '<div class="desktop-settings-grid">' + field('drawerPrinter', t('printer', 'Printer'), select('drawerPrinter', printerChoices(printers, data.printerName), data.printerName || '')) + field('drawerPin', t('drawer_pin', 'Drawer connector pin'), select('drawerPin', { '0': 'Pin 2', '1': 'Pin 5' }, data.pin || 0)) + '</div>' + check('drawerAuto', t('drawer_auto', 'Open the cash drawer after a sale'), !!data.autoOpenOnSale) + button('save-devices', t('save', 'Save settings'), true) + ' ' + open('hardware:cash', t('drawer_test', 'Test cash drawer'))) +
                 card(t('other_devices', 'Other devices'), '<p>' + esc(t('device_tools_help', 'Open the device panel to connect, calibrate or test hardware. These tools also remain available from the desktop menu.')) + '</p><div class="desktop-actions">' + open('hardware:weight', t('scales', 'Weighing scale')) + open('hardware:scanner', t('scanner', 'Barcode scanner')) + open('hardware:mobile', t('mobile', 'Mobile devices')) + '</div>');
         }
@@ -216,6 +232,14 @@
             var body = await content(key);
             if (revision[key] !== stamp) return;
             host(key).html('<div class="desktop-page-heading"><div><h4>' + esc(t(key, sections[key][0])) + '</h4><p>' + esc(t(key + '_help', sections[key][1])) + '</p></div><span class="badge badge-light">' + esc(t('this_computer', 'This computer')) + '</span></div>' + body + '<p data-desktop-status role="status" aria-live="polite"></p>');
+            if (key === 'devices') {
+                var mountReceiptStudio = function () {
+                    if (PosnicPro.receiptDesignerEditor) PosnicPro.receiptDesignerEditor.load();
+                    else host(key).find('#receipt-designer').html('<p class="text-muted">Receipt Printing Studio is unavailable. Reload the page after updating Posnic.</p>');
+                };
+                if (PosnicPro.receiptDesignerEditor) mountReceiptStudio();
+                else $.getScript('static/script/js/modules/js/receipt-studio.js').done(mountReceiptStudio);
+            }
             frequency(key);
             if (key === 'kitchen') host(key).find('input,select,[data-desktop-action="save-kitchen"]').prop('disabled', kitchenRunning);
         } catch (error) { host(key).html('<p role="alert">' + esc(error.message) + '</p>' + button('refresh', t('retry', 'Try again'))); }
@@ -233,8 +257,76 @@
         if (name === 'print-settings') { PosnicPro.settings.openSection('general'); $('#core_settings_tabs a[href="#core-tab-print"]').tab('show'); $('#print-printers-tab').tab('show'); return; }
         if (name === 'browse-backup') { var folder = await backup.browseBackupFolder(); if (folder) host(key).find('[data-field="backupPath"]').val(folder); return; }
         if (name === 'save-app') success(await api.desktop.saveBehaviour({ openAtLogin: checked(key, 'openAtLogin') }));
+        if (name === 'set-label-printer') {
+            var labelPrinterName = value(key, 'labelPrinter') || '';
+            success(await api.printer.setDefault(labelPrinterName));
+            note(key, 'Windows default printer updated for label printing. Receipt printer remains separate.');
+            return load(key);
+        }
+        if (name === 'save-receipt-settings' || name === 'test-receipt') {
+            var receiptConfig = {
+                printerName: value(key, 'receiptPrinter') || '',
+                paperWidth: value(key, 'receiptPaper') || '80mm',
+                storeName: String(value(key, 'receiptStoreName') || '').trim(),
+                receiptTitle: String(value(key, 'receiptTitle') || 'SALE RECEIPT').trim() || 'SALE RECEIPT',
+                storeAddress: String(value(key, 'receiptAddress') || '').trim(),
+                storePhone: String(value(key, 'receiptPhone') || '').trim(),
+                storeEmail: String(value(key, 'receiptEmail') || '').trim(),
+                footer: String(value(key, 'receiptFooter') || '').trim(),
+                showCashier: checked(key, 'receiptShowCashier'),
+                showCustomer: checked(key, 'receiptShowCustomer'),
+                showBranch: checked(key, 'receiptShowBranch'),
+                openDrawer: checked(key, 'receiptOpenDrawer'),
+                design: {
+                    logoText: value(key, 'receiptLogoText'),
+                    alignment: value(key, 'receiptAlignment'),
+                    titleAlignment: value(key, 'receiptTitleAlignment'),
+                    titleSize: value(key, 'receiptTitleSize'),
+                    totalSize: value(key, 'receiptTotalSize'),
+                    separator: value(key, 'receiptSeparator'),
+                    barcodeWidth: Number(value(key, 'receiptBarcodeWidth')),
+                    barcodeHeight: Number(value(key, 'receiptBarcodeHeight')),
+                    note: value(key, 'receiptNote'),
+                    titleBold: checked(key, 'receiptTitleBold'),
+                    totalBold: checked(key, 'receiptTotalBold'),
+                    showTitle: checked(key, 'receiptShowTitle'),
+                    showAddress: checked(key, 'receiptShowAddress'),
+                    showPhone: checked(key, 'receiptShowPhone'),
+                    showEmail: checked(key, 'receiptShowEmail'),
+                    showTicket: checked(key, 'receiptShowTicket'),
+                    showDate: checked(key, 'receiptShowDate'),
+                    showCashier: checked(key, 'receiptShowCashierDesign'),
+                    showCustomer: checked(key, 'receiptShowCustomerDesign'),
+                    showBranch: checked(key, 'receiptShowBranchDesign'),
+                    itemsHeader: checked(key, 'receiptItemsHeader'),
+                    showVariant: checked(key, 'receiptShowVariant'),
+                    showUnitPrice: checked(key, 'receiptShowUnitPrice'),
+                    showSubtotal: checked(key, 'receiptShowSubtotal'),
+                    showTaxes: checked(key, 'receiptShowTaxes'),
+                    showDiscount: checked(key, 'receiptShowDiscount'),
+                    showRoundOff: checked(key, 'receiptShowRoundOff'),
+                    showTotalQty: checked(key, 'receiptShowTotalQty'),
+                    showPayments: checked(key, 'receiptShowPayments'),
+                    showChange: checked(key, 'receiptShowChange'),
+                    showBarcode: checked(key, 'receiptShowBarcode'),
+                    showBarcodeText: checked(key, 'receiptShowBarcodeText'),
+                    showNote: checked(key, 'receiptShowNote'),
+                    headerRule: checked(key, 'receiptHeaderRule'),
+                    totalRule: checked(key, 'receiptTotalRule')
+                }
+            };
+            if (name === 'test-receipt') {
+                var testResult = success(await api.printer.testReceipt(receiptConfig));
+                note(key, testResult.message || 'Sample receipt sent to ' + (receiptConfig.printerName || 'the default printer') + '.');
+                return;
+            }
+            var savedReceipt = success(await api.printer.saveReceiptSettings(receiptConfig));
+            states[key].receipt = savedReceipt.settings || receiptConfig;
+            note(key, 'Receipt printer settings saved.');
+            return;
+        }
         if (name === 'save-devices') {
-            var previous = states[key], printerName = value(key, 'drawerPrinter');
+            var previous = (states[key] && states[key].drawer) || {}, printerName = value(key, 'drawerPrinter');
             var method = printerName === (previous.printerName || '') ? (previous.method || 'printer') : 'printer';
             var drawer = Object.assign({}, previous, { printerName: printerName, pin: Number(value(key, 'drawerPin')), autoOpenOnSale: checked(key, 'drawerAuto'), method: method });
             success(await api.cashDrawer.saveConfig(drawer)); states[key] = drawer;

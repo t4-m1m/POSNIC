@@ -23,6 +23,7 @@
         "modules/categoryReport.html",
         "modules/customer_categories.html",
         "modules/customers.html",
+        "modules/customerdebts.html",
         "modules/customersReport.html",
         "modules/dailyReport.html",
         "modules/dashboard.html",
@@ -104,6 +105,7 @@
         "modals/denomcash.html",
         "modals/tableorder.html",
         "modals/payment.html",
-        "modals/feature_intro.html"
+        "modals/feature_intro.html",
+        "modules/hr.html"
     ]
 }

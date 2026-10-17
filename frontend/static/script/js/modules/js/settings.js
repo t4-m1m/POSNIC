@@ -640,6 +640,10 @@ PosnicPro.settings = {
                     // Store general settings including hardware_weight_machine_enable
                     var generalSettings = {
                         stock_management: response.data['stock_management'] !== false,
+                        cashier_names: Array.isArray(response.data.cashier_names) ? response.data.cashier_names : [],
+                        cashier_popup_enabled: response.data.cashier_popup_enabled !== false,
+                        purchase_exchange_rate: Number(response.data['purchase_exchange_rate']) > 0 ? Number(response.data['purchase_exchange_rate']) : 280,
+                        purchase_vat_rate: Number.isFinite(Number(response.data['purchase_vat_rate'])) ? Number(response.data['purchase_vat_rate']) : 9,
                         hardware_weight_machine_enable: response.data['hardware_weight_machine_enable'] || false,
                         till_lock_enable: response.data['till_lock_enable'] || false,
                         till_lock_idle_minutes: response.data['till_lock_idle_minutes'] || 0,
@@ -673,6 +677,7 @@ PosnicPro.settings = {
                         first_run_decided: PosnicPro.features.keepFirstRunFlag(response.data, 'first_run_decided')
                     };
                     PosnicPro.local.set('general_settings', JSON.stringify(generalSettings));
+                    $(document).trigger('posnic:general-settings-loaded');
                     PosnicPro.shiftWidget.applyEnabled();
                     
                     let branchRecord = [];
@@ -1006,6 +1011,10 @@ PosnicPro.settings = {
                 // Store general settings including hardware_weight_machine_enable
                 var generalSettings = {
                     stock_management: data.stock_management !== false,
+                    cashier_names: Array.isArray(data.cashier_names) ? data.cashier_names : [],
+                    cashier_popup_enabled: data.cashier_popup_enabled !== false,
+                    purchase_exchange_rate: Number(data.purchase_exchange_rate) > 0 ? Number(data.purchase_exchange_rate) : 280,
+                    purchase_vat_rate: Number.isFinite(Number(data.purchase_vat_rate)) ? Number(data.purchase_vat_rate) : 9,
                     hardware_weight_machine_enable: data.hardware_weight_machine_enable || false,
                     till_lock_enable: data.till_lock_enable || false,
                     till_lock_idle_minutes: data.till_lock_idle_minutes || 0,
@@ -1470,7 +1479,7 @@ if ($wrapper.length) {
                     footer_qr_url: data.footer_qr_url,
                     footer_image_caption: data.footer_image_caption
                 });
-                if (PosnicPro.receiptDesignerEditor) PosnicPro.receiptDesignerEditor.load(data);
+                // Keep printer destinations and test-print settings mounted independently of the retired designer UI.
                 if (PosnicPro.printSettings) PosnicPro.printSettings.mount(data);
                 if (PosnicPro.kotPrint) PosnicPro.kotPrint.loadSettings();
 
@@ -3697,22 +3706,8 @@ PosnicPro.payment = {
                     PosnicPro.payment.paymentTable();
                     PosnicPro.payment.paymentClearForm();
 
-                    /*
-                     * STAY OPEN, READY FOR THE NEXT ONE.
-                     *
-                     * A shop setting up its payment methods enters several in
-                     * a row - Cash, UPI, Card, Zomato - and the panel closed
-                     * itself after each one, so every entry cost a reopen.
-                     * Owner: "also dont close after save. lets ready to
-                     * insert new. if user wants, then he can close or press
-                     * esc."
-                     *
-                     * The form is already cleared above, so the cursor goes
-                     * back to the name box and typing continues. Closing is
-                     * the Close button or Escape, both of which the person
-                     * chooses - see the Escape handler in PosnicPro.js.
-                     */
-                    $('#payment_value').val('').trigger('focus');
+                    $('#payment_value').val('');
+                    $('#infobar-settings-sidebar-payment .infobar-settings-close[data-id="payment"]').trigger('click');
 
                     loader.find(".loadingSpinner:first").remove();
                 }
@@ -3734,8 +3729,8 @@ PosnicPro.payment = {
             if (response.type === 'success') {
                 PosnicPro.payment.paymentClearForm();
                 PosnicPro.payment.paymentTable();
-                $(".infobar-settings-sidebar-overlay").css({ "background": "transparent", "position": "initial" });
-                $("#infobar-settings-sidebar-tax").removeClass("sidebarshow");
+                $(".infobar-settings-sidebar-overlay").removeClass("is-active").css({ "background": "transparent", "position": "initial" });
+                $("#infobar-settings-sidebar-payment").removeClass("sidebarshow sidebarview");
                 hasher.setHash('settings');
             }
             loader.find(".loadingSpinner:first").remove();
@@ -3753,8 +3748,8 @@ PosnicPro.payment = {
                 if (response.type === 'success') {
                     PosnicPro.deleteConfirmation = false;
                     PosnicPro.payment.paymentTable();
-                    $(".infobar-settings-sidebar-overlay").css({ "background": "transparent", "position": "initial" });
-                    $("#infobar-settings-sidebar-tax").removeClass("sidebarshow");
+                    $(".infobar-settings-sidebar-overlay").removeClass("is-active").css({ "background": "transparent", "position": "initial" });
+                    $("#infobar-settings-sidebar-payment").removeClass("sidebarshow sidebarview");
                     hasher.setHash('settings');
                 }
                 PosnicPro.alert(response.type, response.message);
@@ -4974,12 +4969,8 @@ jQuery.validator.addMethod("lettersonly", function (value, element) {
 }, "Use letters only");
 $("#tax_discount_add").submit(function (event) {
     event.preventDefault();
-    // Only this form owns the selected Core Settings tab. Other pages share
-    // updateCommonSetting, and the hidden Receipt Print tab stays active.
-    if ($('#core-tab-print').hasClass('active') && PosnicPro.receiptDesignerEditor) {
-        PosnicPro.receiptDesignerEditor.save();
-        return;
-    }
+    // Receipt designers are temporarily removed while the replacement is prepared.
+    // Saving this form must continue through the normal Core Settings flow.
     if ($('#tax_discount_add').valid()) {            // checks form for validity
         PosnicPro.settings.updateCommonSetting('Core Settings saved');
     }
@@ -10337,3 +10328,81 @@ $(document).on('click','#save_captain_tables',function(){
         button.prop('disabled',false);$('#captain_tables_message').text(PosnicPro.i18n.t('lang_successfully_completed','Successfully Completed'));
     },function(){button.prop('disabled',false);$('#captain_tables_message').text(PosnicPro.i18n.t('lang_could_not_save_table_settings_please_retry', 'Could not save table settings. Please retry.'));});
 });
+
+
+/* Vendeur list editor belongs to Settings so it is available even when the Sales module is not loaded. */
+(function posnicCashierParametersUI($) {
+    if (!$) return;
+    function readSettings() {
+        var raw = PosnicPro.local.get('general_settings');
+        if (raw && typeof raw === 'object') return raw;
+        try { return JSON.parse(raw || '{}') || {}; } catch (_) { return {}; }
+    }
+    function readNames() {
+        var settings = readSettings(), names = settings.cashier_names;
+        if (!Array.isArray(names)) {
+            try { names = JSON.parse(PosnicPro.local.get('cashier_names') || '[]'); } catch (_) { names = []; }
+        }
+        return (Array.isArray(names) ? names : []).map(function (n) { return String(n || '').trim(); })
+            .filter(function (n, i, all) { return n && all.findIndex(function (value) { return String(value).toLowerCase() === n.toLowerCase(); }) === i; }).slice(0, 100);
+    }
+    function esc(value) { return $('<span>').text(value == null ? '' : String(value)).html().replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); }
+    function render(names) {
+        var $list = $('#cashier-names-list');
+        if (!$list.length) return;
+        names = (Array.isArray(names) ? names : ($list.data('draftNames') || readNames())).slice();
+        $list.data('draftNames', names);
+        var currentSettings = readSettings();
+        if (!$('#cashier-popup-enabled').data('userChanged')) {
+            $('#cashier-popup-enabled').prop('checked', currentSettings.cashier_popup_enabled !== false);
+        }
+        $list.html(names.length ? names.map(function (name, i) {
+            return '<span class="badge badge-light border d-inline-flex align-items-center p-2 posnic-cashier-chip">' + esc(name)
+                + '<button type="button" class="close cashier-name-remove ml-2" data-index="' + i + '" aria-label="Retirer ' + esc(name) + '">&times;</button></span>';
+        }).join('') : '<span class="text-muted">Aucun vendeur enregistré. Ajoutez un nom ci-dessus.</span>');
+    }
+    function save(names) {
+        names = names.map(function (n) { return String(n || '').trim().slice(0, 80); })
+            .filter(function (n, i, all) { return n && all.findIndex(function (value) { return String(value).toLowerCase() === n.toLowerCase(); }) === i; }).slice(0, 100);
+        var settings = readSettings();
+        var cashierPopupEnabled = $('#cashier-popup-enabled').is(':checked');
+        settings.cashier_names = names;
+        settings.cashier_popup_enabled = cashierPopupEnabled;
+        PosnicPro.put({ url: 'setting/updateCommonSettings', data: JSON.stringify({ cashier_names: names, cashier_popup_enabled: cashierPopupEnabled }) }, function (response) {
+            if (response && response.type === 'success') {
+                PosnicPro.local.set('general_settings', JSON.stringify(settings));
+                PosnicPro.local.set('cashier_names', JSON.stringify(names));
+                $('#cashier-popup-enabled').removeData('userChanged');
+                render(names);
+                PosnicPro.alert('success', 'Paramètres des vendeurs enregistrés.');
+                $(document).trigger('posnic:general-settings-loaded');
+            } else PosnicPro.alert('error', response && response.message || 'Impossible d’enregistrer les vendeurs.');
+        }, function () { PosnicPro.alert('error', 'Impossible d’enregistrer les vendeurs. Réessayez.'); });
+    }
+    $(document).off('.posnicCashierParameters');
+    $(document).on('shown.bs.tab.posnicCashierParameters', '#v-pills-general-tab, a[href="#core-tab-sale"]', function () { render(); });
+    $(document).on('change.posnicCashierParameters', '#cashier-popup-enabled', function () { $(this).data('userChanged', true); });
+    $(document).on('click.posnicCashierParameters', '#cashier-name-add', function () {
+        var $input = $('#cashier-name-input'), name = String($input.val() || '').trim();
+        if (!name) { $input.trigger('focus'); return; }
+        var names = ($('#cashier-names-list').data('draftNames') || readNames()).slice();
+        if (names.some(function (n) { return n.toLowerCase() === name.toLowerCase(); })) {
+            PosnicPro.alert('warning', 'Ce vendeur existe déjà.'); $input.trigger('focus'); return;
+        }
+        names.push(name.slice(0, 80)); $input.val(''); render(names);
+    });
+    $(document).on('keydown.posnicCashierParameters', '#cashier-name-input', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); $('#cashier-name-add').trigger('click'); }
+    });
+    $(document).on('click.posnicCashierParameters', '.cashier-name-remove', function () {
+        var names = ($('#cashier-names-list').data('draftNames') || readNames()).slice();
+        names.splice(Number($(this).attr('data-index')), 1); render(names);
+    });
+    $(document).on('click.posnicCashierParameters', '#cashier-names-save', function () {
+        var names = ($('#cashier-names-list').data('draftNames') || readNames()).slice();
+        var input = String($('#cashier-name-input').val() || '').trim();
+        if (input && !names.some(function (n) { return n.toLowerCase() === input.toLowerCase(); })) names.push(input);
+        $('#cashier-name-input').val(''); save(names); $('#cashier-names-list').removeData('draftNames');
+    });
+    $(function () { window.setTimeout(function () { render(); }, 0); });
+})(window.jQuery);

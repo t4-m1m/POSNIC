@@ -26,16 +26,19 @@ if ($p.PortName -match '^USB[0-9]+$') {
     $devicePresent = @((Get-CimInstance Win32_PnPEntity) | Where-Object { $_.PNPDeviceID -eq $p.PNPDeviceID -and $_.ConfigManagerErrorCode -eq 0 }).Count -gt 0
   }
 }
-$jobs = @(Get-PrintJob -PrinterName $name | ForEach-Object {
-  @{id=[int]$_.ID;document=[string]$_.DocumentName;status=[string]$_.JobStatus}
+$jobs = @(Get-CimInstance Win32_PrintJob | Where-Object { ([string]$_.Name).StartsWith($name + ',', [StringComparison]::OrdinalIgnoreCase) } | ForEach-Object {
+  @{id=[int]$_.JobId;document=[string]$_.Document;status=([string]$_.Status + ' ' + [string]$_.JobStatus).Trim()}
 })
 @{present=$true;workOffline=[bool]$p.WorkOffline;offline=($p.PrinterStatus -eq 7 -or $p.ExtendedPrinterStatus -eq 7);portPresent=$portPresent;devicePresent=$devicePresent;jobs=$jobs} | ConvertTo-Json -Depth 4 -Compress
 `;
   return new Promise((resolve, reject) => execFile('powershell.exe',
     ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')],
     { windowsHide: true, timeout: 5000, maxBuffer: 1024 * 1024, encoding: 'utf8' },
-    (error, stdout) => {
-      if (error) return reject(new Error('Could not inspect the Windows printer queue'));
+    (error, stdout, stderr) => {
+      if (error) {
+        const detail = String(stderr || error.message || '').trim().split(/\r?\n/).filter(Boolean).slice(-2).join(' ');
+        return reject(new Error('Could not inspect the Windows printer queue' + (detail ? ': ' + detail.slice(0, 320) : '')));
+      }
       try { resolve(JSON.parse(stdout.replace(/^\uFEFF/, '').trim())); }
       catch (_) { reject(new Error('Invalid Windows printer queue response')); }
     }));

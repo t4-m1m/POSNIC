@@ -79,10 +79,13 @@ function summarize(sales, branch, day) {
         validated.length = 0;
         break;
       }
+      // A Credit entry is a customer receivable, not cash received by
+      // this register. Outstanding is counted separately from payment_pending.
+      if (/^credit$/i.test(String(method).trim())) continue;
       sum += minor;
       validated.push([method, minor]);
     }
-    if (!validated.length || sum !== amount) {
+    if (sum !== amount) {
       result.unresolved.push(String(sale.sales_id || sale._id));
       continue;
     }

@@ -3162,6 +3162,31 @@
                                             <tbody id="credit_outstanding_body"></tbody>
                                         </table>
                                     </div>
+                                    <section id="credit_ledger_panel" class="card mt-4 border-primary" style="display:none">
+                                        <div class="card-header d-flex align-items-center justify-content-between">
+                                            <h5 id="credit_ledger_title" class="mb-0">Debt ledger</h5>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" id="credit_ledger_close">Close</button>
+                                        </div>
+                                        <div class="card-body">
+                                            <p id="credit_ledger_status" class="text-muted" role="status">Select a customer to view their unpaid sales.</p>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-striped">
+                                                    <thead><tr><th>Date</th><th>Sale / Receipt</th><th>Description</th><th class="text-right">Original total</th><th class="text-right">Remaining</th></tr></thead>
+                                                    <tbody id="credit_ledger_body"><tr><td colspan="5" class="text-center text-muted">Select a customer above.</td></tr></tbody>
+                                                    <tfoot><tr><th colspan="4" class="text-right">Outstanding balance</th><th id="credit_ledger_due" class="text-right text-danger">0.00</th></tr></tfoot>
+                                                </table>
+                                            </div>
+                                            <hr>
+                                            <h6>Collect a payment</h6>
+                                            <div class="form-row align-items-end">
+                                                <div class="form-group col-md-3"><label for="credit_settle_amount">Amount received</label><input id="credit_settle_amount" class="form-control" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
+                                                <div class="form-group col-md-3"><label for="credit_settle_method">Payment method</label><select id="credit_settle_method" class="form-control"><option value="cash">Cash</option><option value="card">Card</option><option value="bank_transfer">Bank transfer</option><option value="other">Other</option></select></div>
+                                                <div class="form-group col-md-4"><label for="credit_settle_note">Note (optional)</label><input id="credit_settle_note" class="form-control" maxlength="500" placeholder="Payment note"></div>
+                                                <div class="form-group col-md-2"><button id="credit_settle_submit" type="button" class="btn btn-success btn-block"><i class="feather icon-check mr-1"></i>Collect</button></div>
+                                            </div>
+                                            <small class="text-muted">A collection is applied to the oldest unpaid sale first, updates its remaining balance, and records a payment entry. Cash collections are added to the current cashier’s open till cash-in journal when one is available.</small>
+                                        </div>
+                                    </section>
                                 </div>
                             </div>
                         </div>
@@ -4617,6 +4642,30 @@
 
                                             <!-- ============ SALE ============ -->
                                             <div class="tab-pane fade show active" id="core-tab-sale" role="tabpanel">
+<fieldset class="border rounded p-3 mb-4" id="posnic-cashier-settings">
+    <legend class="h6"><i class="feather icon-users mr-2"></i>Vendeurs / Caissiers</legend>
+    <p class="text-muted mb-3">Gérez la liste des vendeurs et choisissez si une confirmation est demandée avant la validation.</p>
+    <div class="form-group mb-3">
+        <label class="d-flex align-items-center" for="cashier-popup-enabled">
+            <input type="checkbox" id="cashier-popup-enabled" class="mr-2" checked>
+            <span>Demander le vendeur avant validation (F1 / F2)</span>
+        </label>
+        <small class="form-text text-muted">Désactivé : F1 et F2 exécutent directement leurs actions habituelles sans afficher la fenêtre vendeur.</small>
+    </div>
+    <div class="form-row align-items-end">
+        <div class="form-group col-md-8 mb-2">
+            <label for="cashier-name-input">Nom du vendeur</label>
+            <input type="text" class="form-control" id="cashier-name-input" maxlength="80" placeholder="Ex. Samir" autocomplete="off">
+        </div>
+        <div class="form-group col-md-4 mb-2">
+            <button type="button" class="btn btn-outline-secondary btn-block" id="cashier-name-add"><i class="feather icon-plus mr-1"></i>Ajouter</button>
+        </div>
+    </div>
+    <div id="cashier-names-list" class="d-flex flex-wrap align-items-center mb-3" style="gap:8px" aria-live="polite"><span class="text-muted">Chargement des vendeurs…</span></div>
+    <div class="d-flex justify-content-end">
+        <button type="button" class="btn btn-primary" id="cashier-names-save"><i class="feather icon-save mr-1"></i>Enregistrer les vendeurs</button>
+    </div>
+</fieldset>
 <fieldset class="border rounded p-3 mb-4">
                                                     <legend class="h6"><lang class="lang_sales_item_search">Sales item search</lang></legend>
                                                     <p><lang class="lang_choose_fields_for_typed_searches_exact_bar">Choose fields for typed searches. Exact barcode scans always work.</lang></p>
@@ -5080,6 +5129,21 @@
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            <section class="card mb-4" id="posnic-cashier-settings">
+                                                <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
+                                                    <div><h5 class="mb-1">Vendeurs / Caissiers</h5><small class="text-muted">Manage the names shown before F1/F2 checkout. Each sale records the selected cashier.</small></div>
+                                                    <button type="button" class="btn btn-primary btn-sm" id="cashier-names-save"><i class="feather icon-save mr-1"></i> Enregistrer</button>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="input-group mb-3" style="max-width:560px">
+                                                        <input type="text" class="form-control" id="cashier-name-input" maxlength="80" placeholder="Nom du vendeur">
+                                                        <div class="input-group-append"><button type="button" class="btn btn-outline-primary" id="cashier-name-add">Ajouter</button></div>
+                                                    </div>
+                                                    <div id="cashier-names-list" class="d-flex flex-wrap" style="gap:8px"><span class="text-muted">Chargement des vendeurs…</span></div>
+                                                    <small class="form-text text-muted mt-3">Le nom du compte utilisateur reste inchangé : le vendeur sélectionné est enregistré séparément sur chaque vente.</small>
+                                                </div>
+                                            </section>
 
                                             <!-- ============ RECEIVINGS ============ -->
                                             <div class="tab-pane fade" id="core-tab-receiving" role="tabpanel">
@@ -5568,22 +5632,9 @@
 
                                             <!-- ============ RECEIPT PRINT ============ -->
                                             <div class="tab-pane fade" id="core-tab-print" role="tabpanel">
-                                                <ul class="nav nav-tabs print-settings-tabs mb-3" role="tablist" aria-label="Print settings" data-t-aria-label="lang_print_settings">
-                                                    <li class="nav-item"><a class="nav-link active" id="print-printers-tab" data-toggle="tab" href="#print-printers" role="tab" aria-controls="print-printers" aria-selected="true"><i class="feather icon-printer mr-2" aria-hidden="true"></i><lang class="lang_printer_settings">Printer Settings</lang></a></li>
-                                                    <li class="nav-item"><a class="nav-link" id="print-design-tab" data-toggle="tab" href="#print-design" role="tab" aria-controls="print-design" aria-selected="false"><i class="feather icon-layout mr-2" aria-hidden="true"></i><lang class="lang_receipt_design">Receipt Design</lang></a></li>
-                                                </ul>
                                                 <div class="tab-content">
                                                     <div class="tab-pane fade show active" id="print-printers" role="tabpanel" aria-labelledby="print-printers-tab">
                                                         <div id="document-print-settings"></div>
-                                                        <section class="print-settings-panel">
-                                                            <h5><lang class="lang_rd_printing_options">Printing options</lang></h5>
-                                                            <div id="receipt-print-behaviour"></div>
-                                                            <button type="button" class="btn btn-primary btn-sm" id="save-print-behaviour"><lang class="lang_save_printing_options">Save printing options</lang></button>
-                                                            <span class="small ml-2" id="print-behaviour-status" role="status"></span>
-                                                        </section>
-                                                    </div>
-                                                    <div class="tab-pane fade" id="print-design" role="tabpanel" aria-labelledby="print-design-tab">
-                                                        <div id="receipt-designer"></div>
                                                     </div>
                                                 </div>
                                                 <div id="receipt-legacy-settings" hidden>

@@ -43,7 +43,7 @@ const buildDailyPaymentAggregationPipeline = (match) => [
     $project: {
       sales_total: {
         $toDouble: {
-          $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, 0],
+          $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, '$items_total'],
         },
       },
       items_total: {
@@ -51,6 +51,44 @@ const buildDailyPaymentAggregationPipeline = (match) => [
       },
       multi_payment: 1,
       payment_mode: 1,
+      payment_status: 1,
+      payment_pending: 1,
+      partial_check: 1,
+      partial_balance: 1,
+      paid_amount: 1,
+      collected_total: {
+        $switch: {
+          branches: [
+            {
+              case: { $in: ['$payment_status', ['Unpaid', 'unpaid']] },
+              then: 0,
+            },
+            {
+              case: { $eq: ['$payment_status', 'Paid'] },
+              then: { $toDouble: { $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, '$items_total'] } },
+            },
+            {
+              case: { $gt: [{ $toDouble: { $ifNull: ['$payment_pending', 0] } }, 0] },
+              then: {
+                $max: [
+                  0,
+                  {
+                    $subtract: [
+                      { $toDouble: { $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, '$items_total'] } },
+                      { $toDouble: { $ifNull: ['$payment_pending', 0] } },
+                    ],
+                  },
+                ],
+              },
+            },
+            {
+              case: { $eq: ['$partial_check', 'true'] },
+              then: { $toDouble: { $ifNull: ['$partial_balance', 0] } },
+            },
+          ],
+          default: 0,
+        },
+      },
       payment_entries: {
         $cond: [
           { $eq: [{ $type: '$multi_payment' }, 'object'] },
@@ -69,8 +107,10 @@ const buildDailyPaymentAggregationPipeline = (match) => [
     $facet: {
       // Sales with split/multi payment methods
       split_payments: [
-        { $match: { has_split: true } },
+        { $match: { has_split: true, collected_total: { $gt: 0 } } },
         { $unwind: '$payment_entries' },
+        // Credit is an accounts-receivable entry, not money collected.
+        { $match: { $expr: { $ne: [{ $toLower: '$payment_entries.k' }, 'credit'] } } },
         {
           $group: {
             _id: '$payment_entries.k',
@@ -89,11 +129,7 @@ const buildDailyPaymentAggregationPipeline = (match) => [
           $group: {
             _id: { $ifNull: ['$payment_mode', 'Cash'] },
             total: {
-              $sum: {
-                $toDouble: {
-                  $ifNull: ['$sales_total', '$items_total'],
-                },
-              },
+              $sum: { $toDouble: { $ifNull: ['$collected_total', 0] } },
             },
           },
         },
@@ -259,8 +295,27 @@ const processSale = async (
     )
       return { status: false, message: 'Unsupported decision preview' };
     // Name-only checkout keeps a bill snapshot without inventing a customer account.
-    if (!data.customer_id && [true, 'true'].includes(data.partial_check))
-      return { status: false, message: 'Choose a saved customer for customer credit.' };
+    const paymentMap = data.multi_payment && typeof data.multi_payment === 'object' ? data.multi_payment : {};
+    const creditTender = Object.keys(paymentMap).reduce((sum, method) =>
+      String(method).trim().toLowerCase() === 'credit' ? sum + Math.max(0, Number(paymentMap[method]) || 0) : sum, 0);
+    const pendingBalance = Math.max(0, Number(data.payment_pending) || 0);
+    const customerName = String(data.customer_name || '').trim();
+    const isWalkIn = !data.customer_id || !customerName ||
+      /walk.?in|cash customer|comptoir|client\s+de\s+passage/i.test(customerName);
+    // A checked partial-payment option is not itself an unpaid balance.
+    // Require a real customer account only when money remains due or credit is used.
+    if (isWalkIn && (pendingBalance > 0.01 || creditTender > 0.01))
+      return { status: false, message: 'Partial payment and credit require a registered customer. Collect the full amount for a walk-in sale.' };
+    if (pendingBalance > 0.01 || creditTender > 0.01) {
+      // Enforce the shop's credit-module setting on the server as well as in
+      // the cashier UI. Do not rely on client-side controls for account credit.
+      let branchSettings = context.branchSettings;
+      if (!branchSettings && context.branchId) branchSettings = await getBranchById(context.branchId);
+      if (branchSettings && (branchSettings.module_credit_enable === false ||
+          String(branchSettings.module_credit_enable).trim().toLowerCase() === 'false')) {
+        return { status: false, message: 'Customer credit is disabled in settings. Collect the full amount to validate this sale.' };
+      }
+    }
     // 1. Basic Validation
     if ((parseFloat(data.sales_total) || 0) < 0) {
       // PHP checks < 1, but let's say 0 for safety, PHP said < 1
@@ -323,6 +378,18 @@ const processSale = async (
     const itemRepository = new ItemRepository();
     const customerRepository = new CustomerRepository();
     const registerRepository = new RegisterRepository();
+
+    // Verify the account actually exists, not just that the client supplied an
+    // arbitrary customer_id/name pair. Walk-in sales must settle in full.
+    if (pendingBalance > 0.01 || creditTender > 0.01) {
+      if (!data.customer_id || !ObjectId.isValid(String(data.customer_id))) {
+        return { status: false, message: 'Partial payment and credit require a registered customer. Collect the full amount for a walk-in sale.' };
+      }
+      const savedCustomer = await customerRepository.findById(String(data.customer_id));
+      if (!savedCustomer) {
+        return { status: false, message: 'The selected customer account was not found. Select a registered customer or collect the full amount.' };
+      }
+    }
 
     if (data.register_id) {
       const registerSession = await registerRepository.validateSessionOwner(
@@ -507,6 +574,7 @@ const processSale = async (
           branch: pricingBranch,
           allowCounterPriceOverride: context.allowCounterPriceOverride === true,
           roundGrossUnit: context.roundGrossUnit === true,
+          priceTier: item.price_tier == null ? 1 : item.price_tier,
           previous: previousLine,
           submitted: pricingAuthority.desktopSubmittedPrice(item),
           extras: extras.delta,
@@ -1036,8 +1104,14 @@ const processSale = async (
     let paidAmount = 0;
     let balance = 0;
 
-    if (partialCheck) {
-      // In PHP partial sale, customer has paid partialBalance and pending = paymentPending
+    if (String(data.unpaid) === 'true') {
+      // The explicit Unpaid toggle overrides the entered amount in the legacy
+      // payment-status rules above: nothing is collected on this sale.
+      paidAmount = 0;
+      balance = paymentPending;
+    } else if (partialCheck) {
+      // In a partial sale, the recorded paid amount and remaining balance must
+      // agree with the payment status and the customer transaction ledger.
       paidAmount = partialBalance;
       balance = paymentPending;
     } else {
@@ -1128,32 +1202,62 @@ const processSale = async (
       typeof data.multi_payment === 'object' &&
       Object.keys(data.multi_payment).length > 0
     ) {
-      const amounts = Array.isArray(data.multi_payment)
-        ? data.multi_payment.map((payment) => payment?.amount)
-        : Object.values(data.multi_payment);
-      const invalid = amounts.some(
-        (amount) =>
+      const entries = Array.isArray(data.multi_payment)
+        ? data.multi_payment.map((payment) => [
+            String(payment?.method || payment?.payment_mode || '').trim(),
+            payment?.amount,
+          ])
+        : Object.entries(data.multi_payment);
+      const invalid = entries.some(
+        ([, amount]) =>
           (typeof amount !== 'number' && typeof amount !== 'string') ||
           String(amount).trim() === '' ||
           !Number.isFinite(Number(amount)) ||
           Number(amount) < 0
       );
-      const tenderMinor = amounts.reduce(
-        (sum, amount) => sum + Math.round(Number(amount) * 100),
+      const creditMinor = entries.reduce(
+        (sum, [method, amount]) =>
+          sum + (/^credit$/i.test(String(method).trim()) ? Math.round(Number(amount || 0) * 100) : 0),
         0
       );
-      const expectedTender = partialCheck ? partialBalance : effectiveDue;
-      const dueMinor = Math.round(expectedTender * 100);
-      if (invalid || !Number.isSafeInteger(tenderMinor) || tenderMinor !== dueMinor) {
+      const receivedMinor = entries.reduce(
+        (sum, [method, amount]) =>
+          sum + (/^credit$/i.test(String(method).trim()) ? 0 : Math.round(Number(amount || 0) * 100)),
+        0
+      );
+      const totalTenderMinor = entries.reduce(
+        (sum, [, amount]) => sum + Math.round(Number(amount || 0) * 100),
+        0
+      );
+      const expectedReceived = Math.round((partialCheck ? partialBalance : effectiveDue) * 100);
+      const dueMinor = Math.round(Math.max(0, effectiveDue - (partialCheck ? partialBalance : effectiveDue)) * 100);
+      const billMinor = Math.round(effectiveDue * 100);
+      if (!Number.isSafeInteger(totalTenderMinor) || invalid) {
         return {
           status: false,
-          // This validation precedes every sale, stock and payment write. The
-          // desktop may release this request from uncertain-submit recovery.
-          data:
-            id === '' && typeof data.idempotencyKey === 'string'
+          data: id === '' && typeof data.idempotencyKey === 'string'
+            ? { submission_outcome: 'not_saved', request_id: data.idempotencyKey }
+            : null,
+          message: 'Enter valid non-negative amounts for each payment method.',
+        };
+      }
+      if (partialCheck && dueMinor > 0) {
+        if (receivedMinor !== expectedReceived || creditMinor !== dueMinor || totalTenderMinor !== billMinor) {
+          return {
+            status: false,
+            data: id === '' && typeof data.idempotencyKey === 'string'
               ? { submission_outcome: 'not_saved', request_id: data.idempotencyKey }
               : null,
-          message: `Payment total does not match the ${partialCheck ? 'payment amount' : 'bill total'} (${expectedTender.toFixed(2)}). Review the payment amount before saving.`,
+            message: 'For a partial payment, the received tenders must equal the paid amount and Credit must equal the remaining balance.',
+          };
+        }
+      } else if (creditMinor !== 0 || receivedMinor !== expectedReceived || totalTenderMinor !== expectedReceived) {
+        return {
+          status: false,
+          data: id === '' && typeof data.idempotencyKey === 'string'
+            ? { submission_outcome: 'not_saved', request_id: data.idempotencyKey }
+            : null,
+          message: 'Payment total does not match the amount due. Credit is only valid for the unpaid remainder.',
         };
       }
     }
@@ -1185,6 +1289,9 @@ const processSale = async (
       // keeping the ObjectId in created_by_id for internal usage.
       created_by: userName,
       created_by_id: userId,
+      // Persist the selected till vendor on the sale document itself. Keep it
+      // distinct from the authenticated account stored in created_by/user_name.
+      cashier_name: String(data.cashier_name ?? data.seller_name ?? data.vendeur ?? existingSale?.cashier_name ?? existingSale?.seller_name ?? '').trim().slice(0, 80),
       license: licenseId,
 
       // Node-only field (not present in PHP) appended after core PHP keys
@@ -1233,6 +1340,10 @@ const processSale = async (
         );
 
     // Update block: mirror PHP $updateData field order and contents as much as possible.
+    // Store only the amount actually collected when the final status is Unpaid,
+    // including the KOT override; never leave a stale tender value as paid.
+    if (paymentStatus === 'Unpaid') partialBalance = 0;
+
     const updateData = {
       // Core PHP ordering
       date: mongo_date,
@@ -1284,6 +1395,12 @@ const processSale = async (
       payment_status: paymentStatus,
       payment_pending: paymentPending,
       payment_mode: (data.payment_mode || '').trim(),
+      // Explicit cashier attribution is separate from created_by/user_name,
+      // which continues to represent the authenticated account.
+      cashier_name:
+        data.cashier_name !== undefined && data.cashier_name !== null
+          ? String(data.cashier_name).trim().slice(0, 80)
+          : existingSale?.cashier_name || '',
       sales_description: (data.sales_description || '').trim(),
       payment_description: (data.payment_description || '').trim(),
       discount_description: (data.discount_description || '').trim(),
@@ -1839,12 +1956,21 @@ const processSale = async (
         // Human-readable sale number for UI (e.g. SDS000123)
         sale_no: salePrefixedId,
         date: mongo_date,
-        register_amount: parseFloat(finalSaleTotAmount),
+        // Cash-register totals must represent money collected now, not the
+        // whole invoice value when some of it remains on the customer's account.
+        register_amount: parseFloat(
+          paymentStatus === 'Unpaid'
+            ? 0
+            : paymentStatus === 'Partialy Paid'
+              ? Math.max(0, Number(partialBalance) || 0)
+              : finalSaleTotAmount
+        ),
         register_discount: parseFloat(sale_discount_amount),
         register_tax: parseFloat(sale_tax_amount),
         registerItems_return_total: 0.0,
         register_paymentmode: data.payment_mode,
-        multi_payment: data.multi_payment || [],
+        // Never count stale tender selections as cash when this sale is unpaid.
+        multi_payment: paymentStatus === 'Unpaid' ? {} : data.multi_payment || [],
       };
 
       if (id === '') {
@@ -1892,7 +2018,7 @@ const processSale = async (
             sale_id: saleId,
             amount: finalSaleTotAmount,
             type: 'out',
-            pending: finalSaleTotAmount - partialBalance,
+            pending: paymentPending,
             sale_total: finalSaleTotAmount,
             description: 'Add sale wallet',
           };
@@ -1905,7 +2031,7 @@ const processSale = async (
             sale_id: saleId,
             amount: customerCurrentBalance,
             type: 'out',
-            pending: finalSaleTotAmount - partialBalance,
+            pending: paymentPending,
             sale_total: finalSaleTotAmount,
             description: 'Add sale',
           };
@@ -1918,7 +2044,7 @@ const processSale = async (
             sale_id: saleId,
             amount: 0.0,
             type: 'out',
-            pending: finalSaleTotAmount - partialBalance,
+            pending: paymentPending,
             sale_total: finalSaleTotAmount,
             description: 'Add sale',
           };
@@ -1954,7 +2080,7 @@ const processSale = async (
                 amount: finalSaleTotAmount,
                 type: 'out',
                 updated_date: mongo_date,
-                pending: finalSaleTotAmount - partialBalance,
+                pending: paymentPending,
                 sale_total: finalSaleTotAmount,
                 description: 'Edit sale',
               },
@@ -1974,7 +2100,7 @@ const processSale = async (
                 amount: customerCurrentBalance,
                 type: 'out',
                 updated_date: mongo_date,
-                pending: finalSaleTotAmount - partialBalance,
+                pending: paymentPending,
                 sale_total: finalSaleTotAmount,
                 description: 'Edit sale',
               },
@@ -1994,7 +2120,7 @@ const processSale = async (
                 amount: 0.0,
                 type: 'out',
                 updated_date: mongo_date,
-                pending: finalSaleTotAmount - partialBalance,
+                pending: paymentPending,
                 sale_total: finalSaleTotAmount,
                 description: 'Edit sale',
               },
@@ -2742,7 +2868,7 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
     salesRepository.aggregate(paymentPipeline, { SaleModel: Model }),
     salesRepository.find(
       match,
-      'dine_type table_id table_number person_count extra_discount sale_extra_discount extra_discount_type items total sales_total',
+      'dine_type table_id table_number person_count extra_discount sale_extra_discount extra_discount_type items total sales_total payment_pending',
       { SaleModel: Model }
     ),
     salesRepository.aggregate(taxPipeline, { SaleModel: Model }),

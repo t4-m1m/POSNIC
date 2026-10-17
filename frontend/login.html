@@ -295,7 +295,8 @@
         }
 
         if (PosnicPro.users.readCookie('loginuser') !== null) {
-            window.location = 'dashboard.html#/dashboard';
+            try { sessionStorage.setItem('posnic_force_new_sale', '1'); } catch (e) {}
+            window.location = 'dashboard.html#/sales/new';
         }
 
         $('#forgotslide').click(function () {

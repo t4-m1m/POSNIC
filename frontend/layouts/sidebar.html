@@ -9,6 +9,11 @@
                         <a href="#" class="logo logo-small"><img src="static/images/logo/posnic-logo.svg"
                                 class="img-fluid" alt="logo" loading="lazy" decoding="async"></a>
                     </div>
+                    <a class="posnic-new-sale-quicklink" id="posnic-new-sale-quicklink"
+                        href="#/sales/new" role="button" aria-label="Nouvelle vente"
+                        title="Nouvelle vente" data-toggle="tooltip" data-placement="right">
+                        <i class="feather icon-plus" aria-hidden="true"></i>
+                    </a>
                     <a class="nav-link nav-link-active" id="v-pills-dashboard-tab" data-toggle="pill"
                         href="#v-pills-dashboard" role="tab" aria-controls="v-pills-dashboard"
                         aria-selected="false"><img src="static/images/svg-icon/frontend.svg" class="img-fluid"
@@ -92,12 +97,6 @@
                                     <lang class="lang_online_orders_title">Online orders</lang>
                                 </a>
                             </li>
-                            <li>
-                                <a data-module="sales" data-access="write" href="#/sales/new" id="view_touchsales_page">
-                                    <img src="static/images/svg-icon/bag.svg" class="img-fluid" alt="New Sale" loading="lazy" decoding="async">
-                                    <lang class="lang_addnewsale_title">New Sale</lang>
-                                </a>
-                            </li>
                             <li id="li_quotes">
                                 <a data-module="sales" data-access="read||write" href="#/quotes"
                                     class="quotes" id="view_quotes_page">
@@ -174,13 +173,6 @@
                                 </a>
                             </li>
 
-                            <li>
-                                <a data-module="item" data-access="write" href="#/pricesettings" id="pricesettings_page">
-                                    <img src="static/images/svg-icon/price-tag.svg" class="img-fluid" alt="Price Settings" loading="lazy" decoding="async">
-                                    <lang class="lang_price_settings">Price Settings</lang>
-                                </a>
-                            </li>
-
                             <li id="stockModule"><a data-module="branch" data-access="write" href="#/stocklogs"
                                     class="stocklogs" id="stockReport_page"><img src="static/images/svg-icon/inventory-history.svg"
                                         class="img-fluid" alt="Inventory Log" loading="lazy" decoding="async">
@@ -195,7 +187,6 @@
                                     <lang class="lang_itemcategory_title">Categories</lang>
                                 </a>
                             </li>
-                            <li><a data-module="item" data-access="read" href="#/expiryreport" id="view_expiryreport_page"><i class="feather icon-calendar"></i><span><lang class="lang_expiry_report_short">Expiry list</lang></span></a></li>
                             <li id="inventoryCountsModule"><a data-module="item" data-access="read" href="#/inventorycounts" id="view_inventorycounts_page"><img src="static/images/svg-icon/clipboard.svg" class="img-fluid" alt="Stock Counts" loading="lazy" decoding="async"><span><lang class="lang_stock_counts">Stock Counts</lang></span></a></li>
 
                             <li id="variantModule">
@@ -205,14 +196,6 @@
                                     <lang class="lang_itemvariant_title">Variants</lang>
                                 </a>
                             </li>
-
-                            <li id="unitsModule">
-                                <a data-module="branch" data-access="write" href="#/units" id="view_units_page">
-                                    <img src="static/images/svg-icon/unit-ruler.svg" class="img-fluid" alt="Units" loading="lazy" decoding="async">
-                                    <lang class="lang_units_title">Units</lang>
-                                </a>
-                            </li>
-
 
                             <li id="itemLowModule">
                                 <a data-module="item" data-access="read||write||delete" href="#/lowstockitems"
@@ -322,26 +305,12 @@
                                         src="static/images/svg-icon/testimonial.svg" class="img-fluid" alt="Details" loading="lazy" decoding="async">
                                     <lang class="lang_customerdetails_title">Customer List</lang>
                                 </a></li>
+                            <li data-module="customer" data-access="read" id="customerDebtsModule"><a href="#/customerdebts" id="view_customer_debts_page"><i class="feather icon-alert-circle" aria-hidden="true"></i><span>Clients débiteurs &amp; crédits</span></a></li>
                             <li data-module="plan" data-access="read"><a href="#/customercategory"
                                     id="page_customercategory"><img src="static/images/svg-icon/category.svg"
                                         class="img-fluid" alt="Details" loading="lazy" decoding="async">
                                     <lang class="lang_customer_category_title">Customer Category</lang>
                                 </a></li>
-                            <li data-module="plan" data-access="read"><a href="customerview.html" id="customerdisplay"
-                                    target="_blank"><img src="static/images/svg-icon/buy-online.svg" class="img-fluid"
-                                        alt="View" loading="lazy" decoding="async">
-                                    <lang class="lang_customerview_title">Customer Display </lang><img
-                                        src="static/images/svg-icon/newwindowicon.svg" class="img-fluid" alt=""
-                                        style="width: 11px;" loading="lazy" decoding="async">
-                                </a></li>
-                            <li data-module="plan" data-access="read"><a href="customersearch.html" target="_blank"
-                                    id="view_customersearch"><img src="static/images/svg-icon/target.svg"
-                                        class="img-fluid" alt="Search" loading="lazy" decoding="async">
-                                    <lang class="lang_customersearch_title">Catalog Display</lang>&nbsp;<img
-                                        src="static/images/svg-icon/newwindowicon.svg" class="img-fluid" alt=""
-                                        style="width: 11px;" loading="lazy" decoding="async">
-                                </a></li>
-
                             <div class="col-lg-12 text-center margin_image_t dashboard_img_menu"
                                 id="image_sidebar_customsearch" style="display:none;">
                                 <img src="static/images/general/online-customsearch.svg"
@@ -436,6 +405,12 @@
                                     id="view_users_page">
                                     <img src="static/images/svg-icon/user.svg" class="img-fluid" alt="user" loading="lazy" decoding="async">
                                     <lang class="lang_user_title">Employees</lang>
+                                </a>
+                            </li>
+                            <li id="hrModule">
+                                <a href="#/hr" class="hr hr-entry" id="view_hr_page" aria-label="HR and payroll">
+                                    <img src="static/images/svg-icon/user.svg" class="img-fluid" alt="HR and payroll" loading="lazy" decoding="async">
+                                    <span>RH · Salaires</span>
                                 </a>
                             </li>
                             <!-- Beside Employees, because it answers the same

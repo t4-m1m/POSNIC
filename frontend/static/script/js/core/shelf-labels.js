@@ -48,43 +48,54 @@
         return '@page{size:' + (s.paper === 'a4' ? 'A4' : s.width + 'mm ' + s.height + 'mm') + ';margin:0}' +
             'html,body{margin:0;padding:0}*{box-sizing:border-box}.sl-sheet{width:' + g.width + 'mm;height:' + g.height + 'mm;' +
             'padding:' + (s.paper === 'a4' ? s.margin : 0) + 'mm;display:grid;grid-template-columns:repeat(' + g.columns + ',' + s.width + 'mm);' +
-            'grid-template-rows:repeat(' + g.rows + ',' + s.height + 'mm);gap:' + (s.paper === 'a4' ? s.gap : 0) + 'mm;break-after:page;overflow:hidden}' +
-            '.sl-sheet:last-child{break-after:auto}.sl-label{position:relative;width:' + s.width + 'mm;height:' + s.height + 'mm;padding:0;overflow:hidden;' +
+            'grid-template-rows:repeat(' + g.rows + ',' + s.height + 'mm);gap:' + (s.paper === 'a4' ? s.gap : 0) + 'mm;break-after:page;page-break-after:always;break-inside:avoid;page-break-inside:avoid;overflow:hidden}' +
+            '.sl-sheet:last-child{break-after:auto;page-break-after:auto}.sl-label{position:relative;width:' + s.width + 'mm;height:' + s.height + 'mm;padding:0;overflow:hidden;' +
             'display:block;border:' + (s.guides ? '.15mm dashed #aaa' : 'none') + ';font-family:' + s.font + ';font-size:' + s.fontSize + 'px;text-align:' + s.align +
             ';font-weight:' + (s.fontOptions?.includes('bold') ? '700' : '400') + ';font-style:' + (s.fontOptions?.includes('italic') ? 'italic' : 'normal') +
             ';color:' + s.ink + ';background:' + s.background + ';print-color-adjust:exact;-webkit-print-color-adjust:exact}' +
-            '.sl-label .sl-element{position:absolute;margin:0;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:' + (s.align === 'left' ? 'flex-start' : s.align === 'right' ? 'flex-end' : 'center') + ';line-height:1.15;overflow-wrap:anywhere}' +
-            '.sl-name{font-weight:600}.sl-logo{object-fit:contain}.sl-price{font-weight:700;font-size:220%}.sl-label svg.sl-element{display:block;max-width:100%;max-height:100%;}' +
-            '.sl-foot{font-size:75%;white-space:pre-line}.sl-design-editable .sl-element{outline:1px dashed #2563eb;cursor:move;touch-action:none}' +
+            '.sl-label .sl-element{position:absolute;margin:0;padding:0;overflow:visible;display:flex;align-items:center;justify-content:' + (s.align === 'left' ? 'flex-start' : s.align === 'right' ? 'flex-end' : 'center') + ';line-height:1.15;overflow-wrap:anywhere}' +
+            '.sl-name{font-weight:600;white-space:pre-line}.sl-custom-text{white-space:pre-wrap}.sl-logo{object-fit:contain}.sl-price{font-weight:700}.sl-variant-values{display:block!important;white-space:pre-line}.sl-variant-line{display:block;width:100%;line-height:1.15}.sl-label svg.sl-element{display:block;width:100%;height:100%;max-width:none;max-height:none;overflow:visible;}' +
+            '.sl-foot{font-size:75%;white-space:pre-line}.sl-barcode-visual{display:flex!important;align-items:center;justify-content:center;overflow:hidden}.sl-barcode-visual svg.sl-barcode{display:block;width:auto!important;max-width:100%;height:100%;max-height:100%;overflow:hidden}.sl-design-editable .sl-element{outline:1px dashed #2563eb;cursor:move;touch-action:none}' +
             '.sl-design-editable .sl-element.sl-selected{outline:2px solid #ef4444;z-index:20;overflow:visible}' +
-            '.sl-resize-handle{position:absolute;width:12px;height:12px;border:2px solid white;border-radius:2px;background:#2563eb;cursor:nwse-resize;z-index:21;transform:translate(-50%,-50%);touch-action:none}';
+            '.sl-resize-handle{position:absolute;width:12px;height:12px;border:2px solid white;border-radius:2px;background:#2563eb;cursor:nwse-resize;z-index:21;transform:translate(-50%,-50%);touch-action:none}' +
+            '.sl-rotate-handle{position:absolute;width:13px;height:13px;border:2px solid white;border-radius:50%;background:#f97316;cursor:grab;z-index:22;transform:translate(-50%,-50%);touch-action:none;box-shadow:0 0 0 1px #c2410c}' +
+            '.sl-rotate-handle:after{content:"";position:absolute;width:2px;height:7px;background:#f97316;left:4px;top:-7px}';
     }
     function validateDesign(s) {
         if (!/^[a-zA-Z ,\-]+$/.test(s.font) || !['left', 'center', 'right'].includes(s.align) || !/^#[a-f\d]{6}$/i.test(s.background) || !/^#[a-f\d]{6}$/i.test(s.ink)) throw Error('Invalid label design.');
         if (!Number.isFinite(s.fontSize) || s.fontSize < 3 || s.fontSize > 36) throw Error('Choose a font size between 3 and 36.');
     }
     var DEFAULT_ELEMENT_LAYOUT = {
-        name: { x: 4, y: 3, w: 70, h: 17 },
-        logo: { x: 76, y: 2, w: 20, h: 18 },
-        barcode: { x: 10, y: 22, w: 80, h: 37 },
-        price: { x: 5, y: 60, w: 90, h: 23 },
-        details: { x: 5, y: 84, w: 90, h: 14 }
+        name: { x: 4, y: 2, w: 92, h: 16, rotation: 0, font_size: 100, font_weight: 'bold', text_align: 'center', color: '#000000' },
+        price: { x: 8, y: 78, w: 84, h: 16, font_size: 220, font_weight: 'bold', text_align: 'center', color: '#000000' },
+        variant_values: { x: 3, y: 20, w: 94, h: 14, font_size: 100, font_weight: 'normal', text_align: 'center', color: '#000000' },
+        brand: { x: 5, y: 35, w: 90, h: 10, font_size: 90, font_weight: 'bold', text_align: 'center', color: '#000000' },
+        reference: { x: 5, y: 45, w: 90, h: 10, font_size: 75, font_weight: 'normal', text_align: 'center', color: '#000000' },
+        barcode: { x: 20, y: 54, w: 60, h: 42, rotation: 0, font_size: 70 },
+        custom_text: { x: 5, y: 44, w: 90, h: 12, rotation: 0, text: '' },
+        image: { x: 3, y: 3, w: 20, h: 15, rotation: 0 }
     };
-    function readLogoData() {
-        try {
-            var value = root.localStorage.getItem('posnic.shelf-label-logo') || '';
-            return /^data:image\/(png|jpeg|webp);base64,/i.test(value) ? value : '';
-        } catch (_) { return ''; }
-    }
     function readElementLayout() {
         var saved = {};
         try { saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-elements') || '{}') || {}; } catch (_) {}
         var result = {};
         Object.keys(DEFAULT_ELEMENT_LAYOUT).forEach(function (key) {
-            var d = DEFAULT_ELEMENT_LAYOUT[key], v = saved[key] || {};
+            var d = DEFAULT_ELEMENT_LAYOUT[key] || { x: 10, y: 10, w: 45, h: 12 }, v = saved[key] || {};
             function n(name) { var value = Number(v[name]); return Number.isFinite(value) ? value : d[name]; }
-            var w = Math.max(5, Math.min(100, n('w'))), h = Math.max(5, Math.min(100, n('h')));
-            result[key] = { x: Math.max(0, Math.min(100 - w, n('x'))), y: Math.max(0, Math.min(100 - h, n('y'))), w: w, h: h };
+            var w = Math.max(5, Math.min(300, n('w'))), h = Math.max(5, Math.min(300, n('h')));
+            var rawRotation = n('rotation');
+            var rotation = Number.isFinite(rawRotation) ? ((rawRotation % 360) + 360) % 360 : 0;
+            var defaultFontSize = key === 'price' ? 220 : key === 'details' ? 75 : 100;
+            var fontSize = Number(v.font_size);
+            if (!Number.isFinite(fontSize)) fontSize = defaultFontSize;
+            fontSize = Math.max(25, Math.min(600, fontSize));
+            var fontWeight = v.font_weight === 'bold' ? 'bold' : (v.font_weight === 'normal' ? 'normal' : (key === 'name' || key === 'price' ? 'bold' : 'normal'));
+            var textAlign = ['left', 'center', 'right'].indexOf(v.text_align) >= 0 ? v.text_align : 'center';
+            var color = /^#[0-9a-f]{6}$/i.test(String(v.color || '')) ? v.color : '#000000';
+            var emphasis = v.emphasis === true;
+            if (key === 'barcode' && Number(v.w) === 80 && Number(v.h) === 38 && Number(v.x) === 10 && Number(v.y) === 57) { v = Object.assign({}, v, { x: 22, y: 56, w: 56, h: 38 }); w = 56; h = 38; }
+            if (key === 'barcode' && Number(v.w) === 70 && Number(v.h) === 22 && Number(v.x) === 15 && Number(v.y) === 62) { v = Object.assign({}, v, { x: 22, y: 56, w: 56, h: 38 }); w = 56; h = 38; }
+            result[key] = { x: Math.max(-300, Math.min(300, n('x'))), y: Math.max(-300, Math.min(300, n('y'))), w: w, h: h, rotation: rotation, group_id: typeof v.group_id === 'string' && v.group_id.length <= 80 ? v.group_id : '', font_size: fontSize, font_weight: fontWeight, emphasis: emphasis, text_align: textAlign, color: color, text: typeof v.text === 'string' ? v.text.slice(0, 120) : '' };
         });
         return result;
     }
@@ -93,41 +104,115 @@
         node.classList.add('sl-element');
         node.dataset.slElement = key;
         node.style.left = layout.x + '%';
-        node.style.top = layout.y + '%';
+        var top = layout.y, height = layout.h;
+        if (key === 'name' && String(node.textContent || '').indexOf('\n') >= 0) height = Math.max(height, 22);
+        node.style.top = top + '%';
         node.style.width = layout.w + '%';
-        node.style.height = layout.h + '%';
+        node.style.height = height + '%';
+        node.style.transform = 'rotate(' + (Number(layout.rotation) || 0) + 'deg)';
+        node.style.transformOrigin = 'center center';
+        node.style.fontSize = ((Number(s.fontSize) || 12) * (Number(layout.font_size) || 100) / 100) + 'px';
+        node.style.fontWeight = layout.font_weight || 'normal';
+        node.style.textDecoration = layout.emphasis ? 'underline' : 'none';
+        node.style.textAlign = layout.text_align || 'center';
+        node.style.color = layout.color || '#000000';
+        node.style.transform = 'rotate(' + (Number(layout.rotation) || 0) + 'deg)';
+        node.style.transformOrigin = 'center center';
+        node.style.justifyContent = layout.text_align === 'left' ? 'flex-start' : layout.text_align === 'right' ? 'flex-end' : 'center';
     }
     function label(doc, item, s, barcode) {
-        if (!Number.isFinite(item.label_price)) throw Error(item.name + ': ' + (item.label_price_error || 'A fixed price is required.'));
-        if (s.barcode !== false && !item.barcode_id) throw Error(item.name + ': ' + t('lang_sl_barcode_missing', 'No barcode. Switch off Show barcode to print a price label.'));
+        if (s.barcode !== false && !item.barcode_id) throw Error(item.name + ': ' + t('lang_sl_barcode_missing', 'No barcode is stored for this item.'));
         var div = doc.createElement('div'); div.className = 'sl-label';
         function text(value, cls, key) {
             var p = doc.createElement('p'); p.className = (cls || '') + ' sl-element'; p.textContent = value;
             applyElementLayout(p, key, s); div.appendChild(p); return p;
         }
-        if (s.logoData) {
-            var logo = doc.createElement('img'); logo.className = 'sl-logo sl-element'; logo.alt = 'Store logo';
-            logo.src = s.logoData; applyElementLayout(logo, 'logo', s); div.appendChild(logo);
+        var rawName = String(item.name || '').trim();
+        var nameParts = rawName.match(/^(.*?)-([0-9]{2}-[0-9]{2}\/[^/]+?)(?:\s+\/\s+(.+))?$/);
+        var baseName = nameParts ? nameParts[1].trim() : rawName;
+        var brand = s.enabledFields.includes('brand') ? String(item.brand_abbreviation || item.brand_abbreviation_short || item.brand || '').trim() : '';
+        var nameText = [baseName, brand].filter(Boolean).join(' · ');
+        if (s.enabledFields.includes('name') && nameText.trim()) text(nameText, 'sl-name', 'name');
+        if (s.enabledFields.includes('image') && s.logoData) {
+            var logo = doc.createElement('img');
+            logo.className = 'sl-element sl-logo'; logo.dataset.slElement = 'image';
+            logo.alt = 'Label logo'; logo.src = s.logoData;
+            applyElementLayout(logo, 'image', s); div.appendChild(logo);
         }
-        text(item.name, 'sl-name', 'name');
-        if (s.barcode !== false) {
+        {
+            var selectedVariant = String(item.variant_value || '').trim();
+            var selectedAxisParts = String(item.variant_axis || '').split(/\s*\/\s*|\s*,\s*/).map(function (v) { return v.trim(); }).filter(Boolean);
+            var selectedValueParts = selectedVariant.split(/\s*\/\s*|\s*,\s*/).map(function (v) { return v.trim(); }).filter(Boolean);
+            var selectedByAxis = {};
+            selectedAxisParts.forEach(function (axis, index) {
+                if (selectedValueParts[index]) selectedByAxis[axis.toLocaleLowerCase()] = selectedValueParts[index].toLocaleLowerCase();
+            });
+            var allVariants = Array.isArray(item.available_variant_values) ? item.available_variant_values : [];
+            var variantOptions = item.available_variant_options && typeof item.available_variant_options === 'object' ? item.available_variant_options : null;
+            if (s.enabledFields.includes('variant_values')) {
+                var variantNode = doc.createElement('div');
+                variantNode.className = 'sl-variant-values sl-element';
+                variantNode.dataset.slElement = 'variant_values';
+                function appendVariantValue(axis, value) {
+                    var span = doc.createElement('span');
+                    span.textContent = value;
+                    var selected = selectedByAxis[String(axis).toLocaleLowerCase()] === String(value).trim().toLocaleLowerCase();
+                    if (selected) {
+                        span.style.fontWeight = '900';
+                        span.style.textDecoration = 'underline';
+                        span.style.backgroundColor = 'rgba(37,99,235,.10)';
+                        span.setAttribute('aria-current', 'true');
+                    }
+                    return span;
+                }
+                if (variantOptions && Object.keys(variantOptions).length) {
+                    Object.keys(variantOptions).sort(function (a, b) {
+                        function rank(axis) {
+                            var key = String(axis).toLocaleLowerCase();
+                            if (/taille|size|pointure|shoe/.test(key)) return 0;
+                            if (/couleur|color|colour/.test(key)) return 1;
+                            return 2;
+                        }
+                        return rank(a) - rank(b) || a.localeCompare(b);
+                    }).forEach(function (axis) {
+                        var line = doc.createElement('div');
+                        line.className = 'sl-variant-line';
+                        var heading = doc.createElement('strong');
+                        heading.textContent = axis + ': ';
+                        line.appendChild(heading);
+                        variantOptions[axis].forEach(function (value, index) {
+                            if (index) line.appendChild(doc.createTextNode(' '));
+                            line.appendChild(appendVariantValue(axis, value));
+                        });
+                        variantNode.appendChild(line);
+                    });
+                } else {
+                    var fallback = doc.createElement('div');
+                    fallback.className = 'sl-variant-line';
+                    fallback.textContent = selectedVariant;
+                    variantNode.appendChild(fallback);
+                }
+                applyElementLayout(variantNode, 'variant_values', s);
+                div.appendChild(variantNode);
+            }
+            var reference = String(item.reference_date || item.mm_yy || '').trim();
+            var modelReference = String(item.model_reference || item.reference || item.ref || '').trim();
+            var referenceText = nameParts ? String(nameParts[2] || '').trim() : ((reference ? reference : '') + (reference && modelReference ? ' / ' : '') + modelReference);
+            if ((referenceText || modelReference) && s.enabledFields.includes('reference')) text(referenceText || modelReference, 'sl-reference', 'reference');
+        }
+        if (s.barcode !== false && s.enabledFields.includes('barcode')) {
+            var barcodeBox = doc.createElement('div');
+            barcodeBox.className = 'sl-element sl-barcode-visual';
+            applyElementLayout(barcodeBox, 'barcode', s);
             var svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.classList.add('sl-barcode');
-            applyElementLayout(svg, 'barcode', s); div.appendChild(svg);
-            barcode(svg, String(item.barcode_id), { format: s.format, width: s.barWidth, height: s.barHeight, margin: s.barMargin,
-            marginTop: s.top, marginBottom: s.bottom, marginLeft: s.left, marginRight: s.right,
-            displayValue: s.barText, textMargin: s.textMargin, font: s.font, fontSize: s.fontSize,
-            textAlign: s.align, fontOptions: s.fontOptions || '', lineColor: s.ink, background: s.background });
+            barcodeBox.appendChild(svg); div.appendChild(barcodeBox);
+            barcode(svg, String(item.barcode_id), { format: 'CODE128', width: Math.min(1, Math.max(0.65, Number(s.barWidth) || 1)), height: Math.max(24, Number(s.barHeight) || 30), margin: 2,
+            marginTop: 2, marginBottom: 2, marginLeft: 2, marginRight: 2,
+            displayValue: true, textMargin: Math.max(2, Number(s.textMargin) || 3), font: 'monospace', fontSize: Math.max(12, Number(s.barFontSize) || 14),
+            textAlign: 'center', fontOptions: s.fontOptions || '', lineColor: s.ink, background: s.background });
+            svg.style.width = 'auto'; svg.style.maxWidth = '100%'; svg.style.height = '100%'; svg.style.maxHeight = '100%';
         }
-        text(s.currency + ' ' + item.label_price.toFixed(item.label_currency_digits ?? 2), 'sl-price', 'price');
-        var details = [];
-        if (item.variant_value && !String(item.name || '').includes(String(item.variant_value))) details.push('Variant ' + String(item.variant_value));
-        if (s.mrp && Number(item.mrp_price) > 0) details.push('MRP ' + s.currency + ' ' + Number(item.mrp_price).toFixed(item.label_currency_digits ?? 2));
-        if (s.mfg && item.items_mfg_date) details.push('MFG ' + String(item.items_mfg_date).split(' ')[0]);
-        if (s.exp && item.items_expiry_date) details.push('EXP ' + String(item.items_expiry_date).split(' ')[0]);
-        if (s.shop) details.push(s.shop);
-        if (s.address) details.push(s.address);
-        if (s.date) details.push(s.printedDate);
-        if (details.length) text(details.join('\n'), 'sl-foot', 'details');
+        if (s.enabledFields.includes('price') && Number.isFinite(item.label_price)) text(s.currency + ' ' + item.label_price.toFixed(item.label_currency_digits ?? 2), 'sl-price', 'price');
         return div;
     }
     function sheet(doc, cells, s, barcode) {
@@ -135,8 +220,26 @@
         cells.forEach(function (item) { page.appendChild(item ? label(doc, item, s, barcode) : doc.createElement('div')); });
         return page;
     }
-    var state = { entries: [], byId: new Map(), viewIds: [], filters: {}, step: 0, furthestStep: 0, page: 0, productPage: 1, totalPages: 1, total: 0, loading: false, bulkLoading: false, token: 0, loadError: null, completeKey: null };
+    var state = { entries: [], byId: new Map(), viewIds: [], filters: {}, step: 0, furthestStep: 0, page: 0, productPage: 1, totalPages: 1, total: 0, loading: false, bulkLoading: false, token: 0, loadError: null, completeKey: null, selectedElementKey: null };
+    // Start blank and clear every saved preset from the retired designer.
+    try {
+        if (root.localStorage.getItem('posnic.shelf-label-minimal-v3') !== '1') {
+            ['posnic.shelf-label-layout', 'posnic.shelf-label-elements',
+             'posnic.shelf-label-enabled-fields', 'posnic.shelf-label-templates',
+             'posnic.shelf-label-logo'].forEach(function (key) { root.localStorage.removeItem(key); });
+            root.localStorage.setItem('posnic.shelf-label-minimal-v3', '1');
+        }
+    } catch (_) {}
     state.elementLayout = readElementLayout();
+    var DEFAULT_ENABLED_FIELDS = [];
+    function readEnabledFields() {
+        try {
+            var saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-enabled-fields') || 'null');
+            if (Array.isArray(saved)) return saved.filter(function (key, index, arr) { return ['variant_values','name','brand','reference','barcode','custom_text','image','price'].includes(key) && arr.indexOf(key) === index; });
+        } catch (_) {}
+        return DEFAULT_ENABLED_FIELDS.slice();
+    }
+    state.enabledFields = readEnabledFields();
     var editorDrag = null;
     var searchTimer;
     function $() { return root.jQuery.apply(null, arguments); }
@@ -155,18 +258,21 @@
     function settings() {
         var s = {
             elementLayout: state.elementLayout || readElementLayout(),
-            logoData: readLogoData(),
+            enabledFields: state.enabledFields || readEnabledFields(),
             paper: $('#sl-paper').val(), width: Number($('#sl-width').val()), height: Number($('#sl-height').val()),
             margin: Number($('#sl-margin').val()), gap: Number($('#sl-gap').val()), start: Number($('#sl-start').val()), guides: $('#sl-guides').is(':checked'),
+            logoData: (function () { try { return root.localStorage.getItem('posnic.shelf-label-logo') || ''; } catch (_) { return ''; } })(),
             font: $('#font').val(), fontSize: Number($('#bar-fontSize').val()), align: $('#view_print_lable .text-align.btn-primary').val() || 'center',
             fontOptions: $('#view_print_lable .font-option.btn-primary').map(function () { return this.value; }).get().join(' '),
             background: $('#background-color').val(), ink: $('#line-color').val(), format: $('#barcodeLabelType').val(),
             barWidth: Number($('#bar-width').val()), barHeight: Number($('#bar-height').val()), barMargin: Number($('#bar-margin').val()), textMargin: Number($('#bar-text-margin').val()),
             top: Number($('#margin_top').val()), bottom: Number($('#margin_bottom').val()), left: Number($('#margin_left').val()), right: Number($('#margin_right').val()),
-            barcode: $('#sl-show-barcode').is(':checked'), barText: $('#sl-bar-text').is(':checked'), mrp: $('#sl-mrp').is(':checked'), mfg: $('#mfg_checkbox').is(':checked'), exp: $('#exp_checkbox').is(':checked'),
+            barcode: (state.enabledFields || readEnabledFields()).includes('barcode'), barText: true, mrp: false, mfg: false, exp: false,
             shop: $('#sl-shop').is(':checked') ? root.PosnicPro.local.get('branchname') || '' : '', address: $('#address-value').val(),
             date: $('#sl-date').is(':checked'), printedDate: new Date().toLocaleDateString(), currency: root.PosnicPro.local.get('currencySign') || ''
         };
+        // Keep the saved/default barcode dimensions intact. The designer controls its size and position;
+        // do not silently clamp it to the former 25 mm x 20 mm physical limit.
         validateDesign(s); geometry(s); return s;
     }
     function chosen() { return state.entries.filter(function (e) { return e.selected; }); }
@@ -196,10 +302,11 @@
         style.textContent = allCss.slice(allCss.indexOf('.sl-sheet')).replace(/(^|})(\.sl-[^{]+)/g, '$1' + host + ' $2');
         var $host = $(host).empty().append(style, page);
         if (host === '#sl-sample') {
+            style.textContent += '\n#sl-sample .sl-sheet{overflow:visible!important}#sl-sample .sl-label.sl-design-editable{overflow:visible!important}#sl-sample .sl-resize-handle,#sl-sample .sl-rotate-handle{pointer-events:auto}';
             page.querySelectorAll('.sl-label').forEach(function (label) {
                 label.classList.add('sl-design-editable');
                 label.querySelectorAll('[data-sl-element]').forEach(function (element) {
-                    var key = element.dataset.slElement, layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key];
+                    var key = element.dataset.slElement, layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key] || { x: 5, y: 5, w: 90, h: 12, rotation: 0 };
                     var handle = doc.createElement('span');
                     handle.className = 'sl-resize-handle';
                     handle.dataset.slResizeFor = key;
@@ -207,8 +314,21 @@
                     handle.style.left = (layout.x + layout.w) + '%';
                     handle.style.top = (layout.y + layout.h) + '%';
                     label.appendChild(handle);
+                    var rotateHandle = doc.createElement('span');
+                    rotateHandle.className = 'sl-rotate-handle';
+                    rotateHandle.dataset.slRotateFor = key;
+                    rotateHandle.setAttribute('aria-label', 'Rotate element');
+                    rotateHandle.style.left = (layout.x + layout.w / 2) + '%';
+                    rotateHandle.style.top = Math.max(1, layout.y - 4) + '%';
+                    label.appendChild(rotateHandle);
                 });
             });
+        }
+        if (host === '#sl-sample') {
+            var selectedKey = state.selectedElementKey;
+            var selectedNode = selectedKey && page.querySelector('[data-sl-element="' + selectedKey + '"]');
+            if (!selectedNode) { selectedNode = page.querySelector('[data-sl-element]'); state.selectedElementKey = selectedNode ? selectedNode.dataset.slElement : null; }
+            if (selectedNode) selectedNode.classList.add('sl-selected');
         }
         var available = $host.parent().width() || 400;
         var scale = Math.min(1.4, available / (g.width * 96 / 25.4));
@@ -239,7 +359,7 @@
         try {
             var s = settings(), g = geometry(s), amount = Number($('#sl-batch').val()), from = Number($('#sl-from').val());
             $('#sl-start').attr('max', g.capacity); $('#sl-dimensions').text(s.width + ' × ' + s.height + ' mm');
-            try { root.localStorage.setItem('posnic.shelf-label-layout', JSON.stringify({ paper: s.paper, width: s.width, height: s.height, margin: s.margin, gap: s.gap, start: s.start, guides: s.guides, barcode: s.barcode, barText: s.barText, shop: !!s.shop, date: s.date, mrp: s.mrp, mfg: s.mfg, exp: s.exp, elementLayout: s.elementLayout, logoData: s.logoData,
+            try { root.localStorage.setItem('posnic.shelf-label-layout', JSON.stringify({ paper: s.paper, width: s.width, height: s.height, margin: s.margin, gap: s.gap, start: s.start, guides: s.guides, barcode: s.barcode, barText: s.barText, enabledFields: s.enabledFields, shop: !!s.shop, date: s.date, mrp: s.mrp, mfg: s.mfg, exp: s.exp, elementLayout: s.elementLayout, logoData: s.logoData,
                 design: { font: s.font, fontSize: s.fontSize, align: s.align, ink: s.ink, background: s.background, format: s.format, barWidth: s.barWidth, barHeight: s.barHeight, barMargin: s.barMargin, textMargin: s.textMargin, top: s.top, bottom: s.bottom, left: s.left, right: s.right, fontOptions: s.fontOptions } })); } catch (_) { /* Optional storage. */ }
             if (state.step === 1) {
                 var sampleGeometry = geometry(Object.assign({}, s, { paper: 'roll' }));
@@ -269,10 +389,9 @@
                 var s = settings(), g = geometry(s), entries = chosen();
                 // Validate every selected item, including later pages; never hide a print failure behind a good first sheet.
                 entries.forEach(function (e) {
-                    if (!Number.isFinite(e.item.label_price)) throw Error(e.item.name + ': ' + (e.item.label_price_error || t('lang_sl_fixed_price', 'A fixed price is required.')));
                     if (s.barcode) {
                         if (!e.item.barcode_id) throw Error(e.item.name + ': ' + t('lang_sl_barcode_missing', 'No barcode. Switch off Show barcode to print a price label.'));
-                        try { root.JsBarcode({}, String(e.item.barcode_id), { format: s.format }); }
+                        try { root.JsBarcode({}, String(e.item.barcode_id), { format: 'CODE128', width: Math.max(1, Number(s.barWidth) || 1), height: Math.max(24, Number(s.barHeight) || 30), displayValue: true, margin: 0 }); }
                         catch (_) { throw Error(e.item.name + ': ' + t('lang_sl_barcode_format', 'The barcode does not match this format. Choose another format or switch off Show barcode.')); }
                     }
                 });
@@ -321,6 +440,38 @@
         state.token++; state.bulkLoading = false; state.loading = false; state.completeKey = null;
         $('#sl-all').prop('disabled', false);
     }
+    async function enrichVariantValues(items) {
+        var parents = Array.from(new Set((items || []).map(function (item) {
+            return String(item.variant_parent_name || '').trim();
+        }).filter(Boolean)));
+        for (var parent of parents) {
+            try {
+                var data = await request({ url: 'items', data: { page: 1, limit: 100, filters: JSON.stringify({ variant_parent_name: parent }), label_pricing: 'true' } });
+                var rows = Array.isArray(data.list) ? data.list : [];
+                var values = Array.from(new Set(rows.map(function (row) { return String(row.variant_value || '').trim(); }).filter(Boolean)));
+                var axes = {};
+                function splitParts(value) { return String(value || '').split(/\s*\/\s*|\s*,\s*/).map(function (part) { return part.trim(); }).filter(Boolean); }
+                rows.forEach(function (row) {
+                    var axisParts = splitParts(row.variant_axis), valueParts = splitParts(row.variant_value);
+                    axisParts.forEach(function (axis, index) {
+                        var value = valueParts[index];
+                        if (!axis || !value) return;
+                        var canonical = axis.toLocaleLowerCase();
+                        var key = Object.keys(axes).find(function (existing) { return existing.toLocaleLowerCase() === canonical; }) || axis;
+                        if (!axes[key]) axes[key] = [];
+                        if (!axes[key].some(function (existing) { return existing.toLocaleLowerCase() === value.toLocaleLowerCase(); })) axes[key].push(value);
+                    });
+                });
+                state.entries.forEach(function (entry) {
+                    if (String(entry.item.variant_parent_name || '').trim() === parent) {
+                        entry.item.available_variant_values = values;
+                        entry.item.available_variant_options = axes;
+                    }
+                });
+            } catch (_) { /* Keep printing the selected variant even if sibling lookup is unavailable. */ }
+        }
+        refresh();
+    }
     async function loadPage(page) {
         var token = ++state.token; state.loading = true; state.bulkLoading = false; state.loadError = null;
         state.productPage = page; renderRows();
@@ -329,6 +480,7 @@
             if (state.token !== token) return;
             var current = remember(data.list || []);
             state.viewIds = current.map(function (e) { return String(e.item._id); });
+            enrichVariantValues(data.list || []);
             state.total = Number(data.total) || 0; state.totalPages = Math.max(1, Number(data.total_pages) || 1);
         } catch (e) { if (state.token === token) state.loadError = e; }
         finally { if (state.token === token) { state.loading = false; renderRows(); } }
@@ -363,8 +515,8 @@
         // The wizard owns its visible search/category filters. Tenant scope remains enforced by the Items API.
         state.filters = {};
         state.elementLayout = readElementLayout();
-        $('#sl-search').val(''); $('#sl-category').val(''); $('#sl-from').val(1); $('#sl-batch').val(2000); $('#sl-copies').val(1);
-        $('#sl-width').val(Math.round(Number($('#document_width').val()) * 25.4 * 10) / 10); $('#sl-height').val(Math.round(Number($('#document_height').val()) * 25.4 * 10) / 10);
+        $('#sl-search').val(''); $('#sl-category').val(''); $('#sl-from').val(1); $('#sl-batch').val(2); $('#sl-copies').val(1);
+        $('#sl-width').val(45); $('#sl-height').val(30); $('#sl-paper').val('roll');
         try {
             var saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-layout') || 'null');
             if (saved) {
@@ -397,6 +549,32 @@
             remember([item], true); state.viewIds = [String(item._id)]; state.total = 1; state.loading = false; renderRows();
         }).catch(function (e) { if (state.token === scopeToken) { state.loading = false; state.loadError = e; refresh(); } });
     }
+    function labelPrinterName() {
+        try { return root.localStorage.getItem('posnic.shelf-label-printer') || 'default'; } catch (_) { return 'default'; }
+    }
+    function loadLabelPrinters() {
+        var select = $('#sl-printer');
+        if (!select.length) return;
+        var api = root.electronAPI && root.electronAPI.printer;
+        if (!api || typeof api.list !== 'function') {
+            select.html('<option value="default">Browser print dialog</option>').prop('disabled', true);
+            return;
+        }
+        select.prop('disabled', true).html('<option value="default">Loading printers…</option>');
+        Promise.resolve(api.list()).then(function (printers) {
+            var saved = labelPrinterName(), html = '<option value="default">System default printer</option>';
+            (Array.isArray(printers) ? printers : []).forEach(function (printer) {
+                if (!printer || !printer.name) return;
+                var name = String(printer.name);
+                html += '<option value="' + $('<span>').text(name).html().replace(/"/g, '&quot;') + '">' + $('<span>').text(printer.displayName || name).html() + '</option>';
+            });
+            select.html(html).val(saved);
+            if (!select.val()) select.val('default');
+            select.prop('disabled', false);
+        }).catch(function () {
+            select.html('<option value="default">System default printer</option>').val('default').prop('disabled', false);
+        });
+    }
     function print(test) {
         try {
             if (state.step !== 3) throw Error(t('lang_sl_review_first', 'Review the labels before printing.'));
@@ -405,7 +583,26 @@
             var s = settings(), g = geometry(s), entries = chosen(), from = Number($('#sl-from').val()), amount = test ? 1 : Number($('#sl-batch').val());
             var first = slots(entries, g, 0, from, amount), html = '';
             for (var i = 0; i < first.pages; i++) html += sheet(root.document, slots(entries, g, i, from, amount).cells, s, root.JsBarcode).outerHTML;
-            root.printJS({ printable: html, type: 'raw-html', style: css(s, g), scanStyles: false, documentTitle: t('lang_shelf_label_products', 'Shelf label products') });
+            var printer = root.electronAPI && root.electronAPI.printer;
+            var selectedPrinter = String($('#sl-printer').val() || labelPrinterName() || 'default');
+            try { root.localStorage.setItem('posnic.shelf-label-printer', selectedPrinter); } catch (_) {}
+            if (printer && typeof printer.print === 'function') {
+                var pageWidth = s.paper === 'a4' ? 210 : s.width;
+                var pageHeight = s.paper === 'a4' ? 297 : s.height;
+                var documentHtml = '<!doctype html><html><head><meta charset="utf-8"><title>Shelf labels</title><style>' + css(s, g) + '</style></head><body>' + html + '</body></html>';
+                Promise.resolve(printer.print(documentHtml, {
+                    printerName: selectedPrinter === 'default' ? '' : selectedPrinter,
+                    pageSize: 'custom',
+                    customPageSize: { width: pageWidth, height: pageHeight },
+                    copies: 1, silent: true, strictPrinter: true, forceHtml: true,
+                    printBackground: true, margins: { marginType: 'none' }
+                })).then(function (result) {
+                    if (!result || !result.success) error(new Error(result && result.error || 'Label printing failed.'));
+                    else $('#sl-status').text(test ? 'Test label sent to ' + (selectedPrinter === 'default' ? 'the system default printer' : selectedPrinter) + '.' : 'Labels sent to ' + (selectedPrinter === 'default' ? 'the system default printer' : selectedPrinter) + '.');
+                }).catch(error);
+            } else {
+                root.printJS({ printable: html, type: 'raw-html', style: css(s, g), scanStyles: false, documentTitle: t('lang_shelf_label_products', 'Shelf label products') });
+            }
         } catch (e) { error(e); }
         return false;
     }
@@ -414,11 +611,12 @@
         $(root.document).on('click', '[data-sl-step]', function () { setStep(Number(this.getAttribute('data-sl-step'))); });
         $(root.document).on('click', '#sl-next-step', function () { setStep(state.step + 1); });
         $(root.document).on('click', '#sl-back', function () { setStep(state.step - 1); });
-        $(root.document).on('input change', '#view_print_lable input:not(#sl-search):not(#sl-all):not(#sl-page-all):not(#sl-category),#view_print_lable select:not(#sl-category),#view_print_lable textarea', function () {
+        $(root.document).on('input change', '#view_print_lable input:not(#sl-search):not(#sl-all):not(#sl-page-all):not(#sl-category):not(#sl-selected-font-size):not(#sl-rotation):not(#sl-selected-bold):not(#sl-selected-emphasis),#view_print_lable select:not(#sl-category),#view_print_lable textarea', function () {
             if (this.id === 'sl-width' || this.id === 'sl-height') { $('#document_width').val(Number($('#sl-width').val()) / 25.4); $('#document_height').val(Number($('#sl-height').val()) / 25.4); }
             if (state.step === 1) state.furthestStep = 1;
             state.page = 0; refresh();
             if (state.step === 1 && typeof root.newBarcode === 'function') root.newBarcode();
+            if (typeof syncSelectionControls === 'function') syncSelectionControls();
         });
         $(root.document).on('click', '#view_print_lable .text-align,#view_print_lable .font-option', function () {
             if ($(this).hasClass('text-align')) $('#view_print_lable .text-align').removeClass('btn-primary').filter(this).addClass('btn-primary');
@@ -427,167 +625,225 @@
             if (typeof root.newBarcode === 'function') root.newBarcode();
             refresh();
         });
-        function readTemplates() {
-            try {
-                var saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-templates') || '[]');
-                return Array.isArray(saved) ? saved.filter(function (x) { return x && typeof x.name === 'string' && x.settings; }) : [];
-            } catch (_) { return []; }
-        }
-        function renderTemplates(selected) {
-            var select = $('#sl-template-list'), templates = readTemplates();
-            select.empty().append($('<option>').val('').text('Choose a saved template…'));
-            templates.forEach(function (item) {
-                select.append($('<option>').val(item.name).text(item.name));
+        function persistEnabledFields() {
+            try { root.localStorage.setItem('posnic.shelf-label-enabled-fields', JSON.stringify(state.enabledFields)); } catch (_) {}
+            $('.sl-element-toggle').each(function () {
+                var active = state.enabledFields.includes(this.dataset.slField);
+                $(this).toggleClass('is-active', active).attr('aria-pressed', active ? 'true' : 'false');
+                this.textContent = (active ? '✓ ' : '+ ') + ({variant_values:'Variants',name:'Article name',brand:'Brand abbreviation',reference:'MM-YY / reference',barcode:'Compact barcode',custom_text:'Custom text',image:'Uploaded image',price:'Selling price'}[this.dataset.slField] || this.dataset.slField.replace(/_/g,' '));
             });
-            if (selected) select.val(selected);
-            $('#sl-template-load,#sl-template-delete').prop('disabled', !select.val());
-        }
-        function applyTemplate(saved) {
-            if (!saved || typeof saved !== 'object') return;
-            if (saved.elementLayout && typeof saved.elementLayout === 'object') {
-                try {
-                    root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(saved.elementLayout));
-                    state.elementLayout = readElementLayout();
-                } catch (_) {}
-            }
-            if (typeof saved.logoData === 'string' && /^data:image\/(png|jpeg|webp);base64,/i.test(saved.logoData)) {
-                try { root.localStorage.setItem('posnic.shelf-label-logo', saved.logoData); } catch (_) {}
-            } else {
-                try { root.localStorage.removeItem('posnic.shelf-label-logo'); } catch (_) {}
-            }
-            if (['a4', 'roll'].includes(saved.paper)) $('#sl-paper').val(saved.paper);
-            ['width', 'height', 'margin', 'gap', 'start'].forEach(function (key) {
-                if (Number.isFinite(saved[key])) $('#sl-' + key).val(saved[key]);
-            });
-            ['guides', 'date', 'mrp', 'shop'].forEach(function (key) {
-                if (typeof saved[key] === 'boolean') $('#sl-' + key).prop('checked', saved[key]);
-            });
-            ['mfg', 'exp'].forEach(function (key) {
-                if (typeof saved[key] === 'boolean') $('#' + key + '_checkbox').prop('checked', saved[key]);
-            });
-            if (typeof saved.barcode === 'boolean') $('#sl-show-barcode').prop('checked', saved.barcode);
-            if (typeof saved.barText === 'boolean') $('#sl-bar-text').prop('checked', saved.barText);
-            if (saved.design) {
-                var d = saved.design;
-                Object.entries({ font: 'font', fontSize: 'bar-fontSize', ink: 'line-color', background: 'background-color', format: 'barcodeLabelType', barWidth: 'bar-width', barHeight: 'bar-height', barMargin: 'bar-margin', textMargin: 'bar-text-margin', top: 'margin_top', bottom: 'margin_bottom', left: 'margin_left', right: 'margin_right' }).forEach(function (pair) {
-                    if (d[pair[0]] !== undefined) $('#' + pair[1]).val(d[pair[0]]);
-                });
-                if (['left', 'center', 'right'].includes(d.align)) $('.text-align').removeClass('btn-primary').filter('[value="' + d.align + '"]').addClass('btn-primary');
-                $('.font-option').each(function () { $(this).toggleClass('btn-primary', typeof d.fontOptions === 'string' && d.fontOptions.split(' ').includes(this.value)); });
-            }
+}
+        $(root.document).on('click', '.sl-element-toggle', function () {
+            var key = this.dataset.slField;
+            if (!['variant_values','name','brand','reference','barcode','custom_text','image','price'].includes(key)) return;
+            if (state.enabledFields.includes(key)) state.enabledFields = state.enabledFields.filter(function (field) { return field !== key; });
+            else state.enabledFields.push(key);
+            persistEnabledFields();
+            state.furthestStep = Math.min(state.furthestStep, 1);
             refresh();
-        }
-        $(root.document).on('click', '#sl-template-save', function () {
-            try {
-                refresh();
-                var name = root.prompt('Name this label template:');
-                if (name === null) return;
-                name = String(name).trim().slice(0, 80);
-                if (!name) { $('#sl-status').text('Enter a template name.'); return; }
-                var templates = readTemplates(), existing = templates.findIndex(function (x) { return x.name.toLowerCase() === name.toLowerCase(); });
-                var current = JSON.parse(root.localStorage.getItem('posnic.shelf-label-layout') || 'null');
-                if (!current) throw Error('Adjust the label settings before saving a template.');
-                var record = { name: name, settings: current, updatedAt: new Date().toISOString() };
-                if (existing >= 0) {
-                    if (!root.confirm('Replace the saved template "' + templates[existing].name + '"?')) return;
-                    templates[existing] = record;
-                } else templates.push(record);
-                root.localStorage.setItem('posnic.shelf-label-templates', JSON.stringify(templates));
-                renderTemplates(name);
-                $('#sl-status').text('Template "' + name + '" saved in this browser.');
-            } catch (e) { error(e); }
         });
-        $(root.document).on('change', '#sl-logo-file', function () {
-            var file = this.files && this.files[0];
-            if (!file) return;
-            if (!/^image\/(png|jpeg|webp)$/i.test(file.type) || file.size > 1024 * 1024) {
-                this.value = '';
-                $('#sl-status').text('Choose a PNG, JPEG or WebP logo smaller than 1 MB.');
-                return;
-            }
-            var reader = new FileReader();
-            reader.onload = function () {
-                try {
-                    if (typeof reader.result !== 'string' || !/^data:image\/(png|jpeg|webp);base64,/i.test(reader.result)) throw Error('Could not read the logo image.');
-                    root.localStorage.setItem('posnic.shelf-label-logo', reader.result);
-                    state.elementLayout = state.elementLayout || readElementLayout();
-                    refresh();
-                    $('#sl-status').text('Store logo added to the label design.');
-                } catch (e) { $('#sl-status').text(e.message || 'Could not save the logo.'); }
-            };
-            reader.onerror = function () { $('#sl-status').text('Could not read the logo image.'); };
-            reader.readAsDataURL(file);
-        });
-        $(root.document).on('click', '#sl-logo-remove', function () {
-            try { root.localStorage.removeItem('posnic.shelf-label-logo'); } catch (_) {}
-            $('#sl-logo-file').val('');
-            refresh();
-            $('#sl-status').text('Store logo removed.');
-        });
-        $(root.document).on('change', '#sl-template-list', function () {
-            $('#sl-template-load,#sl-template-delete').prop('disabled', !this.value);
-        });
-        $(root.document).on('click', '#sl-template-load', function () {
-            var chosen = $('#sl-template-list').val(), item = readTemplates().find(function (x) { return x.name === chosen; });
-            if (!item) return;
-            applyTemplate(item.settings);
-            $('#sl-status').text('Loaded template "' + item.name + '".');
-        });
-        $(root.document).on('click', '#sl-template-delete', function () {
-            var chosen = $('#sl-template-list').val();
-            if (!chosen || !root.confirm('Delete the template "' + chosen + '"?')) return;
-            root.localStorage.setItem('posnic.shelf-label-templates', JSON.stringify(readTemplates().filter(function (x) { return x.name !== chosen; })));
-            renderTemplates();
-            $('#sl-status').text('Template deleted.');
-        });
-        $(root.document).on('pointerdown', '#sl-sample .sl-element', function (e) {
+persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .sl-element', function (e) {
             if (e.target.closest('.sl-resize-handle')) return;
             var key = this.dataset.slElement, label = this.closest('.sl-label');
             if (!key || !label) return;
+            state.selectedElementKey = key;
             e.preventDefault();
-            $('#sl-sample .sl-element').removeClass('sl-selected');
-            $(this).addClass('sl-selected');
+            if (e.shiftKey || e.ctrlKey || e.metaKey) {
+                $(this).toggleClass('sl-selected');
+                syncSelectionControls();
+                return;
+            }
+            if (!$(this).hasClass('sl-selected')) {
+                $('#sl-sample .sl-element').removeClass('sl-selected');
+                $(this).addClass('sl-selected');
+            }
+            syncSelectionControls();
             var rect = label.getBoundingClientRect(), layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key];
-            editorDrag = { key: key, mode: 'move', startX: e.clientX, startY: e.clientY, rect: rect, initial: Object.assign({}, layout) };
+            var dragKeys = layout.group_id ? Object.keys(state.elementLayout).filter(function (k) { return state.elementLayout[k].group_id === layout.group_id; }) : [key];
+            var initialLayouts = {};
+            dragKeys.forEach(function (k) { initialLayouts[k] = Object.assign({}, state.elementLayout[k]); });
+            editorDrag = { key: key, keys: dragKeys, initialLayouts: initialLayouts, mode: 'move', startX: e.clientX, startY: e.clientY, rect: rect, initial: Object.assign({}, layout), moved: false };
             if (this.setPointerCapture && e.pointerId !== undefined) { try { this.setPointerCapture(e.pointerId); } catch (_) {} }
+        });
+        $(root.document).on('pointerdown', '#sl-sample .sl-rotate-handle', function (e) {
+            var label = this.closest('.sl-label'), key = this.dataset.slRotateFor;
+            var selectedElement = label && label.querySelector('[data-sl-element="' + key + '"]');
+            if (!key || !label || !selectedElement) return;
+            e.preventDefault(); e.stopPropagation();
+            $('#sl-sample .sl-element').removeClass('sl-selected');
+            $(selectedElement).addClass('sl-selected');
+            state.selectedElementKey = key;
+            syncSelectionControls();
+            var rect = selectedElement.getBoundingClientRect();
+            var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+            editorDrag = { key: key, mode: 'rotate', startX: e.clientX, startY: e.clientY, centerX: cx, centerY: cy, moved: false,
+                startAngle: Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI,
+                initial: Object.assign({}, state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key]) };
         });
         $(root.document).on('pointerdown', '#sl-sample .sl-resize-handle', function (e) {
             var label = this.closest('.sl-label'), key = this.dataset.slResizeFor;
             if (!key || !label) return;
             e.preventDefault(); e.stopPropagation();
             $('#sl-sample .sl-element').removeClass('sl-selected');
-            $(element).addClass('sl-selected');
+            var selectedElement = label.querySelector('[data-sl-element="' + key + '"]');
+            if (selectedElement) $(selectedElement).addClass('sl-selected');
+            state.selectedElementKey = key;
+            syncSelectionControls();
             var layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key];
-            editorDrag = { key: key, mode: 'resize', startX: e.clientX, startY: e.clientY, rect: label.getBoundingClientRect(), initial: Object.assign({}, layout) };
+            editorDrag = { key: key, mode: 'resize', startX: e.clientX, startY: e.clientY, rect: label.getBoundingClientRect(), initial: Object.assign({}, layout), moved: false };
+        });
+        function syncSelectionControls() {
+            var selected = $('#sl-sample .sl-element.sl-selected').first();
+            if (!selected.length) {
+                var remembered = state.selectedElementKey && $('#sl-sample [data-sl-element="' + state.selectedElementKey + '"]').first();
+                selected = remembered && remembered.length ? remembered : $('#sl-sample .sl-element').first();
+                if (selected.length) { selected.addClass('sl-selected'); state.selectedElementKey = selected.attr('data-sl-element'); }
+            }
+            var key = selected.attr('data-sl-element');
+            var layout = key ? (state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key]) : null;
+            var baseSize = Math.max(3, Number($('#bar-fontSize').val()) || 12);
+            $('#sl-rotation').val(layout ? (Number(layout.rotation) || 0) : 0).prop('disabled', false);
+            $('#sl-selected-font-size').val(layout ? Math.max(3, Math.min(72, Math.round(baseSize * (Number(layout.font_size) || 100) / 100))) : baseSize).prop('disabled', false);
+            $('#sl-selected-bold').prop('checked', !!layout && layout.font_weight === 'bold').prop('disabled', !layout);
+            $('#sl-selected-emphasis').prop('checked', !!layout && layout.emphasis === true).prop('disabled', !layout);
+        }
+        function updateSelectedLayout(patch, render) {
+            var selected = $('#sl-sample .sl-element.sl-selected').first(), key = selected.attr('data-sl-element');
+            if (!key) return;
+            var layout = Object.assign({}, state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key], patch);
+            state.elementLayout[key] = layout;
+            try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
+            if (render) {
+                refresh();
+                $('#sl-sample [data-sl-element="' + key + '"]').addClass('sl-selected');
+                syncSelectionControls();
+            } else {
+                var node = document.querySelector('#sl-sample [data-sl-element="' + key + '"]');
+                if (node) applyElementLayout(node, key, { elementLayout: state.elementLayout, fontSize: Math.max(3, Number($('#bar-fontSize').val()) || 12) });
+            }
+        }
+        $(root.document).on('input change', '#sl-selected-font-size', function () {
+            var value = Number(this.value), baseSize = Math.max(3, Number($('#bar-fontSize').val()) || 12);
+            if (!Number.isFinite(value) || value < 3 || value > 72) return;
+            updateSelectedLayout({ font_size: Math.max(25, Math.min(600, value / baseSize * 100)) }, false);
+        });
+        $(root.document).on('change', '#sl-selected-bold', function () { updateSelectedLayout({ font_weight: this.checked ? 'bold' : 'normal' }, false); });
+        $(root.document).on('change', '#sl-selected-emphasis', function () { updateSelectedLayout({ emphasis: this.checked }, false); });
+        function rotateSelected(delta) {
+            var selected = $('#sl-sample .sl-element.sl-selected').first();
+            var key = selected.attr('data-sl-element');
+            if (!key) {
+                selected = $('#sl-sample .sl-element').first().addClass('sl-selected');
+                key = selected.attr('data-sl-element');
+            }
+            if (!key) return;
+            var layout = Object.assign({}, state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key]);
+            layout.rotation = Math.max(-180, Math.min(180, (Number(layout.rotation) || 0) + delta));
+            state.elementLayout[key] = layout;
+            try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
+            refresh();
+            var updated = $('#sl-sample [data-sl-element="' + key + '"]');
+            updated.addClass('sl-selected');
+            syncSelectionControls();
+        }
+        $(root.document).on('click', '#sl-rotate-left', function () { rotateSelected(-15); });
+        $(root.document).on('click', '#sl-rotate-right', function () { rotateSelected(15); });
+        $(root.document).on('change input', '#sl-rotation', function () {
+            var selected = $('#sl-sample .sl-element.sl-selected').first(), key = selected.attr('data-sl-element');
+            if (!key) return;
+            var value = Number(this.value);
+            if (!Number.isFinite(value)) return;
+            var layout = Object.assign({}, state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key]);
+            layout.rotation = Math.max(-180, Math.min(180, value));
+            state.elementLayout[key] = layout;
+            try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
+            var element = $('#sl-sample [data-sl-element="' + key + '"]');
+            if (element.length) element.css('transform', 'rotate(' + layout.rotation + 'deg)');
+        });
+        $(root.document).on('input', '#sl-custom-text-input', function () {
+            var value = String(this.value || '').slice(0, 120);
+            try { root.localStorage.setItem('posnic.shelf-label-custom-text', value); } catch (_) {}
+            var node = document.querySelector('#sl-sample [data-sl-element="custom_text"]');
+            if (node) node.textContent = value || 'Custom text';
+        });
+        $(root.document).on('change', '#sl-custom-text-input', function () { refresh(); });
+        $(root.document).on('change', '#sl-image-upload', function () {
+            var file = this.files && this.files[0];
+            if (!file) return;
+            if (['image/png', 'image/jpeg', 'image/webp'].indexOf(file.type) === -1 || file.size > 1024 * 1024) {
+                error(new Error('Choose a PNG, JPEG or WebP image no larger than 1 MB.'));
+                this.value = '';
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function () {
+                try { root.localStorage.setItem('posnic.shelf-label-logo', String(reader.result)); }
+                catch (_) { error(new Error('Image could not be saved. Use an image smaller than 1 MB.')); return; }
+                if (!state.enabledFields.includes('image')) {
+                    state.enabledFields.push('image');
+                    persistEnabledFields();
+                }
+                refresh();
+            };
+            reader.onerror = function () { error(new Error('Could not read the selected image.')); };
+            reader.readAsDataURL(file);
         });
         $(root.document).on('pointermove', function (e) {
             if (!editorDrag) return;
-            var drag = editorDrag, dx = (e.clientX - drag.startX) / Math.max(1, drag.rect.width) * 100;
+            var drag = editorDrag;
+            if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < 3) return;
+            drag.moved = true;
+            if (drag.mode === 'rotate') {
+                var angle = Math.atan2(e.clientY - drag.centerY, e.clientX - drag.centerX) * 180 / Math.PI;
+                var delta = angle - drag.startAngle;
+                if (delta > 180) delta -= 360;
+                if (delta < -180) delta += 360;
+                var rotated = Object.assign({}, drag.initial, { rotation: Math.max(-180, Math.min(180, (Number(drag.initial.rotation) || 0) + delta)) });
+                state.elementLayout[drag.key] = rotated;
+                var rotatingNode = document.querySelector('#sl-sample [data-sl-element="' + drag.key + '"]');
+                if (rotatingNode) rotatingNode.style.transform = 'rotate(' + rotated.rotation + 'deg)';
+                var rotationInput = document.querySelector('#sl-rotation');
+                if (rotationInput) rotationInput.value = Math.round(rotated.rotation);
+                return;
+            }
+            var dx = (e.clientX - drag.startX) / Math.max(1, drag.rect.width) * 100;
             var dy = (e.clientY - drag.startY) / Math.max(1, drag.rect.height) * 100;
-            var next = Object.assign({}, drag.initial);
-            if (drag.mode === 'move') {
-                next.x = Math.max(0, Math.min(100 - next.w, drag.initial.x + dx));
-                next.y = Math.max(0, Math.min(100 - next.h, drag.initial.y + dy));
-            } else {
-                next.w = Math.max(5, Math.min(100 - next.x, drag.initial.w + dx));
-                next.h = Math.max(5, Math.min(100 - next.y, drag.initial.h + dy));
-            }
-            state.elementLayout[drag.key] = next;
-            var element = document.querySelector('#sl-sample [data-sl-element="' + drag.key + '"]');
-            if (element) {
-                element.style.left = next.x + '%'; element.style.top = next.y + '%';
-                element.style.width = next.w + '%'; element.style.height = next.h + '%';
-                var handle = document.querySelector('#sl-sample .sl-resize-handle[data-sl-resize-for="' + drag.key + '"]');
-                if (handle) { handle.style.left = (next.x + next.w) + '%'; handle.style.top = (next.y + next.h) + '%'; }
-            }
+            var keys = drag.mode === 'move' ? drag.keys : [drag.key];
+            keys.forEach(function (key) {
+                var initial = drag.initialLayouts ? drag.initialLayouts[key] : drag.initial;
+                var next = Object.assign({}, initial);
+                if (drag.mode === 'move') {
+                    next.x = Math.max(-300, Math.min(300, initial.x + dx));
+                    next.y = Math.max(-300, Math.min(300, initial.y + dy));
+                } else {
+                    next.w = Math.max(5, Math.min(500, initial.w + dx));
+                    next.h = Math.max(5, Math.min(500, initial.h + dy));
+                }
+                state.elementLayout[key] = next;
+                var element = document.querySelector('#sl-sample [data-sl-element="' + key + '"]');
+                if (element) {
+                    element.style.left = next.x + '%'; element.style.top = next.y + '%';
+                    element.style.width = next.w + '%'; element.style.height = next.h + '%';
+                    var handle = document.querySelector('#sl-sample .sl-resize-handle[data-sl-resize-for="' + key + '"]');
+                    if (handle) { handle.style.left = (next.x + next.w) + '%'; handle.style.top = (next.y + next.h) + '%'; }
+                    var rotateHandle = document.querySelector('#sl-sample .sl-rotate-handle[data-sl-rotate-for="' + key + '"]');
+                    if (rotateHandle) { rotateHandle.style.left = (next.x + next.w / 2) + '%'; rotateHandle.style.top = Math.max(1, next.y - 4) + '%'; }
+                }
+            });
         });
         $(root.document).on('pointerup pointercancel', function () {
             if (!editorDrag) return;
+            var selectedKey = editorDrag.key;
+            state.selectedElementKey = selectedKey;
             editorDrag = null;
             try { root.localStorage.setItem('posnic.shelf-label-elements', JSON.stringify(state.elementLayout)); } catch (_) {}
             refresh();
+            $('#sl-sample [data-sl-element="' + selectedKey + '"]').addClass('sl-selected');
+            syncSelectionControls();
+        });        $(root.document).on('shown.bs.modal', '#view_print_lable', function () { loadLabelPrinters(); refresh(); });
+        $(root.document).on('change', '#sl-printer', function () {
+            try { root.localStorage.setItem('posnic.shelf-label-printer', String(this.value || 'default')); } catch (_) {}
         });
-                $(root.document).on('shown.bs.modal', '#view_print_lable', function () { renderTemplates(); refresh(); });
         $(root.document).on('hidden.bs.modal', '#view_print_lable', function () { state.token++; state.loading = false; state.bulkLoading = false; clearTimeout(searchTimer); });
         $(root.document).on('change', '#sl-all', function () { if (this.checked) loadAll(); else clear(); });
         $(root.document).on('change', '#sl-page-all', function () { cancelBulk(); var selected = this.checked; state.entries.forEach(function (e) { if (state.viewIds.includes(String(e.item._id))) e.selected = selected; }); state.furthestStep = 0; renderRows(); });
@@ -600,8 +856,7 @@
         $(root.document).on('click', '#sl-prev,#sl-next', function () { state.page += this.id === 'sl-next' ? 1 : -1; refresh(); });
         $(root.document).on('click', '#sl-test', function () { print(true); });
         $(root.document).on('click', '#sl-print', function () { print(false); });
-        $(root.document).on('change', '#sl-paper', function () { $('#sl-start').val(1); refresh(); });
-        $(root).on('resize', function () { if (state.step > 0) refresh(); });
+        $(root.document).on('change', '#sl-paper', function () { $('#sl-start').val(1); refresh(); });        $(root).on('resize', function () { if (state.step > 0) refresh(); });
     }
     init();
     return { geometry: geometry, count: count, slots: slots, css: css, label: label, sheet: sheet, open: open, print: print, refresh: refresh };

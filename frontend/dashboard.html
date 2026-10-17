@@ -992,6 +992,14 @@
                                     });
 
 
+                                    /* Default the authenticated POS session to the cashier's
+                                       primary workflow. Keep explicit deep links untouched. */
+                                    try {
+                                        var initialRoute = String(window.location.hash || '').replace(/\/$/, '');
+                                        if (!initialRoute || initialRoute === '#/dashboard') {
+                                            history.replaceState(null, '', window.location.pathname + window.location.search + '#/sales/new');
+                                        }
+                                    } catch (defaultSaleRouteError) { }
                                     PosnicPro.get('users/getUserAccessDetails', function (response) {
                                         PosnicPro.userACL = response.data;
                                         PosnicPro.ACLApplyForAll();
@@ -1181,6 +1189,22 @@
                 navigator.serviceWorker.register('sw.js').catch(function () { /* optional */ });
             });
         }
+    </script>
+    <script>
+      /* A successful login wins over any stale route restored by the SPA. */
+      try {
+        if (sessionStorage.getItem('posnic_force_new_sale') === '1') {
+          sessionStorage.removeItem('posnic_force_new_sale');
+          if (window.hasher && typeof window.hasher.setHash === 'function') window.hasher.setHash('sales/new');
+          else window.location.hash = '#/sales/new';
+          setTimeout(function () {
+            if (window.location.hash !== '#/sales/new') {
+              if (window.hasher && typeof window.hasher.setHash === 'function') window.hasher.setHash('sales/new');
+              else window.location.hash = '#/sales/new';
+            }
+          }, 500);
+        }
+      } catch (e) { window.location.hash = '#/sales/new'; }
     </script>
     </body>       
 </html>

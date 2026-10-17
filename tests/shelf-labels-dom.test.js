@@ -179,3 +179,28 @@ test('design controls work without legacy direct event bindings and restore the 
     assert.equal($('#sl-products input[type=checkbox]:checked').length, 0);
     dom.window.close();
 });
+
+test('the label editor rotates, groups, and ungroups selected elements', async () => {
+    const { dom, w, $, next, selectAll } = setup();
+    w.PosnicShelfLabels.open();
+    await tick();
+    await selectAll();
+    next();
+    const name = $('#sl-sample [data-sl-element="name"]')[0];
+    name.dispatchEvent(new w.MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
+    assert.equal($('#sl-rotate-element').prop('disabled'), false);
+    $('#sl-rotate-element').trigger('click');
+    assert.equal($('#sl-sample [data-sl-element="name"]').css('transform'), 'rotate(90deg)');
+    const price = $('#sl-sample [data-sl-element="price"]')[0];
+    price.dispatchEvent(new w.MouseEvent('pointerdown', { bubbles: true, shiftKey: true, clientX: 20, clientY: 20 }));
+    assert.equal($('#sl-group-elements').prop('disabled'), false);
+    $('#sl-group-elements').trigger('click');
+    const grouped = JSON.parse(w.localStorage.getItem('posnic.shelf-label-elements'));
+    assert.ok(grouped.name.group_id);
+    assert.equal(grouped.name.group_id, grouped.price.group_id);
+    $('#sl-ungroup-elements').trigger('click');
+    const ungrouped = JSON.parse(w.localStorage.getItem('posnic.shelf-label-elements'));
+    assert.equal(ungrouped.name.group_id, undefined);
+    assert.equal(ungrouped.price.group_id, undefined);
+    dom.window.close();
+});

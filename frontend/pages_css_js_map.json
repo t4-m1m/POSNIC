@@ -142,7 +142,7 @@
             "static/script/js/core/printable-menu-renderer.js",
             "static/script/js/modules/js/printable-menu.js",
             "static/script/js/core/branch-signature.js",
-            "static/script/js/modules/js/receipt-designer-editor.js",
+            "static/script/js/modules/js/receipt-studio.js",
             "static/script/js/modules/js/invoices.js",
             "static/script/js/core/captain-money.js",
             "static/script/js/core/captain-payments.js",
@@ -160,6 +160,7 @@
             "static/script/js/modules/js/campaigns.js",
             "static/script/js/modules/js/messaging.js",
             "static/script/js/modules/js/credit.js",
+            "static/script/js/modules/js/customerdebts.js",
             "static/script/js/modules/js/cashback.js",
             "static/script/js/modules/js/whatsapp.js",
             "static/script/js/modules/js/device_settings.js",
@@ -178,7 +179,8 @@
             "static/script/js/core/order-alert.js",
             "static/script/js/core/kitchen-call.js",
             "static/script/js/core/online-order-watch.js",
-            "static/script/js/core/request-dock.js"
+            "static/script/js/core/request-dock.js",
+            "static/script/js/modules/js/hr.js"
         ]
     },
     "login": {

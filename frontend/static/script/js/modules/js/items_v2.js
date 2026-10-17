@@ -4,7 +4,7 @@
     function assess(f) {
         var tracked = f.kind !== 'service' && f.stock === 'tracked';
         var price = Number(f.price), quantity = Number(f.quantity), cost = Number(f.cost);
-        if (!String(f.name || '').trim()) return { error: 'Give your item a name.', field: 'iv2-name' };
+        if (!String(f.name || '').trim()) return { error: 'Enter the article type, brand abbreviation and model reference.', field: 'iv2-type-name' };
         if (![price, cost].every(function (n) { return Number.isFinite(n) && n >= 0; })) return { error: 'Enter a valid price of zero or more.', field: 'iv2-price' };
         if (tracked && (!Number.isFinite(quantity) || quantity < 0)) return { error: 'Enter an opening stock quantity of zero or more.', field: 'iv2-quantity' };
         if (!price && !f.confirmZero && !f.openPrice) return { error: 'Add a selling price, or confirm that you want to save it at zero.', field: 'iv2-confirm-zero' };
@@ -27,7 +27,7 @@
     function readCapabilities() {
         var settings = {};
         try { settings = JSON.parse(P.local.get('general_settings') || '{}'); } catch (_) {}
-        return { restaurant: businessContext === 'restaurant' || (businessContext === null && P.local.get('table_options') === 'enable'), tax: settings.module_tax_enable !== false, weight: settings.hardware_weight_machine_enable === true, online: settings.module_online_ordering_enable !== false };
+        return { restaurant: false, tax: false, weight: settings.hardware_weight_machine_enable === true, online: settings.module_online_ordering_enable !== false };
     }
     function loadRestaurantOptions() {
         function fill(id, rows, empty) {
@@ -50,8 +50,16 @@
     }
     function checkedValues(id) { return Array.from(document.querySelectorAll('#' + id + ' input:checked')).map(function (el) { return el.value; }); }
     function applyBusinessContext() {
-        var restaurant = businessContext === 'restaurant' || (businessContext === null && P.local.get('table_options') === 'enable');
-        var kind = restaurant ? 'dish' : businessContext === 'service' ? 'service' : 'product';
+        var restaurant = false;
+        var kind = businessContext === 'service' ? 'service' : 'product';
+        var restaurantTab = document.getElementById('iv2-tab-restaurant');
+        var restaurantPanel = document.getElementById('iv2-panel-restaurant');
+        if (restaurantTab) restaurantTab.hidden = true;
+        if (restaurantPanel) restaurantPanel.hidden = true;
+        var restaurantOption = document.querySelector('#iv2-section-select option[value="restaurant"]');
+        if (restaurantOption) { restaurantOption.hidden = true; restaurantOption.disabled = true; }
+        ['iv2-tax-field', 'iv2-tax-extra', 'iv2-tax-error'].forEach(function (id) { var node = document.getElementById(id); if (node) node.hidden = true; });
+        document.querySelectorAll('#items_v2 .iv2-tax-row').forEach(function (node) { node.hidden = true; });
         document.querySelector('#items_v2 input[name="iv2-kind"][value="' + kind + '"]').checked = true;
         document.querySelector('#items_v2 input[name="iv2-stock"][value="' + (kind === 'product' ? 'tracked' : 'untracked') + '"]').checked = true;
         text('iv2-product-label', restaurant ? PosnicPro.i18n.t('lang_packaged_product', 'Packaged product') : PosnicPro.i18n.t('lang_retail_product', 'Retail product'));
@@ -60,14 +68,14 @@
     var bound = false, taxReady = false, taxLoading = false, busy = false, saved = false, attempted = false;
     function value(id) { return document.getElementById(id).value; }
     function selected(name) { var el = document.querySelector('#items_v2 input[name="' + name + '"]:checked'); return el ? el.value : ''; }
-    function show(id, yes) { document.getElementById(id).hidden = !yes; }
+    function show(id, yes) { var node = document.getElementById(id); if (node) node.hidden = !yes; }
     function text(id, message) { document.getElementById(id).textContent = message; }
     function fields() {
         var tax = document.getElementById('iv2-tax').selectedOptions[0];
         var category = document.getElementById('iv2-category').selectedOptions[0];
         var details = P.itemsV2Details.status();
         return { name: value('iv2-name'), price: details.family && details.prices.length ? Math.min.apply(null, details.prices) : value('iv2-price'), cost: value('iv2-cost'), quantity: details.family && details.quantities.length ? Math.min.apply(null, details.quantities) : value('iv2-quantity'), kind: selected('iv2-kind'), stock: selected('iv2-stock'), zeroStock: selected('iv2-zero-stock'), confirmZero: document.getElementById('iv2-confirm-zero').checked, openPrice: details.openPrice, family: details.family,
-            taxId: taxReady && capabilities.tax ? value('iv2-tax') : '', taxName: capabilities.tax && tax && tax.dataset.name || '', taxRate: capabilities.tax && tax && tax.dataset.rate || 0, taxType: value('iv2-tax-type'), categoryId: value('iv2-category'), categoryName: category && category.dataset.name || '', barcode: value('iv2-barcode'), sku: value('iv2-sku'), description: value('iv2-description') };
+            taxId: '', taxName: '', taxRate: 0, taxType: 'inclusive', categoryId: value('iv2-category'), categoryName: category && category.dataset.name || '', barcode: value('iv2-barcode'), sku: value('iv2-sku'), description: value('iv2-description') };
     }
     function money(n) { return (P.local.get('currencySign') || '') + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
     var previewTimer, previewKey = '', previewSequence = 0;
@@ -97,10 +105,14 @@
     }
     function render() {
         var dishChoice = document.querySelector('#items_v2 input[name="iv2-kind"][value="dish"]');
-        dishChoice.closest('label').hidden = !capabilities.restaurant;
-        dishChoice.disabled = !capabilities.restaurant;
-        document.querySelector('#items_v2 .iv2-types').style.gridTemplateColumns = 'repeat(' + (capabilities.restaurant ? 3 : 2) + ', minmax(0, 1fr))';
-        if (!capabilities.restaurant && dishChoice.checked) {
+        if (dishChoice) {
+            var dishLabel = dishChoice.closest('label');
+            if (dishLabel) dishLabel.hidden = !capabilities.restaurant;
+            dishChoice.disabled = !capabilities.restaurant;
+        }
+        var typeGrid = document.querySelector('#items_v2 .iv2-types');
+        if (typeGrid) typeGrid.style.gridTemplateColumns = 'repeat(' + (capabilities.restaurant ? 3 : 2) + ', minmax(0, 1fr))';
+        if (dishChoice && !capabilities.restaurant && dishChoice.checked) {
             document.querySelector('#items_v2 input[name="iv2-kind"][value="product"]').checked = true;
             document.querySelector('#items_v2 input[name="iv2-stock"][value="tracked"]').checked = true;
         }
@@ -179,18 +191,32 @@
     function save(event) {
         if (event) event.preventDefault();
         if (busy || saved) return false;
+        if (P.itemsV2Workspace.currentStep() === 'step1') { P.itemsV2Workspace.goToStep('step2', true); return false; }
         if (P.aclLoaded && P.aclLoaded() && !P.checkAccess('item', 'write')) { fail('You don’t have permission to create items.'); return false; }
         if (editing && savedBranch !== P.local.get('branch_id_set')) { fail(P.i18n.t('lang_iv2_edit_branch_changed', 'The active branch changed. Open the item again before editing.')); return false; }
         attempted = true; render();
-        if (!P.itemsV2Workspace.ready()) { fail(P.i18n.t('lang_iv2_draft_lists', 'Some draft selections are unavailable. Reload to retry, or discard the draft before saving.')); return false; }
         var f = fields(), a = assess(f);
+        // Missing optional draft-list selections must not block a normal item
+        // save. Only pause a variant-family save when its pending variant draft
+        // cannot be restored, since saving that family incomplete would lose rows.
+        if (f.family && !P.itemsV2Workspace.ready()) {
+            fail(P.i18n.t('lang_iv2_draft_lists', 'Some variant draft selections are unavailable. Reload to retry, or discard the draft before saving.'));
+            return false;
+        }
         if (a.error) { fail(a.error, a.field); return false; }
         var advancedError = P.itemsV2Details.validate();
         if (advancedError) { fail(advancedError.error, advancedError.field); return false; }
+        // Validate explicitly and reveal the owning step before focusing a field.
+        // Native reportValidity() on the whole multi-step form can fail on a required
+        // control inside a hidden panel, making Save appear to do nothing.
+        var invalidField = document.querySelector('#iv2-fields input:invalid, #iv2-fields select:invalid, #iv2-fields textarea:invalid');
+        if (invalidField) { fail(invalidField.validationMessage || 'Check this field.', invalidField.id); return false; }
         var form = document.getElementById('iv2-form');
-        if (!form.reportValidity()) return false;
-        if (!taxReady) { fail('Wait for tax settings to load, or choose Try again above.', 'iv2-tax-error'); return false; }
+        if (capabilities.tax && !taxReady) { fail('Wait for tax settings to load, or choose Try again above.', 'iv2-tax-error'); return false; }
         var data = Object.assign(payload(f), P.itemsV2Details.data());
+        // Retail item creation intentionally has no tax field. Ignore stale
+        // default-tax/HSN drafts so the old 0.25% value cannot be re-applied.
+        data.tax = 0; data.tax_id = ''; data.tax_name = ''; data.hsn_code = ''; data.hsn_description = ''; data.tax_type = 'inclusive';
         if (capabilities.restaurant && f.kind !== 'service') {
             data.diet = value('iv2-diet'); data.daypart_ids = checkedValues('iv2-periods');
             data.modifier_group_ids = checkedValues('iv2-modifiers'); data.show_on_menu = document.getElementById('iv2-menu').checked;
@@ -236,7 +262,12 @@
     }
     function bind() {
         if (bound) return; bound = true;
-        var form = document.getElementById('iv2-form'); form.addEventListener('submit', save);
+        var form = document.getElementById('iv2-form');
+        // The editor is multi-step: native browser validation tries to validate
+        // required controls in hidden panels before submit fires, preventing the
+        // custom validator/save handler from running at all. Validate in save().
+        form.noValidate = true;
+        form.addEventListener('submit', save);
         form.addEventListener('focusout', function (event) { touched.add(event.target.id); if (!saved && !busy) render(); });
         form.addEventListener('input', function (event) {
             if (event.target.id === 'iv2-name' || event.target.id === 'iv2-price') document.getElementById('iv2-confirm-zero').checked = false;
@@ -289,7 +320,7 @@
             document.getElementById('iv2-fields').disabled = false; document.getElementById('iv2-save').disabled = false;
             P.itemsV2Workspace.edit(); render();
         },duplicate:prepareCopy        });
-        show('iv2-tax-field', capabilities.tax); document.getElementById('iv2-tax-type').hidden = !capabilities.tax;
+        show('iv2-tax-field', capabilities.tax); var taxType = document.getElementById('iv2-tax-type'); if (taxType) taxType.hidden = !capabilities.tax;
         if (!bound) applyBusinessContext();
         if (capabilities.restaurant) loadRestaurantOptions();
         bind(); document.querySelectorAll('#items_v2 .iv2-currency').forEach(function (el) { el.textContent = P.local.get('currencySign') || ''; });
@@ -330,7 +361,7 @@
             var f=fields();editBaseline=Object.assign(payload(f),P.itemsV2Details.data());
             if(capabilities.restaurant){editBaseline.diet=value('iv2-diet');editBaseline.daypart_ids=checkedValues('iv2-periods');editBaseline.modifier_group_ids=checkedValues('iv2-modifiers');editBaseline.show_on_menu=document.getElementById('iv2-menu').checked;}
             if(capabilities.online)editBaseline.ecommerce=document.getElementById('iv2-orderable').checked;
-            document.getElementById('iv2-tab-basics').click();document.getElementById('iv2-name').focus();
+            document.getElementById('iv2-tab-step1').click();document.getElementById('iv2-name').focus();
             if (duplicate) prepareCopy();
         },function(){failed();});
     }

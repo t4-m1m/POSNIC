@@ -884,6 +884,25 @@ class SettingModel extends BaseModel {
         cleanTimezone = gmtOffsetMatch[1].trim();
       }
 
+      const purchaseExchangeRate = data.purchase_exchange_rate === undefined
+        ? undefined
+        : Number(data.purchase_exchange_rate);
+      const purchaseExtraCost = data.purchase_extra_cost_dzd === undefined
+        ? undefined
+        : Number(data.purchase_extra_cost_dzd);
+      const purchaseVatRate = data.purchase_vat_rate === undefined
+        ? undefined
+        : Number(data.purchase_vat_rate);
+      if (purchaseExchangeRate !== undefined && (!Number.isFinite(purchaseExchangeRate) || purchaseExchangeRate <= 0 || purchaseExchangeRate > 1e9)) {
+        return { status: false, data: null, message: 'Exchange rate must be greater than 0 and no more than 1,000,000,000 DZD per EUR.' };
+      }
+      if (purchaseExtraCost !== undefined && (!Number.isFinite(purchaseExtraCost) || purchaseExtraCost < 0 || purchaseExtraCost > 1e9)) {
+        return { status: false, data: null, message: 'Purchase extra cost must be a non-negative amount.' };
+      }
+      if (purchaseVatRate !== undefined && (!Number.isFinite(purchaseVatRate) || purchaseVatRate < 0 || purchaseVatRate > 100)) {
+        return { status: false, data: null, message: 'Purchase TVA must be between 0 and 100 percent.' };
+      }
+
       const updateData = {
         ...require('../utils/branch-upi').update(data),
         branch_name: data.store_name?.trim() || '',
@@ -909,6 +928,9 @@ class SettingModel extends BaseModel {
         time_zone: cleanTimezone,
         printing_address: data.printing_address?.trim() || '',
         branch_gstin_number: data.branch_gstin_number || '',
+        ...(purchaseExchangeRate !== undefined ? { purchase_exchange_rate: purchaseExchangeRate } : {}),
+        ...(purchaseExtraCost !== undefined ? { purchase_extra_cost_dzd: purchaseExtraCost } : {}),
+        ...(purchaseVatRate !== undefined ? { purchase_vat_rate: purchaseVatRate } : {}),
         ...ifSent('hardware_weight_machine_enable', hardware_weight_machine_enable),
         ...ifSent('till_lock_enable', till_lock_enable),
         ...ifSent('till_lock_idle_minutes', till_lock_idle_minutes),
@@ -974,6 +996,9 @@ class SettingModel extends BaseModel {
         };
       }
 
+      const persistedPurchaseSettings = await collection.findOne(filter, {
+        projection: { purchase_exchange_rate: 1, purchase_vat_rate: 1 },
+      });
       const country_state = {
         country: data.setting_country || '',
         state: data.setting_state || '',
@@ -1258,6 +1283,15 @@ class SettingModel extends BaseModel {
       if (!this.branchId || !this.licenseId || !this.user?._id) {
         throw new Error('Branch context is required (branchId, licenseId, user._id)');
       }
+
+      // Preserve the persisted purchase-cost preferences when unrelated settings
+      // (including receipt layouts) are saved. This value must be in this method's
+      // scope; the similarly named variable in updateGeneralSetting is local there.
+      const purchaseSettingsBranch = await this.getCollection('branches');
+      const persistedPurchaseSettings = await purchaseSettingsBranch.findOne(
+        { _id: this.normalizeId(this.branchId), license: this.normalizeId(this.licenseId) },
+        { projection: { purchase_exchange_rate: 1, purchase_extra_cost_dzd: 1, purchase_vat_rate: 1 } }
+      ) || {};
 
       /*
        * Module On/Off for ANOTHER branch (M4): a multi-branch admin picks a
@@ -1555,6 +1589,9 @@ class SettingModel extends BaseModel {
         indian_gst: data.indian_gst,
         receiving_prefix: data.receiving_prefix,
         branch_gstin_number: data.branch_gstin_number || '',
+        purchase_exchange_rate: Number(persistedPurchaseSettings?.purchase_exchange_rate) > 0 ? Number(persistedPurchaseSettings.purchase_exchange_rate) : 280,
+        purchase_extra_cost_dzd: Number.isFinite(Number(persistedPurchaseSettings?.purchase_extra_cost_dzd)) ? Number(persistedPurchaseSettings.purchase_extra_cost_dzd) : 0,
+        purchase_vat_rate: Number.isFinite(Number(persistedPurchaseSettings?.purchase_vat_rate)) ? Number(persistedPurchaseSettings.purchase_vat_rate) : 9,
         roundOff: roundOff,
         receipt_barcode: barcode,
         stock_management: stockManagement,
@@ -1654,6 +1691,7 @@ class SettingModel extends BaseModel {
            that does not mention it cannot set it either way. */
         first_run_done: onOnly,
         first_run_decided: onOnly,
+        cashier_popup_enabled: offOnly,
         quotes_enable: offOnly,
         invoices_enable: offOnly,
         pl_include_cashbook: offOnly,
@@ -1749,6 +1787,7 @@ class SettingModel extends BaseModel {
         hardware_weight_machine_enable: 'hardware_weight_machine_enable',
         enable_notification_reminders: 'enable_notification_reminders',
         enable_email_reminders: 'enable_email_reminders',
+        cashier_popup_enabled: 'cashier_popup_enabled',
       };
       for (const [field, src] of Object.entries(SOURCE_OF)) {
         if (data[src] === undefined && field in updateFields) {
@@ -1775,6 +1814,21 @@ class SettingModel extends BaseModel {
         updateFields.receipt_designs = require('../helpers/receipt-design').normalize(
           data.receipt_designs
         );
+      }
+      if (data.cashier_names !== undefined) {
+        if (!Array.isArray(data.cashier_names)) {
+          return { status: false, data: null, message: 'Cashier names must be a list.' };
+        }
+        const seenCashiers = new Set();
+        updateFields.cashier_names = data.cashier_names
+          .map((name) => String(name || '').trim().slice(0, 80))
+          .filter((name) => {
+            const key = name.toLowerCase();
+            if (!name || seenCashiers.has(key)) return false;
+            seenCashiers.add(key);
+            return true;
+          })
+          .slice(0, 100);
       }
       updateFields.updated_date = new Date();
 
@@ -1804,6 +1858,7 @@ class SettingModel extends BaseModel {
         header_print: data.header_print,
         footer_print: data.footer_print,
         ...(data.receipt_designs !== undefined ? { receipt_designs: data.receipt_designs } : {}),
+        ...(data.cashier_names !== undefined ? { cashier_names: updateFields.cashier_names || [] } : {}),
       };
       // Return the resolved picture, including cache hits and explicit clears,
       // so the form and the next print see the saved state without a reload.

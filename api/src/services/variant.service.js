@@ -156,9 +156,20 @@ class VariantsService {
       const parsedFilters = this.parseFilters(filters);
       const query = this.buildQueryFromFilters(parsedFilters);
 
-      // Add branch_id filter matching PHP: $filters['branch_id'] = self::$currentBranch;
+      // New variants are branch-owned, but the original POSNIC catalogue
+      // also has shared definitions with no branch_id. Keep those visible to
+      // the variant editor and barcode-combination picker.
       if (branch_id) {
-        query.branch_id = branch_id;
+        const branchId = branch_id.toString();
+        if (query.$or) {
+          query.$and = (query.$and || []).concat([{ $or: query.$or }]);
+          delete query.$or;
+        }
+        query.$or = [
+          { branch_id: branchId },
+          { branch_id: { $exists: false } },
+          { branch_id: null },
+        ];
       }
 
       const result = await variantsRepository.findAll(query, {
@@ -442,11 +453,21 @@ class VariantsService {
     try {
       const variants = await variantsRepository.findForAutocomplete(query, branchId);
 
-      const suggestions = variants.map((variant) => ({
-        id: variant._id?.toString(),
-        name: variant.name,
-        fields: variant.fields || [],
-      }));
+      const suggestions = variants.map((variant) => {
+        const rawFields =
+          Array.isArray(variant.fields) && variant.fields.length
+            ? variant.fields
+            : Array.isArray(variant.product_type)
+              ? variant.product_type
+              : [];
+        const fields = normalizeVariantFields(rawFields);
+        return {
+          id: variant._id?.toString(),
+          name: variant.name,
+          fields,
+          product_type: fields.map((field) => field.name),
+        };
+      });
 
       return {
         status: true,

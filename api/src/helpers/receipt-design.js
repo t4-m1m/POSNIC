@@ -80,7 +80,8 @@
     'divider',
     'signature',
   ];
-  const required = ['store', 'transaction', 'items', 'totals'];
+  // Receipt blocks are optional; owners may remove any element from a design.
+  const required = [];
   const textTypes = ['store', 'transaction', 'items', 'totals', 'text', 'field', 'signature'];
   function image(value) {
     return (
@@ -138,6 +139,19 @@
           type: block.type,
           align: ['left', 'center', 'right'].includes(block.align) ? block.align : 'left',
         };
+        // Preserve visual-editor geometry. Dropping these fields during API
+        // normalization made every save silently reset drag, resize and rotation.
+        for (const [key, min, max] of [
+          ['x', 0, 100], ['y', 0, 5000], ['w', 2, 100], ['h', 8, 2000],
+          ['rotation', -180, 180],
+        ]) {
+          if (block[key] != null && block[key] !== '') {
+            const value = Number(block[key]);
+            if (!Number.isFinite(value) || value < min || value > max)
+              throw new Error('Invalid receipt block ' + key + ' value.');
+            b[key] = value;
+          }
+        }
         if (block.type === 'field') {
           if (!Object.prototype.hasOwnProperty.call(fields, block.field))
             throw new Error('Unknown receipt field.');
@@ -145,6 +159,10 @@
           b.width = block.width == null ? 100 : Number(block.width);
           if (![50, 100].includes(b.width))
             throw new Error('Choose full or half width for a field.');
+          if (block.field === 'sale_note' && Object.prototype.hasOwnProperty.call(block, 'text')) {
+            b.text = String(block.text == null ? '' : block.text);
+            if (b.text.length > 1000) throw new Error('Sale note text must be 1,000 characters or fewer.');
+          }
         }
         if (block.type === 'items') {
           if (block.heading != null) {
@@ -210,6 +228,21 @@
         if (block.type === 'store' && block.showEmail === false) b.showEmail = false;
         if (textTypes.includes(block.type)) {
           b.bold = block.bold === true;
+          // Keep the visual editor's per-element font choice across API saves.
+          // The renderer accepts only this allow-list, so saved designs cannot inject CSS.
+          const fontFamilies = [
+            'Arial, sans-serif',
+            'Tahoma, sans-serif',
+            'Verdana, sans-serif',
+            'Georgia, serif',
+            'Courier New, monospace',
+            'monospace',
+          ];
+          if (block.fontFamily != null) {
+            if (!fontFamilies.includes(block.fontFamily))
+              throw new Error('Choose a supported receipt font.');
+            b.fontFamily = block.fontFamily;
+          }
           if (block.fontSize != null && block.fontSize !== '') {
             const fontSize = Number(block.fontSize);
             if (!Number.isFinite(fontSize) || fontSize < 8 || fontSize > 32)
@@ -236,9 +269,11 @@
             throw new Error('Enter content for every QR code.');
           b.bold = block.bold === true;
         }
-        if (block.type === 'image' || block.type === 'qr' || block.type === 'signature') {
+        if (block.type === 'image' || block.type === 'logo' || block.type === 'qr' || block.type === 'signature') {
           if (block.type === 'image' && !image(block.src))
             throw new Error('Upload a PNG, JPEG or WebP image for each image block.');
+          if (block.type === 'logo' && block.src && !image(block.src))
+            throw new Error('Upload a PNG, JPEG or WebP image for the receipt logo.');
           // Signatures always come from the branch, never a stale per-layout copy.
           if (block.type !== 'signature' && image(block.src)) b.src = block.src;
           b.width = Math.max(
@@ -248,21 +283,12 @@
         }
         return b;
       });
-      required.forEach(function (type) {
-        if (
-          blocks.filter(function (b) {
-            return b.type === type;
-          }).length !== 1
-        )
-          throw new Error(
-            'Keep one store, receipt details, items and totals block in every design.'
-          );
-      });
-      if (
-        blocks.findIndex((b) => b.type === 'totals') < blocks.findIndex((b) => b.type === 'items')
-      )
-        throw new Error('Place totals after the items.');
-      out.layouts[format] = { fontSize: size, blocks: blocks };
+      const canvasHeight = Number(layout.canvasHeight);
+      out.layouts[format] = {
+        fontSize: size,
+        blocks: blocks,
+        ...(layout.canvas === true ? { canvas: true, canvasHeight: Number.isFinite(canvasHeight) ? Math.max(80, Math.min(8000, canvasHeight)) : 0 } : {}),
+      };
     });
     return out;
   }

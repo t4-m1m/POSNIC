@@ -1,6 +1,6 @@
 {
   "name": "posnic",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "description": "Free, offline-first point-of-sale software for retail and restaurants, with open source POS code and billing workflows. Posnic source is AGPL-3.0-only; packages contain separately licensed components.",
   "main": "src/main.js",
   "desktopName": "com.posnic.app.desktop",
@@ -173,6 +173,7 @@
       "src/print-pdf.js",
       "src/windows-spooler.js",
       "src/print-temp-files.js",
+      "src/tysoo-prp300-receipt.js",
       "src/escpos-receipt.js",
       "src/escpos-unicode.js",
       "src/bill-design.js",
@@ -471,12 +472,6 @@
       "target": [
         {
           "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
           "arch": [
             "x64"
           ]

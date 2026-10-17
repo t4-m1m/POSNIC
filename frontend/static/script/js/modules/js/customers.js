@@ -608,6 +608,7 @@ PosnicPro.customers = {
                 $('#customer_city').val(data.city);
                 $('#customer_country').val(data.country).trigger('change.select2');
                 $('#customer_category').val(data.category_id).trigger("change");
+                $('#customer_price_tier').val([1, 2, 3].includes(Number(data.price_tier)) ? Number(data.price_tier) : 1);
                 $('#customer_referrer_name').val(data.referrer_name);
                 $('#customer_referrer_id').val(data.referrer_id);
                 $('#partial_balance').prop("checked", data.partial_balance);
@@ -770,6 +771,7 @@ PosnicPro.customers = {
     customerClearForm: function () {
         PosnicPro.customers.loadSelectCustomerState(PosnicPro.local.get('countryid'), 'clear');
         $('#customer_add_form')[0].reset();
+        $('#customer_price_tier').val('1');
         $('#customer_country').val(PosnicPro.local.get("country_setting")).trigger('change.select2');
         PosnicPro.local.set('edit_customer_state', PosnicPro.local.get("state_setting"));        
         $('.error_customer').css('display', 'none')

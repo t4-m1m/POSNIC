@@ -469,6 +469,7 @@ const normalizeSaleItems = (rawItems) => {
         item_discount_percentage: numberOrZero(raw?.item_discount_percentage ?? 0, 0),
         item_available_quantity: numberOrZero(raw?.item_available_quantity ?? 0, 0),
         item_id: raw?.item_id ? String(raw?.item_id) : '',
+        price_tier: [1, 2, 3].includes(Number(raw?.price_tier)) ? Number(raw.price_tier) : 1,
         item_unit: raw?.item_unit || 'qty',
         total_amount: roundToTwo(numberOrZero(raw?.total_amount ?? computedTotal, computedTotal)),
         barcode_id: raw?.barcode_id || undefined,
@@ -1074,6 +1075,8 @@ const formatSaleListEntry = (saleDoc) => {
       saleDate,
     updated_date: parseSaleDate(doc.updated_date) || parseSaleDate(doc.updatedAt) || null,
     created_by: doc.created_by || doc.user_name || undefined,
+    // The selected till seller is separate from the signed-in account; return it in the history list API.
+    cashier_name: String(doc.cashier_name || doc.seller_name || doc.vendeur || doc.cashier?.name || doc.seller?.name || doc.cashierName || '').trim(),
     branch_name: doc.branch_name,
     // KOT-specific fields required by frontend kot.js
     items: Array.isArray(doc.items)

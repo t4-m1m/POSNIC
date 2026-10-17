@@ -212,7 +212,8 @@ PosnicPro.quickreport = {
         var qty = 0,
           price = 0,
           total = 0,
-          profit = 0;
+          profit = 0,
+          productDiscountTotal = 0;
         var productHeaderRow = [
           "productName",
           "productSku",
@@ -232,6 +233,7 @@ PosnicPro.quickreport = {
           var pProfit = safeNum(p.product_profit);
           var pDiscount = safeNum(p.product_discount);
           var pTax = safeNum(p.product_tax);
+          productDiscountTotal += pDiscount;
 
           qty += pQty;
           price += pSubtotal;
@@ -394,6 +396,12 @@ PosnicPro.quickreport = {
           qty: safeNum(qty),
           subtotal: safeNum(price),
           total: safeNum(total),
+          // Net profit is the report profit after item discounts. Gross profit
+          // adds item and sale-level discounts back before them. Taxes are not
+          // included in the day-close slip figures.
+          netProfit: safeNum(profit),
+          grossProfit: safeNum(profit + productDiscountTotal + total_sale_extra_discount),
+          outstanding: safeNum(response.data && response.data.outstanding_amount),
           payments: paymentAllDataRow.map(function (row) {
             return { label: row[0], amount: safeNum(row[1]) };
           }),
@@ -410,7 +418,7 @@ PosnicPro.quickreport = {
         });
         var summary = $('#daily-payment-summary').empty().addClass('d-flex flex-wrap');
         summary.css('gap', '16px');
-        [['Cash received', summaryCash], ['Card received', summaryCard], ['Total payments received', tenderTotal]].forEach(function (entry) {
+        [['Cash received', summaryCash], ['Card received', summaryCard], ['Total payments received', tenderTotal], ['Debt created this period', PosnicPro.quickreport.lastReport.outstanding]].forEach(function (entry) {
           var card = $('<div class="card p-3 mb-1">');
           $('<span>').text(entry[0]).appendTo(card);
           $('<strong class="h4 mb-0">').text((PosnicPro.local.get('currencySign') || '') + safeNum(entry[1]).toFixed(2)).appendTo(card);
@@ -423,7 +431,8 @@ PosnicPro.quickreport = {
           var money = function (n) { return Number(n || 0).toFixed(2); };
           var rows = '<tr><td><lang class="lang_total_sales">Total sales</lang></td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.total) + '</td></tr>'
             + '<tr><td><lang class="lang_items_sold">Items sold</lang></td><td class="text-right">' + PosnicPro.quickreport.lastReport.qty + '</td></tr>'
-            + '<tr><td><lang class="lang_payments_received">Payments received</lang></td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.tenderTotal) + '</td></tr>';
+            + '<tr><td><lang class="lang_payments_received">Payments received</lang></td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.tenderTotal) + '</td></tr>'
+            + '<tr><td>Debt created this period</td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.outstanding) + '</td></tr>';
           PosnicPro.quickreport.lastReport.payments.forEach(function (p) {
             rows += '<tr><td>' + $('<i>').text(p.label).html() + '</td><td class="text-right">' + money(p.amount) + '</td></tr>';
           });
@@ -900,16 +909,22 @@ PosnicPro.quickreport = {
         { label: PosnicPro.i18n.t('lang_by', 'By'), value: PosnicPro.local.get('loginuser_name') || '' }
       ],
       sections: [
-        { type: 'pairs', name: 'SALES', rows: [
+        { type: 'pairs', name: 'SALES (EXCLUDING TAX)', rows: [
           { label: PosnicPro.i18n.t('lang_items_sold', 'Items sold'), value: String(report.qty) },
-          { label: PosnicPro.i18n.t('lang_subtotal', 'Subtotal'), value: money(report.subtotal) }
+          { label: 'Sales before tax', value: money(report.subtotal) },
+          { label: 'Gross profit', value: money(report.grossProfit) },
+          { label: 'Net profit', value: money(report.netProfit) }
         ] },
-        { type: 'total', label: PosnicPro.i18n.t('lang_total_sales_2', 'TOTAL SALES'), value: money(report.total) },
+        { type: 'total', label: 'TOTAL SALES EXCLUDING TAX', value: money(report.subtotal) },
         { type: 'pairs', name: 'PAYMENTS',
           rows: report.payments.map(function (p) {
             return { label: p.label, value: money(p.amount) };
           }),
           total: { label: PosnicPro.i18n.t('lang_total_received', 'Total received'), value: money(report.tenderTotal) } },
+        { type: 'pairs', name: 'CASH & CREDIT TOTALS', rows: [
+          { label: 'Cash received today', value: money(cash) },
+          { label: 'Credit / debt created today', value: money(report.outstanding) }
+        ] },
         /*
          * The cash figure sits at the head of the handover block, directly
          * above the line the count goes on, because that is the comparison

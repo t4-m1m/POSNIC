@@ -1752,39 +1752,42 @@ class ItemRepository extends BaseModel {
         };
       }
 
-      // Generate an internal Code 128 barcode for new items when none was supplied.
-      // Existing/manual barcodes and barcodes on item edits are preserved.
-      if (!id && !itemBarcodes.normalize(data.barcode_id)) {
-        const { randomBytes } = require('crypto');
-        const branchToken = String(branchObjectId).slice(-4).toUpperCase();
+      // Recalculate EUR purchase costs on the server so stored cost and TVA
+      // cannot drift from the exchange rate and VAT supplied by the form.
+      if (data.purchase_price_eur !== undefined && data.purchase_price_eur !== null && String(data.purchase_price_eur).trim() !== '') {
+        const { calculatePurchaseCost } = require('../utils/purchase-cost');
+        const purchaseCost = calculatePurchaseCost(data.purchase_price_eur, {
+          purchase_exchange_rate: data.purchase_exchange_rate,
+          purchase_extra_cost_dzd: data.purchase_extra_cost_dzd ?? data.purchase_vat_dzd ?? 0,
+          purchase_vat_rate: data.purchase_vat_rate,
+        });
+        data = { ...data, ...purchaseCost, company_price: purchaseCost.purchase_cost_dzd };
+      }
+
+      // The shop uses compact six-digit numeric Code 128 labels for every
+      // newly-created sellable item (including variant children). Keep the
+      // number numeric: letters, branch prefixes and timestamps make the
+      // narrow retail label denser and harder for scanners to decode.
+      if (!id && !/^\d{6}$/.test(itemBarcodes.normalize(data.barcode_id))) {
         let generatedBarcode = '';
-
-        for (let attempt = 0; attempt < 10; attempt += 1) {
-          const candidate =
-            'P' +
-            branchToken +
-            Date.now().toString(36).toUpperCase() +
-            randomBytes(4).toString('hex').toUpperCase();
-
+        for (let attempt = 0; attempt < 250; attempt += 1) {
+          const candidate = String(require('crypto').randomInt(1000000)).padStart(6, '0');
           const conflict = await itemBarcodes.findConflict(collection, [candidate], {
             branchId: branchObjectId,
             licenseId: licenseObjectId,
           });
-
           if (!conflict) {
             generatedBarcode = candidate;
             break;
           }
         }
-
         if (!generatedBarcode) {
           return {
             status: false,
-            message: 'Could not generate a unique barcode. Please try again.',
+            message: 'Could not allocate a unique six-digit barcode. The numeric code space may be full; please retry.',
             data: null,
           };
         }
-
         data = { ...data, barcode_id: generatedBarcode };
       }
 
@@ -1884,6 +1887,10 @@ class ItemRepository extends BaseModel {
         branch_name: branchName,
         branch_access: [{ branch_id: branchObjectId, branch_name: branchName }],
         name: (data.name || '').trim(),
+        ...(Object.prototype.hasOwnProperty.call(data, 'article_type') ? { article_type: String(data.article_type || '').trim() } : {}),
+        ...(Object.prototype.hasOwnProperty.call(data, 'brand_abbreviation') ? { brand_abbreviation: String(data.brand_abbreviation || '').trim() } : {}),
+        ...(Object.prototype.hasOwnProperty.call(data, 'reference_date') ? { reference_date: String(data.reference_date || '').trim() } : {}),
+        ...(Object.prototype.hasOwnProperty.call(data, 'model_reference') ? { model_reference: String(data.model_reference || '').trim() } : {}),
         ...(Object.prototype.hasOwnProperty.call(data, 'translations')
           ? { translations: itemText.normalize(data.translations) }
           : {}),
@@ -1920,7 +1927,18 @@ class ItemRepository extends BaseModel {
         tax_fields: taxFields,
         mrp_price: parseFloat(data.mrp_price) || 0,
         company_price: parseFloat(data.company_price) || 0,
+        ...(data.purchase_price_eur !== undefined && data.purchase_price_eur !== null && String(data.purchase_price_eur).trim() !== '' ? {
+          purchase_price_eur: parseFloat(data.purchase_price_eur),
+          purchase_exchange_rate: parseFloat(data.purchase_exchange_rate) || 280,
+          purchase_extra_cost_dzd: Number.isFinite(Number(data.purchase_extra_cost_dzd)) ? Number(data.purchase_extra_cost_dzd) : (Number.isFinite(Number(data.purchase_vat_dzd)) ? Number(data.purchase_vat_dzd) : 0),
+          purchase_vat_rate: Number.isFinite(Number(data.purchase_vat_rate)) ? Number(data.purchase_vat_rate) : 0,
+          purchase_base_dzd: parseFloat(data.purchase_base_dzd) || 0,
+          purchase_vat_dzd: parseFloat(data.purchase_extra_cost_dzd ?? data.purchase_vat_dzd) || 0,
+          purchase_cost_dzd: parseFloat(data.purchase_cost_dzd) || parseFloat(data.company_price) || 0,
+        } : {}),
         selling_price: parseFloat(data.selling_price) || 0,
+        selling_price_2: Number.isFinite(Number(data.selling_price_2)) ? Number(data.selling_price_2) : 0,
+        selling_price_3: Number.isFinite(Number(data.selling_price_3)) ? Number(data.selling_price_3) : 0,
         available_quantity: parseFloat(data.available_quantity) || 0,
         image: (data.cover_image || '').trim(),
         multi_image: multiImage,
@@ -6491,29 +6509,15 @@ class ItemRepository extends BaseModel {
       const page = parseInt(options.page, 10) || 1;
       const skip = Math.max(0, (page - 1) * limit);
 
+      // This is a current-stock valuation report. Items must remain visible
+      // even when older records lack the legacy track_inventory flag.
       const filter = {
         'branch_access.branch_id': { $in: branchObjectIds },
-        track_inventory: true,
       };
 
       const licenseId = context.licenseId;
       if (licenseId) {
         filter.license = ObjectId.isValid(licenseId) ? new ObjectId(licenseId) : licenseId;
-      }
-
-      // Apply session filter dates to the query
-      if (data.starting_date || data.ending_date) {
-        if (data.starting_date) {
-          filter.createdAt = { $gte: new Date(data.starting_date) };
-        }
-
-        if (data.ending_date) {
-          if (filter.createdAt) {
-            filter.createdAt.$lte = new Date(data.ending_date);
-          } else {
-            filter.createdAt = { $lte: new Date(data.ending_date) };
-          }
-        }
       }
 
       console.log('\ud83d\udd0d itemStockReportTable - Filter:', JSON.stringify(filter, null, 2));

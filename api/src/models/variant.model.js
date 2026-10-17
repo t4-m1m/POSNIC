@@ -39,6 +39,14 @@ const variantSchema = new mongoose.Schema(
       default: [],
     },
 
+    // Legacy POSNIC variants used product_type before fields was introduced.
+    // Keep the alias readable so older definitions can still be edited and
+    // their values appear in item/barcode-combination forms.
+    product_type: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: undefined,
+    },
+
     description: {
       type: String,
       trim: true,

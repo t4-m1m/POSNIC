@@ -1,4 +1,5 @@
 name: Quick Windows EXE (no tests)
+# Re-triggered for the current POSNIC update; build installer only, no test steps.
 
 on:
   workflow_dispatch:
@@ -6,6 +7,56 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/quick-windows-exe.yml"
+      - "frontend/modules/items.html"
+      - "frontend/modules/items_v2.html"
+      - "frontend/modules/sales_read.html"
+      - "frontend/static/script/js/core/shelf-labels.js"
+      - "frontend/static/script/js/modules/js/items.js"
+      - "frontend/static/script/js/modules/js/items-v2-details.js"
+      - "frontend/static/script/js/modules/js/items_v2.js"
+      - "frontend/static/script/js/modules/js/receiving_add.js"
+      - "frontend/static/script/js/modules/js/sales.js"
+      - "frontend/static/style/css/modules/sales.css"
+      - "frontend/layouts/sidebar.html"
+      - "frontend/modules/items_v2.html"
+      - "frontend/static/script/js/modules/js/items-v2-details.js"
+      - "api/src/controllers/receivings.controller.js"
+      - "api/src/models/setting.model.js"
+      - "api/src/repositories/item.repository.js"
+      - "api/src/utils/purchase-cost.js"
+      - "api/src/services/pricing-authority.js"
+      - "api/src/services/sale.service.js"
+      - "api/src/controllers/sales.controller.js"
+      - "api/src/services/outlet-summary.js"
+      - "frontend/static/script/js/modules/js/report_dailysales.js"
+      - "api/src/helpers/sales.helper.js"
+      - "api/src/models/customer.model.js"
+      - "api/src/middleware/customers.validation.js"
+      - "frontend/modals/customer.html"
+      - "frontend/static/script/js/modules/js/customers.js"
+      - "api/src/routes/hr.routes.js"
+      - "api/src/routes/index.js"
+      - "frontend/modules/hr.html"
+      - "frontend/static/script/js/modules/js/hr.js"
+      - "frontend/pages_css_js_map.json"
+      - "frontend/pages_html_map.json"
+      - "frontend/layouts/sidebar.html"
+      - "frontend/static/script/js/core/receipt-designer.js"
+      - "frontend/static/script/js/core/print-settings.js"
+      - "frontend/static/script/js/modules/js/receipt-designer-editor.js"
+      - "frontend/static/style/css/receipt-designer.css"
+      - "frontend/modules/settings_write.html"
+      - "frontend/static/script/js/modules/js/sales.js"
+      - "frontend/modules/sales_write.html"
+      - "frontend/static/script/js/core/PosnicPro.js"
+      - "frontend/static/script/js/core/receipt-data.js"
+      - "frontend/static/script/js/core/shelf-labels.js"
+      - "src/hardware-manager.js"
+      - "src/hardware-ipc.js"
+      - "src/escpos-unicode.js"
+      - "src/windows-spooler.js"
+      - "src/escpos-report.js"
+      - "src/escpos-receipt.js"
 
 permissions:
   contents: read
@@ -59,9 +110,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: Posnic-Windows-EXE
-          path: |
-            dist/*.exe
-            dist/*.yml
-            dist/*.blockmap
+          path: dist/*-windows-x64-installer.exe
           if-no-files-found: error
           retention-days: 7

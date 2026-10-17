@@ -752,3 +752,259 @@ body.customer-display .contentbar {
     #sales_filter_search .lf-custom { position:static; flex-direction:column; align-items:stretch; white-space:normal; }
     #sales_filter_search .lf-custom input { width:100%; min-width:0; }
 }
+
+
+/* POSNIC owner layout: keep the active basket on the left and catalogue on the right. */
+@media (min-width: 768px) {
+  #touchsales_page > .row:has(#instance-view, #items_view_hide) {
+    display: flex;
+    align-items: flex-start;
+  }
+  #touchsales_page #instance-view {
+    order: 1;
+    flex: 0 0 50%;
+    max-width: 50%;
+    min-width: 0;
+  }
+  #touchsales_page #items_view_hide {
+    order: 2;
+    flex: 0 0 50%;
+    max-width: 50%;
+    min-width: 0;
+  }
+  #touchsales_page #return_view_hide {
+    order: 3;
+  }
+}
+@media (max-width: 767.98px) {
+  #touchsales_page #instance-view,
+  #touchsales_page #items_view_hide {
+    max-width: 100%;
+  }
+}
+
+/* POS cashier shortcut bar and prominent customer-credit action */
+#touchsales_page > .sales-function-shortcuts{display:flex;clear:both;width:100%;max-width:100%;box-sizing:border-box;flex:0 0 100%;order:0;margin:0 0 12px;position:relative;z-index:1}
+#touchsales_page > .row:has(#instance-view, #items_view_hide){width:100%;margin-left:0;margin-right:0}
+#sales_customer_credit_button[hidden]{display:none!important}
+.sales-function-shortcuts{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:10px;background:#f6f7fb;border:1px solid #e5e7ef;border-radius:12px}
+.sales-function-key{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:8px 13px;border:1px solid #d9deea;border-radius:9px;background:#fff;color:#26334a;font-weight:700;cursor:pointer;transition:transform .12s,box-shadow .12s}
+.sales-function-key:hover,.sales-function-key:focus{transform:translateY(-1px);box-shadow:0 3px 9px rgba(25,35,55,.12);outline:2px solid #b8c8ff;outline-offset:1px}
+.sales-function-key kbd{font-size:11px;padding:3px 5px;border-radius:5px;background:#eef1f7;color:#35425a}.sales-function-key i{font-size:17px}.sales-function-key span{font-size:13px}
+.sales-key-fast{background:#fff9e8;border-color:#f3c85e}.sales-key-pay{background:#effbf5;border-color:#8bd5b1}.sales-key-price{background:#f3f5ff;border-color:#aebdff}.sales-key-quantity{background:#f2f9ff;border-color:#b9d8f7}.sales-key-exchange{background:#fbf5ff;border-color:#d5b8ef}
+.sales-customer-credit-button{width:100%;display:flex;align-items:center;gap:12px;margin:8px 0 14px;padding:14px 18px;background:#c62828;color:#fff;border:2px solid #a71919;border-radius:10px;box-shadow:0 3px 8px rgba(160,20,20,.2);font-size:17px;cursor:pointer;text-align:left}
+.sales-customer-credit-button:hover,.sales-customer-credit-button:focus{background:#a71919;color:#fff;outline:3px solid rgba(198,40,40,.2);outline-offset:2px}.sales-customer-credit-button .sales-credit-word{font-size:13px;font-weight:800;letter-spacing:.08em}.sales-customer-credit-button strong{font-size:22px;margin-left:auto}.sales-customer-credit-button .sales-credit-currency{font-size:13px}#customerDebtsModule>a{display:flex;align-items:center;gap:10px}#customerDebtsModule>a .feather{font-size:18px;color:#c62828}
+@media(max-width:767px){.sales-function-shortcuts{gap:6px;padding:7px}.sales-function-key{flex:1 1 30%;padding:7px 5px;gap:5px;flex-direction:column}.sales-function-key span{font-size:11px}.sales-customer-credit-button{padding:12px}}
+
+
+/* Explicit selected basket line for F3 three-price assignment. */
+#sales_new .touch-table-tbody tr.posnic-selected-sale-line > td {
+    box-shadow: inset 0 2px 0 var(--primary, #506fe4), inset 0 -2px 0 var(--primary, #506fe4);
+    background-color: rgba(80, 111, 228, 0.10);
+}
+#sales_new .touch-table-tbody tr.posnic-selected-sale-line > td:first-child {
+    box-shadow: inset 3px 0 0 var(--primary, #506fe4), inset 0 2px 0 var(--primary, #506fe4), inset 0 -2px 0 var(--primary, #506fe4);
+}
+
+/* The checkout total stays visible alongside the cashier function keys. */
+#sales-function-shortcuts{align-items:center}
+.sales-shortcut-total{margin-left:auto;display:flex;align-items:flex-end;justify-content:center;flex-direction:column;min-width:180px;padding:6px 14px;border:1px solid #b7c7f5;border-radius:10px;background:#eef3ff;color:#1c2d50;line-height:1.2}
+.sales-shortcut-total>span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a6a88}
+.sales-shortcut-total strong{font-size:26px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+@media(max-width:767.98px){.sales-shortcut-total{flex:1 1 100%;min-width:0;align-items:flex-end}.sales-shortcut-total strong{font-size:22px}}
+
+
+/* Keep one clear total on the sale-entry screen: the colorful shortcut total. */
+#sales_new #sub_hide,
+#sales_new #sub_total_hide,
+#sales_new #pay_hide,
+#sales_new #pay_total_hide,
+#sales_new #refund_sub_total,
+#sales_new #refund_subtotal,
+#sales_new #refund_pay_total,
+#sales_new #refund_grand_total {
+    display: none !important;
+}
+#sales-function-shortcuts .sales-shortcut-total {
+    background: linear-gradient(135deg, #fff7cc 0%, #ffe0f0 48%, #dbeafe 100%) !important;
+    border: 2px solid #f59e0b !important;
+    border-radius: 14px !important;
+    box-shadow: 0 5px 18px rgba(37, 99, 235, .18), inset 0 1px 0 rgba(255,255,255,.9) !important;
+    color: #172554 !important;
+    padding: 8px 18px !important;
+}
+#sales-function-shortcuts .sales-shortcut-total > span {
+    color: #7c2d12 !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+#sales-function-shortcuts .sales-shortcut-total strong {
+    color: #1d4ed8 !important;
+    font-size: clamp(24px, 2.2vw, 34px) !important;
+    font-weight: 950 !important;
+    line-height: 1.1;
+    text-shadow: 0 1px 0 rgba(255,255,255,.9);
+}
+
+/* Single quick action in the blue icon rail, directly under the Posnic logo. */
+.posnic-new-sale-quicklink{
+    display:flex!important;
+    align-items:center;
+    justify-content:center;
+    width:42px;
+    height:42px;
+    margin:8px auto 10px;
+    padding:0!important;
+    border-radius:10px;
+    color:#fff!important;
+    background:rgba(255,255,255,.14);
+    border:1px solid rgba(255,255,255,.3);
+    transition:background .15s ease,transform .15s ease;
+}
+.posnic-new-sale-quicklink .feather{font-size:23px;stroke-width:2.8}
+.posnic-new-sale-quicklink:hover,.posnic-new-sale-quicklink:focus{
+    background:#fff!important;
+    color:#2457d6!important;
+    transform:scale(1.04);
+    outline:2px solid rgba(255,255,255,.45);
+    outline-offset:2px;
+}
+
+
+/* The sales toolbar is pinned by the scroll handler because nested app
+   scroll containers prevent CSS sticky from consistently reaching the viewport. */
+#sales_new #sales-function-shortcuts{position:relative;isolation:isolate;}
+#sales_new #sales-function-shortcuts.sales-function-toolbar-pinned{
+ margin:0 0 12px!important;
+ box-shadow:0 6px 18px rgba(18,35,70,.18);
+}
+.sales-function-toolbar-placeholder{display:block;min-height:1px;pointer-events:none;}
+/* The plus action must exist only once, in the blue icon rail. */
+a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
+#sales_new .sales-customer-entry{display:none!important}
+#sales-function-shortcuts .sales-current-customer{
+ display:flex;align-items:center;gap:9px;min-height:48px;min-width:140px;max-width:240px;
+ padding:8px 13px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;
+ color:#172554;font-weight:800;overflow:hidden;
+}
+#sales-function-shortcuts .sales-current-customer .feather{flex:0 0 auto;font-size:17px;color:#2563eb}
+#sales-function-shortcuts #sales-current-customer-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sales-function-shortcuts .sales-key-payer{background:#dcfce7;border-color:#86efac;color:#14532d;min-width:105px}
+#sales-function-shortcuts .sales-key-customer{background:#eff6ff;border-color:#93c5fd}
+#sales-function-shortcuts .sales-key-payer span{font-weight:900;letter-spacing:.03em}
+#posnic-customer-picker .modal-dialog{max-width:760px}
+#posnic-customer-picker .posnic-customer-picker-list{max-height:48vh;overflow:auto;border:1px solid #e2e8f0;border-radius:10px}
+#posnic-customer-picker .posnic-customer-picker-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-bottom:1px solid #edf0f5;cursor:pointer;background:#fff}
+#posnic-customer-picker .posnic-customer-picker-row:last-child{border-bottom:0}
+#posnic-customer-picker .posnic-customer-picker-row:hover,#posnic-customer-picker .posnic-customer-picker-row:focus{background:#eff6ff;outline:0}
+#posnic-customer-picker .posnic-customer-picker-row strong{display:block;color:#172554}
+#posnic-customer-picker .posnic-customer-picker-row small{display:block;color:#64748b}
+#posnic-customer-picker .posnic-customer-debt-preview{margin-top:12px;padding:12px 14px;border-radius:10px;background:#fff7ed;border:1px solid #fed7aa;min-height:64px;color:#7c2d12}
+#posnic-customer-picker .posnic-customer-debt-preview strong{font-size:18px}
+@media(max-width:767.98px){
+ #sales_new #sales-function-shortcuts{gap:5px;padding:7px}
+ #sales-function-shortcuts .sales-current-customer{order:0;flex:1 1 100%;max-width:none;min-width:0}
+ #sales-function-shortcuts .sales-key-payer{flex:1 1 30%}
+ #sales-function-shortcuts .sales-shortcut-total{flex:1 1 100%}
+}
+
+/* Simultaneous walk-in baskets: each tab preserves its own customer and cart. */
+#posnic-multi-baskets{
+ display:flex;align-items:center;gap:7px;flex-wrap:wrap;width:100%;
+ margin:0 0 9px;padding:7px 9px;border:1px solid #dbe3f2;border-radius:10px;
+ background:#f8faff;box-sizing:border-box;
+}
+#posnic-multi-baskets .posnic-basket-tab,
+#posnic-multi-baskets .posnic-basket-add{
+ display:inline-flex;align-items:center;justify-content:center;gap:7px;
+ min-height:36px;padding:7px 13px;border:1px solid #cbd5e1;border-radius:8px;
+ background:#fff;color:#24324b;font-size:13px;font-weight:750;cursor:pointer;
+}
+#posnic-multi-baskets .posnic-basket-tab.is-active{
+ background:#2457d6;border-color:#2457d6;color:#fff;
+ box-shadow:0 2px 7px rgba(36,87,214,.22);
+}
+#posnic-multi-baskets .posnic-basket-add{
+ border-style:dashed;border-color:#93a4c5;color:#2457d6;background:#f0f5ff;
+}
+#posnic-multi-baskets .posnic-basket-hint{
+ margin-left:auto;color:#64748b;font-size:11px;font-weight:600;
+}
+@media(max-width:767.98px){
+ #posnic-multi-baskets .posnic-basket-hint{flex:1 1 100%;margin-left:0}
+ #posnic-multi-baskets .posnic-basket-tab,#posnic-multi-baskets .posnic-basket-add{flex:1 1 auto}
+}
+
+
+/* Client basket tabs: distinct close affordance without nested buttons. */
+#posnic-multi-baskets .posnic-basket-tab-wrap{display:inline-flex;align-items:stretch;border:1px solid #dbe3f2;border-radius:9px;overflow:hidden;background:#fff;max-width:100%}
+#posnic-multi-baskets .posnic-basket-tab-wrap.is-active{border-color:#2563eb;box-shadow:0 0 0 2px rgba(37,99,235,.10)}
+#posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-tab{border:0;border-radius:0;min-width:72px;padding:8px 11px;background:transparent;color:#334155;font-weight:650}
+#posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-tab.is-active{background:#eff6ff;color:#1d4ed8}
+#posnic-multi-baskets .posnic-basket-close{width:32px;flex:0 0 32px;border:0;border-left:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:21px;line-height:1;cursor:pointer}
+#posnic-multi-baskets .posnic-basket-close:hover,#posnic-multi-baskets .posnic-basket-close:focus-visible{background:#fff1f2;color:#be123c;outline:0}
+#posnic-multi-baskets .posnic-basket-tab-wrap.is-active .posnic-basket-close{background:#eff6ff}
+
+
+/* Quiet, native POSNIC-style cashier confirmation dialog. */
+#posnic-vendeur-modal .posnic-vendeur-content{border:1px solid var(--theme-border-color,#dce3eb);border-radius:12px;overflow:hidden;box-shadow:0 18px 55px rgba(15,23,42,.16);background:var(--theme-card-bg,#fff)}
+#posnic-vendeur-modal .posnic-vendeur-header{padding:20px 22px;background:var(--theme-card-bg,#fff);border-bottom:1px solid var(--theme-border-color,#e2e8f0)}
+#posnic-vendeur-modal .posnic-vendeur-eyebrow{display:block;margin-bottom:5px;color:var(--theme-muted-color,#64748b);font-size:10px;font-weight:700;letter-spacing:.1em}
+#posnic-vendeur-modal .modal-title{font-size:20px;font-weight:700;color:var(--theme-text-color,#1e293b);margin-bottom:4px}
+#posnic-vendeur-modal .posnic-vendeur-header small{font-size:12px;color:var(--theme-muted-color,#64748b)}
+#posnic-vendeur-modal .modal-body{padding:22px}
+#posnic-vendeur-modal .modal-body>label{display:block;margin-bottom:7px;font-size:12px;font-weight:650;color:var(--theme-text-color,#334155)}
+#posnic-vendeur-modal #posnic-vendeur-select{height:44px;border:1px solid var(--theme-border-color,#cbd5e1);border-radius:8px;background:var(--theme-input-bg,#fff);color:var(--theme-text-color,#1e293b);box-shadow:none}
+#posnic-vendeur-modal #posnic-vendeur-select:focus{border-color:var(--theme-primary-color,#2563eb);box-shadow:0 0 0 3px color-mix(in srgb,var(--theme-primary-color,#2563eb) 14%,transparent)}
+#posnic-vendeur-modal .posnic-vendeur-empty{margin-top:10px;padding:10px 12px;border:1px solid var(--theme-border-color,#e2e8f0);border-radius:8px;color:var(--theme-muted-color,#64748b);font-size:12px;background:var(--theme-soft-bg,#f8fafc)}
+#posnic-vendeur-modal .posnic-vendeur-help{margin-top:10px;font-size:11px;color:var(--theme-muted-color,#64748b);line-height:1.5}
+#posnic-vendeur-modal .modal-footer{padding:13px 22px;border-top:1px solid var(--theme-border-color,#e2e8f0);gap:8px}
+#posnic-vendeur-modal .modal-footer .btn{border-radius:7px;min-height:38px;padding:8px 13px;font-weight:600;box-shadow:none}
+#posnic-vendeur-modal .modal-footer .btn:disabled{opacity:.45;cursor:not-allowed}
+
+
+/* Refined POSNIC cashier confirmation: quiet surfaces, clear hierarchy, one accent. */
+#posnic-vendeur-modal .modal-dialog{width:calc(100% - 32px);max-width:440px;margin:1.75rem auto}
+#posnic-vendeur-modal .posnic-vendeur-content{border:1px solid var(--theme-border-color,#d9e1ec);border-radius:14px;background:var(--theme-card-bg,#fff);box-shadow:0 24px 70px rgba(15,23,42,.2)}
+#posnic-vendeur-modal .posnic-vendeur-header{position:relative;display:flex;align-items:flex-start;gap:14px;padding:22px 24px 18px;border-bottom:1px solid var(--theme-border-color,#e5eaf1);background:var(--theme-card-bg,#fff)}
+#posnic-vendeur-modal .posnic-vendeur-header:before{content:"";display:block;flex:0 0 40px;width:40px;height:40px;border-radius:11px;background:var(--theme-soft-bg,#f1f5f9);border:1px solid var(--theme-border-color,#e2e8f0);background-image:var(--posnic-cashier-icon,none);background-repeat:no-repeat;background-position:center}
+#posnic-vendeur-modal .posnic-vendeur-eyebrow{margin:0 0 5px;color:var(--theme-muted-color,#718096);font-size:10px;font-weight:700;letter-spacing:.09em}
+#posnic-vendeur-modal .modal-title{font-size:19px;line-height:1.25;font-weight:700;color:var(--theme-text-color,#1e293b);margin:0 0 5px}
+#posnic-vendeur-modal .posnic-vendeur-header small{display:block;font-size:12px;line-height:1.5;color:var(--theme-muted-color,#64748b)}
+#posnic-vendeur-modal .modal-body{padding:22px 24px 20px}
+#posnic-vendeur-modal .modal-body>label{font-size:12px;font-weight:650;color:var(--theme-text-color,#334155);margin-bottom:8px}
+#posnic-vendeur-modal #posnic-vendeur-select{height:46px;padding:0 13px;border:1px solid var(--theme-border-color,#cbd5e1);border-radius:9px;background-color:var(--theme-input-bg,#fff);color:var(--theme-text-color,#1e293b);font-size:14px;box-shadow:none}
+#posnic-vendeur-modal #posnic-vendeur-select:focus{border-color:var(--theme-primary-color,#2563eb);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+#posnic-vendeur-modal .posnic-vendeur-empty{padding:12px 13px;background:var(--theme-soft-bg,#f8fafc);border:1px solid var(--theme-border-color,#e2e8f0);border-radius:9px;color:var(--theme-muted-color,#64748b);font-size:12px;line-height:1.5}
+#posnic-vendeur-modal .posnic-vendeur-help{font-size:11px;line-height:1.5;color:var(--theme-muted-color,#64748b);margin-top:11px}
+#posnic-vendeur-modal .modal-footer{padding:14px 24px 20px;border:0;gap:9px;background:var(--theme-card-bg,#fff)}
+#posnic-vendeur-modal .modal-footer .btn{min-height:40px;padding:9px 15px;border-radius:8px;font-size:12px;font-weight:650;box-shadow:none;transition:background-color .15s,border-color .15s,transform .15s}
+#posnic-vendeur-modal .modal-footer .btn-primary{background:var(--theme-primary-color,#2563eb);border-color:var(--theme-primary-color,#2563eb);color:#fff}
+#posnic-vendeur-modal .modal-footer .btn-primary:not(:disabled):hover{filter:brightness(.96);transform:translateY(-1px)}
+#posnic-vendeur-modal .modal-footer .btn-light{background:var(--theme-card-bg,#fff);border:1px solid var(--theme-border-color,#dbe3ed);color:var(--theme-text-color,#334155)}
+#posnic-vendeur-modal .modal-footer .btn-light:hover{background:var(--theme-soft-bg,#f8fafc)}
+#posnic-vendeur-modal .modal-footer .btn:focus-visible{outline:2px solid var(--theme-primary-color,#2563eb);outline-offset:2px}
+@media(max-width:480px){#posnic-vendeur-modal .modal-dialog{width:calc(100% - 20px);margin:10px auto}#posnic-vendeur-modal .posnic-vendeur-header,#posnic-vendeur-modal .modal-body{padding-left:18px;padding-right:18px}#posnic-vendeur-modal .modal-footer{padding:12px 18px 18px}}
+
+
+/* Final sale-screen cleanup: remove the empty-basket illustration and legacy PAY action. */
+#sales_new_items_table .sales-cart-image{display:none!important}
+#sales_new .salesBalanceAmount{display:none!important}
+
+/* Vendor selector: neutral white surface with high-contrast, readable text. */
+#posnic-vendeur-modal .posnic-vendeur-content,
+#posnic-vendeur-modal .posnic-vendeur-header,
+#posnic-vendeur-modal .modal-body,
+#posnic-vendeur-modal .modal-footer{background:#fff!important;color:#1f2937!important}
+#posnic-vendeur-modal .modal-title,
+#posnic-vendeur-modal .modal-body label,
+#posnic-vendeur-modal .posnic-vendeur-content,
+#posnic-vendeur-modal #posnic-vendeur-select,
+#posnic-vendeur-modal #posnic-vendeur-cancel{color:#1f2937!important}
+#posnic-vendeur-modal .modal-header small,
+#posnic-vendeur-modal .posnic-vendeur-empty,
+#posnic-vendeur-modal .posnic-vendeur-help{color:#475569!important}
+#posnic-vendeur-modal #posnic-vendeur-select{background:#fff!important;border-color:#cbd5e1!important}
+#posnic-vendeur-modal .posnic-vendeur-empty{background:#f8fafc!important}
+#posnic-vendeur-modal .modal-footer{background:#f8fafc!important}

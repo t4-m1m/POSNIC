@@ -17,6 +17,7 @@ class CreditController extends BaseController {
       branchId: t.branchId || u.branch_id || u.branchId || BaseModel.currentBranch || null,
       branchName: t.branchName || u.branch_name || BaseModel.currentBranchName || '',
       userName: u.name || u.username || u.email || '',
+      userId: u._id || u.id || null,
       currency: t.currency || u.currency_type || '',
     };
   }
@@ -60,6 +61,31 @@ class CreditController extends BaseController {
     } catch (e) {
       console.error('Error in credit.outstanding:', e);
       return this.error(res, e.message, 500);
+    }
+  }
+
+  /** GET /credit/ledger/:customerId - unpaid sale balances for one customer. */
+  async ledger(req, res) {
+    try {
+      const ctx = this._ctx(req);
+      const rows = await this.service.ledger(req.params.customerId, ctx.branchId);
+      return this.success(res, rows, 'Customer debt ledger');
+    } catch (e) {
+      console.error('Error in credit.ledger:', e);
+      return this.error(res, e.message, 400);
+    }
+  }
+
+  /** POST /credit/settle/:customerId - collect money against original sale balances. */
+  async settle(req, res) {
+    try {
+      if (!this._canWrite(req)) return this.error(res, 'Unauthorized', 403);
+      const ctx = this._ctx(req);
+      const data = await this.service.settleDebt(req.params.customerId, req.body || {}, ctx);
+      return this.success(res, data, 'Debt payment recorded');
+    } catch (e) {
+      console.error('Error in credit.settle:', e);
+      return this.error(res, e.message, /changed during collection/.test(e.message) ? 409 : 400);
     }
   }
 

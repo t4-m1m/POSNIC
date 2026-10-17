@@ -2645,7 +2645,7 @@ PosnicPro = {
     },
 
     showAddModal: function (page) {
-        $(".infobar-settings-sidebar-overlay").css({ "background": "rgba(0,0,0,0.4)", "position": "fixed" });
+        $(".infobar-settings-sidebar-overlay").addClass("is-active").css({ "background": "rgba(0,0,0,0.4)", "position": "fixed" });
         $("#infobar-settings-sidebar-" + page).addClass("sidebarshow");
     },
 
@@ -2876,6 +2876,10 @@ PosnicPro = {
         $('#viewkioskreport_page').closest('li').toggle(on('module_channels_enable'));
         $('#viewkotreport_page').closest('li')
             .toggle(PosnicPro.local.get('table_options') === 'enable');
+
+        // Payroll contains confidential salary data: hide its entry from cashiers.
+        var role = String(PosnicPro.local.get('usertype') || '').trim().toLowerCase();
+        $('#hrModule').toggle(role === 'admin' || role === 'super_admin');
 
         /*
          * Fields that only mean something to a restaurant: serving periods,
@@ -3540,10 +3544,15 @@ PosnicPro = {
              * it is a real page, the layout is a page layout, and it prints
              * correctly today.
              */
-            if (data !== 'a4' && window.electronAPI.printer.printReceipt && PosnicPro.receiptData
-                && PosnicPro.printReceiptRaw(contents)) {
-                return;
-            }
+            /*
+             * Do not send sale receipts through the raw ESC/POS text encoder by
+             * default. On some installed thermal printers the selected code page
+             * and command set do not match the encoder, producing corrupted,
+             * symbol-heavy output like the reported Tysoo receipt. Use Chromium's
+             * normal print pipeline so the Windows printer driver performs text
+             * encoding and preserves the configured HTML receipt layout. The raw
+             * helper remains available for a future explicitly verified device path.
+             */
 
             let printUrl = PosnicPro.local.get('print_url');
             // margin-top on the body pushes the first line down the roll and is
@@ -5897,8 +5906,13 @@ $(document).on('keydown.infobarEscape', function (e) {
     if (!$open.length) return;
     $open.last().find('.infobar-settings-close').first().trigger('click');
 });
+$(document).on('click.infobarOverlay', '.infobar-settings-sidebar-overlay', function () {
+    var $open = $('.infobar-settings-sidebar.sidebarshow, .infobar-settings-sidebar.sidebarview');
+    if ($open.length) $open.last().find('.infobar-settings-close').first().trigger('click');
+});
 
 $(".infobar-settings-close").on("click", function (e) {
+    $(".infobar-settings-sidebar-overlay").removeClass("is-active").css({ "background": "transparent", "position": "initial" });
     var category = 'sales/categories/new';
     if (currentHash === category) {
         hasher.changed.active = true;

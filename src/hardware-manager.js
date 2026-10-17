@@ -596,9 +596,19 @@ class HardwareManager {
         'letter':{ width: 215900, height: 279400,  windowWidth: 816 }
       };
 
-      // Get pageSize from options or default to 80mm (3inch)
-      const sizeKey = (options.pageSize || '80mm').toLowerCase();
-      const pageSize = paperSizes[sizeKey] || paperSizes['80mm'];
+      // Custom-size label stock is supplied in millimetres by the label
+      // designer. Keep the established named sizes unchanged for receipts.
+      const sizeKey = String(options.pageSize || '80mm').toLowerCase();
+      const custom = options.customPageSize && typeof options.customPageSize === 'object'
+        ? options.customPageSize : null;
+      const customWidth = custom ? Number(custom.width) : NaN;
+      const customHeight = custom ? Number(custom.height) : NaN;
+      const hasCustomPageSize = Number.isFinite(customWidth) && Number.isFinite(customHeight)
+        && customWidth >= 15 && customWidth <= 500 && customHeight >= 15 && customHeight <= 1000;
+      const pageSize = hasCustomPageSize
+        ? { width: Math.round(customWidth * 1000), height: Math.round(customHeight * 1000),
+          windowWidth: Math.max(120, Math.round(customWidth / 25.4 * 96)) }
+        : paperSizes[sizeKey] || paperSizes['80mm'];
 
       /*
        * Where the document is going to be loaded from, decided before the

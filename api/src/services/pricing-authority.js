@@ -41,6 +41,7 @@ function resolve({
   branch = {},
   submitted,
   previous,
+  priceTier = 1,
   extras = 0,
   venue,
   outlet,
@@ -64,9 +65,14 @@ function resolve({
   }
   const catalogue = number(product.selling_price ?? product.item_price ?? 0, 'Catalogue price');
   const variable = isVariable(product, branch);
-  let selling = catalogue;
-  let source = 'catalogue';
-  let ruleId = null;
+  const requestedTier = Number(priceTier == null ? 1 : priceTier);
+  if (![1, 2, 3].includes(requestedTier)) fail('invalid_price_tier', 'Choose one of the configured selling prices.');
+  const configuredTierPrice = requestedTier === 1 ? catalogue : Number(product['selling_price_' + requestedTier] || 0);
+  if (!variable && requestedTier > 1 && (!Number.isFinite(configuredTierPrice) || configuredTierPrice <= 0))
+    fail('price_tier_unavailable', name + ': this selling price is not configured.');
+  let selling = !variable && requestedTier > 1 ? number(configuredTierPrice, 'Selling price ' + requestedTier) : catalogue;
+  let source = requestedTier > 1 && !variable ? 'catalogue_tier' : 'catalogue';
+  let ruleId = requestedTier > 1 && !variable ? 'tier:' + requestedTier : null;
   if (variable) {
     if (product.item_status === 'instant' && submitted === undefined && catalogue > 0)
       submitted = catalogue;
@@ -80,14 +86,14 @@ function resolve({
       fail('item_needs_price', `${name} is priced on the day, so it needs a valid entered price.`);
     selling = number(submitted, 'Entered price');
     source = product.item_status === 'instant' ? 'quick_item' : 'variable';
-  } else if (outlet) {
+  } else if (requestedTier === 1 && outlet) {
     const override = outlet.prices?.find((p) => String(p.item_id) === String(product._id));
     selling = override
       ? number(override.price, 'Outlet price')
       : round(catalogue * (1 + number(outlet.markup_percent ?? 0, 'Outlet markup') / 100));
     source = 'outlet';
     ruleId = String(outlet.id || outlet._id);
-  } else if (priceList) {
+  } else if (requestedTier === 1 && priceList) {
     const override = priceList.item_overrides?.find(
       (p) => String(p.item_id) === String(product._id)
     );

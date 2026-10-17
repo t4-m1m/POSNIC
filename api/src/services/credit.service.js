@@ -108,25 +108,26 @@ class CreditService {
   // ============================ outstanding ============================
 
   /** A customer's outstanding = sum of `pending` across their ledger rows. */
-  async dueFor(customerId) {
+  async dueFor(customerId, branchId) {
     const db = await BaseModel.getDb();
-    const rows = await db
-      .collection('transaction')
-      .aggregate([
-        { $match: { customer_id: oid(customerId), license: BaseModel.license } },
-        { $group: { _id: '$customer_id', due: { $sum: '$pending' } } },
-      ])
-      .toArray();
+    const match = { customer_id: oid(customerId), license: BaseModel.license };
+    if (branchId) match.branch_id = oid(branchId);
+    const rows = await db.collection('transaction').aggregate([
+      { $match: match },
+      { $group: { _id: '$customer_id', due: { $sum: '$pending' } } },
+    ]).toArray();
     return rows.length ? round2(rows[0].due) : 0;
   }
 
   /** Customers who owe money, most-owed first, with their phone for reminders. */
   async outstanding(branchId, { minDue = 0 } = {}) {
     const db = await BaseModel.getDb();
+    const outstandingMatch = { license: BaseModel.license };
+    if (branchId) outstandingMatch.branch_id = oid(branchId);
     const grouped = await db
       .collection('transaction')
       .aggregate([
-        { $match: { license: BaseModel.license } },
+        { $match: outstandingMatch },
         {
           $group: {
             _id: '$customer_id',
@@ -167,9 +168,192 @@ class CreditService {
     const settings = await this.getSettings(branchId);
     const custLimit = cust && Number(cust.creditLimit) > 0 ? Number(cust.creditLimit) : 0;
     const limit = custLimit > 0 ? custLimit : Number(settings.default_credit_limit) || 0;
-    const outstanding = await this.dueFor(customerId);
+    const outstanding = await this.dueFor(customerId, branchId);
     const r = CreditService.withinLimit(limit, outstanding, addAmount);
     return { ...r, error: r.allowed ? null : 'Credit limit exceeded' };
+  }
+
+  // ============================ customer debt ledger ============================
+
+  async ledger(customerId, branchId) {
+    if (!ObjectId.isValid(String(customerId || ''))) throw new Error('Invalid customer ID');
+    const db = await BaseModel.getDb();
+    const query = { customer_id: oid(customerId), license: BaseModel.license };
+    if (branchId) query.branch_id = oid(branchId);
+    const rows = await db.collection('transaction').find(query).sort({ created_date: 1, _id: 1 }).toArray();
+    const sales = db.collection('sales');
+    const result = [];
+    for (const row of rows) {
+      const pending = round2(row.pending);
+      if (pending <= 0) continue;
+      let sale = null;
+      if (row.sale_id) {
+        const saleQuery = ObjectId.isValid(String(row.sale_id))
+          ? { _id: oid(row.sale_id), license: BaseModel.license }
+          : { sales_id: String(row.sale_id), license: BaseModel.license };
+        sale = await sales.findOne(saleQuery, { projection: { sales_id: 1, created_date: 1, sales_total: 1, total: 1, payment_pending: 1, payment_status: 1 } });
+      }
+      result.push({
+        transaction_id: String(row._id),
+        sale_id: row.sale_id ? String(row.sale_id) : '',
+        receipt_number: (sale && sale.sales_id) || String(row.sale_id || ''),
+        date: (row.created_date || (sale && sale.created_date) || row.updated_date || null),
+        sale_total: round2(row.sale_total != null ? row.sale_total : (sale && (sale.sales_total || sale.total))),
+        pending,
+        description: row.description || 'Credit sale',
+      });
+    }
+    return result;
+  }
+
+  async settleDebt(customerId, input = {}, ctx = {}) {
+    if (!ObjectId.isValid(String(customerId || ''))) throw new Error('Invalid customer ID');
+    const amount = round2(input.amount);
+    if (!(amount > 0)) throw new Error('Enter a payment amount greater than zero');
+    const methodMap = { cash: 'cash', card: 'card', bank_transfer: 'bank_transfer', other: 'other' };
+    const method = methodMap[String(input.method || 'cash').toLowerCase()];
+    if (!method) throw new Error('Choose a valid payment method');
+    const db = await BaseModel.getDb();
+    const customer = await db.collection('customers').findOne({ _id: oid(customerId), license: BaseModel.license, is_deleted: { $ne: true } });
+    if (!customer) throw new Error('Customer not found');
+    const query = { customer_id: oid(customerId), license: BaseModel.license };
+    if (ctx.branchId) query.branch_id = oid(ctx.branchId);
+    const transactions = await db.collection('transaction').find(query).sort({ created_date: 1, _id: 1 }).toArray();
+    const due = round2(transactions.reduce((sum, row) => sum + Math.max(0, Number(row.pending) || 0), 0));
+    if (amount > due + 0.009) throw new Error('Payment exceeds the customer’s outstanding balance');
+    // Use the active cashier's till journal when one is open, but do not
+    // block debt collection outside a live till session. The credit ledger and
+    // original sale balances remain the authoritative receivable records.
+    let cashRegister = null;
+    if (method === 'cash' && ctx.userId) {
+      const registerQuery = { license: BaseModel.license, register_status: 'Opened', current_user_id: oid(ctx.userId) };
+      if (ctx.branchId) registerQuery.branch_id = oid(ctx.branchId);
+      cashRegister = await db.collection('cashregister').findOne(registerQuery, { projection: { _id: 1 } });
+    }
+    // Refuse to collect against a ledger row whose original sale no longer
+    // exists. Preflight all affected rows before changing any balances.
+    let preflightAmount = amount;
+    for (const row of transactions) {
+      const pending = Math.max(0, Number(row.pending) || 0);
+      if (pending <= 0 || preflightAmount <= 0) continue;
+      if (!row.sale_id) {
+        throw new Error('This debt has no link to its original POS sale. No payment was collected; reconcile the debt record first.');
+      }
+      const saleQuery = ObjectId.isValid(String(row.sale_id))
+        ? { _id: oid(row.sale_id), license: BaseModel.license }
+        : { sales_id: String(row.sale_id), license: BaseModel.license };
+      if (ctx.branchId) saleQuery.branch_id = oid(ctx.branchId);
+      const originalSale = await db.collection('sales').findOne(saleQuery);
+      if (!originalSale) {
+        throw new Error('Original POS sale ' + String(row.sale_id) + ' was not found in this branch. No payment was collected.');
+      }
+      if (originalSale.customer_id && String(originalSale.customer_id) !== String(customerId)) {
+        throw new Error('The original POS sale belongs to a different customer. No payment was collected.');
+      }
+      const salePending = Number(originalSale.payment_pending);
+      if (Number.isFinite(salePending) && salePending + 0.009 < Math.min(pending, preflightAmount)) {
+        throw new Error('The POS sale balance and debt ledger do not match. No payment was collected; reconcile this sale first.');
+      }
+      preflightAmount = round2(preflightAmount - Math.min(pending, preflightAmount));
+    }
+    let remaining = amount;
+    const now = new Date();
+    const allocations = [];
+    for (const row of transactions) {
+      if (remaining <= 0) break;
+      const oldPending = Math.max(0, Number(row.pending) || 0);
+      if (!oldPending) continue;
+      const paid = round2(Math.min(oldPending, remaining));
+      const nextPending = round2(oldPending - paid);
+      const changed = await db.collection('transaction').updateOne(
+        { _id: row._id, license: BaseModel.license, pending: row.pending },
+        { $set: { pending: nextPending, updated_date: now, last_payment_date: now } }
+      );
+      if (!changed.matchedCount) throw new Error('A debt changed during collection. Refresh the debt page and retry.');
+      if (row.sale_id) {
+        const saleQuery = ObjectId.isValid(String(row.sale_id))
+          ? { _id: oid(row.sale_id), license: BaseModel.license }
+          : { sales_id: String(row.sale_id), license: BaseModel.license };
+        if (ctx.branchId) saleQuery.branch_id = oid(ctx.branchId);
+        const sale = await db.collection('sales').findOne(saleQuery);
+        if (sale) {
+          const oldSalePending = Math.max(0, Number(sale.payment_pending != null ? sale.payment_pending : oldPending) || 0);
+          const nextSalePending = round2(Math.max(0, oldSalePending - paid));
+          // Keep tender reporting in sync as well as the sale's balance and
+          // auditable payment history. The sales collection supports both old
+          // array-shaped and newer object-shaped multi-payment values.
+          const multi = {};
+          if (Array.isArray(sale.multi_payment)) {
+            sale.multi_payment.forEach((entry) => {
+              if (!entry || typeof entry !== 'object') return;
+              const key = String(entry.payment_mode || entry.method || '').trim();
+              const value = Number(entry.sale_payment != null ? entry.sale_payment : entry.amount) || 0;
+              if (key) multi[key] = (Number(multi[key]) || 0) + value;
+            });
+          } else if (sale.multi_payment && typeof sale.multi_payment === 'object') {
+            Object.keys(sale.multi_payment).forEach((key) => { multi[key] = Number(sale.multi_payment[key]) || 0; });
+          }
+          const creditKey = Object.keys(multi).find((key) => key.toLowerCase() === 'credit');
+          if (creditKey) multi[creditKey] = round2(Math.max(0, multi[creditKey] - paid));
+          multi[method] = round2((Number(multi[method]) || 0) + paid);
+          // Optimistic compare-and-set on the original sale prevents two
+          // simultaneous collections from spending the same outstanding balance.
+          const guardedSaleQuery = { ...saleQuery };
+          if (sale.payment_pending == null) guardedSaleQuery.payment_pending = { $exists: false };
+          else guardedSaleQuery.payment_pending = sale.payment_pending;
+          const saleChanged = await db.collection('sales').updateOne(guardedSaleQuery, {
+            $set: {
+              payment_pending: nextSalePending,
+              payment_status: nextSalePending <= 0 ? 'Paid' : 'Partialy Paid',
+              payment_mode: Object.keys(multi).filter((key) => Number(multi[key]) > 0).join(',') || method,
+              multi_payment: multi,
+              updated_date: now,
+              last_debt_payment_date: now,
+            },
+            $inc: { paid_amount: paid },
+            $push: { payments: { amount: paid, date: now, method, notes: 'Customer debt settlement', origin: { type: 'credit_settlement', transaction_id: String(row._id) } } },
+          });
+          if (!saleChanged.matchedCount) {
+            // We already reduced the ledger row above. Restore it before
+            // returning an error so no payment is silently half-applied.
+            const restored = await db.collection('transaction').updateOne(
+              { _id: row._id, license: BaseModel.license, pending: nextPending },
+              { $set: { pending: oldPending, updated_date: now, last_payment_date: row.last_payment_date || null } }
+            );
+            if (!restored.matchedCount) {
+              throw new Error('POS sale changed during collection and the debt ledger could not be restored automatically. Stop collecting and reconcile this customer account.');
+            }
+            throw new Error('The original POS sale changed during collection. No payment was recorded; refresh and retry.');
+          }
+        }
+      }
+      allocations.push({ transaction_id: String(row._id), sale_id: row.sale_id ? String(row.sale_id) : '', amount: paid, remaining: nextPending });
+      remaining = round2(remaining - paid);
+    }
+    const payment = {
+      customer_id: oid(customerId), customer_name: customer.name || '',
+      amount: round2(amount - remaining), method, allocations, branch_id: ctx.branchId ? oid(ctx.branchId) : null,
+      license: BaseModel.license, received_by: ctx.userName || '', received_at: now,
+      register_id: cashRegister ? cashRegister._id : (input.register_id && ObjectId.isValid(String(input.register_id)) ? oid(input.register_id) : null),
+      note: String(input.note || '').slice(0, 500),
+    };
+    const inserted = await db.collection('credit_payments').insertOne(payment);
+    // Keep the physical till's cash-in journal in step with a cash debt collection.
+    // Non-cash tenders remain in the credit payment ledger and never inflate drawer cash.
+    if (method === 'cash' && cashRegister) {
+      const registerUpdate = await db.collection('cashregister').updateOne(
+        { _id: cashRegister._id, license: BaseModel.license, register_status: 'Opened', current_user_id: oid(ctx.userId) },
+        { $push: { cashInOutDetail: {
+          cashin_amount: payment.amount, cashout_amount: 0,
+          cashin_description: 'Customer debt payment - ' + (customer.name || customerId),
+          cashout_description: '', date: now, source: 'credit_settlement',
+          credit_payment_id: String(inserted.insertedId),
+        } } }
+      );
+      // If the till closes concurrently, do not report a failed collection
+      // after the customer's debt and payment record have already been updated.
+    }
+    return { payment_id: String(inserted.insertedId || ''), customer_id: String(customerId), amount: payment.amount, method, allocations, due_before: due, due_after: await this.dueFor(customerId, ctx.branchId) };
   }
 
   // ============================ reminders ============================
@@ -206,7 +390,7 @@ class CreditService {
       .collection('customers')
       .findOne({ _id: oid(customerId), license: BaseModel.license });
     if (!cust) return { status: false, message: 'Customer not found' };
-    const due = await this.dueFor(customerId);
+    const due = await this.dueFor(customerId, branchId);
     if (due <= 0) return { status: true, data: { sent: 0 }, message: 'Nothing outstanding' };
 
     const settings = await this.getSettings(branchId);

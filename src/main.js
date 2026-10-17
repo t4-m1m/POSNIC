@@ -2521,30 +2521,16 @@ async function redirectToWizard() {
 async function redirectToLogin() {
   if (mainWindow) {
     const origin = `http://localhost:${apiPort()}`;
-    const cookies = await session.defaultSession.cookies.get({ url: origin });
-    const hasSavedCookie = hasUnexpiredAuthCookie(cookies);
-    const hasSavedLogin = hasSavedCookie
-      ? await validateSavedLogin(origin, cookies)
-      : false;
-
-    if (hasSavedCookie && hasSavedLogin === false) {
-      console.warn('[Auth] Saved login is no longer valid; clearing stale session');
-      await clearStaleLogin(session.defaultSession.cookies, origin, console);
-    }
-
-    const targetUrl = hasSavedLogin
-      ? `${origin}/public/dashboard.html#/dashboard`
-      : `${origin}/public/login.html`;
-
+    // A fully closed desktop app always requires credentials again, even if
+    // the previous login cookie is still valid. Preserve local app data; clear
+    // only authentication cookies before opening the login screen.
+    await clearStaleLogin(session.defaultSession.cookies, origin, console);
+    const targetUrl = `${origin}/public/login.html`;
     await loadPageAndReveal(targetUrl);
-    if (hasSavedLogin === false) {
-      require('./startup-progress').clearLoginRenderer(mainWindow.webContents, targetUrl, console);
-    }
-    writeStartupPerformanceSummary(hasSavedLogin ? 'Dashboard' : 'Login');
-    markInterfaceReady(hasSavedLogin ? 'Dashboard' : 'Login');
-    console.log(hasSavedLogin
-      ? 'Saved login found - redirected directly to dashboard\n'
-      : 'Redirected to login page\n');
+    require('./startup-progress').clearLoginRenderer(mainWindow.webContents, targetUrl, console);
+    writeStartupPerformanceSummary('Login');
+    markInterfaceReady('Login');
+    console.log('Fresh login required for this application launch\n');
 
     // Start backup scheduler now that everything is ready
     try {

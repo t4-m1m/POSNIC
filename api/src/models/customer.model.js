@@ -29,6 +29,7 @@ class CustomerModel extends BaseModel {
       name: { type: 'String', select: true, required: true },
       category_id: { type: 'ObjectId', select: true },
       category_name: { type: 'String', select: true },
+      price_tier: { type: 'Number', select: true, default: 1 },
       referrer_id: { type: 'ObjectId', select: true },
       referrer_name: { type: 'String', select: true },
       email: {

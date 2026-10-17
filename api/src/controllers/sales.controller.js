@@ -534,17 +534,53 @@ class SalesController extends BaseController {
    * the check lets the sale through rather than blocking a shop over a glitch.
    */
   async checkCustomerCreditLimit(req, payload) {
+    const total = Number(payload.sales_total) || 0;
+    const isPartial = String(payload.partial_check) === 'true';
+    const isUnpaid = String(payload.unpaid) === 'true';
+    const paid = Number(payload.partial_balance);
+    // Reject malformed entered amounts even when the unpaid toggle is on;
+    // processSale still receives this payload and must never store an invalid
+    // paid_amount greater than the sale total.
+    if (isPartial && (!Number.isFinite(paid) || paid < 0 || paid > total + 0.009)) {
+      return { blocked: true, error: 'Enter a payment amount between 0 and the sale total.' };
+    }
+    // The unpaid toggle overrides any entered amount in processSale, so use
+    // the same precedence when deciding whether this sale creates receivables.
+    const creditAmount = isUnpaid
+      ? Math.max(0, total)
+      : isPartial
+        ? Math.max(0, total - paid)
+        : 0;
+
+    if (creditAmount <= 0) return { blocked: false };
+
     try {
-      const customerId = payload.customer_id;
-      if (!customerId) return { blocked: false };
-      const total = Number(payload.sales_total) || 0;
-      let creditAmount = 0;
-      if (String(payload.partial_check) === 'true') {
-        creditAmount = total - (Number(payload.partial_balance) || 0);
-      } else if (String(payload.unpaid) === 'true') {
-        creditAmount = total;
+      const customerId = String(payload.customer_id || '').trim();
+      const customerName = String(payload.customer_name || '').trim();
+      if (!customerId || !mongoose.Types.ObjectId.isValid(customerId) ||
+          /walk.?in|cash customer|comptoir/i.test(customerName)) {
+        return {
+          blocked: true,
+          error: 'Partial payment and customer credit are available only for a registered customer. Collect the full amount for walk-in sales.',
+        };
       }
-      if (creditAmount <= 0) return { blocked: false };
+
+      // Validate the actual account in the tenant database; a forged ObjectId or
+      // a stale walk-in customer id must never create an account receivable.
+      const db = await BaseModel.getDb();
+      const customer = await db.collection('customers').findOne({
+        _id: new mongoose.Types.ObjectId(customerId),
+        license: BaseModel.license,
+        is_deleted: { $ne: true },
+        status: { $nin: ['inactive', 'blocked'] },
+      }, { projection: { _id: 1, name: 1 } });
+      if (!customer || /walk.?in|cash customer|comptoir/i.test(String(customer.name || ''))) {
+        return {
+          blocked: true,
+          error: 'Select an active, registered customer account before accepting a partial payment.',
+        };
+      }
+
       const ctx = this.buildLoyaltyCtx(req);
       const r = await creditService.checkCreditLimit(customerId, creditAmount, ctx.branchId);
       if (r && !r.allowed) {
@@ -556,8 +592,13 @@ class SalesController extends BaseController {
       }
       return { blocked: false };
     } catch (e) {
-      console.error('[credit] limit check skipped:', e && e.message);
-      return { blocked: false };
+      // Fail closed for credit: a database/ledger failure must not silently turn
+      // an unverified debt into a saved sale. Fully-paid sales never enter here.
+      console.error('[credit] validation failed:', e && e.message);
+      return {
+        blocked: true,
+        error: 'Could not verify the customer account and credit balance. Please retry or collect the full amount.',
+      };
     }
   }
 
@@ -795,6 +836,9 @@ class SalesController extends BaseController {
           );
         }
       }
+
+      // Normalize the till-selected seller before pricing/persistence. Keep this separate from the authenticated account.
+      payload.cashier_name = String(payload.cashier_name || payload.seller_name || payload.vendeur || '').trim().slice(0, 80);
 
       // Build Context for Service
       const context = await this.buildSaleContext(req);
@@ -1187,6 +1231,29 @@ class SalesController extends BaseController {
       return this.success(res, data);
     } catch (error) {
       if (error.status) return this.error(res, error.message, error.status);
+      next(error);
+    }
+  }
+
+  /** Resolve an exact scanned receipt code to its sale document ID. */
+  async receiptLookup(req, res, next) {
+    try {
+      if (!this.checkPermission('sales', 'read', req.user)) {
+        return this.error(res, ERROR_MESSAGES.UNAUTHORIZED_VIEW_SALES, 403);
+      }
+      await this.ensureContext(req);
+      const code = String(req.params.code || '').trim();
+      if (!code || code.length > 128) return this.error(res, 'Enter a valid receipt barcode.', 400);
+      const SaleModel = this.model || Sale;
+      const criteria = [{ sales_id: code }, { invoice_number: code }];
+      if (mongoose.Types.ObjectId.isValid(code)) criteria.push({ _id: new mongoose.Types.ObjectId(code) });
+      const scope = BaseModel.license ? { license: BaseModel.license } : {};
+      const sale = await SaleModel.findOne({ ...scope, $or: criteria })
+        .select('_id sales_id invoice_number')
+        .lean();
+      if (!sale) return this.error(res, 'No sale matches this exact receipt barcode.', 404);
+      return this.success(res, { id: String(sale._id), sales_id: sale.sales_id || '', invoice_number: sale.invoice_number || '' }, SUCCESS_MESSAGES.GET_SUCCESSFULLY);
+    } catch (error) {
       next(error);
     }
   }
@@ -1773,11 +1840,19 @@ class SalesController extends BaseController {
         serving_periods: servingPeriods || [],
       };
 
+      // Debt created by bills in this report period. This is receivable,
+      // not money collected, so it is separate from payment_details.
+      const outstandingAmount = salesPayments.reduce(
+        (sum, saleDoc) => sum + Math.max(0, Number(saleDoc.payment_pending) || 0),
+        0
+      );
+
       // ---- Build response data ----
       const responseData = {
         branch_details: branchDetails,
         product_details: productDetails,
         payment_details: paymentDetails,
+        outstanding_amount: roundToTwo(outstandingAmount),
         dine_details: dineDetails,
         tax_details: taxDetails,
         extra_discount: {

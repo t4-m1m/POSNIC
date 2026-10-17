@@ -17,11 +17,18 @@
         var documents = parse(PosnicPro.local.get('document_print_profiles'), {});
         var sales = parse(PosnicPro.local.get('receipt_printers'), []);
         if (!Array.isArray(sales) || !sales.length) sales = [{ name: PosnicPro.local.get('receipt_printer') || 'default', pageSize: PosnicPro.local.get('print_width') || '80mm', copies: 1 }];
-        sales = sales.map(function (v) { return { name: String(v.name || 'default'), pageSize: String(v.pageSize || '80mm'), printMode: v.printMode || 'exact', copies: Math.min(20, Math.max(1, parseInt(v.copies, 10) || 1)) }; });
+        sales = sales.map(function (v) { return { name: String(v.name || 'default'), pageSize: String(v.pageSize || '80mm'), printMode: v.printMode === 'driver' ? 'driver' : 'exact', copies: Math.min(20, Math.max(1, parseInt(v.copies, 10) || 1)) }; });
         return { sales: sales, invoice: sheet(documents.invoice), quotation: sheet(documents.quotation), itemLanguages: parse(PosnicPro.local.get('item_print_languages'), {}) };
     }
     function mirror(value) {
         state = value;
+        // The legacy Fast receipt mode serializes the designed receipt into a
+        // plain text/ESC-POS ticket. Keep the original receipt designer output
+        // as the default for every existing profile; only explicit driver mode
+        // opts out of the graphics-preserving raster path.
+        state.sales = (Array.isArray(state.sales) ? state.sales : []).map(function (v) {
+            return Object.assign({}, v, { printMode: v.printMode === 'driver' ? 'driver' : 'exact' });
+        });
         PosnicPro.local.set('item_print_languages', JSON.stringify(state.itemLanguages || {}));
         PosnicPro.local.set('document_print_profiles', JSON.stringify({ invoice: state.invoice, quotation: state.quotation }));
         PosnicPro.local.set('receipt_printers', JSON.stringify(state.sales));
@@ -61,7 +68,7 @@
         return '<tr data-profile="' + kind + '"><th scope="row">' + esc(title) + (sale && index ? ' ' + (index + 1) : '') + '</th><td>' +
             (desktop() ? select(choices, name, 'data-setting="printer" aria-label="' + esc(title + ' — ' + PosnicPro.i18n.t('lang_printer', 'Printer')) + '"') : '<span>' + esc(PosnicPro.i18n.t('lang_print_browser_dialog', 'Browser print dialog')) + '</span>') +
             '</td><td>' + select(sizes, format, 'data-setting="paper" aria-label="' + esc(title + ' — ' + PosnicPro.i18n.t('lang_print_paper_size', 'Paper size')) + '"') +
-            '</td><td>' + (sale && desktop() ? select({ exact: PosnicPro.i18n.t('lang_print_mode_exact', 'Exact design'), fast: PosnicPro.i18n.t('lang_print_mode_fast', 'Fast receipt'), driver: PosnicPro.i18n.t('lang_print_mode_driver', 'Windows driver (advanced)') }, value.printMode || 'exact', 'data-setting="mode" aria-label="Print mode" data-t-aria-label="lang_print_mode"') + '<small>' + esc(PosnicPro.i18n.t('lang_print_mode_help', 'Fast uses standard text layout. Graphics or unsupported text use Exact design.')) + '</small>' : '—') + '</td><td><input class="form-control form-control-sm" type="number" min="1" max="20" data-setting="copies" value="' + value.copies + '" aria-label="' + esc(title + ' — ' + PosnicPro.i18n.t('lang_print_copies', 'Copies')) + '"' + (desktop() ? '' : ' disabled') + '></td><td>' +
+            '</td><td>' + (sale && desktop() ? select({ exact: PosnicPro.i18n.t('lang_print_mode_exact', 'Exact design'), driver: PosnicPro.i18n.t('lang_print_mode_driver', 'Windows driver (advanced)') }, value.printMode || 'exact', 'data-setting="mode" aria-label="Print mode" data-t-aria-label="lang_print_mode"') + '<small>' + esc(PosnicPro.i18n.t('lang_print_mode_help', 'Exact design preserves the configured receipt layout, graphics and text.')) + '</small>' : '—') + '</td><td><input class="form-control form-control-sm" type="number" min="1" max="20" data-setting="copies" value="' + value.copies + '" aria-label="' + esc(title + ' — ' + PosnicPro.i18n.t('lang_print_copies', 'Copies')) + '"' + (desktop() ? '' : ' disabled') + '></td><td>' +
             (sale && desktop() ? '<button type="button" class="btn btn-outline-primary" data-print-test>' + esc(PosnicPro.i18n.t('lang_print_sample', 'Print sample')) + '</button>' : '') + (sale && index ? '<button type="button" class="btn btn-light btn-sm" data-print-remove aria-label="' + esc(PosnicPro.i18n.t('lang_print_remove_printer', 'Remove printer')) + '">×</button>' : '') + '</td></tr>';
     }
     function languageSettings() {
@@ -81,6 +88,7 @@
             (desktop() ? '<button type="button" class="btn btn-outline-primary btn-sm mr-2" data-print-add>' + esc(PosnicPro.i18n.t('lang_print_add_sales_printer', 'Add sales printer')) + '</button>' : '') +
             '<button type="button" class="btn btn-primary btn-sm" data-print-save>' + esc(PosnicPro.i18n.t('lang_print_save_settings', 'Save print settings')) + '</button><span class="small ml-2" role="status" data-print-status></span></div></section>');
         features(featureState);
+
     }
     function collect() {
         var next = { sales: [], invoice: state.invoice, quotation: state.quotation, itemLanguages: { receipt: $('#print-item-receipt').val() || '', kot: $('#print-item-kot').val() || '', bilingual: $('#print-item-bilingual').prop('checked') === true } };

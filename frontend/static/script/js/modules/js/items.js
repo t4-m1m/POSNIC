@@ -1023,6 +1023,18 @@ PosnicPro.items = {
      * rolls back if a row fails mid-way - a network blip can no longer
      * leave half a family behind.
      */
+    _newSixDigitVariantBarcode: function (used) {
+        used = used || {};
+        var code;
+        var attempts = 0;
+        do {
+            code = String(Math.floor(100000 + Math.random() * 900000));
+            attempts++;
+        } while (used[code] && attempts < 1000);
+        if (used[code]) throw new Error('Could not allocate a unique six-digit variant barcode. Please retry.');
+        used[code] = true;
+        return code;
+    },
     saveVariantFamily: function (loader) {
         var itemName = $('#items_name').val();
         /* The same ordered list loadVariant built the inputs from. Walking it
@@ -1034,6 +1046,7 @@ PosnicPro.items = {
         var shared = PosnicPro.items._sharedItemFields();
         var axis = PosnicPro.items.variantAxisLabel();
         var rows = [];
+        var usedVariantBarcodes = Object.create(null);
         /* Did somebody actually PICK a tile, or is it the automatic one?
            _sharedItemFields already resolved the fallback against the parent
            name, so by the time it is spread onto a row there is no way left to
@@ -1113,7 +1126,7 @@ PosnicPro.items = {
                 translations: (shared.translations || []).map(function (entry) { return Object.assign({}, entry, { name: entry.name ? entry.name + " / " + variantName : "" }); }),
                 variant_value: variantName,
                 sku_id: $('#items_itemid_' + key + '').val(),
-                barcode_id: $('#items_barcodeid_' + key + '').val(),
+                barcode_id: '', // Server allocates a branch-unique six-digit numeric Code 128 value.
                 mrp_price: $('#items_mrp_price_' + key + '').val(),
                 company_price: $('#items_company_price_' + key + '').val(),
                 selling_price: $('#items_selling_price_' + key + '').val(),
@@ -4646,15 +4659,6 @@ $(document).ready(function () {
                 greaterThanMfgDate: "#items_mfg_date",
                 expiryGreaterThanCurrentDate: true
             },
-            // Validated only when HSN tax mode shows it (hidden fields are
-            // ignored) - it is the tax source in that mode, so it must be a
-            // real HSN: 4-8 digits.
-            items_hsncode: {
-                digits: true,
-                minlength: 4,
-                maxlength: 8
-            }
-
         },
         messages: {
             items_name: {
@@ -4714,11 +4718,6 @@ $(document).ready(function () {
             items_description: {
                 minlength: "This field must consist of at least 100 characters",
                 maxlength: "This field should not be more than 10000 characters"
-            },
-            items_hsncode: {
-                digits: "HSN code is digits only",
-                minlength: "HSN code is 4 to 8 digits",
-                maxlength: "HSN code is 4 to 8 digits"
             },
             items_mfg_date: {
                 dateISO: "Use the date format YYYY-MM-DD",
@@ -4833,9 +4832,50 @@ $(document).ready(function () {
     });
     $("#item_image_upload_form").submit(function (event) {
         event.preventDefault();
-        if (PosnicPro.items._saving || !PosnicPro.itemTranslations.ready()) return;
-        if ($('#item_image_upload_form').valid()) {            // checks form for validity
-            if ($("#product_with_variant").is(":checked") && $("#load_price_fields").html() === '') {
+        if (PosnicPro.items._saving) return;
+        // Translations are optional metadata. A slow or failed translation
+        // bootstrap must never block saving the core item record.
+        var $itemForm = $('#item_image_upload_form');
+        /* Some installations load jQuery Validate and some load only the base
+           form helpers. Do not let a missing .valid() plugin silently abort
+           the Save action. Validate visible controls only: the form is tabbed,
+           so required controls in inactive panes must not block submission. */
+        var formIsValid = true;
+        var formElement = $itemForm[0];
+        /* Always validate the controls the cashier can actually see. The
+           jQuery Validate plugin's form-wide check can reject hidden required
+           controls in inactive item tabs / variant templates, leaving Save
+           looking dead even though the visible fields are complete. */
+        if (formElement) {
+            formIsValid = Array.prototype.every.call(formElement.elements, function (field) {
+                if (!field.willValidate || field.disabled) return true;
+                var $field = $(field);
+                var visible = $field.is(':visible') ||
+                    ($field.hasClass('select2-hidden-accessible') && $field.next('.select2-container').is(':visible'));
+                return !visible || field.checkValidity();
+            });
+        }
+        if (!formIsValid) {
+            var $invalid = $itemForm.find(':input').filter(function () {
+                if (!this.willValidate || this.disabled) return false;
+                var $field = $(this);
+                var visible = $field.is(':visible') ||
+                    ($field.hasClass('select2-hidden-accessible') && $field.next('.select2-container').is(':visible'));
+                return visible && !this.checkValidity();
+            }).first();
+            if ($invalid.length) {
+                var $pane = $invalid.closest('.tab-pane');
+                if ($pane.length && !$pane.hasClass('active')) {
+                    var paneId = $pane.attr('id');
+                    $('#item_form_tabs a[href="#' + paneId + '"]').tab('show');
+                }
+                $invalid.trigger('focus');
+            }
+            PosnicPro.alert('warning', 'Please complete the required item fields before saving.');
+            return;
+        }
+        if (formIsValid) {
+            if ($("#product_with_variant").is(":checked") && !$("#load_price_fields").children().length) {
                 PosnicPro.items.loadVariant();
                 PosnicPro.alert('info', 'Review each variant\'s price below, then Save');
             } else {

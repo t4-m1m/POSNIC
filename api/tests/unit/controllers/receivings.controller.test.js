@@ -1609,7 +1609,7 @@ describe('companyPriceUpdate', () => {
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: 'Item company price updated successfully',
+        message: 'Item purchase cost updated successfully',
       })
     );
   });
@@ -1655,7 +1655,7 @@ describe('companyPriceUpdate', () => {
     await ctrl.companyPriceUpdate(req, res);
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'item_price is required' })
+      expect.objectContaining({ message: 'item_price or item_price_eur is required' })
     );
   });
 
@@ -1665,7 +1665,7 @@ describe('companyPriceUpdate', () => {
     await ctrl.companyPriceUpdate(req, res);
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'item_price must be a valid positive number' })
+      expect.objectContaining({ message: 'item_price must be a finite non-negative number' })
     );
   });
 
@@ -1676,15 +1676,12 @@ describe('companyPriceUpdate', () => {
     expect(res.status).toHaveBeenCalledWith(400);
   });
 
-  test('returns 400 for price=0 (production bug: !item_price is true for 0)', async () => {
-    // Controller uses !item_price which is truthy for 0, blocking free items
+  test('accepts a zero price without confusing it with a missing value', async () => {
     const req = mockReq({ body: { item_id: VALID_ITEM_ID, item_price: 0 }, user: adminUser() });
     const res = mockRes();
     await ctrl.companyPriceUpdate(req, res);
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'item_price is required' })
-    );
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(col.updateOne).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({ $set: { company_price: 0 } }));
   });
 
   test('returns 404 when item is not found (matchedCount === 0)', async () => {
