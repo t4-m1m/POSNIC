@@ -1208,4 +1208,10 @@
 #infobar-settings-sidebar-tender-details .email-leftbar,#infobar-settings-sidebar-tender-details .email-rightbar{width:100%;max-width:100%;margin:0}
 #infobar-settings-sidebar-tender-details .card{border-radius:14px;overflow:hidden}
 @media(max-width:700px){.posnic-payment-redesign #payment_id{grid-template-columns:1fr}.posnic-payment-redesign .posnic-pay-due{align-items:flex-start;flex-direction:column}#infobar-settings-sidebar-tender-details .loader-qrimg>.row{padding:14px 10px 24px;gap:10px}}
+
+/* Compact cashier basket: remove notes, tax line and quote/invoice actions. */
+#click_payment_description,#click_sales_description,#saveQuoteButton,#saveInvoiceButton,#return_tax{display:none!important}
+#save_btn .changeSalesBtnText,#save_btn .save_text{font-size:0}
+#save_btn .changeSalesBtnText:after,#save_btn .save_text:after{content:'PAYER';font-size:14px}
+#tendered_amount{pointer-events:auto!important;user-select:text!important;-webkit-user-select:text!important;background:#fff!important;opacity:1!important;cursor:text!important}
 </style>
