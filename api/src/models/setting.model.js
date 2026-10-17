@@ -1813,6 +1813,21 @@ class SettingModel extends BaseModel {
           data.receipt_designs
         );
       }
+      if (data.cashier_names !== undefined) {
+        if (!Array.isArray(data.cashier_names)) {
+          return { status: false, data: null, message: 'Cashier names must be a list.' };
+        }
+        const seenCashiers = new Set();
+        updateFields.cashier_names = data.cashier_names
+          .map((name) => String(name || '').trim().slice(0, 80))
+          .filter((name) => {
+            const key = name.toLowerCase();
+            if (!name || seenCashiers.has(key)) return false;
+            seenCashiers.add(key);
+            return true;
+          })
+          .slice(0, 100);
+      }
       updateFields.updated_date = new Date();
 
       // Core Settings uses this legacy endpoint. Keep the grouped preference
@@ -1841,6 +1856,7 @@ class SettingModel extends BaseModel {
         header_print: data.header_print,
         footer_print: data.footer_print,
         ...(data.receipt_designs !== undefined ? { receipt_designs: data.receipt_designs } : {}),
+        ...(data.cashier_names !== undefined ? { cashier_names: updateFields.cashier_names || [] } : {}),
       };
       // Return the resolved picture, including cache hits and explicit clears,
       // so the form and the next print see the saved state without a reload.
