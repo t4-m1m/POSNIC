@@ -1361,6 +1361,12 @@ const processSale = async (
       payment_status: paymentStatus,
       payment_pending: paymentPending,
       payment_mode: (data.payment_mode || '').trim(),
+      // Explicit cashier attribution is separate from created_by/user_name,
+      // which continues to represent the authenticated account.
+      cashier_name:
+        data.cashier_name !== undefined && data.cashier_name !== null
+          ? String(data.cashier_name).trim().slice(0, 80)
+          : existingSale?.cashier_name || '',
       sales_description: (data.sales_description || '').trim(),
       payment_description: (data.payment_description || '').trim(),
       discount_description: (data.discount_description || '').trim(),
