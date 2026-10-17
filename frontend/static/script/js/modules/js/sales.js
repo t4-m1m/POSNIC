@@ -12348,23 +12348,47 @@ PosnicPro.sales.refreshCustomerAccount = function () {
         target.append($('<a>').attr('href', '#/customers/' + id).text(t('lang_view_details', 'View details')));
     }, failed);
 };
+PosnicPro.sales._debtButtonRequest = 0;
 PosnicPro.sales.refreshCustomerDebtButton = function (data) {
     var button = $('#sales_customer_credit_button');
     if (!button.length) return;
     var id = String(data && (data.id || data.customer_id) || $('#sales_new_customer_id').val() || '').trim();
     var name = String(data && data.name || $('#sales_new_customer_name').val() || '').trim();
-    var raw = data && data.balance != null ? data.balance : $('#customer_current_balance').val();
-    var balance = Number(String(raw == null ? '0' : raw).replace(/,/g, ''));
-    var partial = data && (data.partial_balance === true || data.partial_balance === 'true' || data.partial_balance === 1 || data.partial_balance === '1');
+    var request = ++PosnicPro.sales._debtButtonRequest;
     var walkin = !id || !name || /walk.?in|cash customer|comptoir/i.test(name);
-    if (walkin || !partial || !Number.isFinite(balance) || balance <= 0) { button.prop('hidden', true).hide(); return; }
-    $('#sales_customer_credit_amount').text(balance.toLocaleString('fr-DZ', {minimumFractionDigits:2, maximumFractionDigits:2}));
+    button.prop('hidden', true).hide();
+    $('#sales_customer_credit_amount').text('0,00');
     button.find('.sales-credit-currency').text(String(PosnicPro.local.get('currencySign') || ''));
-    button.prop('hidden', false).show();
+    if (walkin || !/^[a-f0-9]{24}$/i.test(id)) return;
+    PosnicPro.get('credit/ledger/' + encodeURIComponent(id), function (response) {
+        if (request !== PosnicPro.sales._debtButtonRequest ||
+            String($('#sales_new_customer_id').val() || '') !== id ||
+            String($('#sales_new_customer_name').val() || '').trim() !== name) return;
+        if (!response || response.type !== 'success' || !Array.isArray(response.data)) {
+            button.prop('hidden', true).hide();
+            return;
+        }
+        var balance = response.data.reduce(function (sum, row) {
+            return sum + Math.max(0, Number(row && row.pending) || 0);
+        }, 0);
+        balance = Math.round(balance * 100) / 100;
+        if (!(balance > 0)) {
+            button.prop('hidden', true).hide();
+            $('#sales_customer_credit_amount').text('0,00');
+            return;
+        }
+        $('#sales_customer_credit_amount').text(balance.toLocaleString('fr-DZ', {minimumFractionDigits:2, maximumFractionDigits:2}));
+        button.prop('hidden', false).show();
+    }, function () {
+        if (request === PosnicPro.sales._debtButtonRequest &&
+            String($('#sales_new_customer_id').val() || '') === id) {
+            button.prop('hidden', true).hide();
+            $('#sales_customer_credit_amount').text('0,00');
+        }
+    });
 };
 PosnicPro.sales.applyCustomerPick = function (data) {
     var customerRecord = [];
-    PosnicPro.sales.refreshCustomerDebtButton(data);
     PosnicPro.local.set('customerName', data.name);
     PosnicPro.local.set('customerPhone', data.phone);
     PosnicPro.local.set('customerEmail', data.email);
@@ -12380,6 +12404,7 @@ PosnicPro.sales.applyCustomerPick = function (data) {
     $('#sales_new_customer_gst_number').val(data.gst_number);
     $('#sales_new_customer_partial_balance').val(data.partial_balance);
     $('#customer_current_balance').val(data.balance);
+    PosnicPro.sales.refreshCustomerDebtButton(data);
     PosnicPro.sales.refreshCustomerAccount();
     // Price lists (V4): remember this customer's category so newly added
     // lines price from their list; fetch when the payload lacks it.
