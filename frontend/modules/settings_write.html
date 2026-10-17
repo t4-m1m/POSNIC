@@ -4644,7 +4644,14 @@
                                             <div class="tab-pane fade show active" id="core-tab-sale" role="tabpanel">
 <fieldset class="border rounded p-3 mb-4" id="posnic-cashier-settings">
     <legend class="h6"><i class="feather icon-users mr-2"></i>Vendeurs / Caissiers</legend>
-    <p class="text-muted mb-3">Gérez la liste utilisée par la fenêtre de confirmation Vendeur avant chaque validation de vente avec F1 ou F2.</p>
+    <p class="text-muted mb-3">Gérez la liste des vendeurs et choisissez si une confirmation est demandée avant la validation.</p>
+    <div class="form-group mb-3">
+        <label class="d-flex align-items-center" for="cashier-popup-enabled">
+            <input type="checkbox" id="cashier-popup-enabled" class="mr-2" checked>
+            <span>Demander le vendeur avant validation (F1 / F2)</span>
+        </label>
+        <small class="form-text text-muted">Désactivé : F1 et F2 exécutent directement leurs actions habituelles sans afficher la fenêtre vendeur.</small>
+    </div>
     <div class="form-row align-items-end">
         <div class="form-group col-md-8 mb-2">
             <label for="cashier-name-input">Nom du vendeur</label>

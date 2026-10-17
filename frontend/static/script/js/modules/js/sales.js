@@ -11729,6 +11729,7 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         if (raw && typeof raw === 'object') return raw;
         try { return JSON.parse(raw || '{}') || {}; } catch (_) { return {}; }
     }
+    function cashierPopupEnabled() { return generalSettings().cashier_popup_enabled !== false; }
     function cashierNames() {
         var settings = generalSettings(), names = settings.cashier_names;
         if (!Array.isArray(names)) {
@@ -11796,12 +11797,13 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
     PosnicPro.sales.runFunctionShortcut = function (key) {
         // Both checkout entry points first attribute the sale to a configured cashier.
         // F1 then performs fast checkout; F2 opens the editable payment screen.
-        if (key === 'F1' || key === 'F2') { askCashier(key); return; }
+        if ((key === 'F1' || key === 'F2') && cashierPopupEnabled()) { askCashier(key); return; }
         return originalShortcut(key);
     };
     document.addEventListener('keydown', function (e) {
         if (bypassNextFunctionKey) { bypassNextFunctionKey = false; return; }
         if (e.key !== 'F1' && e.key !== 'F2') return;
+        if (!cashierPopupEnabled()) return;
         if (!/sales\/new/i.test(String(window.location.hash || '')) && !$('#sales_new').is(':visible')) return;
         if ($('#posnic-vendeur-modal').hasClass('show')) return;
         e.preventDefault(); e.stopImmediatePropagation();

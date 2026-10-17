@@ -1691,6 +1691,7 @@ class SettingModel extends BaseModel {
            that does not mention it cannot set it either way. */
         first_run_done: onOnly,
         first_run_decided: onOnly,
+        cashier_popup_enabled: offOnly,
         quotes_enable: offOnly,
         invoices_enable: offOnly,
         pl_include_cashbook: offOnly,
@@ -1786,6 +1787,7 @@ class SettingModel extends BaseModel {
         hardware_weight_machine_enable: 'hardware_weight_machine_enable',
         enable_notification_reminders: 'enable_notification_reminders',
         enable_email_reminders: 'enable_email_reminders',
+        cashier_popup_enabled: 'cashier_popup_enabled',
       };
       for (const [field, src] of Object.entries(SOURCE_OF)) {
         if (data[src] === undefined && field in updateFields) {

@@ -641,6 +641,7 @@ PosnicPro.settings = {
                     var generalSettings = {
                         stock_management: response.data['stock_management'] !== false,
                         cashier_names: Array.isArray(response.data.cashier_names) ? response.data.cashier_names : [],
+                        cashier_popup_enabled: response.data.cashier_popup_enabled !== false,
                         purchase_exchange_rate: Number(response.data['purchase_exchange_rate']) > 0 ? Number(response.data['purchase_exchange_rate']) : 280,
                         purchase_vat_rate: Number.isFinite(Number(response.data['purchase_vat_rate'])) ? Number(response.data['purchase_vat_rate']) : 9,
                         hardware_weight_machine_enable: response.data['hardware_weight_machine_enable'] || false,
@@ -1011,6 +1012,7 @@ PosnicPro.settings = {
                 var generalSettings = {
                     stock_management: data.stock_management !== false,
                     cashier_names: Array.isArray(data.cashier_names) ? data.cashier_names : [],
+                    cashier_popup_enabled: data.cashier_popup_enabled !== false,
                     purchase_exchange_rate: Number(data.purchase_exchange_rate) > 0 ? Number(data.purchase_exchange_rate) : 280,
                     purchase_vat_rate: Number.isFinite(Number(data.purchase_vat_rate)) ? Number(data.purchase_vat_rate) : 9,
                     hardware_weight_machine_enable: data.hardware_weight_machine_enable || false,
@@ -10350,6 +10352,10 @@ $(document).on('click','#save_captain_tables',function(){
         if (!$list.length) return;
         names = (Array.isArray(names) ? names : ($list.data('draftNames') || readNames())).slice();
         $list.data('draftNames', names);
+        var currentSettings = readSettings();
+        if (!$('#cashier-popup-enabled').data('userChanged')) {
+            $('#cashier-popup-enabled').prop('checked', currentSettings.cashier_popup_enabled !== false);
+        }
         $list.html(names.length ? names.map(function (name, i) {
             return '<span class="badge badge-light border d-inline-flex align-items-center p-2 posnic-cashier-chip">' + esc(name)
                 + '<button type="button" class="close cashier-name-remove ml-2" data-index="' + i + '" aria-label="Retirer ' + esc(name) + '">&times;</button></span>';
@@ -10359,19 +10365,23 @@ $(document).on('click','#save_captain_tables',function(){
         names = names.map(function (n) { return String(n || '').trim().slice(0, 80); })
             .filter(function (n, i, all) { return n && all.findIndex(function (value) { return String(value).toLowerCase() === n.toLowerCase(); }) === i; }).slice(0, 100);
         var settings = readSettings();
+        var cashierPopupEnabled = $('#cashier-popup-enabled').is(':checked');
         settings.cashier_names = names;
-        PosnicPro.put({ url: 'setting/updateCommonSettings', data: JSON.stringify({ cashier_names: names }) }, function (response) {
+        settings.cashier_popup_enabled = cashierPopupEnabled;
+        PosnicPro.put({ url: 'setting/updateCommonSettings', data: JSON.stringify({ cashier_names: names, cashier_popup_enabled: cashierPopupEnabled }) }, function (response) {
             if (response && response.type === 'success') {
                 PosnicPro.local.set('general_settings', JSON.stringify(settings));
                 PosnicPro.local.set('cashier_names', JSON.stringify(names));
+                $('#cashier-popup-enabled').removeData('userChanged');
                 render(names);
-                PosnicPro.alert('success', 'Liste des vendeurs enregistrée.');
+                PosnicPro.alert('success', 'Paramètres des vendeurs enregistrés.');
                 $(document).trigger('posnic:general-settings-loaded');
             } else PosnicPro.alert('error', response && response.message || 'Impossible d’enregistrer les vendeurs.');
         }, function () { PosnicPro.alert('error', 'Impossible d’enregistrer les vendeurs. Réessayez.'); });
     }
     $(document).off('.posnicCashierParameters');
     $(document).on('shown.bs.tab.posnicCashierParameters', '#v-pills-general-tab, a[href="#core-tab-sale"]', function () { render(); });
+    $(document).on('change.posnicCashierParameters', '#cashier-popup-enabled', function () { $(this).data('userChanged', true); });
     $(document).on('click.posnicCashierParameters', '#cashier-name-add', function () {
         var $input = $('#cashier-name-input'), name = String($input.val() || '').trim();
         if (!name) { $input.trigger('focus'); return; }
