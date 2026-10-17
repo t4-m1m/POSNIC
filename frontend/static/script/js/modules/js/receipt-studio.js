@@ -11,7 +11,7 @@ function status(s,bad){root.find('.rps-status').text(s).toggleClass('is-error',!
 function checkpoint(){undo.push(engine.copy(design));if(undo.length>30)undo.shift();}
 function sample(){
  var item=function(n,p,q){return {item_name:n,item_price:p,item_quantity:q,item_unit:'ea',total_amount:p*q};};
- return Object.assign({},branch,{receipt_designs:design,sales_id:'SAMPLE-2026-1042',created_date:new Date().toLocaleString(),receipt_date:new Date().toLocaleString(),customer_name:'Sample Customer',customer_phone:'0550 00 00 00',user_name:'Cashier',created_by:'Cashier',items:[item('Example product',1200,2),item('Second item',850,1)],items_subtotal:3250,items_total:3250,tax:0,discount:0,charges:[],payment_mode:'Cash',partial_check:'false',sales_description:'Returns accepted within 7 days with receipt.'});
+ return Object.assign({},branch,{receipt_designs:design,sales_id:'SAMPLE-2026-1042',created_date:new Date().toLocaleString(),receipt_date:new Date().toLocaleString(),customer_name:'Sample Customer',customer_phone:'0550 00 00 00',user_name:'Logged-in user',created_by:'Logged-in user',cashier_name:'Amira Benali',items:[item('Example product',2500,2),item('Second item',2500,1)],items_subtotal:7500,items_total:7500,tax:0,discount:0,charges:[],payment_mode:'Cash, Credit',multi_payment:{Cash:5000,Credit:2500},partial_check:'true',partial_balance:5000,payment_pending:2500,sales_description:'Returns accepted within 7 days with receipt.'});
 }
 function seed(data){
  try{design=data&&data.receipt_designs?schema.normalize(data.receipt_designs):engine.defaults(data||{});}catch(_){design=engine.defaults(data||{});}
@@ -52,6 +52,7 @@ function inspector(b){
  if(b.type==='items')out+='<label class="rps-label">Items layout<select data-prop="itemLayout"><option value="detailed">Detailed</option><option value="columns">Compact columns</option><option value="compact">Name and quantity</option></select></label><label class="rps-label">Item name length<input data-prop="nameMaxChars" type="number" min="8" max="80" value="'+esc(b.nameMaxChars||24)+'"></label>';
  if(b.type==='divider')out+='<label class="rps-label">Line style<select data-prop="lineStyle"><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="dotted">Dotted</option></select></label>';
  if(b.type==='logo'||b.type==='image')out+='<label class="rps-label">Upload logo / image<input type="file" id="rps-image" accept="image/png,image/jpeg,image/webp"></label><small class="rps-help">PNG with transparent background recommended (max 5 MB).</small>';
+ if(b.type==='transaction')out+='<label class="rps-check"><input type="checkbox" data-prop="showCashier" '+(b.showCashier!==false?'checked':'')+'> Show cashier name on receipt</label>';
  if(b.type==='totals')out+='<label class="rps-check"><input type="checkbox" data-prop="showPaymentMethod" '+(b.showPaymentMethod!==false?'checked':'')+'> Show payment method</label>';
  out+='<label class="rps-check"><input type="checkbox" data-prop="bold" '+(b.bold?'checked':'')+'> Bold text</label><button type="button" class="rps-delete">Remove element</button>';
  return out;
