@@ -72,64 +72,59 @@ PosnicPro.sales = {
         if (!toolbar || !salesPage) return;
 
         var state = PosnicPro.sales._functionToolbarPinState;
-        if (!state) {
-            state = PosnicPro.sales._functionToolbarPinState = { placeholder: null, installed: false };
-        }
+        if (!state) state = PosnicPro.sales._functionToolbarPinState = { placeholder: null, installed: false, frame: false };
 
         function clearPin() {
             toolbar.classList.remove('sales-function-toolbar-pinned');
-            toolbar.style.position = '';
-            toolbar.style.top = '';
-            toolbar.style.left = '';
-            toolbar.style.width = '';
-            toolbar.style.zIndex = '';
-            toolbar.style.boxSizing = '';
-            if (state.placeholder && state.placeholder.parentNode) {
-                state.placeholder.parentNode.removeChild(state.placeholder);
-            }
+            ['position','top','left','right','width','zIndex','boxSizing'].forEach(function (name) { toolbar.style[name] = ''; });
+            if (state.placeholder && state.placeholder.parentNode) state.placeholder.parentNode.removeChild(state.placeholder);
             state.placeholder = null;
         }
-
         function updatePin() {
-            if (!document.documentElement.contains(toolbar) ||
-                window.getComputedStyle(salesPage).display === 'none') {
-                clearPin();
-                return;
+            state.frame = false;
+            if (!document.documentElement.contains(toolbar) || window.getComputedStyle(salesPage).display === 'none') {
+                clearPin(); return;
             }
-
+            // Evaluate the toolbar's original flow position on every scroll tick.
+            // Pin once it reaches the viewport top; keep a spacer in normal flow
+            // so the page doesn't jump when the toolbar becomes fixed.
             if (!state.placeholder) {
-                var initialRect = toolbar.getBoundingClientRect();
-                if (initialRect.top > 0) return;
+                var flowRect = toolbar.getBoundingClientRect();
+                if (flowRect.top > 0) return;
                 state.placeholder = document.createElement('div');
                 state.placeholder.className = 'sales-function-toolbar-placeholder';
                 state.placeholder.setAttribute('aria-hidden', 'true');
-                state.placeholder.style.height = toolbar.offsetHeight + 'px';
+                state.placeholder.style.height = Math.max(toolbar.offsetHeight, 1) + 'px';
                 state.placeholder.style.width = '100%';
                 toolbar.parentNode.insertBefore(state.placeholder, toolbar);
             }
-
             var rect = state.placeholder.getBoundingClientRect();
-            if (rect.top > 0) {
-                clearPin();
-                return;
-            }
-
+            if (rect.top > 1) { clearPin(); return; }
             toolbar.classList.add('sales-function-toolbar-pinned');
             toolbar.style.position = 'fixed';
-            toolbar.style.top = '0';
-            toolbar.style.left = rect.left + 'px';
-            toolbar.style.width = rect.width + 'px';
+            toolbar.style.top = '0px';
+            toolbar.style.left = Math.max(0, rect.left) + 'px';
+            toolbar.style.right = 'auto';
+            toolbar.style.width = Math.max(0, rect.width) + 'px';
             toolbar.style.zIndex = '1050';
             toolbar.style.boxSizing = 'border-box';
-            state.placeholder.style.height = toolbar.offsetHeight + 'px';
+            state.placeholder.style.height = Math.max(toolbar.offsetHeight, 1) + 'px';
         }
-
+        function schedulePin() {
+            if (state.frame) return;
+            state.frame = true;
+            if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(updatePin);
+            else updatePin();
+        }
         if (!state.installed) {
-            window.addEventListener('scroll', updatePin, true);
-            window.addEventListener('resize', updatePin);
+            // Capture catches scroll events from nested scrollable POS containers,
+            // not only window/document scrolling.
+            document.addEventListener('scroll', schedulePin, true);
+            window.addEventListener('scroll', schedulePin, true);
+            window.addEventListener('resize', schedulePin);
             state.installed = true;
         }
-        updatePin();
+        schedulePin();
     },
     showAdd: function () {
         PosnicPro.sales.resetOrderRequest();
