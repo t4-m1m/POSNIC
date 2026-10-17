@@ -4444,7 +4444,8 @@ PosnicPro.sales.addSale = {
                 PosnicPro.alert('warning', 'Partial payment is available only for a registered customer. Select a customer or collect the full amount.');
                 return false;
             }
-            if (checkoutSettings.module_credit_enable === false) {
+            var creditSettingValue = String(checkoutSettings.module_credit_enable == null ? '' : checkoutSettings.module_credit_enable).trim().toLowerCase();
+            if (checkoutSettings.module_credit_enable === false || ['false', 'disable', 'disabled', '0', 'no'].includes(creditSettingValue)) {
                 PosnicPro.sales.submissionInProgress = false;
                 $('#save_btn').prop('disabled', false);
                 $('#save_submit').removeClass('disabled');
