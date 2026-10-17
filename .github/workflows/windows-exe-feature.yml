@@ -60,13 +60,15 @@ jobs:
           Remove-Item mongodb.zip -Force
           Remove-Item mongodb-temp -Recurse -Force
           node scripts/check-mongodb-binaries.js
-      - name: Build Windows installer only (no tests)
+      - name: Build installer only (disable portable target, no tests)
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          npm run build -- --publish never
+          npm run build -- --win nsis --x64 --publish never
           $installer = Get-ChildItem -Path 'dist' -Filter '*-windows-x64-installer.exe' | Select-Object -First 1
           if (-not $installer) { throw 'Windows installer was not produced.' }
+          $portable = Get-ChildItem -Path 'dist' -Filter '*portable*.exe' -ErrorAction SilentlyContinue
+          if ($portable) { $portable | Remove-Item -Force }
       - name: Upload Windows installer only
         uses: actions/upload-artifact@v4
         with:
