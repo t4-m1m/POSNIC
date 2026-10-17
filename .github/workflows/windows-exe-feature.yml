@@ -1,4 +1,5 @@
 name: Windows EXE - article cost label designer branch
+# Rebuild the latest branch state and publish the installer only.
 
 on:
   push:
