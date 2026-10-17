@@ -81,27 +81,18 @@
     }
     function render() {
         var host = $('#document-print-settings');
-        // Keep an already-mounted Studio across printer-setting refreshes so
-        // unsaved design edits are not discarded. Never preserve the legacy
-        // editor root: only a root containing Studio's own header is reusable.
-        var studio = host.find('#receipt-designer').filter(function () {
-            return $(this).find('.rs-head').length > 0;
-        }).detach();
-        host.find('#receipt-designer').remove();
         host.html('<section class="print-settings-panel"><h5>' + esc(PosnicPro.i18n.t('lang_print_printers_paper', 'Printers & paper')) + '</h5><p class="small text-muted">' + esc(PosnicPro.i18n.t('lang_print_this_device', 'Saved on this computer')) + '</p><p class="small text-muted mt-2">' +
             esc(desktop() ? PosnicPro.i18n.t('lang_print_device_help', 'Choose a printer and paper for each document. Other computers keep their own choices.') : PosnicPro.i18n.t('lang_print_browser_help', 'Paper choices are saved in this browser. Choose the printer and copies in the browser print dialog.')) + '</p><div class="table-responsive"><table class="table table-sm mb-2"><thead><tr><th>' + esc(PosnicPro.i18n.t('lang_print_document', 'Document')) + '</th><th>' + esc(PosnicPro.i18n.t('lang_printer', 'Printer')) + '</th><th>' + esc(PosnicPro.i18n.t('lang_print_paper_size', 'Paper size')) + '</th><th>' + esc(PosnicPro.i18n.t('lang_print_mode', 'Print mode')) + '</th><th>' + esc(PosnicPro.i18n.t('lang_print_copies', 'Copies')) + '</th><th></th></tr></thead><tbody>' +
             state.sales.map(function (v, i) { return row('sales', v, i); }).join('') + row('invoice', state.invoice) + row('quotation', state.quotation) +
             '</tbody></table></div>' + languageSettings() + '<div class="d-flex align-items-center flex-wrap mb-2"><button type="button" class="btn btn-outline-primary btn-sm mr-2" data-print-refresh>' + esc(PosnicPro.i18n.t('lang_print_refresh_printers', 'Refresh printers')) + '</button>' +
             (desktop() ? '<button type="button" class="btn btn-outline-primary btn-sm mr-2" data-print-add>' + esc(PosnicPro.i18n.t('lang_print_add_sales_printer', 'Add sales printer')) + '</button>' : '') +
             '<button type="button" class="btn btn-primary btn-sm" data-print-save>' + esc(PosnicPro.i18n.t('lang_print_save_settings', 'Save print settings')) + '</button><span class="small ml-2" role="status" data-print-status></span></div></section>');
-        host.append('<section class="receipt-studio-panel mt-4"><h5>Receipt Studio</h5><p class="small text-muted">Edit the receipt here. Printing continues through the existing receipt renderer and printer pipeline.</p><div id="receipt-designer"></div></section>');
         features(featureState);
-        if (studio.length) {
-            host.find('#receipt-designer').replaceWith(studio);
-        } else if (PosnicPro.receiptDesignerEditor && typeof PosnicPro.receiptDesignerEditor.load === 'function') {
+        var studioRoot = $('#print-design #receipt-designer');
+        if (studioRoot.length && PosnicPro.receiptDesignerEditor && typeof PosnicPro.receiptDesignerEditor.load === 'function') {
             PosnicPro.receiptDesignerEditor.load(featureState);
-        } else {
-            host.find('#receipt-designer').html('<div class="alert alert-danger" role="alert">Receipt Studio did not load. Refresh the application after updating the desktop build.</div>');
+        } else if (studioRoot.length) {
+            studioRoot.html('<div class="alert alert-danger" role="alert">Receipt Studio failed to initialize. Reload Settings or update the desktop app.</div>');
         }
     }
     function collect() {
