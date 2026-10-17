@@ -11695,7 +11695,7 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
     var originalShortcut = PosnicPro.sales.runFunctionShortcut;
     var bypassNextFunctionKey = false;
     var selectedCashier = String(PosnicPro.local.get('last_cashier_name') || '').trim();
-    function escapeText(value) { return $('<span>').text(value == null ? '' : String(value)).html(); }
+    function escapeText(value) { return $('<span>').text(value == null ? '' : String(value)).html().replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); }
     function generalSettings() {
         var raw = PosnicPro.local.get('general_settings');
         if (raw && typeof raw === 'object') return raw;
@@ -11737,7 +11737,7 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
     $(document).on('click.cashierSettings', '#cashier-name-add', function () {
         var input = $('#cashier-name-input'), name = String(input.val() || '').trim();
         if (!name) { input.focus(); return; }
-        var names = cashierNames();
+        var names = ($('#cashier-names-list').data('draftNames') || cashierNames()).slice();
         if (names.some(function (n) { return n.toLowerCase() === name.toLowerCase(); })) {
             PosnicPro.alert('warning', 'Ce vendeur existe déjà.'); input.focus(); return;
         }
