@@ -108,25 +108,26 @@ class CreditService {
   // ============================ outstanding ============================
 
   /** A customer's outstanding = sum of `pending` across their ledger rows. */
-  async dueFor(customerId) {
+  async dueFor(customerId, branchId) {
     const db = await BaseModel.getDb();
-    const rows = await db
-      .collection('transaction')
-      .aggregate([
-        { $match: { customer_id: oid(customerId), license: BaseModel.license } },
-        { $group: { _id: '$customer_id', due: { $sum: '$pending' } } },
-      ])
-      .toArray();
+    const match = { customer_id: oid(customerId), license: BaseModel.license };
+    if (branchId) match.branch_id = oid(branchId);
+    const rows = await db.collection('transaction').aggregate([
+      { $match: match },
+      { $group: { _id: '$customer_id', due: { $sum: '$pending' } } },
+    ]).toArray();
     return rows.length ? round2(rows[0].due) : 0;
   }
 
   /** Customers who owe money, most-owed first, with their phone for reminders. */
   async outstanding(branchId, { minDue = 0 } = {}) {
     const db = await BaseModel.getDb();
+    const outstandingMatch = { license: BaseModel.license };
+    if (branchId) outstandingMatch.branch_id = oid(branchId);
     const grouped = await db
       .collection('transaction')
       .aggregate([
-        { $match: { license: BaseModel.license } },
+        { $match: outstandingMatch },
         {
           $group: {
             _id: '$customer_id',
@@ -167,7 +168,7 @@ class CreditService {
     const settings = await this.getSettings(branchId);
     const custLimit = cust && Number(cust.creditLimit) > 0 ? Number(cust.creditLimit) : 0;
     const limit = custLimit > 0 ? custLimit : Number(settings.default_credit_limit) || 0;
-    const outstanding = await this.dueFor(customerId);
+    const outstanding = await this.dueFor(customerId, branchId);
     const r = CreditService.withinLimit(limit, outstanding, addAmount);
     return { ...r, error: r.allowed ? null : 'Credit limit exceeded' };
   }
@@ -302,7 +303,7 @@ class CreditService {
         );
       }
     }
-    return { payment_id: String(inserted.insertedId || ''), customer_id: String(customerId), amount: payment.amount, method, allocations, due_before: due, due_after: await this.dueFor(customerId) };
+    return { payment_id: String(inserted.insertedId || ''), customer_id: String(customerId), amount: payment.amount, method, allocations, due_before: due, due_after: await this.dueFor(customerId, ctx.branchId) };
   }
 
   // ============================ reminders ============================
@@ -339,7 +340,7 @@ class CreditService {
       .collection('customers')
       .findOne({ _id: oid(customerId), license: BaseModel.license });
     if (!cust) return { status: false, message: 'Customer not found' };
-    const due = await this.dueFor(customerId);
+    const due = await this.dueFor(customerId, branchId);
     if (due <= 0) return { status: true, data: { sent: 0 }, message: 'Nothing outstanding' };
 
     const settings = await this.getSettings(branchId);
