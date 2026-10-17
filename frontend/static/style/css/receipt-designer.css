@@ -201,3 +201,40 @@ body.rd-workspace-open { overflow: hidden; }
 #receipt-designer .rs-format:not(.active):hover{background:var(--theme-soft-bg,#f8fafc);border-color:var(--theme-primary-color,#2563eb)}
 #receipt-designer .rd-save-area .btn,#receipt-designer .rd-format-edit,#receipt-designer .rd-format-default{border-radius:7px!important;box-shadow:none!important}
 #receipt-designer .rs-actions .btn:focus-visible,#receipt-designer .rs-add:focus-visible,#receipt-designer .rs-format:focus-visible,#receipt-designer .rs-inspector button:focus-visible{outline:2px solid var(--theme-primary-color,#2563eb);outline-offset:2px}
+
+
+/* Receipt Printing Studio — align the complete settings workspace with modern POSNIC controls. */
+#receipt-designer{--rs-line:var(--theme-border-color,#dbe3ed);--rs-panel:var(--theme-card-bg,#fff);--rs-muted:var(--theme-muted-color,#64748b);--rs-primary:var(--theme-primary-color,#2563eb);font-family:var(--theme-font-family,inherit);color:var(--theme-text-color,#243247)}
+#receipt-designer .rs-head{align-items:center;padding:2px 0 14px;border-bottom:1px solid var(--rs-line);margin-bottom:16px}
+#receipt-designer .rs-head h3{font-size:19px;letter-spacing:-.02em;color:var(--theme-text-color,#1e293b)}
+#receipt-designer .rs-head p{margin-top:5px;max-width:620px;line-height:1.55;color:var(--rs-muted)}
+#receipt-designer .rs-status{padding:6px 10px;border:1px solid var(--rs-line);border-radius:7px;background:var(--theme-soft-bg,#f8fafc);font-size:11px}
+#receipt-designer .rs-formats{gap:8px;margin:0 0 14px}
+#receipt-designer .rs-format{min-height:36px;padding:8px 12px;border-radius:8px!important;font-size:12px!important;font-weight:650!important}
+#receipt-designer .rs-work{gap:14px;grid-template-columns:178px minmax(260px,1fr) 265px;align-items:stretch}
+#receipt-designer .rs-tools,#receipt-designer .rs-inspector{border:1px solid var(--rs-line);border-radius:11px;background:var(--rs-panel);padding:14px}
+#receipt-designer .rs-tools h4,#receipt-designer .rs-inspector h4{font-size:12px;letter-spacing:.02em;margin-bottom:12px;color:var(--theme-text-color,#26364b)}
+#receipt-designer .rs-tools .rs-add{min-height:38px;margin-bottom:7px;padding:9px 10px;border-radius:8px!important;font-size:12px!important;line-height:1.35}
+#receipt-designer .rs-tools .rs-add:hover{transform:translateY(-1px)}
+#receipt-designer .rs-stage{border:1px solid var(--rs-line);border-radius:11px;background:var(--theme-soft-bg,#f1f5f9);padding:14px}
+#receipt-designer .rs-paper-meta{margin-bottom:12px;color:var(--rs-muted);font-size:11px}
+#receipt-designer .rs-paper-meta label{gap:8px;font-weight:600}
+#receipt-designer .rs-height{height:34px;border:1px solid var(--rs-line);border-radius:7px;background:var(--rs-panel);padding:6px 9px;color:inherit}
+#receipt-designer .rs-paper-wrap{padding:12px 8px}
+#receipt-designer .rs-paper{border-radius:3px;box-shadow:0 8px 24px rgba(15,23,42,.12);border:1px solid #d8dee8}
+#receipt-designer .rs-object{border-color:#a9b6c8;border-radius:3px}
+#receipt-designer .rs-object.selected{border-color:var(--rs-primary);background:rgba(37,99,235,.09);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+#receipt-designer .rs-resize{width:14px;height:14px;border-radius:4px;background:var(--rs-primary)}
+#receipt-designer .rs-inspector{background:var(--rs-panel)}
+#receipt-designer .rs-inspector label{font-size:11px;font-weight:650;color:var(--theme-text-color,#3b4b60);margin-bottom:5px}
+#receipt-designer .rs-inspector .form-control,#receipt-designer .rs-inspector input[type=text],#receipt-designer .rs-inspector input[type=number],#receipt-designer .rs-inspector select,#receipt-designer .rs-inspector textarea{min-height:35px;padding:7px 9px;border:1px solid var(--rs-line);border-radius:7px;background:var(--theme-input-bg,#fff);color:var(--theme-text-color,#243247);box-shadow:none}
+#receipt-designer .rs-inspector .form-control:focus,#receipt-designer .rs-inspector select:focus,#receipt-designer .rs-inspector textarea:focus{border-color:var(--rs-primary);box-shadow:0 0 0 3px rgba(37,99,235,.11);outline:0}
+#receipt-designer .rs-inspector small{font-size:10px;line-height:1.5;color:var(--rs-muted)}
+#receipt-designer .rs-actions .btn{min-height:36px;padding:8px 12px;border-radius:8px!important;font-size:12px!important;font-weight:650!important}
+#receipt-designer .rs-actions .btn-primary{background:var(--rs-primary)!important;border-color:var(--rs-primary)!important}
+#receipt-designer .rs-actions .btn:not(:disabled):hover{transform:translateY(-1px)}
+#receipt-designer .rd-save-area .btn{min-height:36px;border-radius:8px!important;font-weight:650!important}
+#receipt-designer .rd-print-options{border-radius:10px;background:var(--theme-card-bg,#fff);border-color:var(--rs-line)}
+#receipt-designer .rd-print-options summary{padding:3px 0;color:var(--theme-text-color,#334155)}
+@media(max-width:1000px){#receipt-designer .rs-work{grid-template-columns:155px minmax(0,1fr) 245px}}
+@media(max-width:760px){#receipt-designer .rs-work{grid-template-columns:1fr}#receipt-designer .rs-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}#receipt-designer .rs-tools h4,#receipt-designer .rs-tools p{grid-column:1/-1}#receipt-designer .rs-inspector{grid-column:auto}#receipt-designer .rs-head{align-items:flex-start}}
