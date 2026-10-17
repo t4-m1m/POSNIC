@@ -84,7 +84,7 @@ function persist(){
  },function(xhr){busy=false;root.find('.rps-save').prop('disabled',false);status(xhr&&xhr.responseJSON&&xhr.responseJSON.message||'Save failed. Your edits are still here.',true);});
 }
 function printSample(){
- try{var html=engine.render(sample(),format,false);engine.print(html,format,{sample:true,showDialog:true}).then(function(r){status(r&&r.success?'Test receipt sent to printer.':'Test print finished.');}).catch(function(e){status(e.message||'Test print failed.',true);});}catch(e){status(e.message||'Could not prepare test receipt.',true);}
+ try{var html=engine.render(sample(),format,false);engine.print(html,format,{sample:true,showDialog:true}).then(function(r){status(r&&r.success?'Print dialog opened. Choose Microsoft Print to PDF to save a copy.':'Print preview finished.');}).catch(function(e){status(e.message||'Test print failed.',true);});}catch(e){status(e.message||'Could not prepare test receipt.',true);}
 }
 function load(data){
  branch=data||{};engine=PosnicPro.receiptDesigner;schema=engine&&engine.contract;root=$('#desktop-receipt-designer');if(!root.length||!engine||!schema)return;
@@ -122,7 +122,7 @@ function load(data){
     designLoadPending=false;
     var saved=response&&response.data;
     if(saved&&saved.data&&!saved.receipt_designs)saved=saved.data;
-    if(saved&&saved.receipt_designs){branch=Object.assign({},branch,saved);seed(branch);render();status('Saved receipt design loaded from this branch.');}
+    if(saved&&saved.receipt_designs&&!busy&&root.find('.rps-status').text()!=='Unsaved changes'){branch=Object.assign({},branch,saved);seed(branch);render();status('Saved receipt design loaded from this branch.');}
    },function(){designLoadPending=false;});
   }
   if(!window.__posnicReceiptStudioMessageHandler){window.__posnicReceiptStudioMessageHandler=true;window.addEventListener('message',function(e){var d=e.data||{};if(d.type==='rps-select'){selected=d.id;render();}if(d.type==='rps-geometry'){var b=layout().blocks.find(function(x){return x.id===d.id;});if(b){checkpoint();b.x=Math.round(d.x*10)/10;b.y=Math.round(d.y);b.w=Math.round(d.w*10)/10;b.h=Math.round(d.h);layout().canvasHeight=Math.max(layout().canvasHeight,b.y+b.h+20);selected=b.id;render();status('Unsaved changes');}}});}
