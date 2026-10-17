@@ -11533,7 +11533,7 @@ $(document).on('click', '.sale-price-tier-label', function (event) { event.preve
  */
 $(document).on('keydown.posnicReceiptEditShortcut', function (event) {
     if (event.key !== 'F8' || event.altKey || event.ctrlKey || event.metaKey ||
-        !$('#sales_new').is(':visible') || $(event.target).closest('input,textarea,select,[contenteditable="true"],.modal').length) return;
+        !$('#sales_new').is(':visible') || $(event.target).closest('.modal').length) return;
     event.preventDefault();
     var existing = document.getElementById('posnic-receipt-edit-overlay');
     if (existing) { existing.remove(); }

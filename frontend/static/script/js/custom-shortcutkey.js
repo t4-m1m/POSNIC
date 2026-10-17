@@ -308,25 +308,10 @@ $(document).ready(function () {
      * shortcuts above, and precisely wrong here, because the search box is
      * where the cursor almost always is.
      */
+    // F1–F4 and F8 are owned by the POS workspace handler in sales.js.
+    // Keeping legacy bindings here caused F2/F4/F8 to trigger two unrelated
+    // actions (search/hold/clear) alongside payment/quantity/ticket actions.
     var TILL_KEYS = {
-        F2: {
-            label: 'Search item',
-            run: function () {
-                var box = document.getElementById('sales_new_item_name');
-                if (box) { box.focus(); box.select && box.select(); }
-            }
-        },
-        F4: {
-            label: 'Hold sale',
-            needs: 'write',
-            run: function () { $('#holdSaleButton').trigger('click'); }
-        },
-        F8: {
-            label: 'Clear sale',
-            needs: 'write',
-            // Clear keeps its own confirmation; this only presses the button.
-            run: function () { $('#clearSaleButton').trigger('click'); }
-        },
         F9: {
             label: 'Complete sale',
             needs: 'write',
@@ -338,41 +323,22 @@ $(document).ready(function () {
             }
         }
     };
-
-    /* Label the buttons with their key, or nobody will ever learn them. */
     function labelTillButtons() {
-        var pairs = [['#holdSaleButton', 'F4'], ['#clearSaleButton', 'F8'], ['#save_submit', 'F9']];
-        for (var i = 0; i < pairs.length; i++) {
-            var el = $(pairs[i][0]);
-            if (!el.length) continue;
-            var existing = (el.attr('title') || '').replace(/\s*\(F\d+\)\s*$/, '');
-            el.attr('title', (existing || el.text().trim()) + ' (' + pairs[i][1] + ')');
-        }
+        var el = $('#save_submit');
+        if (!el.length) return;
+        var existing = (el.attr('title') || '').replace(/\s*\(F\d+\)\s*$/, '');
+        el.attr('title', (existing || el.text().trim()) + ' (F9)');
     }
     $(document).on('shown.bs.modal hidden.bs.modal', labelTillButtons);
-    setInterval(labelTillButtons, 4000);   // the cart re-renders constantly
-
+    setInterval(labelTillButtons, 4000);
     $(document).bind('keydown', function (e) {
         if (window.location.hash.slice(1) !== '/sales/new') return;
-
         var binding = TILL_KEYS[e.key];
-        if (!binding) return;
-
-        /*
-         * Not while a dialog is open.
-         *
-         * The payment dialog has its own buttons and its own Enter handling;
-         * a stray F9 behind it is how one press becomes two sales.
-         */
-        if (document.querySelector('.modal.show')) return;
-
+        if (!binding || document.querySelector('.modal.show')) return;
         try {
             var acl = PosnicPro['userACL'] && PosnicPro['userACL'].sales;
             if (binding.needs && !(acl && acl[binding.needs] === true)) return;
-        } catch (err) {
-            return;   // no ACL loaded yet: do nothing rather than guess
-        }
-
+        } catch (err) { return; }
         e.preventDefault();
         binding.run();
         return false;

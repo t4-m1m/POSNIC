@@ -27,7 +27,7 @@
     function readCapabilities() {
         var settings = {};
         try { settings = JSON.parse(P.local.get('general_settings') || '{}'); } catch (_) {}
-        return { restaurant: businessContext === 'restaurant' || (businessContext === null && P.local.get('table_options') === 'enable'), tax: settings.module_tax_enable !== false, weight: settings.hardware_weight_machine_enable === true, online: settings.module_online_ordering_enable !== false };
+        return { restaurant: false, tax: false, weight: settings.hardware_weight_machine_enable === true, online: settings.module_online_ordering_enable !== false };
     }
     function loadRestaurantOptions() {
         function fill(id, rows, empty) {
@@ -50,8 +50,16 @@
     }
     function checkedValues(id) { return Array.from(document.querySelectorAll('#' + id + ' input:checked')).map(function (el) { return el.value; }); }
     function applyBusinessContext() {
-        var restaurant = businessContext === 'restaurant' || (businessContext === null && P.local.get('table_options') === 'enable');
-        var kind = restaurant ? 'dish' : businessContext === 'service' ? 'service' : 'product';
+        var restaurant = false;
+        var kind = businessContext === 'service' ? 'service' : 'product';
+        var restaurantTab = document.getElementById('iv2-tab-restaurant');
+        var restaurantPanel = document.getElementById('iv2-panel-restaurant');
+        if (restaurantTab) restaurantTab.hidden = true;
+        if (restaurantPanel) restaurantPanel.hidden = true;
+        var restaurantOption = document.querySelector('#iv2-section-select option[value="restaurant"]');
+        if (restaurantOption) { restaurantOption.hidden = true; restaurantOption.disabled = true; }
+        ['iv2-tax-field', 'iv2-tax-extra', 'iv2-tax-error'].forEach(function (id) { var node = document.getElementById(id); if (node) node.hidden = true; });
+        document.querySelectorAll('#items_v2 .iv2-tax-row').forEach(function (node) { node.hidden = true; });
         document.querySelector('#items_v2 input[name="iv2-kind"][value="' + kind + '"]').checked = true;
         document.querySelector('#items_v2 input[name="iv2-stock"][value="' + (kind === 'product' ? 'tracked' : 'untracked') + '"]').checked = true;
         text('iv2-product-label', restaurant ? PosnicPro.i18n.t('lang_packaged_product', 'Packaged product') : PosnicPro.i18n.t('lang_retail_product', 'Retail product'));
@@ -67,7 +75,7 @@
         var category = document.getElementById('iv2-category').selectedOptions[0];
         var details = P.itemsV2Details.status();
         return { name: value('iv2-name'), price: details.family && details.prices.length ? Math.min.apply(null, details.prices) : value('iv2-price'), cost: value('iv2-cost'), quantity: details.family && details.quantities.length ? Math.min.apply(null, details.quantities) : value('iv2-quantity'), kind: selected('iv2-kind'), stock: selected('iv2-stock'), zeroStock: selected('iv2-zero-stock'), confirmZero: document.getElementById('iv2-confirm-zero').checked, openPrice: details.openPrice, family: details.family,
-            taxId: taxReady && capabilities.tax ? value('iv2-tax') : '', taxName: capabilities.tax && tax && tax.dataset.name || '', taxRate: capabilities.tax && tax && tax.dataset.rate || 0, taxType: value('iv2-tax-type'), categoryId: value('iv2-category'), categoryName: category && category.dataset.name || '', barcode: value('iv2-barcode'), sku: value('iv2-sku'), description: value('iv2-description') };
+            taxId: '', taxName: '', taxRate: 0, taxType: 'inclusive', categoryId: value('iv2-category'), categoryName: category && category.dataset.name || '', barcode: value('iv2-barcode'), sku: value('iv2-sku'), description: value('iv2-description') };
     }
     function money(n) { return (P.local.get('currencySign') || '') + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
     var previewTimer, previewKey = '', previewSequence = 0;
@@ -189,8 +197,11 @@
         if (advancedError) { fail(advancedError.error, advancedError.field); return false; }
         var form = document.getElementById('iv2-form');
         if (!form.reportValidity()) return false;
-        if (!taxReady) { fail('Wait for tax settings to load, or choose Try again above.', 'iv2-tax-error'); return false; }
+        if (capabilities.tax && !taxReady) { fail('Wait for tax settings to load, or choose Try again above.', 'iv2-tax-error'); return false; }
         var data = Object.assign(payload(f), P.itemsV2Details.data());
+        // Retail item creation intentionally has no tax field. Ignore stale
+        // default-tax/HSN drafts so the old 0.25% value cannot be re-applied.
+        data.tax = 0; data.tax_id = ''; data.tax_name = ''; data.hsn_code = ''; data.hsn_description = ''; data.tax_type = 'inclusive';
         if (capabilities.restaurant && f.kind !== 'service') {
             data.diet = value('iv2-diet'); data.daypart_ids = checkedValues('iv2-periods');
             data.modifier_group_ids = checkedValues('iv2-modifiers'); data.show_on_menu = document.getElementById('iv2-menu').checked;
