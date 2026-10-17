@@ -186,3 +186,18 @@ body.rd-workspace-open { overflow: hidden; }
 #receipt-designer .rs-inspector small{display:block;color:#64748b;margin-top:4px}
 @media(max-width:1000px){#receipt-designer .rs-work{grid-template-columns:145px minmax(240px,1fr)}#receipt-designer .rs-inspector{grid-column:1/-1}}
 @media(max-width:600px){#receipt-designer .rs-work{grid-template-columns:1fr}#receipt-designer .rs-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}#receipt-designer .rs-tools h4,#receipt-designer .rs-tools p{grid-column:1/-1}#receipt-designer .rs-head{display:block}#receipt-designer .rs-actions{margin-top:10px}}
+
+
+/* Receipt Designer controls use the same restrained button language as POSNIC. */
+#receipt-designer .rs-actions .btn,#receipt-designer .rs-add,#receipt-designer .rs-format,#receipt-designer .rs-paper-meta button,#receipt-designer .rs-inspector button{border-radius:7px!important;min-height:34px;padding:7px 11px;font-size:12px!important;font-weight:600!important;line-height:1.35;box-shadow:none!important;transition:background-color .14s ease,border-color .14s ease,color .14s ease,transform .14s ease}
+#receipt-designer .rs-actions .btn-primary,#receipt-designer .rs-inspector .btn-primary{background:var(--theme-primary-color,#2563eb)!important;border-color:var(--theme-primary-color,#2563eb)!important;color:#fff!important}
+#receipt-designer .rs-actions .btn-primary:hover,#receipt-designer .rs-inspector .btn-primary:hover{filter:brightness(.96)}
+#receipt-designer .rs-actions .btn-light,#receipt-designer .rs-paper-meta button,#receipt-designer .rs-inspector .btn-light{background:var(--theme-card-bg,#fff)!important;border:1px solid var(--theme-border-color,#dbe3ed)!important;color:var(--theme-text-color,#334155)!important}
+#receipt-designer .rs-actions .btn-light:hover,#receipt-designer .rs-paper-meta button:hover,#receipt-designer .rs-inspector .btn-light:hover{background:var(--theme-soft-bg,#f8fafc)!important;border-color:var(--theme-border-color,#cbd5e1)!important}
+#receipt-designer .rs-add{display:flex;align-items:center;gap:8px;width:100%;margin-bottom:7px;border:1px solid var(--theme-border-color,#dbe3ed)!important;background:var(--theme-card-bg,#fff)!important;color:var(--theme-text-color,#334155)!important;text-align:left}
+#receipt-designer .rs-add:hover{background:var(--theme-soft-bg,#f8fafc)!important;border-color:var(--theme-primary-color,#2563eb)!important;color:var(--theme-primary-color,#2563eb)!important;transform:translateY(-1px)}
+#receipt-designer .rs-format{background:var(--theme-card-bg,#fff);border:1px solid var(--theme-border-color,#dbe3ed);color:var(--theme-text-color,#334155)}
+#receipt-designer .rs-format.active{background:var(--theme-primary-color,#2563eb)!important;border-color:var(--theme-primary-color,#2563eb)!important;color:#fff!important}
+#receipt-designer .rs-format:not(.active):hover{background:var(--theme-soft-bg,#f8fafc);border-color:var(--theme-primary-color,#2563eb)}
+#receipt-designer .rd-save-area .btn,#receipt-designer .rd-format-edit,#receipt-designer .rd-format-default{border-radius:7px!important;box-shadow:none!important}
+#receipt-designer .rs-actions .btn:focus-visible,#receipt-designer .rs-add:focus-visible,#receipt-designer .rs-format:focus-visible,#receipt-designer .rs-inspector button:focus-visible{outline:2px solid var(--theme-primary-color,#2563eb);outline-offset:2px}
