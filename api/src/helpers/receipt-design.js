@@ -159,6 +159,10 @@
           b.width = block.width == null ? 100 : Number(block.width);
           if (![50, 100].includes(b.width))
             throw new Error('Choose full or half width for a field.');
+          if (block.field === 'sale_note' && Object.prototype.hasOwnProperty.call(block, 'text')) {
+            b.text = String(block.text == null ? '' : block.text);
+            if (b.text.length > 1000) throw new Error('Sale note text must be 1,000 characters or fewer.');
+          }
         }
         if (block.type === 'items') {
           if (block.heading != null) {

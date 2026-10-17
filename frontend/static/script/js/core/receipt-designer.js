@@ -178,7 +178,7 @@
             '.rd-total-row{display:flex;justify-content:space-between;gap:12px;margin:3px 0;}.rd-grand-total{font-size:1.3em;font-weight:bold;border-top:2px solid #111;padding-top:7px;margin-top:8px;}' +
             '.rd-totals{width:' + (sheet ? '48%' : '100%') + ';margin-left:auto;}.rd-transaction{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;border-bottom:1px solid #bbb;padding-bottom:8px;}' +
             '.rd-transaction>strong,.rd-transaction-date{flex:0 0 auto;min-width:0;max-width:100%;}.rd-transaction-date{margin-left:auto;text-align:right;}' +
-            '.rd-header-value{display:inline-block;max-width:100%;vertical-align:top;overflow-wrap:anywhere;}' +
+            '.rd-header-value{display:inline-block;max-width:100%;vertical-align:top;overflow-wrap:anywhere;}.rd-sale-meta{display:flex;justify-content:space-between;gap:4px;align-items:flex-start;}.rd-sale-meta>strong{min-width:0;overflow-wrap:anywhere;}.rd-sale-details .rd-divider{border:0;border-top:1px dashed #777;}.rd-sale-client,.rd-cashier{margin-top:2px;}' +
             '.rd-muted{color:#555;font-size:.9em;}.rd-text{white-space:pre-wrap;}.rd-divider{border:0;border-top:1px dashed #777;margin:10px 0;}' +
             '.rd-sheet .rd-store{padding-bottom:12px;border-bottom:2px solid #222;}.rd-terms{margin-top:20px;font-size:.9em;white-space:pre-line;}' +
             (sheet ? sheetCss(format) :
@@ -262,12 +262,16 @@
                         var headerSize = Number(b.fontSize) || layout.fontSize;
                         if (Array.from(headerText).length * headerSize * 0.605 + 4 <= contract.formats[format].content * 96 / 25.4) billPrefix = prefix;
                     }
-                    content = '<div class="rd-transaction"' + (b.showTitle === false ? ' style="column-gap:4px"' : '') + '><strong>' + (customLabel ? esc(b.labelText) + (b.labelText ? ' ' : '') : b.showTitle === false ? esc(billPrefix) : esc(documentTitle)) + (data.sales_id ? (customLabel || b.showTitle === false ? '' : ' ') + headerValue(data.sales_id) : '') + '</strong><span class="rd-transaction-date">' + thermalDate(formattedDate) + '</span></div>';
+                    var saleNumberLabel = customLabel ? b.labelText : PosnicPro.i18n.t('lang_bill_no', 'Bill no');
+                    var sellerName = data.cashier_name || data.seller_name || data.steward_name || data.steward || data.created_by || data.user_name || '';
+                    content = '<div class="rd-transaction rd-sale-details">' +
+                        '<div class="rd-sale-meta"><strong>' + esc(saleNumberLabel) + (data.sales_id ? ': ' + headerValue(data.sales_id) : '') + '</strong><span class="rd-transaction-date">' + thermalDate(formattedDate) + '</span></div>' +
+                        '<hr class="rd-divider rd-sale-separator" style="width:100%;margin:4px 0">' +
+                        (sellerName && b.showCashier !== false ? '<div class="rd-cashier"><strong>' + esc(label('Vendeur')) + ':</strong> ' + esc(sellerName) + '</div>' : '') +
+                        (present(data.customer_name) ? '<div class="rd-sale-client"><strong>' + esc(label('Client')) + ':</strong> ' + esc(String(data.customer_name).trim()) + '</div>' : '') +
+                        '</div>';
                 }
                 if (!data.sales_id && !pendingGoods) content += '<p class="rd-pending-number">' + esc(PosnicPro.i18n.t('lang_receipt_number_after_save', 'Receipt number is assigned after saving the sale.')) + '</p>';
-                if (present(data.cashier_name || data.seller_name) && b.showCashier !== false) {
-                    content += '<div class="rd-cashier"><strong>' + esc(label('Vendeur')) + ':</strong> ' + esc(data.cashier_name || data.seller_name) + '</div>';
-                }
                 if (present(taxNumber) && !hasField('customer_tax_number')) content += '<p class="rd-customer-tax">' + esc(fieldLabel('customer_tax_number')) + ': ' + esc(String(taxNumber).trim()) + '</p>';
             } else if (b.type === 'items') {
                 var compact = !sheet && b.itemLayout === 'compact';
@@ -325,7 +329,7 @@
                 }
                 content += '</div>';
             } else if (b.type === 'field') {
-                var value = values[b.field];
+                var value = b.field === 'sale_note' && Object.prototype.hasOwnProperty.call(b, 'text') ? b.text : values[b.field];
                 if (!present(value)) return '';
                 content = '<div class="rd-text">' + (b.field === 'brand_url' ? '' : '<strong class="rd-field-label">' + esc(fieldLabel(b.field)) + ':</strong> ') + esc(String(value).trim()) + '</div>';
             } else if (b.type === 'text') {
