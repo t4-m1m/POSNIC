@@ -11699,7 +11699,17 @@ $(document).on('keydown.posnicReceiptEditShortcut', function (event) {
  * unless an actual customer account is selected and credit is enabled.
  */
 $(document).on('click.posnicCreditRules', '#save_btn', function (event) {
-    var dueText = String($('.balanceDue').first().text() || '0').replace(/[^0-9,.-]/g, '').replace(/,/g, '');
+    var dueText = String($('.balanceDue').first().text() || '0').replace(/[^0-9,.-]/g, '');
+    // Accept both French decimal commas (1 234,56) and US-style grouping
+    // (1,234.56); stripping every comma turns 12,50 into 1250 and falsely
+    // blocks fully-paid walk-in sales.
+    if (dueText.indexOf(',') !== -1 && dueText.indexOf('.') !== -1) {
+        if (dueText.lastIndexOf(',') > dueText.lastIndexOf('.')) dueText = dueText.replace(/\./g, '').replace(',', '.');
+        else dueText = dueText.replace(/,/g, '');
+    } else if (dueText.indexOf(',') !== -1) {
+        var decimals = dueText.length - dueText.lastIndexOf(',') - 1;
+        dueText = decimals > 0 && decimals <= 2 ? dueText.replace(/\./g, '').replace(',', '.') : dueText.replace(/,/g, '');
+    }
     var due = parseFloat(dueText);
     if (!isFinite(due)) due = 0;
     var creditTender = 0;
