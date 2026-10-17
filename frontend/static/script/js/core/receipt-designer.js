@@ -363,15 +363,20 @@
         var canvasHeight = Math.max(80, Math.min(8000, Number(layout.canvasHeight) || 0));
         if (designs.showBranding !== false) html += '<section class="rd-block rd-branding" style="' + (layout.canvas ? 'position:absolute;left:0;top:' + canvasHeight + 'px;width:100%;' : '') + 'text-align:center;font-size:10px">Made with Posnic &middot; posnic.com</section>';
         if (pendingGoods) html += '<section class="rd-block rd-payment-status" style="' + (layout.canvas ? 'position:absolute;left:0;top:' + canvasHeight + 'px;width:100%;' : '') + '">' + esc(label('Payment pending')) + '</section>';
+        var canvasExtraHeight = 0;
         if (sheet) {
             var notes = '';
             if ((data.branch_gstin_number || on(data.gst)) && PosnicPro.sales && PosnicPro.sales.view && PosnicPro.sales.view._amountInWords) {
                 notes += '<div class="rd-terms"><strong>' + esc(PosnicPro.i18n.t('lang_amount_in_words', 'Amount in words:')) + '</strong> ' + esc(PosnicPro.sales.view._amountInWords(data.items_total)) + '</div>';
             }
             if (data.invoice_terms) notes += '<div class="rd-terms"><strong>' + esc(PosnicPro.i18n.t('lang_terms_conditions', 'Terms & conditions')) + '</strong><br>' + esc(data.invoice_terms) + '</div>';
-            if (notes) html += '<div class="rd-invoice-end"><div class="rd-invoice-end-notes">' + notes + '</div></div>';
+            if (notes) {
+                canvasExtraHeight = layout.canvas ? 180 : 0;
+                html += '<div class="rd-invoice-end"' + (layout.canvas ? ' style="position:absolute;left:0;top:' + (canvasHeight + 28) + 'px;width:100%;"' : '') + '><div class="rd-invoice-end-notes">' + notes + '</div></div>';
+            }
         }
-        var canvasCss = layout.canvas ? '.rd-document{position:relative;height:' + canvasHeight + 'px;min-height:' + canvasHeight + 'px;overflow:visible;}.rd-document>.rd-block{box-sizing:border-box;}' : '';
+        var finalCanvasHeight = Math.min(8000, canvasHeight + canvasExtraHeight);
+        var canvasCss = layout.canvas ? '.rd-document{position:relative;height:' + finalCanvasHeight + 'px;min-height:' + finalCanvasHeight + 'px;overflow:visible;}.rd-document>.rd-block{box-sizing:border-box;}' : '';
         return '<style>' + css(format, layout.fontSize) + canvasCss + (fixedItems ? '.rd-fixed-columns .rd-number{white-space:nowrap;}.rd-fixed-columns td{border-bottom:0;padding-top:2px;padding-bottom:2px;}.rd-fixed-columns th,.rd-total-quantity td,.rd-grand-total{border-color:#333;border-top-style:' + (fixedItems.lineStyle || 'dotted') + ';border-bottom-style:' + (fixedItems.lineStyle || 'dotted') + ';}.rd-transaction{border-bottom-style:' + (fixedItems.lineStyle || 'dotted') + ';}.rd-total-quantity td{border-top:1px ' + (fixedItems.lineStyle || 'dotted') + ' #333;padding-top:6px;}.rd-grand-total{border-top-width:1px;border-bottom:1px ' + (fixedItems.lineStyle || 'dotted') + ' #333;padding-bottom:6px;}' : '') + '</style><article class="rd-document' + (sheet ? ' rd-sheet' : '') + '" data-receipt-design="' + format + '">' + html + '</article>';
     }
     var activeSale = false;
