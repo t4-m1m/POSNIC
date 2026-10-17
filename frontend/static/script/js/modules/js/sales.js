@@ -4706,12 +4706,14 @@ PosnicPro.sales.addSale = {
                             button: "Ok",
                         });
                     }
+                    var fastSaleSucceeded = window.__posnicFastPayPending === true;
                     var askPrint = (PosnicPro.askposnic && PosnicPro.askposnic.checkout && PosnicPro.askposnic.checkout.print === true)
                         || window.__posnicFastPrintPending === true;
                     window.__posnicFastPrintPending = false;
                     window.__posnicFastPayPending = false;
                     if (PosnicPro.askposnic) PosnicPro.askposnic.checkout = null;
                     $('#ask_checkout_payment').remove();
+                    if (fastSaleSucceeded) PosnicPro.alert('success', 'Sale completed successfully.');
                     // Cashier checkout always prints immediately after a successful save.
                     // Do not route through the post-sale print-choice screen.
                     if (PosnicPro.sales.saleProcess !== 'KOT') {
@@ -11718,22 +11720,23 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
     // F1 deliberately follows the normal checkout preparation before submitting,
     // so payment validation and the existing duplicate-submit guard remain in force.
     if (event.key === 'F1') {
-        // Fast payment opts into immediate receipt printing after the existing
-        // validated save flow succeeds; never print before the sale is saved.
-        window.__posnicFastPrintPending = true;
-        window.__posnicFastPayPending = true;
-        var $save = $('#save_btn');
-        if ($('#tenderpage').is(':visible')) {
-            if (!$save.prop('disabled')) $save.trigger('click');
-        } else {
-            var checkout = document.querySelector('#check_button');
-            if (checkout && !checkout.disabled) checkout.click();
-        }
         event.preventDefault();
+        window.__posnicFastPrintPending = true; window.__posnicFastPayPending = true;
+        function submitFastCashSale() {
+            if (!window.__posnicFastPayPending || !$('#sales_new').is(':visible')) return;
+            var total=Number($('#sales_new_total_amount').val())||Number($('#grand_total').val())||Number(String($('#sales_new_subtotal').text()||'').replace(/,/g,''))||0;
+            if(total>0){$('#Partial_amount').val(total.toFixed(2)).trigger('input').trigger('change');$('#tendered_amount').val(total.toFixed(2)).trigger('input').trigger('change');$('#sales_new_customer_partial_balance').val('false');$('#unpaid_payment_toggle').prop('checked',true).trigger('change');}
+            var $save=$('#save_btn');
+            if($save.length&&!$save.prop('disabled'))$save.trigger('click');
+            else{window.__posnicFastPayPending=false;window.__posnicFastPrintPending=false;PosnicPro.alert('error','Fast checkout could not start. Press F2 to open payment.');}
+        }
+        if($('#tenderpage').is(':visible'))submitFastCashSale();
+        else{var checkout=document.querySelector('#check_button');if(!checkout||checkout.disabled){window.__posnicFastPayPending=false;window.__posnicFastPrintPending=false;PosnicPro.alert('warning','Add an item to the basket before completing the sale.');return;}checkout.click();window.setTimeout(submitFastCashSale,250);}
     }
 });
 
 
+$(document).ready(function(){function syncShortcutTotal(){var $v=$('#sales-shortcut-total-value');if(!$v.length)return;var $s=$('#pay_total_hide .sales_price_fields').first();if(!$s.length||!$s.text().trim())$s=$('#sales_new_subtotal');$v.text(($s.text()||'0.00').trim());var c=$('#pay_total_hide .display-currency').first().text()||PosnicPro.local.get('currencySign')||'';$('#sales-function-shortcuts .display-currency').text(c);}syncShortcutTotal();var n=document.querySelector('#pay_total_hide');if(n&&window.MutationObserver)new MutationObserver(syncShortcutTotal).observe(n,{childList:true,subtree:true,characterData:true,attributes:true});$(document).on('input change','#sales_new_item_name,#extraDisc,#sale_tip_input',syncShortcutTotal);});
 $(document).on('click', '.sale-invoice-link', function () {
     PosnicPro.sales.invoiceLink($(this).data('sale-id'));
 });
