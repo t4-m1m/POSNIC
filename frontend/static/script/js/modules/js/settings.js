@@ -10326,3 +10326,73 @@ $(document).on('click','#save_captain_tables',function(){
         button.prop('disabled',false);$('#captain_tables_message').text(PosnicPro.i18n.t('lang_successfully_completed','Successfully Completed'));
     },function(){button.prop('disabled',false);$('#captain_tables_message').text(PosnicPro.i18n.t('lang_could_not_save_table_settings_please_retry', 'Could not save table settings. Please retry.'));});
 });
+
+
+/* Vendeur list editor belongs to Settings so it is available even when the Sales module is not loaded. */
+(function posnicCashierParametersUI($) {
+    if (!$) return;
+    function readSettings() {
+        var raw = PosnicPro.local.get('general_settings');
+        if (raw && typeof raw === 'object') return raw;
+        try { return JSON.parse(raw || '{}') || {}; } catch (_) { return {}; }
+    }
+    function readNames() {
+        var settings = readSettings(), names = settings.cashier_names;
+        if (!Array.isArray(names)) {
+            try { names = JSON.parse(PosnicPro.local.get('cashier_names') || '[]'); } catch (_) { names = []; }
+        }
+        return (Array.isArray(names) ? names : []).map(function (n) { return String(n || '').trim(); })
+            .filter(function (n, i, all) { return n && all.indexOf(n.toLowerCase()) === i; }).slice(0, 100);
+    }
+    function esc(value) { return $('<span>').text(value == null ? '' : String(value)).html().replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); }
+    function render(names) {
+        var $list = $('#cashier-names-list');
+        if (!$list.length) return;
+        names = (Array.isArray(names) ? names : ($list.data('draftNames') || readNames())).slice();
+        $list.data('draftNames', names);
+        $list.html(names.length ? names.map(function (name, i) {
+            return '<span class="badge badge-light border d-inline-flex align-items-center p-2 posnic-cashier-chip">' + esc(name)
+                + '<button type="button" class="close cashier-name-remove ml-2" data-index="' + i + '" aria-label="Retirer ' + esc(name) + '">&times;</button></span>';
+        }).join('') : '<span class="text-muted">Aucun vendeur enregistré. Ajoutez un nom ci-dessus.</span>');
+    }
+    function save(names) {
+        names = names.map(function (n) { return String(n || '').trim().slice(0, 80); })
+            .filter(function (n, i, all) { return n && all.indexOf(n.toLowerCase()) === i; }).slice(0, 100);
+        var settings = readSettings();
+        settings.cashier_names = names;
+        PosnicPro.put({ url: 'setting/updateCommonSettings', data: JSON.stringify({ cashier_names: names }) }, function (response) {
+            if (response && response.type === 'success') {
+                PosnicPro.local.set('general_settings', JSON.stringify(settings));
+                PosnicPro.local.set('cashier_names', JSON.stringify(names));
+                render(names);
+                PosnicPro.alert('success', 'Liste des vendeurs enregistrée.');
+                $(document).trigger('posnic:general-settings-loaded');
+            } else PosnicPro.alert('error', response && response.message || 'Impossible d’enregistrer les vendeurs.');
+        }, function () { PosnicPro.alert('error', 'Impossible d’enregistrer les vendeurs. Réessayez.'); });
+    }
+    $(document).off('.posnicCashierParameters');
+    $(document).on('shown.bs.tab.posnicCashierParameters', '#v-pills-general-tab, a[href="#core-tab-sale"]', function () { render(); });
+    $(document).on('click.posnicCashierParameters', '#cashier-name-add', function () {
+        var $input = $('#cashier-name-input'), name = String($input.val() || '').trim();
+        if (!name) { $input.trigger('focus'); return; }
+        var names = ($('#cashier-names-list').data('draftNames') || readNames()).slice();
+        if (names.some(function (n) { return n.toLowerCase() === name.toLowerCase(); })) {
+            PosnicPro.alert('warning', 'Ce vendeur existe déjà.'); $input.trigger('focus'); return;
+        }
+        names.push(name.slice(0, 80)); $input.val(''); render(names);
+    });
+    $(document).on('keydown.posnicCashierParameters', '#cashier-name-input', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); $('#cashier-name-add').trigger('click'); }
+    });
+    $(document).on('click.posnicCashierParameters', '.cashier-name-remove', function () {
+        var names = ($('#cashier-names-list').data('draftNames') || readNames()).slice();
+        names.splice(Number($(this).attr('data-index')), 1); render(names);
+    });
+    $(document).on('click.posnicCashierParameters', '#cashier-names-save', function () {
+        var names = ($('#cashier-names-list').data('draftNames') || readNames()).slice();
+        var input = String($('#cashier-name-input').val() || '').trim();
+        if (input && !names.some(function (n) { return n.toLowerCase() === input.toLowerCase(); })) names.push(input);
+        $('#cashier-name-input').val(''); save(names); $('#cashier-names-list').removeData('draftNames');
+    });
+    $(function () { window.setTimeout(function () { render(); }, 0); });
+})(window.jQuery);
