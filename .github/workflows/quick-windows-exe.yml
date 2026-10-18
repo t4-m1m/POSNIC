@@ -108,8 +108,8 @@ jobs:
       - name: Prepare bundled app resources
         run: npm run prepare:bundle
 
-      - name: Build Windows installer and portable EXE
-        run: npx electron-builder --win nsis portable --x64 --publish never --config.win.verifyUpdateCodeSignature=false
+      - name: Build Windows installer only
+        run: npx electron-builder --win nsis --x64 --publish never --config.win.verifyUpdateCodeSignature=false
 
       - name: Upload Windows EXE builds
         uses: actions/upload-artifact@v7
@@ -117,7 +117,5 @@ jobs:
           name: Posnic-Windows-EXE
           path: |
             dist/*-windows-x64-installer.exe
-            dist/*-win-portable.exe
-            dist/*-portable.exe
           if-no-files-found: error
           retention-days: 7
