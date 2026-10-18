@@ -327,6 +327,7 @@
                 content += '</div>';
             } else if (b.type === 'field') {
                 var value = b.field === 'sale_note' && typeof b.text === 'string' && b.text.trim() ? b.text : values[b.field];
+                if (b.field === 'receipt_number') value = data.sales_id || data.sale_number || '';
                 if (!present(value)) return '';
                 content = '<div class="rd-text">' + (b.field === 'brand_url' ? '' : '<strong class="rd-field-label">' + esc(fieldLabel(b.field)) + ':</strong> ') + esc(String(value).trim()) + '</div>';
             } else if (b.type === 'text') {
@@ -352,7 +353,7 @@
                 if (!src) return '';
                 var imageWidth = b.type === 'logo' ? Math.max(5, Math.min(250, Number(b.w != null ? b.w : b.width) || (sheet ? 22 : 45))) : b.type === 'barcode' ? 90 : b.width;
                 var imageHeight = b.type === 'logo' ? Math.max(8, Math.min(2000, Number(b.h) || 44)) : b.type === 'barcode' ? Math.max(24, Math.min(200, Number(b.h) || 58)) : Number(b.h) || 32;
-                content = '<img src="' + esc(src) + '" alt="' + esc(label(b.type === 'qr' ? 'QR code' : b.type === 'logo' ? 'Store logo' : b.type === 'barcode' ? PosnicPro.i18n.t('lang_rd_receipt_barcode', 'Receipt barcode') : PosnicPro.i18n.t('lang_image', 'Image'))) + '" style="display:block;width:' + (sheet ? contract.formats[format].content * imageWidth / 100 + 'mm' : (b.type === 'barcode' ? '100%' : imageWidth + '%')) + ';height:' + (sheet ? imageHeight * 25.4 / 96 + 'mm' : imageHeight + 'px') + ';max-width:100%;object-fit:contain;margin-left:' + (b.align === 'center' ? 'auto' : '0') + ';margin-right:' + (b.align === 'left' ? 'auto' : '0') + ';">' + (b.type === 'barcode' ? '<div class="rd-barcode-value" style="font:10px/1.2 monospace;text-align:center;letter-spacing:1px;margin-top:2px;white-space:nowrap;">' + esc(data.sales_id || 'PREVIEW-RECEIPT-0001') + '</div>' : '');
+                content = '<img src="' + esc(src) + '" alt="' + esc(label(b.type === 'qr' ? 'QR code' : b.type === 'logo' ? 'Store logo' : b.type === 'barcode' ? PosnicPro.i18n.t('lang_rd_receipt_barcode', 'Receipt barcode') : PosnicPro.i18n.t('lang_image', 'Image'))) + '" style="display:block;width:' + (sheet ? contract.formats[format].content * imageWidth / 100 + 'mm' : (b.type === 'barcode' ? '100%' : imageWidth + '%')) + ';height:' + (sheet ? imageHeight * 25.4 / 96 + 'mm' : imageHeight + 'px') + ';max-width:100%;object-fit:contain;margin-left:' + (b.align === 'center' ? 'auto' : '0') + ';margin-right:' + (b.align === 'left' ? 'auto' : '0') + ';">' + (b.type === 'barcode' ? '<div class="rd-barcode-value" style="font:bold 12px/1 Tahoma,sans-serif;text-align:center;letter-spacing:0;margin-top:0;white-space:nowrap;">' + esc(data.sales_id || 'PREVIEW-RECEIPT-0001') + '</div>' : '');
             }
             var style = 'text-align:' + b.align;
             if (b.rotation != null && Number.isFinite(Number(b.rotation)) && Number(b.rotation) !== 0) {
