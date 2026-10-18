@@ -11852,7 +11852,7 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         pickerReady = true;
         var markup = '<div class="modal fade" id="posnic-customer-picker" tabindex="-1" role="dialog" aria-labelledby="posnic-customer-picker-title" aria-hidden="true">' +
           '<div class="modal-dialog modal-dialog-centered" role="document"><div class="modal-content">' +
-          '<div class="modal-header"><h5 class="modal-title" id="posnic-customer-picker-title">Choisir un client — double-cliquez pour sélectionner</h5>' +
+          '<div class="modal-header"><h5 class="modal-title" id="posnic-customer-picker-title">Choisir un client</h5>' +
           '<button type="button" class="close" data-dismiss="modal" aria-label="Fermer"><span aria-hidden="true">&times;</span></button></div>' +
           '<div class="modal-body"><input type="search" class="form-control mb-3" id="posnic-customer-picker-search" placeholder="Rechercher par nom ou téléphone" autocomplete="off">' +
           '<div class="posnic-customer-picker-list" id="posnic-customer-picker-list"><div class="p-3 text-muted">Chargement des clients…</div></div>' +
@@ -12755,7 +12755,6 @@ PosnicPro.sales.refreshCustomerAccount = function () {
 PosnicPro.sales._debtButtonRequest = 0;
 PosnicPro.sales.refreshCustomerDebtButton = function (data) {
     var button = $('#sales_customer_credit_button');
-    if (!button.length) return;
     var id = String(data && (data.id || data.customer_id) || $('#sales_new_customer_id').val() || '').trim();
     var name = String(data && data.name || $('#sales_new_customer_name').val() || '').trim();
     var request = ++PosnicPro.sales._debtButtonRequest;
@@ -12772,6 +12771,7 @@ PosnicPro.sales.refreshCustomerDebtButton = function (data) {
             String($('#sales_new_customer_name').val() || '').trim() !== name) return;
         if (!response || response.type !== 'success' || !Array.isArray(response.data)) {
             button.prop('hidden', true).hide();
+            inline.prop('hidden', true).hide();
             return;
         }
         var balance = response.data.reduce(function (sum, row) {
@@ -12780,7 +12780,8 @@ PosnicPro.sales.refreshCustomerDebtButton = function (data) {
         balance = Math.round(balance * 100) / 100;
         if (!(balance > 0)) {
             button.prop('hidden', true).hide();
-            $('#sales_customer_credit_amount').text('0,00');
+            inline.prop('hidden', true).hide();
+            $('#sales_customer_credit_amount, #sales-customer-credit-inline-amount').text('0,00');
             return;
         }
         var formattedBalance = balance.toLocaleString('fr-DZ', {minimumFractionDigits:2, maximumFractionDigits:2});
