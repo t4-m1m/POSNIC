@@ -350,7 +350,7 @@
                 var src = b.type === 'logo' ? safeImage(b.src || (!logo || logo === 'store.png' ? 'static/images/default/store.png' : logo)) : b.type === 'barcode' ? barcode(data.sales_id || 'PREVIEW-RECEIPT-0001') : safeImage(b.src);
                 if (!src) return '';
                 var imageWidth = b.type === 'logo' ? Math.max(5, Math.min(250, Number(b.w != null ? b.w : b.width) || (sheet ? 22 : 45))) : b.type === 'barcode' ? 90 : b.width;
-                content = '<img src="' + esc(src) + '" alt="' + esc(label(b.type === 'qr' ? 'QR code' : b.type === 'logo' ? 'Store logo' : b.type === 'barcode' ? PosnicPro.i18n.t('lang_rd_receipt_barcode', 'Receipt barcode') : PosnicPro.i18n.t('lang_image', 'Image'))) + '" style="width:' + (sheet ? contract.formats[format].content * imageWidth / 100 + 'mm' : imageWidth + '%') + ';max-height:' + (b.type === 'logo' ? '100px' : 'none') + ';">';
+                content = '<img src="' + esc(src) + '" alt="' + esc(label(b.type === 'qr' ? 'QR code' : b.type === 'logo' ? 'Store logo' : b.type === 'barcode' ? PosnicPro.i18n.t('lang_rd_receipt_barcode', 'Receipt barcode') : PosnicPro.i18n.t('lang_image', 'Image'))) + '" style="width:' + (sheet ? contract.formats[format].content * imageWidth / 100 + 'mm' : (b.type === 'barcode' ? '100%' : imageWidth + '%')) + ';max-height:' + (b.type === 'logo' ? '100px' : 'none') + ';">' + (b.type === 'barcode' ? '<div class="rd-barcode-value" style="font:10px/1.2 monospace;text-align:center;letter-spacing:1px;margin-top:2px;white-space:nowrap;">' + esc(data.sales_id || 'PREVIEW-RECEIPT-0001') + '</div>' : '');
             }
             var style = 'text-align:' + b.align;
             if (b.rotation != null && Number.isFinite(Number(b.rotation)) && Number(b.rotation) !== 0) {
@@ -366,9 +366,12 @@
                             var lineCount = Math.max(1, Math.ceil(Array.from(String(itemName || '')).length / (format === '58' ? 14 : 22)));
                             return total + 18 * lineCount + 8;
                         }, 28);
-                        effectiveHeight = Math.max(effectiveHeight, Math.min(4000, estimatedRowsHeight));
+                        // Basket height follows the actual receipt content, not a manually saved cap.
+                        effectiveHeight = Math.max(estimatedRowsHeight, 28);
+                        style += 'height:auto;max-height:none;overflow:visible;';
+                    } else {
+                        style += 'min-height:' + Math.min(4000, effectiveHeight) + 'px;';
                     }
-                    style += 'min-height:' + Math.min(4000, effectiveHeight) + 'px;'
                 };
             }
             if (contract.textTypes.indexOf(b.type) !== -1) {

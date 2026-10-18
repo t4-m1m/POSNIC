@@ -515,7 +515,7 @@
         // The wizard owns its visible search/category filters. Tenant scope remains enforced by the Items API.
         state.filters = {};
         state.elementLayout = readElementLayout();
-        $('#sl-search').val(''); $('#sl-category').val(''); $('#sl-from').val(1); $('#sl-batch').val(2); $('#sl-copies').val(1);
+        $('#sl-search').val(''); $('#sl-category').val(''); $('#sl-from').val(1); $('#sl-batch').val(1); $('#sl-copies').val(1);
         $('#sl-width').val(45); $('#sl-height').val(30); $('#sl-paper').val('roll');
         try {
             var saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-layout') || 'null');
