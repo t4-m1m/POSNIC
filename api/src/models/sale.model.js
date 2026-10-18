@@ -233,6 +233,9 @@ const saleItemSchema = new mongoose.Schema(
 
 const paymentSchema = new mongoose.Schema(
   {
+    // Stable identity lets reconciliation update one payment even when a sale has
+    // multiple card/bank-transfer installments with the same amount.
+    payment_id: { type: String, default: () => new mongoose.Types.ObjectId().toString() },
     amount: {
       type: Number,
       required: true,
