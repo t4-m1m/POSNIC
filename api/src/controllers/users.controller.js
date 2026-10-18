@@ -195,21 +195,24 @@ class UsersController extends BaseController {
    */
   async login(req, res, next) {
     try {
-      const { email, password } = req.body;
+      // Accept the same username-or-email identifier as the legacy POS login.
+      // This keeps initial Super Admin accounts usable without requiring an email address.
+      const loginId = String(req.body?.username || req.body?.email || '').trim();
+      const { password } = req.body || {};
 
-      // 1) Check if email and password exist
-      if (!email || !password) {
-        return next(new AppError('Please provide email and password!', httpStatus.BAD_REQUEST));
+      if (loginId.length < 3 || loginId.length > 250 || !password) {
+        return next(new AppError('Please provide a username and password!', httpStatus.BAD_REQUEST));
       }
 
-      // 2) Check if user exists && password is correct
-      const user = await this.userModel.findOne({ email }).select('+password');
+      const user = await this.userModel
+        .findOne({ $or: [{ username: loginId }, { email: loginId }] })
+        .select('+password');
 
       if (
         !user ||
         !(await require('../utils/password-match').passwordMatches(password, user.password))
       ) {
-        return next(new AppError('Incorrect email or password', httpStatus.UNAUTHORIZED));
+        return next(new AppError('Incorrect username or password', httpStatus.UNAUTHORIZED));
       }
 
       // 3) Store user id in session (PHP-style primary auth)
