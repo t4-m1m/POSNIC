@@ -411,6 +411,7 @@ PosnicPro.quickreport = {
             return { name: row[0], qty: safeNum(row[2]), total: safeNum(row[6]) };
           }),
         };
+        PosnicPro.quickreport.renderCloseTicketPreview();
 
         var summaryCash = 0, summaryCard = 0;
         PosnicPro.quickreport.lastReport.payments.forEach(function (payment) {
@@ -2342,6 +2343,7 @@ $(document).on('change', '#day-close-title, #day-close-footer, #day-close-width,
 
 $(document).ready(function () {
   PosnicPro.quickreport.loadCloseTicketSettings();
+  PosnicPro.quickreport.renderCloseTicketPreview();
   setTimeout(function () {
     var fullHash = window.location.hash;
     var hash = fullHash.replace(/^#\/?/, "");
@@ -2415,4 +2417,12 @@ $(document).on('change', '#dailysale_branch_value', function () {
   $('#daily-meal-custom').hide();
   PosnicPro.quickreport.loadPeriods();
   $('#daily-serving-period').val('');
+});
+
+$(document).on('input change', '#day-close-title, #day-close-footer, #day-close-width, #day-close-show-profit, #day-close-show-products', function () {
+  PosnicPro.quickreport.renderCloseTicketPreview();
+});
+$(document).on('click', '#day-close-save-design', function () {
+  PosnicPro.quickreport.saveCloseTicketSettings();
+  PosnicPro.quickreport.renderCloseTicketPreview();
 });
