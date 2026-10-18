@@ -1020,3 +1020,8 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
 #sales_new .sale-header-time{flex:0 0 auto;margin-left:auto;position:relative;z-index:2}
 #sales_new #sales-function-shortcuts{clear:both;position:relative;top:auto;margin-top:8px;gap:8px}
 @media(max-width:900px){#sales-function-shortcuts .sales-customer-credit-inline{flex:1 1 100%;white-space:normal}}
+
+/* Hide the tax column only in the active sale basket (not totals or reports). */
+#sales_new #sales_new_items_tbody{ }
+#sales_new #sales_new_items_tbody tr > td:nth-child(6),
+#sales_new table:has(#sales_new_items_tbody) thead tr > th:nth-child(6){display:none!important}
