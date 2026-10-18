@@ -1008,3 +1008,15 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
 #posnic-vendeur-modal #posnic-vendeur-select{background:#fff!important;border-color:#cbd5e1!important}
 #posnic-vendeur-modal .posnic-vendeur-empty{background:#f8fafc!important}
 #posnic-vendeur-modal .modal-footer{background:#f8fafc!important}
+
+
+/* Compact cashier toolbar: inline customer credit and clear space below the date/time. */
+#sales-function-shortcuts .sales-customer-credit-inline{display:flex;align-items:center;gap:10px;min-height:48px;padding:8px 12px;border:1px solid #b91c1c;border-radius:9px;background:#dc2626;color:#fff;font-weight:800;white-space:nowrap}
+#sales-function-shortcuts .sales-customer-credit-inline[hidden]{display:none!important}
+#sales-function-shortcuts .sales-customer-credit-inline strong{font-size:16px;font-variant-numeric:tabular-nums}
+#sales-function-shortcuts .sales-customer-credit-inline span{font-size:12px}
+#sales_new .th-tax-col,#sales_new td.tax-sales-line,#sales_new td.sale-tax-column,#sales_new .tax-column{display:none!important}
+#sales_new .sale-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#sales_new .sale-header-time{flex:0 0 auto;margin-left:auto;position:relative;z-index:2}
+#sales_new #sales-function-shortcuts{clear:both;position:relative;top:auto;margin-top:8px;gap:8px}
+@media(max-width:900px){#sales-function-shortcuts .sales-customer-credit-inline{flex:1 1 100%;white-space:normal}}
