@@ -861,8 +861,8 @@ saleSchema.pre('save', async function () {
     // provide an explicit sales_id (service layer remains the primary
     // source of truth for sequential/prefixed IDs).
     if (!this.sales_id) {
-      const fallbackId = `SID${Date.now()}`;
-      this.sales_id = fallbackId;
+      // Emergency path still obeys the seven-digit public sale-number format.
+      this.sales_id = String(require('crypto').randomInt(0, 10000000)).padStart(7, '0');
     }
   }
 
@@ -2245,14 +2245,12 @@ Sale.kioskOrderModel = async function (data) {
       { sort: { _id: -1 }, limit: 1 }
     );
 
-    const prefixValue = branchDoc.sales_prefix || 'INV';
-    let incrementVal = '000001';
-    if (lastRecord && lastRecord.sales_id) {
-      const subStringValue = lastRecord.sales_id.substring(3);
-      const countValue = parseInt(subStringValue, 10) + 1;
-      incrementVal = String(countValue).padStart(6, '0');
-    }
-    const prefixId = prefixValue + incrementVal;
+    // Use the same seven-digit number space for kiosk/QR orders. The unique
+    // sales_id index remains the collision backstop when tills save concurrently.
+    const lastNumber = lastRecord && /^\d{7}$/.test(String(lastRecord.sales_id || ''))
+      ? Number(lastRecord.sales_id)
+      : 0;
+    const prefixId = String(Math.min(9999999, lastNumber + 1)).padStart(7, '0');
 
     const insertData = {
       branch_id: branchDoc._id,
