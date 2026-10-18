@@ -11845,7 +11845,12 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         if (e.key !== 'F1' && e.key !== 'F2') return;
         if (!cashierPopupEnabled()) return;
         if (!/sales\/new/i.test(String(window.location.hash || '')) && !$('#sales_new').is(':visible')) return;
-        if ($('#posnic-vendeur-modal').hasClass('show')) return;
+        // Bootstrap can miss/interrupt the hidden event during a fast checkout.
+        // Recover the guard from the actual modal state so the next sale can
+        // always invoke the cashier selector instead of silently swallowing F2.
+        var $cashierModal = $('#posnic-vendeur-modal');
+        if (cashierPromptOpen && !$cashierModal.hasClass('show')) cashierPromptOpen = false;
+        if ($cashierModal.hasClass('show')) return;
         e.preventDefault(); e.stopImmediatePropagation();
         askCashier(e.key);
     }, true);
