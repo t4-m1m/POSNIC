@@ -4428,7 +4428,20 @@ PosnicPro.sales.addSale = {
             PosnicPro.sales.paymentOnlyMode !== true && PosnicPro.sales.SaleAction === 'add';
         if (fullyUnpaidNewSale) {
             var fullyUnpaidTotal = Math.max(0, Number(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot) || 0);
+            var unpaidCustomerId = String($('#sales_new_customer_id').val() || '').trim();
+            var unpaidCustomerName = String($('#sales_new_customer_name').val() || '').trim();
+            var unpaidIsWalkIn = !unpaidCustomerId || !unpaidCustomerName ||
+                /walk.?in|cash customer|comptoir|client\\s+de\\s+passage/i.test(unpaidCustomerName);
+            if (unpaidIsWalkIn) {
+                PosnicPro.sales.submissionInProgress = false;
+                $('#save_btn').prop('disabled', false);
+                $('#save_submit').removeClass('disabled');
+                PosnicPro.alert('warning', 'A fully unpaid sale is available only for a registered customer. Collect the full amount from a walk-in customer.');
+                return false;
+            }
             if (fullyUnpaidTotal > 0) {
+                // Credit is a receivable, not a payment. Clear default tender values.
+                Object.keys(payments).forEach(function (mode) { payments[mode] = 0; });
                 payments.Credit = Math.round(fullyUnpaidTotal * 100) / 100;
                 partial = '0';
                 partial_check = 'true';
@@ -11838,7 +11851,8 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
     }
     PosnicPro.sales.updateWalkInPaymentAmountLock = function () {
         var customerName = String($('#sales_new_customer_name').val() || '').trim();
-        var isWalkIn = !customerName || /walk.?in|cash customer|comptoir|client\s+de\s+passage/i.test(customerName);
+        var customerId = String($('#sales_new_customer_id').val() || '').trim();
+        var isWalkIn = !customerId || !customerName || /walk.?in|cash customer|comptoir|client\s+de\s+passage/i.test(customerName);
         var isNewCheckout = PosnicPro.sales.SaleAction === 'add' && PosnicPro.sales.paymentOnlyMode !== true;
         var $amount = $('#Partial_amount');
         if (!$amount.length || !isNewCheckout) return;
