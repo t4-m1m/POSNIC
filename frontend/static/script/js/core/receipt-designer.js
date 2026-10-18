@@ -139,7 +139,7 @@
             '.rd-invoice-header>.rd-block{margin:0;min-width:0;grid-row:1;}.rd-invoice-header>.rd-block-store{grid-column:1;}.rd-invoice-header>.rd-block-transaction{grid-column:2;text-align:right!important;}' +
             '.rd-invoice-header.has-logo{grid-template-columns:' + (compact ? '12mm' : '18mm') + ' minmax(0,1.6fr) minmax(0,1fr);}' +
             '.rd-invoice-header.has-logo>.rd-block-logo{grid-column:1;}.rd-invoice-header.has-logo>.rd-block-store{grid-column:2;}.rd-invoice-header.has-logo>.rd-block-transaction{grid-column:3;}' +
-            '.rd-invoice-header .rd-block-logo img{width:auto!important;max-width:100%;max-height:' + (compact ? '12mm' : '18mm') + '!important;}' +
+            '.rd-invoice-header .rd-block-logo img{width:auto!important;max-width:none!important;max-height:none!important;}' +
             '.rd-sheet .rd-store{border:0;padding:0;}.rd-sheet .rd-store h1{font-size:' + (compact ? '1.8em' : '2.2em') + ';line-height:1.15;margin-bottom:3mm;letter-spacing:-.025em;}' +
             '.rd-sheet .rd-store-contact,.rd-sheet .rd-store p{color:#46505d;line-height:' + (compact ? '1.45' : '1.6') + ';}' +
             '.rd-invoice-title{font-size:' + (compact ? '1.7em' : '2.1em') + ';font-weight:700;letter-spacing:.08em;margin-bottom:3mm;line-height:1.2;}' +
@@ -349,7 +349,7 @@
                 var logo = data.logo || data.branch_image;
                 var src = b.type === 'logo' ? safeImage(b.src || (!logo || logo === 'store.png' ? 'static/images/default/store.png' : logo)) : b.type === 'barcode' ? barcode(data.sales_id || 'PREVIEW-RECEIPT-0001') : safeImage(b.src);
                 if (!src) return '';
-                var imageWidth = b.type === 'logo' ? Math.max(5, Math.min(100, Number(b.width != null ? b.width : b.w) || (sheet ? 22 : 45))) : b.type === 'barcode' ? 90 : b.width;
+                var imageWidth = b.type === 'logo' ? Math.max(5, Math.min(250, Number(b.w != null ? b.w : b.width) || (sheet ? 22 : 45))) : b.type === 'barcode' ? 90 : b.width;
                 content = '<img src="' + esc(src) + '" alt="' + esc(label(b.type === 'qr' ? 'QR code' : b.type === 'logo' ? 'Store logo' : b.type === 'barcode' ? PosnicPro.i18n.t('lang_rd_receipt_barcode', 'Receipt barcode') : PosnicPro.i18n.t('lang_image', 'Image'))) + '" style="width:' + (sheet ? contract.formats[format].content * imageWidth / 100 + 'mm' : imageWidth + '%') + ';max-height:' + (b.type === 'logo' ? '100px' : 'none') + ';">';
             }
             var style = 'text-align:' + b.align;
@@ -357,7 +357,7 @@
                 style += ';transform:rotate(' + Math.max(-180, Math.min(180, Number(b.rotation))) + 'deg);transform-origin:center center;';
             }
             if (layout.canvas && Number.isFinite(Number(b.x)) && Number.isFinite(Number(b.y))) {
-                style += ';position:absolute;left:' + Math.max(0, Math.min(100, Number(b.x))) + '%;top:' + Math.max(0, Number(b.y)) + 'px;width:' + Math.max(5, Math.min(100, Number(b.w) || 100)) + '%;margin:0;';
+                style += ';position:absolute;left:' + Math.max(0, Math.min(100, Number(b.x))) + '%;top:' + Math.max(0, Number(b.y)) + 'px;width:' + Math.max(5, Math.min(250, Number(b.w) || 100)) + '%;margin:0;';
                 if (Number.isFinite(Number(b.h)) && Number(b.h) > 0) {
                     var effectiveHeight = Number(b.h);
                     if (!sheet && b.type === 'items') {
