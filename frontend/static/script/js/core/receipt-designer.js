@@ -359,7 +359,7 @@
                 style += ';transform:rotate(' + Math.max(-180, Math.min(180, Number(b.rotation))) + 'deg);transform-origin:center center;';
             }
             if (layout.canvas && Number.isFinite(Number(b.x)) && Number.isFinite(Number(b.y))) {
-                style += ';position:absolute;left:' + Math.max(0, Math.min(100, Number(b.x))) + '%;top:' + Math.max(0, Number(b.y)) + 'px;width:' + Math.max(5, Math.min(250, Number(b.w) || 100)) + '%;margin:0;';
+                style += ';position:absolute;left:' + Math.max(-250, Math.min(300, Number(b.x))) + '%;top:' + Math.max(0, Number(b.y)) + 'px;width:' + Math.max(5, Math.min(250, Number(b.w) || 100)) + '%;margin:0;';
                 if (Number.isFinite(Number(b.h)) && Number(b.h) > 0) {
                     var effectiveHeight = Number(b.h);
                     if (!sheet && b.type === 'items') {
