@@ -11750,6 +11750,7 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
 (function () {
     var originalShortcut = PosnicPro.sales.runFunctionShortcut;
     var bypassNextFunctionKey = false;
+    var cashierPromptOpen = false;
     var selectedCashier = String(PosnicPro.local.get('last_cashier_name') || '').trim();
     function escapeText(value) { return $('<span>').text(value == null ? '' : String(value)).html().replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); }
     function generalSettings() {
@@ -11780,6 +11781,15 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
             '</div></div></div>');
     }
     function askCashier(key) {
+        if (cashierPromptOpen) return;
+        // If F2 is pressed again after payment has opened, keep the original
+        // behavior: focus the payment amount instead of opening a second picker.
+        if (key === 'F2' && $('#infobar-settings-sidebar-tender-details').hasClass('sidebarview') && $('#tenderpage').length) {
+            var amountField = document.getElementById('Partial_amount') || document.getElementById('tendered_amount');
+            if (amountField) { amountField.focus(); if (amountField.select) amountField.select(); }
+            return;
+        }
+        cashierPromptOpen = true;
         ensureCashierModal();
         var names = cashierNames(), $modal = $('#posnic-vendeur-modal');
         $modal.data('pending-key', key).data('pending-name', selectedCashier || '');
@@ -11811,7 +11821,8 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         selectedCashier = name.slice(0, 80);
         PosnicPro.sales._cashierName = selectedCashier;
         PosnicPro.local.set('last_cashier_name', selectedCashier);
-        $modal.one('hidden.bs.modal', function () {
+        $modal.one('hidden.bs.modal.cashierContinue', function () {
+            cashierPromptOpen = false;
             bypassNextFunctionKey = true;
             originalShortcut(key);
         });
@@ -11819,6 +11830,7 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
     }
     $(document).on('click.cashier', '#posnic-vendeur-confirm', continueCheckout);
     $(document).on('click.cashier', '#posnic-vendeur-cancel', function () { $('#posnic-vendeur-modal').modal('hide'); });
+    $('#posnic-vendeur-modal').on('hidden.bs.modal.cashierReset', function () { cashierPromptOpen = false; });
     $(document).on('keydown.cashier', '#posnic-vendeur-select', function (e) {
         if (e.key === 'Enter' && !$('#posnic-vendeur-confirm').prop('disabled')) { e.preventDefault(); continueCheckout(); }
     });
