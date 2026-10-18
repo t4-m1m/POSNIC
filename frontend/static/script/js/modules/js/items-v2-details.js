@@ -181,7 +181,7 @@
         variants = names.map(function (name) {
             if (previous.has(name)) {
                 var prior = previous.get(name);
-                if (!prior.barcode_id || usedCodes.has(prior.barcode_id)) prior.barcode_id = makeInternalBarcode(Array.from(usedCodes));
+                if (!/^\\d{7}$/.test(String(prior.barcode_id || '')) || usedCodes.has(prior.barcode_id)) prior.barcode_id = makeInternalBarcode(Array.from(usedCodes));
                 usedCodes.add(prior.barcode_id);
                 return prior;
             }
