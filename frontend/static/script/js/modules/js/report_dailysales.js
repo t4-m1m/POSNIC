@@ -1057,41 +1057,25 @@ PosnicPro.quickreport = {
     var paymentRows = (report.payments || []).map(function (p) { return line(p.label, money(p.amount), false); }).join('');
     var products = settings.showProducts ? '<h3>Articles vendus</h3>' + (report.products || []).slice(0, 30).map(function (p) { return line(p.name + ' × ' + p.qty, money(p.total), false); }).join('') : '';
     var profit = settings.showProfit ? line('Marge nette estimée', money(report.netProfit), false) + line('Marge avant remises', money(report.grossProfit), false) : '';
-    // Electron's secure window policy blocks renderer-created popups. Use the native
-    // print bridge in the desktop app; retain the popup only for ordinary browsers.
-    if (window.electronAPI && window.electronAPI.printer && window.electronAPI.printer.printReport) {
-      var closeDoc = PosnicPro.quickreport._slipDoc(report);
-      closeDoc.title = settings.title;
-      closeDoc.sections = (closeDoc.sections || []).filter(function (section) {
-        if (!settings.showProfit && /SALES \(EXCLUDING TAX\)/i.test(section.name || '')) {
-          section.rows = (section.rows || []).filter(function (row) {
-            return !/profit/i.test(typeof row === 'string' ? row : row.label || '');
-          });
-        }
-        return settings.showProducts || !/TOP ITEMS BY VALUE/i.test(section.name || '');
+    var printHtml = '<!doctype html><html><head><meta charset="utf-8"><title>' + esc(settings.title) + '</title><style>@page{size:' + settings.width + 'mm auto;margin:3mm}*{box-sizing:border-box}body{font:12px/1.4 Arial,sans-serif;color:#111;width:' + (Number(settings.width)-8) + 'mm;margin:0 auto}header{text-align:center;border-bottom:1px dashed #555;padding-bottom:8px;margin-bottom:8px}h1{font-size:17px;line-height:1.2;margin:0 0 7px}h2{font-size:13px;margin:10px 0 5px;text-transform:uppercase}h3{font-size:12px;margin:10px 0 4px}.muted{color:#444;font-size:10px}.line{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dotted #ddd}.line span{max-width:62%;overflow-wrap:anywhere}.line b{text-align:right;white-space:nowrap}.strong{font-size:13px;border-top:1px solid #222;border-bottom:1px solid #222;margin-top:4px;padding:6px 0}.rule{border:0;border-top:1px dashed #555;margin:8px 0}footer{text-align:center;margin-top:12px;font-size:10px;white-space:pre-wrap}</style></head><body><header><h1>' + esc(settings.title) + '</h1><strong>' + esc(branch.branch_name || 'Posnic') + '</strong><div class="muted">' + esc(branch.branch_address || '') + '</div><div class="muted">' + esc(branch.branch_phone || '') + (branch.branch_email ? ' · ' + esc(branch.branch_email) : '') + '</div></header><div class="muted">Période : ' + esc(report.from || '') + ' → ' + esc(report.to || '') + '</div><div class="muted">' + esc(report.period || 'Journée complète') + '</div><hr class="rule"><h2>Résumé des ventes</h2>' + line('Nombre d’articles', report.qty, false) + line('Chiffre d’affaires', money(report.total), true) + line('Paiements enregistrés', money(report.tenderTotal), false) + line('Crédit / impayés signalés', money(report.outstanding), false) + profit + '<hr class="rule"><h2>Encaissements par moyen</h2>' + (paymentRows || '<div class="muted">Aucun encaissement détaillé pour cette période.</div>') + line('Total des encaissements', money(report.tenderTotal), true) + line('Encaissements espèces (identifiés)', money(cash), false) + products + '<hr class="rule"><div class="muted">Le montant d’ouverture, le comptage physique et l’écart de caisse ne sont pas inclus ici car ils ne sont pas fournis par ce rapport.</div><footer>' + esc(settings.footer) + '</footer><script>window.onload=function(){setTimeout(function(){window.print();},250)};<\/script></body></html>;
+    // Use the native desktop print dialog so Microsoft Print to PDF is selectable.
+    if (window.electronAPI && window.electronAPI.printer && window.electronAPI.printer.print) {
+      window.electronAPI.printer.print(printHtml, {
+        silent: false,
+        pageSize: settings.width === 'a4' ? 'a4' : settings.width + 'mm',
+        fitReceipt: true,
+        copies: 1
+      }).then(function (result) {
+        if (!result || result.success === false) PosnicPro.alert('error', (result && result.error) || 'Print failed');
+      }).catch(function (err) {
+        PosnicPro.alert('error', (err && err.message) || 'Print failed');
       });
-      if (settings.footer) closeDoc.sections.push({ type: 'note', text: settings.footer });
-      Promise.resolve(PosnicPro.resolveReceiptPrinter())
-        .then(function (chosen) { return chosen || window.electronAPI.printer.getDefault(); })
-        .then(function (printerName) {
-          if (printerName && typeof printerName === 'object') printerName = printerName.name || null;
-          if (!printerName) throw new Error('No printer found. Choose one in Hardware Manager, Receipt Printer.');
-          return window.electronAPI.printer.printReport(closeDoc, {
-            printerName: printerName, paperWidth: settings.width, docName: settings.title
-          });
-        })
-        .then(function (result) {
-          if (!result || !result.success) PosnicPro.alert('error', (result && result.error) || 'Print failed');
-        })
-        .catch(function (err) {
-          PosnicPro.alert('error', (err && err.message) || 'Print failed');
-        });
       return false;
     }
     var w = window.open('', '_blank', 'width=520,height=760');
     if (!w) { PosnicPro.alert('error', 'The print window was blocked. Allow pop-ups for Posnic and retry.'); return false; }
     w.document.open();
-    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + esc(settings.title) + '</title><style>@page{size:' + settings.width + 'mm auto;margin:3mm}*{box-sizing:border-box}body{font:12px/1.4 Arial,sans-serif;color:#111;width:' + (Number(settings.width)-8) + 'mm;margin:0 auto}header{text-align:center;border-bottom:1px dashed #555;padding-bottom:8px;margin-bottom:8px}h1{font-size:17px;line-height:1.2;margin:0 0 7px}h2{font-size:13px;margin:10px 0 5px;text-transform:uppercase}h3{font-size:12px;margin:10px 0 4px}.muted{color:#444;font-size:10px}.line{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dotted #ddd}.line span{max-width:62%;overflow-wrap:anywhere}.line b{text-align:right;white-space:nowrap}.strong{font-size:13px;border-top:1px solid #222;border-bottom:1px solid #222;margin-top:4px;padding:6px 0}.rule{border:0;border-top:1px dashed #555;margin:8px 0}footer{text-align:center;margin-top:12px;font-size:10px;white-space:pre-wrap}</style></head><body><header><h1>' + esc(settings.title) + '</h1><strong>' + esc(branch.branch_name || 'Posnic') + '</strong><div class="muted">' + esc(branch.branch_address || '') + '</div><div class="muted">' + esc(branch.branch_phone || '') + (branch.branch_email ? ' · ' + esc(branch.branch_email) : '') + '</div></header><div class="muted">Période : ' + esc(report.from || '') + ' → ' + esc(report.to || '') + '</div><div class="muted">' + esc(report.period || 'Journée complète') + '</div><hr class="rule"><h2>Résumé des ventes</h2>' + line('Nombre d’articles', report.qty, false) + line('Chiffre d’affaires', money(report.total), true) + line('Paiements enregistrés', money(report.tenderTotal), false) + line('Crédit / impayés signalés', money(report.outstanding), false) + profit + '<hr class="rule"><h2>Encaissements par moyen</h2>' + (paymentRows || '<div class="muted">Aucun encaissement détaillé pour cette période.</div>') + line('Total des encaissements', money(report.tenderTotal), true) + line('Encaissements espèces (identifiés)', money(cash), false) + products + '<hr class="rule"><div class="muted">Le montant d’ouverture, le comptage physique et l’écart de caisse ne sont pas inclus ici car ils ne sont pas fournis par ce rapport.</div><footer>' + esc(settings.footer) + '</footer><script>window.onload=function(){setTimeout(function(){window.print();},250)};<\/script></body></html>');
+    w.document.write(printHtml);
     w.document.close();
     return false;
   },
