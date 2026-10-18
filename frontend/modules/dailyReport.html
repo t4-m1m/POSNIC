@@ -68,6 +68,15 @@
             #dailyreport_new .meal-guidance { margin-left: 0; }
             #dailyreport_new > .contentbar { padding-left: 12px; padding-right: 12px; }
         }
+
+        #dailyreport_new .day-close-tools{margin:10px 30px 14px;padding:16px 18px;border:1px solid #dce4ef;border-radius:12px;background:var(--theme-card-bg,#fff);box-shadow:0 4px 16px rgba(25,45,75,.04);color:var(--theme-text-color,#243247)}
+        #dailyreport_new .day-close-tools-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+        #dailyreport_new .day-close-tools-head strong{font-size:15px;font-weight:750}#dailyreport_new .day-close-tools-head p{margin:4px 0 0;color:#6b778b;font-size:12px}
+        #dailyreport_new .day-close-designer{margin-top:12px;border-top:1px solid #e5eaf1;padding-top:10px}#dailyreport_new .day-close-designer summary{cursor:pointer;font-weight:650;color:#245da8}
+        #dailyreport_new .day-close-fields{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:12px;margin:12px 0}
+        #dailyreport_new .day-close-fields label{font-size:12px;font-weight:650;margin:0}#dailyreport_new .day-close-fields input.form-control,#dailyreport_new .day-close-fields select.form-control{margin-top:5px;font-size:13px}
+        #dailyreport_new .day-close-fields .day-close-check{display:flex;align-items:center;gap:8px;font-weight:500}#dailyreport_new #day-close-save-status{margin-left:10px;font-size:12px;color:#247044}
+        @media(max-width:700px){#dailyreport_new .day-close-tools{margin:8px 12px}#dailyreport_new .day-close-fields{grid-template-columns:1fr}}
     </style>
     <section class="meal-filter" id="daily-meal-filter" style="display:none" aria-label="Sales time filter" data-t-aria-label="lang_sales_time_filter">
         <label for="daily-serving-period" class="mb-0"><lang class="lang_serving_period">Serving period</lang></label>
@@ -85,6 +94,24 @@
         <p class="meal-help" id="daily-meal-status" role="status" aria-live="polite"></p>
     </section>
 
+    <section id="day-close-ticket-tools" class="day-close-tools" aria-label="Cash closing ticket designer">
+        <div class="day-close-tools-head">
+            <div><strong>Clôture de caisse · Ticket designer</strong><p>Customize the printed closing slip without changing the main Posnic report.</p></div>
+            <button type="button" class="btn btn-outline-primary" id="day-close-ticket-print"><i class="feather icon-printer"></i> Print closing ticket</button>
+        </div>
+        <details class="day-close-designer">
+            <summary>Customize ticket</summary>
+            <div class="day-close-fields">
+                <label>Ticket title<input id="day-close-title" class="form-control" maxlength="80" value="CLÔTURE DE CAISSE"></label>
+                <label>Footer / thank-you text<input id="day-close-footer" class="form-control" maxlength="180" value="Clôture effectuée. Merci."></label>
+                <label>Paper width<select id="day-close-width" class="form-control"><option value="58">58 mm</option><option value="80" selected>80 mm</option></select></label>
+                <label class="day-close-check"><input type="checkbox" id="day-close-show-profit" checked> Show profitability figures</label>
+                <label class="day-close-check"><input type="checkbox" id="day-close-show-products"> Include item summary</label>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" id="day-close-save-design">Save ticket settings</button>
+            <span id="day-close-save-status" role="status"></span>
+        </details>
+    </section>
     <!-- Start Contentbar -->
     <div class="contentbar">
         <!-- Start row -->
