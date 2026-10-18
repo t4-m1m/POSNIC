@@ -349,7 +349,7 @@
                 var logo = data.logo || data.branch_image;
                 var src = b.type === 'logo' ? safeImage(b.src || (!logo || logo === 'store.png' ? 'static/images/default/store.png' : logo)) : b.type === 'barcode' ? barcode(data.sales_id || 'PREVIEW-RECEIPT-0001') : safeImage(b.src);
                 if (!src) return '';
-                var imageWidth = b.type === 'logo' ? (sheet ? 22 : 45) : b.type === 'barcode' ? 90 : b.width;
+                var imageWidth = b.type === 'logo' ? Math.max(5, Math.min(100, Number(b.width != null ? b.width : b.w) || (sheet ? 22 : 45))) : b.type === 'barcode' ? 90 : b.width;
                 content = '<img src="' + esc(src) + '" alt="' + esc(label(b.type === 'qr' ? 'QR code' : b.type === 'logo' ? 'Store logo' : b.type === 'barcode' ? PosnicPro.i18n.t('lang_rd_receipt_barcode', 'Receipt barcode') : PosnicPro.i18n.t('lang_image', 'Image'))) + '" style="width:' + (sheet ? contract.formats[format].content * imageWidth / 100 + 'mm' : imageWidth + '%') + ';max-height:' + (b.type === 'logo' ? '100px' : 'none') + ';">';
             }
             var style = 'text-align:' + b.align;
