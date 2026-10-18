@@ -2,7 +2,7 @@
 'use strict';
 var engine, schema, root, branch={}, design, format='80', selected=null, undo=[], redo=[], busy=false, previewScale=1, designLoadPending=false;
 var names={logo:'Store logo',store:'Store name & address',transaction:'Sale details',items:'Basket items',totals:'Totals & payment',text:'Custom text',field:'Dynamic field',qr:'QR code',image:'Image',barcode:'Sale barcode',divider:'Separator',signature:'Signature'};
-var palette=[['store','Store details'],['transaction','Date / cashier / client'],['items','Basket items'],['totals','Totals & payment'],['logo','PNG logo'],['barcode','Sale barcode'],['divider','Separator'],['text','Custom text'],['field','Dynamic field'],['image','Image'],['qr','QR code'],['signature','Signature']];
+var palette=[['store','Store details'],['transaction','Sale number'],['field:receipt_date','Sale date'],['field:seller_name','Cashier / seller'],['field:customer_name','Client name'],['field:customer_phone','Client phone'],['items','Basket items'],['totals','Totals & payment'],['logo','PNG logo'],['barcode','Sale barcode'],['divider','Separator'],['text','Custom text'],['field','Dynamic field'],['image','Image'],['qr','QR code'],['signature','Signature']];
 var esc=function(v){return PosnicPro.escapeHtml(String(v==null?'':v));};
 var id=function(){return 'studio-'+Math.random().toString(36).slice(2,10);};
 var layout=function(){return design.layouts[format];};
@@ -69,10 +69,11 @@ function render(){
  renderPreview();
 }
 function add(type){
+ var requestedField=type.indexOf('field:')===0?type.slice(6):null;if(requestedField)type='field';
  if(layout().blocks.length>=40){status('A receipt can contain at most 40 elements.',true);return;}
  var y=layout().blocks.reduce(function(n,b){return Math.max(n,Number(b.y||0)+Number(b.h||24)+8);},8);
  var b=engine.block(type,{id:id(),align:type==='logo'||type==='barcode'?'center':'left',x:4,y:y,w:['items','totals','store','transaction','divider'].includes(type)?92:70,h:type==='items'?100:type==='totals'?70:type==='logo'?44:30,fontSize:12,rotation:0});
- if(type==='text')b.text='Merci pour votre achat !';if(type==='field')b.field='customer_name';if(type==='items')b.itemLayout='detailed';if(type==='divider')b.lineStyle='dashed';if(type==='totals')b.showPaymentMethod=true;
+ if(type==='text')b.text='Merci pour votre achat !';if(type==='field')b.field=requestedField||'customer_name';if(type==='items')b.itemLayout='detailed';if(type==='divider')b.lineStyle='dashed';if(type==='totals')b.showPaymentMethod=true;
  checkpoint();layout().blocks.push(b);layout().canvasHeight=Math.max(layout().canvasHeight,y+b.h+20);selected=b.id;render();status('Unsaved changes');
 }
 function persist(){
