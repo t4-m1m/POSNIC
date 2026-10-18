@@ -1764,14 +1764,14 @@ class ItemRepository extends BaseModel {
         data = { ...data, ...purchaseCost, company_price: purchaseCost.purchase_cost_dzd };
       }
 
-      // The shop uses compact six-digit numeric Code 128 labels for every
+      // The shop uses compact seven-digit numeric Code 128 labels for every
       // newly-created sellable item (including variant children). Keep the
       // number numeric: letters, branch prefixes and timestamps make the
       // narrow retail label denser and harder for scanners to decode.
-      if (!id && !/^\d{6}$/.test(itemBarcodes.normalize(data.barcode_id))) {
+      if (!id && !/^\d{7}$/.test(itemBarcodes.normalize(data.barcode_id))) {
         let generatedBarcode = '';
         for (let attempt = 0; attempt < 250; attempt += 1) {
-          const candidate = String(require('crypto').randomInt(1000000)).padStart(6, '0');
+          const candidate = String(require('crypto').randomInt(10000000)).padStart(7, '0');
           const conflict = await itemBarcodes.findConflict(collection, [candidate], {
             branchId: branchObjectId,
             licenseId: licenseObjectId,
@@ -1784,7 +1784,7 @@ class ItemRepository extends BaseModel {
         if (!generatedBarcode) {
           return {
             status: false,
-            message: 'Could not allocate a unique six-digit barcode. The numeric code space may be full; please retry.',
+            message: 'Could not allocate a unique seven-digit barcode. The numeric code space may be full; please retry.',
             data: null,
           };
         }
