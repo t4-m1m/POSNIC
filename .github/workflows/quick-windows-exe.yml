@@ -19,6 +19,7 @@ on:
       - "frontend/static/script/js/modules/js/report_customers.js"
       - "frontend/static/script/js/modules/js/report_payment.js"
       - "frontend/static/script/js/routes.js"
+      - "api/src/helpers/receipt-design.js"
       - "frontend/static/script/js/core/receipt-designer.js"
       - "frontend/static/script/js/modules/js/receipt-studio.js"
       - "frontend/modules/items.html"
