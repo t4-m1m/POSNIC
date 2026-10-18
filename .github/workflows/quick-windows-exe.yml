@@ -4,7 +4,7 @@ name: Quick Windows EXE (no tests)
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, "feat/article-cost-label-designer-sales-calendar"]
     paths:
       - ".github/workflows/quick-windows-exe.yml"
       - "frontend/modules/items.html"
@@ -16,6 +16,9 @@ on:
       - "frontend/static/script/js/modules/js/items_v2.js"
       - "frontend/static/script/js/modules/js/receiving_add.js"
       - "frontend/static/script/js/modules/js/sales.js"
+      - "frontend/static/script/js/modules/js/registers.js"
+      - "frontend/static/script/js/modules/js/receipt-studio.js"
+      - "api/src/helpers/sale-payment-summary.js"
       - "frontend/static/style/css/modules/sales.css"
       - "frontend/layouts/sidebar.html"
       - "frontend/modules/items_v2.html"
@@ -103,13 +106,16 @@ jobs:
       - name: Prepare bundled app resources
         run: npm run prepare:bundle
 
-      - name: Build Windows installer
-        run: npx electron-builder --win --x64 --publish never --config.win.verifyUpdateCodeSignature=false
+      - name: Build Windows installer and portable EXE
+        run: npx electron-builder --win nsis portable --x64 --publish never --config.win.verifyUpdateCodeSignature=false
 
-      - name: Upload EXE installer
+      - name: Upload Windows EXE builds
         uses: actions/upload-artifact@v7
         with:
           name: Posnic-Windows-EXE
-          path: dist/*-windows-x64-installer.exe
+          path: |
+            dist/*-windows-x64-installer.exe
+            dist/*-win-portable.exe
+            dist/*-portable.exe
           if-no-files-found: error
           retention-days: 7
