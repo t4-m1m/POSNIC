@@ -14544,7 +14544,7 @@ $(document).ready(function () {
             bar.appendChild(add);
             var hint = document.createElement('span');
             hint.className = 'posnic-basket-hint';
-            hint.textContent = 'Double-cliquez sur Shift ou utilisez les onglets pour basculer';
+            hint.textContent = 'Utilisez les onglets pour basculer';
             bar.appendChild(hint);
         },
         init: function () {
