@@ -1008,6 +1008,59 @@ PosnicPro.quickreport = {
     });
   },
 
+  loadCloseTicketSettings: function () {
+    var defaults = { title: 'CLÔTURE DE CAISSE', footer: 'Clôture effectuée. Merci.', width: '80', showProfit: true, showProducts: false };
+    try {
+      var saved = window.localStorage.getItem('posnic.dayCloseTicketDesign');
+      if (saved) defaults = Object.assign(defaults, JSON.parse(saved));
+    } catch (_) {}
+    $('#day-close-title').val(defaults.title);
+    $('#day-close-footer').val(defaults.footer);
+    $('#day-close-width').val(defaults.width === '58' ? '58' : '80');
+    $('#day-close-show-profit').prop('checked', defaults.showProfit !== false);
+    $('#day-close-show-products').prop('checked', defaults.showProducts === true);
+    return defaults;
+  },
+  saveCloseTicketSettings: function () {
+    var settings = {
+      title: String($('#day-close-title').val() || 'CLÔTURE DE CAISSE').slice(0, 80),
+      footer: String($('#day-close-footer').val() || '').slice(0, 180),
+      width: $('#day-close-width').val() === '58' ? '58' : '80',
+      showProfit: $('#day-close-show-profit').is(':checked'),
+      showProducts: $('#day-close-show-products').is(':checked')
+    };
+    try {
+      window.localStorage.setItem('posnic.dayCloseTicketDesign', JSON.stringify(settings));
+      $('#day-close-save-status').text('Saved on this device.');
+    } catch (_) {
+      $('#day-close-save-status').text('Could not save settings in this app session.');
+    }
+    return settings;
+  },
+  printCloseTicket: function () {
+    var report = PosnicPro.quickreport.lastReport;
+    if (!report) {
+      PosnicPro.alert('warning', 'Generate the day-end report first, then print the closing ticket.');
+      return false;
+    }
+    var settings = PosnicPro.quickreport.saveCloseTicketSettings();
+    var esc = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]); }); };
+    var money = function (v) { return (PosnicPro.local.get('currencySign') || 'DA') + ' ' + Number(v || 0).toLocaleString('fr-DZ', {minimumFractionDigits:2, maximumFractionDigits:2}); };
+    var branch = report.branch || {};
+    var cash = 0;
+    (report.payments || []).forEach(function (p) { if (/cash|esp[eè]ces|liquide/i.test(p.label || '')) cash += Number(p.amount || 0); });
+    var line = function (label, value, strong) { return '<div class="line' + (strong ? ' strong' : '') + '"><span>' + esc(label) + '</span><b>' + esc(value) + '</b></div>'; };
+    var paymentRows = (report.payments || []).map(function (p) { return line(p.label, money(p.amount), false); }).join('');
+    var products = settings.showProducts ? '<h3>Articles vendus</h3>' + (report.products || []).slice(0, 30).map(function (p) { return line(p.name + ' × ' + p.qty, money(p.total), false); }).join('') : '';
+    var profit = settings.showProfit ? line('Marge nette estimée', money(report.netProfit), false) + line('Marge avant remises', money(report.grossProfit), false) : '';
+    var w = window.open('', '_blank', 'width=520,height=760');
+    if (!w) { PosnicPro.alert('error', 'The print window was blocked. Allow pop-ups for Posnic and retry.'); return false; }
+    w.document.open();
+    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + esc(settings.title) + '</title><style>@page{size:' + settings.width + 'mm auto;margin:3mm}*{box-sizing:border-box}body{font:12px/1.4 Arial,sans-serif;color:#111;width:' + (Number(settings.width)-8) + 'mm;margin:0 auto}header{text-align:center;border-bottom:1px dashed #555;padding-bottom:8px;margin-bottom:8px}h1{font-size:17px;line-height:1.2;margin:0 0 7px}h2{font-size:13px;margin:10px 0 5px;text-transform:uppercase}h3{font-size:12px;margin:10px 0 4px}.muted{color:#444;font-size:10px}.line{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dotted #ddd}.line span{max-width:62%;overflow-wrap:anywhere}.line b{text-align:right;white-space:nowrap}.strong{font-size:13px;border-top:1px solid #222;border-bottom:1px solid #222;margin-top:4px;padding:6px 0}.rule{border:0;border-top:1px dashed #555;margin:8px 0}footer{text-align:center;margin-top:12px;font-size:10px;white-space:pre-wrap}</style></head><body><header><h1>' + esc(settings.title) + '</h1><strong>' + esc(branch.branch_name || 'Posnic') + '</strong><div class="muted">' + esc(branch.branch_address || '') + '</div><div class="muted">' + esc(branch.branch_phone || '') + (branch.branch_email ? ' · ' + esc(branch.branch_email) : '') + '</div></header><div class="muted">Période : ' + esc(report.from || '') + ' → ' + esc(report.to || '') + '</div><div class="muted">' + esc(report.period || 'Journée complète') + '</div><hr class="rule"><h2>Résumé des ventes</h2>' + line('Nombre d’articles', report.qty, false) + line('Chiffre d’affaires', money(report.total), true) + line('Paiements enregistrés', money(report.tenderTotal), false) + line('Crédit / impayés signalés', money(report.outstanding), false) + profit + '<hr class="rule"><h2>Encaissements par moyen</h2>' + (paymentRows || '<div class="muted">Aucun encaissement détaillé pour cette période.</div>') + line('Total des encaissements', money(report.tenderTotal), true) + line('Encaissements espèces (identifiés)', money(cash), false) + products + '<hr class="rule"><div class="muted">Le montant d’ouverture, le comptage physique et l’écart de caisse ne sont pas inclus ici car ils ne sont pas fournis par ce rapport.</div><footer>' + esc(settings.footer) + '</footer><script>window.onload=function(){setTimeout(function(){window.print();},250)};<\/script></body></html>');
+    w.document.close();
+    return false;
+  },
+
   dailyReportPdf: function () {
     var report = PosnicPro.quickreport.lastReport;
     if (!report) { PosnicPro.alert('warning', PosnicPro.i18n.t('lang_run_the_report_first_then_download_it', 'Run the report first, then download it.')); return false; }
@@ -1158,7 +1211,12 @@ PosnicPro.quickreport = {
   },
 };
 
+$(document).on('click', '#day-close-save-design', function () { PosnicPro.quickreport.saveCloseTicketSettings(); });
+$(document).on('click', '#day-close-ticket-print', function () { PosnicPro.quickreport.printCloseTicket(); });
+$(document).on('change', '#day-close-title, #day-close-footer, #day-close-width, #day-close-show-profit, #day-close-show-products', function () { $('#day-close-save-status').text('Unsaved changes'); });
+
 $(document).ready(function () {
+  PosnicPro.quickreport.loadCloseTicketSettings();
   setTimeout(function () {
     var fullHash = window.location.hash;
     var hash = fullHash.replace(/^#\/?/, "");
