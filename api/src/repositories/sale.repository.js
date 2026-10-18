@@ -14082,11 +14082,12 @@ class SalesRepository {
       (branchDoc && branchDoc.license) || BaseModel.license,
       { reseed, period, numberingContext }
     );
-    return this.buildDocNumber('S', branchId, n, {
-      fallbackPrefix: prefix,
-      period: period.label,
-      numberingContext,
-    });
+    // Sale numbers are exactly seven decimal digits. Legacy prefixes, branch/device tags
+    // and period labels remain readable only on existing records; never generate them again.
+    if (!Number.isSafeInteger(n) || n < 0 || n > 9999999) {
+      throw new Error('Seven-digit sale number space exhausted for this branch');
+    }
+    return String(n).padStart(7, '0');
   }
 
   /**
