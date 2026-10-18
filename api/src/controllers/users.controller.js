@@ -570,7 +570,7 @@ class UsersController extends BaseController {
         usertype: user.usertype,
         firstname: user.firstname,
         lastname: user.lastname,
-        user_name: user.username,
+        user_name: `${user.firstname || ''} ${user.lastname || ''}`.trim() || (user.username && !String(user.username).includes('@') ? user.username : 'Super Admin'),
         user_image: user.image,
         register_status: actualRegisterStatus,
         branch_image: checkUserBranch.logo,
