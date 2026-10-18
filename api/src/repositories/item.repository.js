@@ -346,7 +346,8 @@ class ItemRepository extends BaseModel {
       const n = Number(r && r.itemid);
       if (Number.isFinite(n)) max = Math.max(max, n);
     }
-    return String(max + 1);
+    // Generated article IDs use seven digits; preserve an explicitly supplied unique SKU.
+    return String(max + 1).padStart(7, '0');
   }
 
   /*
