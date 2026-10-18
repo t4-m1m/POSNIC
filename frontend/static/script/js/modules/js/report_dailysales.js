@@ -401,6 +401,7 @@ PosnicPro.quickreport = {
           // included in the day-close slip figures.
           netProfit: safeNum(profit),
           grossProfit: safeNum(profit + productDiscountTotal + total_sale_extra_discount),
+          discounts: safeNum(productDiscountTotal + total_sale_extra_discount),
           outstanding: safeNum(response.data && response.data.outstanding_amount),
           payments: paymentAllDataRow.map(function (row) {
             return { label: row[0], amount: safeNum(row[1]) };
@@ -418,7 +419,7 @@ PosnicPro.quickreport = {
         });
         var summary = $('#daily-payment-summary').empty().addClass('d-flex flex-wrap');
         summary.css('gap', '16px');
-        [['Cash received', summaryCash], ['Card received', summaryCard], ['Total payments received', tenderTotal], ['Debt created this period', PosnicPro.quickreport.lastReport.outstanding]].forEach(function (entry) {
+        [['Total sales', PosnicPro.quickreport.lastReport.total], ['Net profit', PosnicPro.quickreport.lastReport.netProfit], ['Cash received', summaryCash], ['Card received', summaryCard], ['Total payments received', tenderTotal], ['Discounts', PosnicPro.quickreport.lastReport.discounts], ['Outstanding credit', PosnicPro.quickreport.lastReport.outstanding]].forEach(function (entry) {
           var card = $('<div class="card p-3 mb-1">');
           $('<span>').text(entry[0]).appendTo(card);
           $('<strong class="h4 mb-0">').text((PosnicPro.local.get('currencySign') || '') + safeNum(entry[1]).toFixed(2)).appendTo(card);
@@ -432,7 +433,10 @@ PosnicPro.quickreport = {
           var rows = '<tr><td><lang class="lang_total_sales">Total sales</lang></td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.total) + '</td></tr>'
             + '<tr><td><lang class="lang_items_sold">Items sold</lang></td><td class="text-right">' + PosnicPro.quickreport.lastReport.qty + '</td></tr>'
             + '<tr><td><lang class="lang_payments_received">Payments received</lang></td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.tenderTotal) + '</td></tr>'
-            + '<tr><td>Debt created this period</td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.outstanding) + '</td></tr>';
+            + '<tr><td>Discounts</td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.discounts) + '</td></tr>'
+            + '<tr><td>Gross profit estimate</td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.grossProfit) + '</td></tr>'
+            + '<tr><td>Net profit estimate</td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.netProfit) + '</td></tr>'
+            + '<tr><td>Outstanding credit</td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.outstanding) + '</td></tr>';
           PosnicPro.quickreport.lastReport.payments.forEach(function (p) {
             rows += '<tr><td>' + $('<i>').text(p.label).html() + '</td><td class="text-right">' + money(p.amount) + '</td></tr>';
           });
