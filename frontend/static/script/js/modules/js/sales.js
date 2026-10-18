@@ -4421,6 +4421,20 @@ PosnicPro.sales.addSale = {
         var partial = $('#Partial_amount').val();
         let payments = PosnicPro.sales.getPaymentObject();
 
+        // A fully unpaid NEW sale is a receivable, not a zero-value payment.
+        // Record the whole bill under Credit, while the amount actually received
+        // remains zero. The API's unpaid flag creates the customer debt ledger.
+        var fullyUnpaidNewSale = !$('#unpaid_payment_toggle').is(':checked') &&
+            PosnicPro.sales.paymentOnlyMode !== true && PosnicPro.sales.SaleAction === 'add';
+        if (fullyUnpaidNewSale) {
+            var fullyUnpaidTotal = Math.max(0, Number(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot) || 0);
+            if (fullyUnpaidTotal > 0) {
+                payments.Credit = Math.round(fullyUnpaidTotal * 100) / 100;
+                partial = '0';
+                partial_check = 'true';
+            }
+        }
+
         // A walk-in sale can use split tenders only when the entire bill is
         // collected now. Credit is permitted only against a saved customer.
         var creditAmountForGuard = parseFloat(payments.Credit || payments.credit || 0) || 0;
