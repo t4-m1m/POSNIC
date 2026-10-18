@@ -68,6 +68,8 @@ jobs:
   build-windows:
     name: Build Windows installer without running tests
     runs-on: windows-latest
+    env:
+      POSNIC_MINIFY: "0"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -107,8 +109,6 @@ jobs:
         run: npm run prepare:bundle
 
       - name: Build Windows installer and portable EXE
-        env:
-          POSNIC_MINIFY: "0"
         run: npx electron-builder --win nsis portable --x64 --publish never --config.win.verifyUpdateCodeSignature=false
 
       - name: Upload Windows EXE builds
