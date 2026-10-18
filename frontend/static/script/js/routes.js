@@ -6,10 +6,31 @@ var currentHash = '';
  */
 function withModule(module, run) {
     if (PosnicPro[module]) { run(); return; }
-    if (PosnicPro.lazy && PosnicPro.lazy._sets && PosnicPro.lazy._sets.reports) {
+
+    // All five main report pages are registered in the reports lazy chunk.
+    // Do not gate loading on the private _sets cache: that cache can be empty
+    // on a cold start even though the reports chunk is available. The old
+    // guard made every report route silently fail before the chunk was loaded.
+    var reportModules = {
+        salereport: true, receivingreport: true, itemreport: true,
+        customerreport: true, paymentreport: true, salereportroot: true,
+        receivingroot: true, itemroot: true, customerroot: true, paymentroot: true
+    };
+    if (PosnicPro.lazy && typeof PosnicPro.lazy.load === 'function' &&
+        (reportModules[module] || (PosnicPro.lazy._sets && PosnicPro.lazy._sets.reports))) {
         PosnicPro.lazy.load('reports').then(function () {
             if (PosnicPro[module]) { run(); }
-            else { console.error('[routes] unknown module: ' + module); }
+            else {
+                console.error('[routes] module missing after reports chunk load: ' + module);
+                if (window.PosnicPro && PosnicPro.toast) {
+                    PosnicPro.toast('Reports could not load. Please restart Posnic and try again.', 'error');
+                }
+            }
+        }).catch(function (error) {
+            console.error('[routes] failed to load reports chunk:', error);
+            if (window.PosnicPro && PosnicPro.toast) {
+                PosnicPro.toast('Reports failed to load. Please restart Posnic and try again.', 'error');
+            }
         });
         return;
     }
