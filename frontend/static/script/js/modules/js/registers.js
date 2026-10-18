@@ -666,6 +666,31 @@ PosnicPro.registers = {
             $('#total_transaction').text($('#register_transaction').text());
 
             var contents = $("#printRegister_a4_form").html();
+
+            // Desktop builds must use the native print window instead of a
+            // hidden renderer iframe. Electron can suppress window.print()
+            // from an off-screen iframe without showing any error or dialog.
+            // Keep the browser fallback for the web version.
+            if (window.electronAPI && window.electronAPI.printer &&
+                typeof window.electronAPI.printer.print === 'function') {
+                var desktopPrintHtml = '<!doctype html><html><head><meta charset="utf-8"><title>Clôture de caisse</title>' +
+                    '<style>html,body{background:#fff;color:#222;font-family:Arial,Helvetica,sans-serif;margin:0;padding:12px}*{box-sizing:border-box}table{width:100%;border-collapse:collapse}img{max-width:100%}@media print{@page{size:auto;margin:8mm}html,body{padding:0}}</style>' +
+                    '</head><body>' + contents + url + '</body></html>';
+                window.electronAPI.printer.print(desktopPrintHtml, {
+                    showPrintDialog: true,
+                    pageSize: 'a4',
+                    docName: 'Clôture de caisse'
+                }).then(function (result) {
+                    if (result && result.success === false) {
+                        PosnicPro.alert('error', result.error || 'Impossible d’ouvrir la fenêtre d’impression de la clôture de caisse.');
+                    }
+                }).catch(function (error) {
+                    console.error('Register close desktop print failed:', error);
+                    PosnicPro.alert('error', 'Impossible d’ouvrir la fenêtre d’impression de la clôture de caisse.');
+                });
+                return;
+            }
+
             var frame1 = $('<iframe />');
             frame1[0].name = "frame1";
             frame1.css({
