@@ -678,18 +678,55 @@ PosnicPro.registers = {
             var frameDoc = frame1[0].contentWindow ? frame1[0].contentWindow : frame1[0].contentDocument.document ? frame1[0].contentDocument.document : frame1[0].contentDocument;
             frameDoc.document.open();
             //Create a new HTML document.
-            frameDoc.document.write('<html><head><title>.</title>');
-            frameDoc.document.write('</head><body style="margin-top:15px;" onload="window.print();">');
-            //Append the external CSS file.
-            //frameDoc.document.write('<link href="static/pages/a4print.css" rel="stylesheet" type="text/css" />');
-            frameDoc.document.write('<style type="text/css" media="print">@page {    size: auto;   /* auto is the initial value */    margin: 0;  /* this affects the margin in the printer settings */}</style>');
+            frameDoc.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Clôture de caisse</title>');
+            // Keep the closing slip self-contained: external application stylesheets
+            // are not reliably available from a sandboxed/hidden print frame.
+            frameDoc.document.write('<style>html,body{background:#fff;color:#222;font-family:Arial,Helvetica,sans-serif;margin:0;padding:12px}*{box-sizing:border-box}table{width:100%;border-collapse:collapse}img{max-width:100%}@media print{@page{size:auto;margin:8mm}html,body{padding:0}}</style>');
+            frameDoc.document.write('</head><body>');
             frameDoc.document.write(contents);
             frameDoc.document.write(url);
             frameDoc.document.write('</body></html>');
             frameDoc.document.close();
-            frame1.focus();
-            frame1.onafterprint = () => {
-                this.remove();
+
+            // Wait until the document is ready before invoking the native print
+            // dialog. Printing during document.write/close races can yield a blank
+            // PDF or a failed "Microsoft Print to PDF" save.
+            var printWindow = frame1[0].contentWindow;
+            var disposed = false;
+            var disposeFrame = function () {
+                if (disposed) return;
+                disposed = true;
+                frame1.remove();
+            };
+            if (printWindow) {
+                printWindow.onafterprint = disposeFrame;
+                frame1.on('load.registerClosePrint', function () {
+                    try {
+                        printWindow.focus();
+                        printWindow.print();
+                    } catch (error) {
+                        disposeFrame();
+                        PosnicPro.alert('error', 'Could not open the cash-register closing print dialog. Please try printing the closing report again.');
+                        console.error('Register close print failed:', error);
+                    }
+                });
+                // Some Electron versions do not emit load for a document written
+                // into an iframe; schedule printing after the current write stack.
+                window.setTimeout(function () {
+                    if (!disposed && frame1[0] && frame1[0].contentWindow) {
+                        try {
+                            printWindow.focus();
+                            printWindow.print();
+                        } catch (error) {
+                            disposeFrame();
+                            PosnicPro.alert('error', 'Could not open the cash-register closing print dialog. Please try printing the closing report again.');
+                            console.error('Register close print failed:', error);
+                        }
+                    }
+                }, 150);
+            } else {
+                disposeFrame();
+                PosnicPro.alert('error', 'The cash-register closing print frame could not be created.');
             }
 
         }, function (xhr) {
