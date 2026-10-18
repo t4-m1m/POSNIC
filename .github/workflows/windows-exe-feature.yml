@@ -1,5 +1,5 @@
 name: Windows EXE - article cost label designer branch
-# Rebuild the latest feature branch and publish both the Windows installer and portable executable (no tests).
+# Rebuild the latest feature branch and publish only the Windows installer (no tests).
 
 on:
   push:
@@ -60,21 +60,18 @@ jobs:
           Remove-Item mongodb.zip -Force
           Remove-Item mongodb-temp -Recurse -Force
           node scripts/check-mongodb-binaries.js
-      - name: Build installer and portable executable (no tests)
+      - name: Build Windows installer only (no tests)
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          npm run build -- --win nsis portable --x64 --publish never
+          npm run build -- --win nsis --x64 --publish never
           $installer = Get-ChildItem -Path 'dist' -Filter '*-windows-x64-installer.exe' | Select-Object -First 1
           if (-not $installer) { throw 'Windows installer was not produced.' }
-          $portable = Get-ChildItem -Path 'dist' -Filter '*portable*.exe' | Select-Object -First 1
-          if (-not $portable) { throw 'Windows portable executable was not produced.' }
-      - name: Upload Windows installer and portable executable
+      - name: Upload Windows installer only
         uses: actions/upload-artifact@v4
         with:
-          name: POSNIC-Windows-EXE-installer-and-portable-feature-branch
+          name: POSNIC-Windows-Installer-feature-branch
           path: |
             dist/*-windows-x64-installer.exe
-            dist/*portable*.exe
           if-no-files-found: error
           retention-days: 14
