@@ -41,19 +41,42 @@
             return url.protocol === 'https:' || (url.protocol === 'http:' && url.origin === new URL(document.baseURI).origin) ? url.href : '';
         } catch (_) { return ''; }
     }
+    /*
+     * Sale barcode renderer: encode the immutable sale/ticket identifier using
+     * Code 128. Prefer JsBarcode on a canvas (consistent raster output in
+     * Electron/Windows print dialogs); keep the legacy plugin only as fallback.
+     * Human-readable text is rendered by the block itself, directly below the
+     * stripes, so it cannot overlap the bars or be baked into the barcode.
+     */
     function barcode(text) {
-        if (!text) return '';
-        if ($.fn.barcode) {
-            var canvas = $('<canvas>');
-            canvas.barcode(String(text), 'code128', { output: 'canvas', barWidth: 2, barHeight: 42, showHRI: false });
-            return canvas[0].toDataURL('image/png');
-        }
+        var value = String(text == null ? '' : text).trim();
+        if (!value) return '';
         if (window.JsBarcode) {
             try {
-                var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                window.JsBarcode(svg, String(text), { format: 'CODE128', displayValue: false, fontSize: 12, height: 42, margin: 2 });
-                return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
-            } catch (_) { return ''; }
+                var canvas = document.createElement('canvas');
+                window.JsBarcode(canvas, value, {
+                    format: 'CODE128',
+                    displayValue: false,
+                    width: 2,
+                    height: 48,
+                    margin: 0,
+                    marginTop: 1,
+                    marginBottom: 0,
+                    background: '#ffffff',
+                    lineColor: '#000000'
+                });
+                return canvas.toDataURL('image/png');
+            } catch (_) { /* Try the bundled legacy renderer below. */ }
+        }
+        if ($.fn.barcode) {
+            try {
+                var fallback = $('<canvas>');
+                fallback.barcode(value, 'code128', {
+                    output: 'canvas', barWidth: 2, barHeight: 48, showHRI: false,
+                    bgColor: '#ffffff', color: '#000000', barWidth: 2
+                });
+                return fallback[0].toDataURL('image/png');
+            } catch (_) { /* A missing renderer is handled as an empty block. */ }
         }
         return '';
     }
@@ -334,7 +357,7 @@
             }
             else {
                 var logo = data.logo || data.branch_image;
-                var saleBarcodeValue = String(data.sales_id || data.sale_number || 'PREVIEW-RECEIPT-0001');
+                var saleBarcodeValue = String(data.sales_id || data.sale_number || data.receipt_number || 'PREVIEW-RECEIPT-0001').trim();
                 var src = b.type === 'logo' ? safeImage(b.src || (!logo || logo === 'store.png' ? 'static/images/default/store.png' : logo)) : b.type === 'barcode' ? barcode(saleBarcodeValue) : safeImage(b.src);
                 if (!src) return '';
                 var imageWidth = b.type === 'logo' ? Math.max(5, Math.min(250, Number(b.w != null ? b.w : b.width) || (sheet ? 22 : 45))) : b.type === 'barcode' ? 90 : b.width;
@@ -344,7 +367,7 @@
                     var barcodeHeight = sheet ? imageHeight * 25.4 / 96 + 'mm' : imageHeight + 'px';
                     content = '<div class="rd-sale-barcode" style="width:' + barcodeWidth + ';max-width:100%;margin:0 auto;text-align:center;line-height:0;">' +
                         '<img src="' + esc(src) + '" alt="Sale barcode ' + esc(saleBarcodeValue) + '" style="display:block;width:100%;height:' + barcodeHeight + ';max-width:100%;object-fit:fill;margin:0 auto;">' +
-                        '<div class="rd-barcode-value" style="font-family:Tahoma,sans-serif;font-size:12px;font-weight:700;line-height:14px;text-align:center;letter-spacing:0;margin:0;padding:0;white-space:nowrap;">' + esc(saleBarcodeValue) + '</div></div>';
+                        '<div class="rd-barcode-value" style="font-family:Tahoma,sans-serif;font-size:12px;font-weight:700;line-height:14px;text-align:center;letter-spacing:0;margin:0;padding:0;white-space:nowrap;display:block;">' + esc(saleBarcodeValue) + '</div></div>';
                 } else {
                     content = '<img src="' + esc(src) + '" alt="' + esc(label(b.type === 'qr' ? 'QR code' : b.type === 'logo' ? 'Store logo' : label('Image'))) + '" style="display:block;width:' + (sheet ? contract.formats[format].content * imageWidth / 100 + 'mm' : imageWidth + '%') + ';height:' + (sheet ? imageHeight * 25.4 / 96 + 'mm' : imageHeight + 'px') + ';max-width:100%;object-fit:contain;margin-left:' + (b.align === 'center' ? 'auto' : '0') + ';margin-right:' + (b.align === 'left' ? 'auto' : '0') + ';">';
                 }
