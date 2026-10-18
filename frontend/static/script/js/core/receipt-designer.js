@@ -139,7 +139,7 @@
             '.rd-invoice-header>.rd-block{margin:0;min-width:0;grid-row:1;}.rd-invoice-header>.rd-block-store{grid-column:1;}.rd-invoice-header>.rd-block-transaction{grid-column:2;text-align:right!important;}' +
             '.rd-invoice-header.has-logo{grid-template-columns:' + (compact ? '12mm' : '18mm') + ' minmax(0,1.6fr) minmax(0,1fr);}' +
             '.rd-invoice-header.has-logo>.rd-block-logo{grid-column:1;}.rd-invoice-header.has-logo>.rd-block-store{grid-column:2;}.rd-invoice-header.has-logo>.rd-block-transaction{grid-column:3;}' +
-            '.rd-invoice-header .rd-block-logo img{width:auto!important;max-width:none!important;max-height:none!important;}' +
+            '.rd-invoice-header .rd-block-logo img{width:100%!important;max-width:none!important;max-height:none!important;object-fit:contain;}' +
             '.rd-sheet .rd-store{border:0;padding:0;}.rd-sheet .rd-store h1{font-size:' + (compact ? '1.8em' : '2.2em') + ';line-height:1.15;margin-bottom:3mm;letter-spacing:-.025em;}' +
             '.rd-sheet .rd-store-contact,.rd-sheet .rd-store p{color:#46505d;line-height:' + (compact ? '1.45' : '1.6') + ';}' +
             '.rd-invoice-title{font-size:' + (compact ? '1.7em' : '2.1em') + ';font-weight:700;letter-spacing:.08em;margin-bottom:3mm;line-height:1.2;}' +
