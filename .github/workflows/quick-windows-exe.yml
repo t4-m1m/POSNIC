@@ -1,5 +1,5 @@
 name: Quick Windows EXE (no tests)
-# Re-triggered for the current POSNIC update; build installer only, no test steps.
+# Build Windows installer and portable EXE; deliberately no test steps.
 
 on:
   workflow_dispatch:
@@ -33,6 +33,7 @@ on:
       - "api/src/services/outlet-summary.js"
       - "frontend/static/script/js/modules/js/report_dailysales.js"
       - "frontend/static/script/js/modules/js/report_sales.js"
+      - "frontend/static/script/js/modules/js/report_payment.js"
       - "frontend/static/script/js/modules/js/report_return.js"
       - "frontend/static/script/js/modules/js/report_pending.js"
       - "frontend/static/script/js/modules/js/report_registers.js"
@@ -77,7 +78,7 @@ permissions:
 
 jobs:
   build-windows:
-    name: Build Windows installer without running tests
+    name: Build Windows installer and portable EXE without running tests
     runs-on: windows-latest
     env:
       POSNIC_MINIFY: "0"
@@ -119,14 +120,15 @@ jobs:
       - name: Prepare bundled app resources
         run: npm run prepare:bundle
 
-      - name: Build Windows installer only
-        run: npx electron-builder --win nsis --x64 --publish never --config.win.verifyUpdateCodeSignature=false
+      - name: Build Windows installer and portable EXE
+        run: npx electron-builder --win nsis portable --x64 --publish never --config.win.verifyUpdateCodeSignature=false
 
       - name: Upload Windows EXE builds
         uses: actions/upload-artifact@v7
         with:
-          name: Posnic-Windows-EXE
+          name: Posnic-Windows-Installer-and-Portable-EXE
           path: |
             dist/*-windows-x64-installer.exe
+            dist/*-windows-x64-portable.exe
           if-no-files-found: error
           retention-days: 7
