@@ -669,14 +669,29 @@ PosnicPro.registers = {
             let printUrl = PosnicPro.local.get('print_url');
             let url = ((printUrl === 'true') ? '<div class="col-md-12 col-sm-12 col-xs-12 text-center" style="margin-top: -30px;">' + PosnicPro.BRAND_URL + '</div>' : '');
 
-            // Desktop builds must use the native print window instead of a
-            // hidden renderer iframe. Electron can suppress window.print()
-            // from an off-screen iframe without showing any error or dialog.
-            // Keep the browser fallback for the web version.
+            // The close slip must reconcile every tender, not only cash. The
+            // report's editable tally can be empty on first render, so derive
+            // the print copy directly from the register API response.
+            var tallyRows = '';
+            if (data.paymentTally && typeof data.paymentTally === 'object') {
+                Object.keys(data.paymentTally).forEach(function (method) {
+                    var amount = Number(data.paymentTally[method]) || 0;
+                    var safeMethod = String(method).replace(/[&<>"]/g, function (c) {
+                        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);
+                    });
+                    tallyRows += '<tr><th>' + safeMethod + '</th><td style="text-align:right">' + amount.toFixed(2) + '</td></tr>';
+                });
+            }
+            if (tallyRows) {
+                contents += '<section class="posnic-close-tender-summary"><h3>Payment summary</h3><table><thead><tr><th>Payment method</th><th style="text-align:right">Expected amount</th></tr></thead><tbody>' + tallyRows + '</tbody></table></section>';
+            }
+
+            // Desktop builds must use the same native print dialog path as the
+            // working receipt printer. Keep the browser iframe fallback for web.
             if (window.electronAPI && window.electronAPI.printer &&
                 typeof window.electronAPI.printer.print === 'function') {
                 var desktopPrintHtml = '<!doctype html><html><head><meta charset="utf-8"><title>Clôture de caisse</title>' +
-                    '<style>html,body{background:#fff;color:#222;font-family:Arial,Helvetica,sans-serif;margin:0;padding:12px}*{box-sizing:border-box}table{width:100%;border-collapse:collapse}img{max-width:100%}@media print{@page{size:auto;margin:8mm}html,body{padding:0}}</style>' +
+                    '<style>html,body{background:#fff;color:#222;font-family:Arial,Helvetica,sans-serif;margin:0;padding:12px}*{box-sizing:border-box}table{width:100%;border-collapse:collapse}th,td{padding:6px 8px;border-bottom:1px solid #d8dee8;text-align:left}img{max-width:100%}.posnic-close-tender-summary{margin-top:18px;page-break-inside:avoid}.posnic-close-tender-summary h3{font-size:15px;margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid #222}@media print{@page{size:A4;margin:10mm}html,body{padding:0}}</style>' +
                     '</head><body>' + contents + url + '</body></html>';
                 window.electronAPI.printer.print(desktopPrintHtml, {
                     showPrintDialog: true,
