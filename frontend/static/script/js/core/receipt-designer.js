@@ -214,7 +214,7 @@
         var documentTitle = pendingGoods ? label('Bill') : beforePayment ? (present(data.branch_gstin_number) || on(data.gst) ? label('Tax invoice') : label('Bill')) : label('Receipt');
         var hasField = function (field) { return layout.blocks.some(function (b) { return b.type === 'field' && b.field === field; }); };
         var values = {
-            receipt_number: data.sales_id || data.sale_number || data.id, receipt_date: data.receipt_date || data.created_date || data.date || '', seller_name: data.cashier_name || data.seller_name || data.steward_name || data.steward || data.created_by || data.user_name,
+            receipt_number: data.sales_id || data.sale_number || '', receipt_date: data.receipt_date || data.created_date || data.date || '', seller_name: data.cashier_name || data.seller_name || data.steward_name || data.steward || data.created_by || data.user_name,
             customer_name: data.customer_name, customer_phone: data.customer_phone, customer_email: data.customer_email,
             customer_tax_number: taxNumber,
             customer_address: data.customer_address, sale_note: data.sales_description, brand_url: data.website || PosnicPro.BRAND_URL,
