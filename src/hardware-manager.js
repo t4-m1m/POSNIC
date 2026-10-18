@@ -626,7 +626,7 @@ class HardwareManager {
       const route = this._resolvePrintRoute(htmlContent);
 
       printWindow = new BrowserWindow({
-        show: false,
+        show: options.showPrintDialog === true,
         width: pageSize.windowWidth,
         height: 600,
         webPreferences: {
@@ -640,7 +640,7 @@ class HardwareManager {
 
       hardenPrintWindow(printWindow);
 
-      const deviceName = await this._resolvePrinterName(options.printerName);
+      const deviceName = options.showPrintDialog === true ? null : await this._resolvePrinterName(options.printerName);
       receiptPrinter = deviceName;
 
       const expectedReceipt = /data-receipt-design\s*=/.test(htmlContent);
