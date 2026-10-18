@@ -255,6 +255,19 @@ const paymentSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    // Bank/card settlements are not physical till cash. Track collection on the
+    // individual electronic payment so a transfer can be reconciled exactly once.
+    collection_status: {
+      type: String,
+      enum: ['not_applicable', 'pending', 'collected'],
+      default: function () {
+        return ['card', 'bank_transfer'].includes(String(this.method || '').toLowerCase())
+          ? 'pending'
+          : 'not_applicable';
+      },
+    },
+    collected_at: { type: Date, default: undefined },
+    collected_by: { type: String, trim: true, default: undefined },
     paper_order: { type: mongoose.Schema.Types.Mixed },
     order_photos: { type: [mongoose.Schema.Types.Mixed], default: undefined },
     origin: { type: mongoose.Schema.Types.Mixed },
