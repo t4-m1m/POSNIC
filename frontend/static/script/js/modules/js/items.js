@@ -1028,10 +1028,10 @@ PosnicPro.items = {
         var code;
         var attempts = 0;
         do {
-            code = String(Math.floor(100000 + Math.random() * 900000));
+            code = String(Math.floor(1000000 + Math.random() * 9000000));
             attempts++;
         } while (used[code] && attempts < 1000);
-        if (used[code]) throw new Error('Could not allocate a unique six-digit variant barcode. Please retry.');
+        if (used[code]) throw new Error('Could not allocate a unique seven-digit variant barcode. Please retry.');
         used[code] = true;
         return code;
     },
@@ -1126,7 +1126,7 @@ PosnicPro.items = {
                 translations: (shared.translations || []).map(function (entry) { return Object.assign({}, entry, { name: entry.name ? entry.name + " / " + variantName : "" }); }),
                 variant_value: variantName,
                 sku_id: $('#items_itemid_' + key + '').val(),
-                barcode_id: '', // Server allocates a branch-unique six-digit numeric Code 128 value.
+                barcode_id: '', // Server allocates a branch-unique seven-digit numeric Code 128 value.
                 mrp_price: $('#items_mrp_price_' + key + '').val(),
                 company_price: $('#items_company_price_' + key + '').val(),
                 selling_price: $('#items_selling_price_' + key + '').val(),
