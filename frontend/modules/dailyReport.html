@@ -69,14 +69,22 @@
             #dailyreport_new > .contentbar { padding-left: 12px; padding-right: 12px; }
         }
 
-        #dailyreport_new .day-close-tools{margin:10px 30px 14px;padding:16px 18px;border:1px solid #dce4ef;border-radius:12px;background:var(--theme-card-bg,#fff);box-shadow:0 4px 16px rgba(25,45,75,.04);color:var(--theme-text-color,#243247)}
-        #dailyreport_new .day-close-tools-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
-        #dailyreport_new .day-close-tools-head strong{font-size:15px;font-weight:750}#dailyreport_new .day-close-tools-head p{margin:4px 0 0;color:#6b778b;font-size:12px}
-        #dailyreport_new .day-close-designer{margin-top:12px;border-top:1px solid #e5eaf1;padding-top:10px}#dailyreport_new .day-close-designer summary{cursor:pointer;font-weight:650;color:#245da8}
-        #dailyreport_new .day-close-fields{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:12px;margin:12px 0}
+        #dailyreport_new .day-close-tools{margin:10px 30px 14px;padding:18px;border:1px solid #dce4ef;border-radius:16px;background:var(--theme-card-bg,#fff);box-shadow:0 8px 24px rgba(25,45,75,.07);color:var(--theme-text-color,#243247)}
+        #dailyreport_new .day-close-tools-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid #e8edf4}
+        #dailyreport_new .day-close-tools-head strong{font-size:16px;font-weight:750}#dailyreport_new .day-close-tools-head p{margin:4px 0 0;color:#6b778b;font-size:12px}
+        #dailyreport_new .day-close-workspace{display:grid;grid-template-columns:minmax(250px, .9fr) minmax(260px, 1.1fr);gap:18px;padding-top:16px}
+        #dailyreport_new .day-close-designer{border:1px solid #e4eaf2;border-radius:12px;padding:14px;background:var(--theme-card-bg,#fff)}#dailyreport_new .day-close-designer summary{cursor:pointer;font-weight:700;color:#245da8}
+        #dailyreport_new .day-close-fields{display:grid;grid-template-columns:1fr;gap:12px;margin:12px 0}
         #dailyreport_new .day-close-fields label{font-size:12px;font-weight:650;margin:0}#dailyreport_new .day-close-fields input.form-control,#dailyreport_new .day-close-fields select.form-control{margin-top:5px;font-size:13px}
-        #dailyreport_new .day-close-fields .day-close-check{display:flex;align-items:center;gap:8px;font-weight:500}#dailyreport_new #day-close-save-status{margin-left:10px;font-size:12px;color:#247044}
-        @media(max-width:700px){#dailyreport_new .day-close-tools{margin:8px 12px}#dailyreport_new .day-close-fields{grid-template-columns:1fr}}
+        #dailyreport_new .day-close-fields .day-close-check{display:flex;align-items:center;gap:8px;font-weight:500}#dailyreport_new #day-close-save-status{display:block;margin-top:10px;font-size:12px;color:#247044}
+        #dailyreport_new .day-close-preview-wrap{border:1px solid #e4eaf2;border-radius:12px;padding:14px;background:#f1f4f8;min-width:0}
+        #dailyreport_new .day-close-preview-label{font-size:11px;font-weight:750;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin-bottom:10px}
+        #dailyreport_new #day-close-ticket-preview{width:100%;max-width:360px;min-height:380px;margin:0 auto;background:#fff;color:#111;padding:20px 18px;box-shadow:0 4px 18px rgba(15,23,42,.12);font:11px/1.45 Arial,sans-serif}
+        #dailyreport_new #day-close-ticket-preview h4{text-align:center;font-size:16px;margin:0 0 5px;color:#111;font-weight:800}#dailyreport_new #day-close-ticket-preview .dc-preview-muted{text-align:center;color:#64748b;font-size:10px}
+        #dailyreport_new #day-close-ticket-preview .dc-preview-rule{border:0;border-top:1px dashed #9ca3af;margin:10px 0}
+        #dailyreport_new #day-close-ticket-preview .dc-preview-line{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px dotted #e5e7eb}
+        #dailyreport_new #day-close-ticket-preview .dc-preview-line strong{white-space:nowrap}#dailyreport_new #day-close-ticket-preview .dc-preview-total{font-size:12px;font-weight:800;border-top:1px solid #111;border-bottom:1px solid #111;margin-top:5px;padding:7px 0}
+        @media(max-width:800px){#dailyreport_new .day-close-tools{margin:8px 12px}#dailyreport_new .day-close-workspace{grid-template-columns:1fr}}
     </style>
     <section class="meal-filter" id="daily-meal-filter" style="display:none" aria-label="Sales time filter" data-t-aria-label="lang_sales_time_filter">
         <label for="daily-serving-period" class="mb-0"><lang class="lang_serving_period">Serving period</lang></label>
@@ -96,21 +104,33 @@
 
     <section id="day-close-ticket-tools" class="day-close-tools" aria-label="Cash closing ticket designer">
         <div class="day-close-tools-head">
-            <div><strong>Clôture de caisse · Ticket designer</strong><p>Customize the printed closing slip without changing the main Posnic report.</p></div>
-            <button type="button" class="btn btn-outline-primary" id="day-close-ticket-print"><i class="feather icon-printer"></i> Print closing ticket</button>
+            <div><strong><i class="feather icon-sliders mr-1"></i> Clôture de caisse · Receipt Studio</strong><p>Design and preview the closing ticket before printing or saving as PDF.</p></div>
+            <button type="button" class="btn btn-primary" id="day-close-ticket-print"><i class="feather icon-printer mr-1"></i> Print / Save PDF</button>
         </div>
-        <details class="day-close-designer">
-            <summary>Customize ticket</summary>
-            <div class="day-close-fields">
-                <label>Ticket title<input id="day-close-title" class="form-control" maxlength="80" value="CLÔTURE DE CAISSE"></label>
-                <label>Footer / thank-you text<input id="day-close-footer" class="form-control" maxlength="180" value="Clôture effectuée. Merci."></label>
-                <label>Paper width<select id="day-close-width" class="form-control"><option value="58">58 mm</option><option value="80" selected>80 mm</option></select></label>
-                <label class="day-close-check"><input type="checkbox" id="day-close-show-profit" checked> Show profitability figures</label>
-                <label class="day-close-check"><input type="checkbox" id="day-close-show-products"> Include item summary</label>
+        <div class="day-close-workspace">
+            <details class="day-close-designer" open>
+                <summary>Ticket settings</summary>
+                <div class="day-close-fields">
+                    <label>Ticket title<input id="day-close-title" class="form-control" maxlength="80" value="CLÔTURE DE CAISSE"></label>
+                    <label>Footer / thank-you text<input id="day-close-footer" class="form-control" maxlength="180" value="Clôture effectuée. Merci."></label>
+                    <label>Paper width<select id="day-close-width" class="form-control"><option value="58">58 mm</option><option value="80" selected>80 mm</option></select></label>
+                    <label class="day-close-check"><input type="checkbox" id="day-close-show-profit" checked> Show profitability figures</label>
+                    <label class="day-close-check"><input type="checkbox" id="day-close-show-products"> Include item summary</label>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" id="day-close-save-design">Save ticket settings</button>
+                <span id="day-close-save-status" role="status" aria-live="polite"></span>
+            </details>
+            <div class="day-close-preview-wrap">
+                <div class="day-close-preview-label">Live preview</div>
+                <div id="day-close-ticket-preview" aria-live="polite">
+                    <h4>CLÔTURE DE CAISSE</h4><div class="dc-preview-muted">Generate the report to preview closing figures</div><hr class="dc-preview-rule">
+                    <div class="dc-preview-line"><span>Chiffre d’affaires</span><strong>—</strong></div>
+                    <div class="dc-preview-line"><span>Encaissements</span><strong>—</strong></div>
+                    <div class="dc-preview-line"><span>Crédit / impayés</span><strong>—</strong></div>
+                    <hr class="dc-preview-rule"><div class="dc-preview-muted">Clôture effectuée. Merci.</div>
+                </div>
             </div>
-            <button type="button" class="btn btn-primary btn-sm" id="day-close-save-design">Save ticket settings</button>
-            <span id="day-close-save-status" role="status"></span>
-        </details>
+        </div>
     </section>
     <!-- Start Contentbar -->
     <div class="contentbar">
