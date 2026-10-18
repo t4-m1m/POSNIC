@@ -1,5 +1,5 @@
 name: Quick Windows EXE (no tests)
-# Build Windows installer and portable EXE; deliberately no test steps.
+# Build the current feature-branch snapshot as installer and portable EXEs; deliberately no test steps.
 
 on:
   workflow_dispatch:
