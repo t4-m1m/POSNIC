@@ -11844,6 +11844,7 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
     };
     PosnicPro.sales.syncCustomerHeader = function () {
         $('#sales-current-customer-name').text(currentClientName());
+        if (PosnicPro.sales.refreshCustomerDebtButton) PosnicPro.sales.refreshCustomerDebtButton();
         if (PosnicPro.sales.updateWalkInPaymentAmountLock) PosnicPro.sales.updateWalkInPaymentAmountLock();
     };
     function ensurePicker() {
@@ -12759,8 +12760,10 @@ PosnicPro.sales.refreshCustomerDebtButton = function (data) {
     var name = String(data && data.name || $('#sales_new_customer_name').val() || '').trim();
     var request = ++PosnicPro.sales._debtButtonRequest;
     var walkin = !id || !name || /walk.?in|cash customer|comptoir|client\s+de\s+passage/i.test(name);
+    var inline = $('#sales-customer-credit-inline');
     button.prop('hidden', true).hide();
-    $('#sales_customer_credit_amount').text('0,00');
+    inline.prop('hidden', true).hide();
+    $('#sales_customer_credit_amount, #sales-customer-credit-inline-amount').text('0,00');
     button.find('.sales-credit-currency').text(String(PosnicPro.local.get('currencySign') || ''));
     if (walkin || !/^[a-f0-9]{24}$/i.test(id)) return;
     PosnicPro.get('credit/ledger/' + encodeURIComponent(id), function (response) {
@@ -12780,8 +12783,9 @@ PosnicPro.sales.refreshCustomerDebtButton = function (data) {
             $('#sales_customer_credit_amount').text('0,00');
             return;
         }
-        $('#sales_customer_credit_amount').text(balance.toLocaleString('fr-DZ', {minimumFractionDigits:2, maximumFractionDigits:2}));
-        button.prop('hidden', false).show();
+        var formattedBalance = balance.toLocaleString('fr-DZ', {minimumFractionDigits:2, maximumFractionDigits:2});
+        $('#sales_customer_credit_amount, #sales-customer-credit-inline-amount').text(formattedBalance);
+        inline.prop('hidden', false).show();
     }, function () {
         if (request === PosnicPro.sales._debtButtonRequest &&
             String($('#sales_new_customer_id').val() || '') === id) {
