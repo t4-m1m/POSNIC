@@ -11757,7 +11757,7 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         if (raw && typeof raw === 'object') return raw;
         try { return JSON.parse(raw || '{}') || {}; } catch (_) { return {}; }
     }
-    function cashierPopupEnabled() { return generalSettings().cashier_popup_enabled !== false; }
+    function cashierPopupEnabled() { var value = generalSettings().cashier_popup_enabled; if (value == null || value === '') return true; return !([false, 0, '0', 'false', 'disabled', 'disable', 'no', 'off'].indexOf(typeof value === 'string' ? value.trim().toLowerCase() : value) !== -1); }
     function cashierNames() {
         var settings = generalSettings(), names = settings.cashier_names;
         if (!Array.isArray(names)) {
@@ -12754,8 +12754,11 @@ PosnicPro.sales.refreshCustomerAccount = function () {
     var request = PosnicPro.sales._accountRequest = (PosnicPro.sales._accountRequest || 0) + 1;
     var target = $('.sale-customer-account').empty().hide();
     var creditEnabled = function () {
-        try { return JSON.parse(PosnicPro.local.get('general_settings') || '{}').module_credit_enable !== false; }
-        catch (e) { return true; }
+        var settings = PosnicPro.local.get('general_settings');
+        if (typeof settings === 'string') { try { settings = JSON.parse(settings || '{}'); } catch (_) { settings = {}; } }
+        var value = settings && settings.module_credit_enable;
+        if (value == null || value === '') return true;
+        return !([false, 0, '0', 'false', 'disabled', 'disable', 'no', 'off'].indexOf(typeof value === 'string' ? value.trim().toLowerCase() : value) !== -1);
     };
     if (!creditEnabled()) return;
     var branch = PosnicPro.local.get('branch_id_set');
