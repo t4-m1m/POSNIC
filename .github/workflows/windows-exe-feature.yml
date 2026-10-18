@@ -1,5 +1,5 @@
 name: Windows EXE - article cost label designer branch
-# Rebuild the latest feature branch and publish the Windows installer only (no tests).
+# Rebuild the latest feature branch and publish both the Windows installer and portable executable (no tests).
 
 on:
   push:
@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: posnic-windows-feature-installer-${{ github.ref }}
+  group: posnic-windows-feature-build-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -60,20 +60,21 @@ jobs:
           Remove-Item mongodb.zip -Force
           Remove-Item mongodb-temp -Recurse -Force
           node scripts/check-mongodb-binaries.js
-      - name: Build installer only (disable portable target, no tests)
+      - name: Build installer and portable executable (no tests)
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          npm run build -- --win nsis --x64 --publish never
+          npm run build -- --win nsis portable --x64 --publish never
           $installer = Get-ChildItem -Path 'dist' -Filter '*-windows-x64-installer.exe' | Select-Object -First 1
           if (-not $installer) { throw 'Windows installer was not produced.' }
-          $portable = Get-ChildItem -Path 'dist' -Filter '*portable*.exe' -ErrorAction SilentlyContinue
-          if ($portable) { $portable | Remove-Item -Force }
-      - name: Upload Windows installer only
+          $portable = Get-ChildItem -Path 'dist' -Filter '*portable*.exe' | Select-Object -First 1
+          if (-not $portable) { throw 'Windows portable executable was not produced.' }
+      - name: Upload Windows installer and portable executable
         uses: actions/upload-artifact@v4
         with:
-          name: POSNIC-Windows-EXE-installer-feature-branch
+          name: POSNIC-Windows-EXE-installer-and-portable-feature-branch
           path: |
             dist/*-windows-x64-installer.exe
+            dist/*portable*.exe
           if-no-files-found: error
           retention-days: 14
