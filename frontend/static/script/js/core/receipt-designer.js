@@ -45,13 +45,13 @@
         if (!text) return '';
         if ($.fn.barcode) {
             var canvas = $('<canvas>');
-            canvas.barcode(String(text), 'code128', { output: 'canvas', barWidth: 2, barHeight: 42, showHRI: true });
+            canvas.barcode(String(text), 'code128', { output: 'canvas', barWidth: 2, barHeight: 42, showHRI: false });
             return canvas[0].toDataURL('image/png');
         }
         if (window.JsBarcode) {
             try {
                 var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                window.JsBarcode(svg, String(text), { format: 'CODE128', displayValue: true, fontSize: 12, height: 42, margin: 2 });
+                window.JsBarcode(svg, String(text), { format: 'CODE128', displayValue: false, fontSize: 12, height: 42, margin: 2 });
                 return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
             } catch (_) { return ''; }
         }
@@ -208,13 +208,13 @@
         var gstNumber = [data.customer_gstin, data.customer_gstin_number, data.customer_gst_number].find(present);
         var taxNumber = present(gstNumber) ? gstNumber : data.customer_tax_number;
         var registrationLabel = contract.taxRegistrationLabel(data, PosnicPro.local.get('country_setting'));
-        var fieldLabel = function (field) { return label({ customer_name: 'Name', customer_phone: 'Phone', customer_email: 'Email', customer_address: 'Address', customer_tax_number: present(gstNumber) ? registrationLabel : PosnicPro.i18n.t('lang_tax_id', 'Tax ID'), fssai: 'FSSAI' }[field] || contract.fields[field]); };
+        var fieldLabel = function (field) { return label({ receipt_number: 'Receipt number', receipt_date: 'Date', seller_name: 'Seller', customer_name: 'Name', customer_phone: 'Phone', customer_email: 'Email', customer_address: 'Address', customer_tax_number: present(gstNumber) ? registrationLabel : PosnicPro.i18n.t('lang_tax_id', 'Tax ID'), fssai: 'FSSAI' }[field] || contract.fields[field] || field); };
         var pendingGoods = data.pending_goods_receipt === true;
         var beforePayment = pendingGoods || preview || !data.sales_id;
         var documentTitle = pendingGoods ? label('Bill') : beforePayment ? (present(data.branch_gstin_number) || on(data.gst) ? label('Tax invoice') : label('Bill')) : label('Receipt');
         var hasField = function (field) { return layout.blocks.some(function (b) { return b.type === 'field' && b.field === field; }); };
         var values = {
-            customer_name: data.customer_name, customer_phone: data.customer_phone, customer_email: data.customer_email,
+            receipt_number: data.sales_id || data.sale_number || data.id, receipt_date: data.receipt_date || data.created_date || data.date || '', seller_name: data.cashier_name || data.seller_name || data.steward_name || data.steward || data.created_by || data.user_name,\n            customer_name: data.customer_name, customer_phone: data.customer_phone, customer_email: data.customer_email,
             customer_tax_number: taxNumber,
             customer_address: data.customer_address, sale_note: data.sales_description, brand_url: data.website || PosnicPro.BRAND_URL,
             total_quantity: receiptItems.reduce(function (n, i) { return n + Number(i.item_quantity || 0); }, 0),
@@ -227,7 +227,7 @@
         var rendered = layout.blocks.map(function (b) {
             var content = '';
             if (b.type === 'field' && ((b.field === 'fssai' && headerFssai) || (b.field === 'total_quantity' && fixedItems))) return '';
-            if (b.type === 'field' && !contract.fieldAvailable(b.field, data) && !(b.field === 'sale_note' && typeof b.text === 'string' && b.text.trim())) return '';
+            if (b.type === 'field' && ['receipt_number', 'receipt_date', 'seller_name'].indexOf(b.field) === -1 && !contract.fieldAvailable(b.field, data) && !(b.field === 'sale_note' && typeof b.text === 'string' && b.text.trim())) return '';
             if (b.type === 'store') {
                 function storeText(key, fallback) { return String(b[key] || '').trim() || fallback || ''; }
                 var storeName = storeText('nameText', data.branch_name || data.store_name || PosnicPro.local.get('branchname'));
@@ -350,7 +350,7 @@
                 var src = b.type === 'logo' ? safeImage(b.src || (!logo || logo === 'store.png' ? 'static/images/default/store.png' : logo)) : b.type === 'barcode' ? barcode(data.sales_id || 'PREVIEW-RECEIPT-0001') : safeImage(b.src);
                 if (!src) return '';
                 var imageWidth = b.type === 'logo' ? Math.max(5, Math.min(250, Number(b.w != null ? b.w : b.width) || (sheet ? 22 : 45))) : b.type === 'barcode' ? 90 : b.width;
-                content = '<img src="' + esc(src) + '" alt="' + esc(label(b.type === 'qr' ? 'QR code' : b.type === 'logo' ? 'Store logo' : b.type === 'barcode' ? PosnicPro.i18n.t('lang_rd_receipt_barcode', 'Receipt barcode') : PosnicPro.i18n.t('lang_image', 'Image'))) + '" style="width:' + (sheet ? contract.formats[format].content * imageWidth / 100 + 'mm' : (b.type === 'barcode' ? '100%' : imageWidth + '%')) + ';max-height:' + (b.type === 'logo' ? '100px' : 'none') + ';">' + (b.type === 'barcode' ? '<div class="rd-barcode-value" style="font:10px/1.2 monospace;text-align:center;letter-spacing:1px;margin-top:2px;white-space:nowrap;">' + esc(data.sales_id || 'PREVIEW-RECEIPT-0001') + '</div>' : '');
+                var imageHeight = b.type === 'logo' ? Math.max(8, Math.min(2000, Number(b.h) || 44)) : b.type === 'barcode' ? Math.max(24, Math.min(200, Number(b.h) || 58)) : Number(b.h) || 32;\n                content = '<img src="' + esc(src) + '" alt="' + esc(label(b.type === 'qr' ? 'QR code' : b.type === 'logo' ? 'Store logo' : b.type === 'barcode' ? PosnicPro.i18n.t('lang_rd_receipt_barcode', 'Receipt barcode') : PosnicPro.i18n.t('lang_image', 'Image'))) + '" style="display:block;width:' + (sheet ? contract.formats[format].content * imageWidth / 100 + 'mm' : (b.type === 'barcode' ? '100%' : imageWidth + '%')) + ';height:' + (sheet ? imageHeight * 25.4 / 96 + 'mm' : imageHeight + 'px') + ';max-width:100%;object-fit:contain;margin-left:' + (b.align === 'center' ? 'auto' : '0') + ';margin-right:' + (b.align === 'left' ? 'auto' : '0') + ';">' + (b.type === 'barcode' ? '<div class="rd-barcode-value" style="font:10px/1.2 monospace;text-align:center;letter-spacing:1px;margin-top:2px;white-space:nowrap;">' + esc(data.sales_id || 'PREVIEW-RECEIPT-0001') + '</div>' : '');
             }
             var style = 'text-align:' + b.align;
             if (b.rotation != null && Number.isFinite(Number(b.rotation)) && Number(b.rotation) !== 0) {
