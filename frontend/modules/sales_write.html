@@ -55,7 +55,7 @@
 <button type="button" class="sales-function-key sales-key-customer" onclick="PosnicPro.sales.runFunctionShortcut('F5')" title="F5 — Choisir un client"><kbd>F5</kbd><i class="feather icon-users"></i><span>Client</span></button>
 <button type="button" class="sales-function-key sales-key-exchange" onclick="PosnicPro.sales.runFunctionShortcut('F8')" title="F8 — Échange / ticket"><kbd>F8</kbd><i class="feather icon-repeat"></i><span>Échange ticket</span></button>
 <div class="sales-current-customer" id="sales-current-customer" role="status" title="Client de la vente"><i class="feather icon-user"></i><span id="sales-current-customer-name">Client de passage</span></div>
-<div id="sales-customer-credit-inline" class="sales-customer-credit-inline" hidden role="status" aria-live="polite"><span>Crédit : montants du crédit</span><strong><span class="display-currency"></span> <span id="sales-customer-credit-inline-amount">0,00</span></strong></div>
+<div id="sales-customer-credit-inline" class="sales-customer-credit-inline" hidden role="status" aria-live="polite"><strong><span class="display-currency"></span> <span id="sales-customer-credit-inline-amount">0,00</span></strong></div>
 <div class="sales-shortcut-total" role="status" aria-live="polite"><span>Total</span><strong><span class="display-currency"></span> <span id="sales-shortcut-total-value">0.00</span></strong></div>
 </div>
                     <div class="row">
@@ -306,8 +306,7 @@
                                                         <lang class="lang_total_title">Total</lang>
                                                     </th>
                                                     <th scope="col">
-                                                        <lang class="lang_action"><span
-                                                                class="sale_table_head_text">Action</span></lang>
+                                                        <span class="sale_table_head_text">Action</span>
                                                     </th>
                                                 </tr>
                                             </thead>
