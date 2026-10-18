@@ -1,3 +1,23 @@
+/* Payment reports share one date parser. Splitting on every hyphen corrupts ISO dates. */
+function paymentReportDateRange(value) {
+    var text = String(value || '').trim();
+    var isoDates = text.match(/\d{4}-\d{2}-\d{2}/g);
+    if (isoDates && isoDates.length >= 2) {
+        return { starting_date: isoDates[0], ending_date: isoDates[1] };
+    }
+    var parts = text.split(/\s+-\s+/);
+    if (parts.length >= 2) {
+        return { starting_date: parts[0].trim(), ending_date: parts[1].trim() };
+    }
+    return { starting_date: '', ending_date: '' };
+}
+function paymentReportBranches() {
+    var selected = $('.payment_branch_value').val();
+    if (selected == null) return [];
+    return Array.isArray(selected) ? selected.filter(function (id) { return id !== ''; }) :
+        (String(selected) ? [String(selected)] : []);
+}
+
 PosnicPro.paymentreport = {
     showDataTablePage: function () {
         var loader = $(".loader-sales-payment-report");
@@ -52,16 +72,22 @@ PosnicPro.paymentreport = {
         }
     },
     paymentSaleReportView: function () {
-        var branchId = $(".payment_branch_value").val().toString();
-        if (branchId !== '') {
+        var branches = paymentReportBranches();
+        var branchId = branches.join(',');
+        if (branches.length) {
             var loader = $(".loader-sales-payment-type");
             $("<div class='loadingSpinner'></div>").appendTo(loader);
             var daterange = $(".view_payment_report_daterange").val();
-            var fields = daterange.split('-');
+            var dateRange = paymentReportDateRange(daterange);
+            if (!dateRange.starting_date || !dateRange.ending_date) {
+                loader.find(".loadingSpinner:first").remove();
+                PosnicPro.alert('error', 'Select a valid date range before loading payment reports.');
+                return;
+            }
             var data = {
-                starting_date: fields[0],
-                ending_date: fields[1],
-                branch: $(".payment_branch_value").val()
+                starting_date: dateRange.starting_date,
+                ending_date: dateRange.ending_date,
+                branch: branches
             };
             var params = {
                 url: 'sales/paymentSaleTypeReport',
@@ -72,7 +98,8 @@ PosnicPro.paymentreport = {
                 if (response.type === 'success') {
                     $("#salePaymentType").children('tbody').text('');
                     var data = response.data;
-                    var rowTotal = data.payment.length;
+                    var paymentRows = Array.isArray(data.payment) ? data.payment : [];
+                    var rowTotal = paymentRows.length;
                     if (rowTotal === 0) {
                         $('.reportpayment_header').hide();
                         let dateRange = $('#view_sales_daterange span span[data-toggle="tooltip"]').attr('data-original-title');
@@ -87,7 +114,7 @@ PosnicPro.paymentreport = {
                     if (Array.isArray(data.payment) && data.payment.length) {
                         var currency = PosnicPro.local.get('currencySign');
 
-                        $(data.payment).each(function (key, val) {
+                        $(paymentRows).each(function (key, val) {
                             var saleType = '<tr>' +
                                     '<td>' + (val.sales_payment_mode || '') + '</td>' +
                                     '<td class="text-right">' + currency + '&nbsp;<span class="number">' + (val.sales_payment || 0) + '</span></td>' +
@@ -115,6 +142,7 @@ PosnicPro.paymentreport = {
             });
         } else {
             $(".payment_branch_value").focus();
+            PosnicPro.alert('warning', 'Select at least one branch to view payment reports.');
         }
     },
     paymentTableTabClick: function () {
@@ -126,13 +154,19 @@ PosnicPro.paymentreport = {
 
 PosnicPro.paymentransaction = {
     paymentransactionTable: function (type) {
-        var branchId = $(".payment_branch_value").val().toString();
-        if (branchId !== '') {
+        var branches = paymentReportBranches();
+        var branchId = branches.join(',');
+        if (branches.length) {
             var loader = $(".loader-receiving-payment-report");
             $("<div class='loadingSpinner'></div>").appendTo(loader);
             PosnicPro.appendReportTableBody('paymenttransaction');
             var daterange = $(".view_payment_report_daterange").val();
-            var fields = daterange.split('-');
+            var dateRange = paymentReportDateRange(daterange);
+            if (!dateRange.starting_date || !dateRange.ending_date) {
+                loader.find(".loadingSpinner:first").remove();
+                PosnicPro.alert('error', 'Select a valid date range before loading payment reports.');
+                return;
+            }
             var table = $('#view_paymentransaction');
 
             if (type === 'paymentransactionexport') {
@@ -145,9 +179,9 @@ PosnicPro.paymentransaction = {
             var data = {
                 page: current_page,
                 limit: per_page,
-                starting_date: fields[0],
-                ending_date: fields[1],
-                branch: $(".payment_branch_value").val(),
+                starting_date: dateRange.starting_date,
+                ending_date: dateRange.ending_date,
+                branch: branches,
                 payment_mode: $("#payment_transaction_cash_mode").val()
             };
             var params = {
@@ -236,13 +270,19 @@ PosnicPro.paymentransaction = {
 
 PosnicPro.paymentreturntransaction = {
     paymentreturntransactionTable: function (type) {
-        let branchId = $(".payment_branch_value").val().toString();
-        if (branchId !== '') {
+        let branches = paymentReportBranches();
+        let branchId = branches.join(',');
+        if (branches.length) {
             let loader = $(".loader-return-sales-payment-report");
             $("<div class='loadingSpinner'></div>").appendTo(loader);
             PosnicPro.appendReportTableBody('paymenttransaction');
             let daterange = $(".view_payment_report_daterange").val();
-            let fields = daterange.split('-');
+            let dateRange = paymentReportDateRange(daterange);
+            if (!dateRange.starting_date || !dateRange.ending_date) {
+                loader.find(".loadingSpinner:first").remove();
+                PosnicPro.alert('error', 'Select a valid date range before loading payment reports.');
+                return;
+            }
             let table = $('#view_paymentreturntransaction');
 
             if (type === 'paymentreturntransactionexport') {
@@ -255,9 +295,9 @@ PosnicPro.paymentreturntransaction = {
             let data = {
                 page: current_page,
                 limit: per_page,
-                starting_date: fields[0],
-                ending_date: fields[1],
-                branch: $(".payment_branch_value").val(),
+                starting_date: dateRange.starting_date,
+                ending_date: dateRange.ending_date,
+                branch: branches,
                 payment_mode: $("#payment_transaction_cash_mode").val()
             };
             let params = {
@@ -393,14 +433,14 @@ PosnicPro.commissionreport = {
 
         var daterange = String($('.view_payment_report_daterange').val() ||
             $('.view_payment_report_daterange span').text() || '');
-        var fields = daterange.split('-');
+        var dateRange = paymentReportDateRange(daterange);
 
         PosnicPro.get({
             url: 'sales/commissionReport',
             data: {
-                starting_date: (fields[0] || '').trim(),
-                ending_date: (fields[1] || '').trim(),
-                branch: $('.payment_branch_value').val() || []
+                starting_date: dateRange.starting_date,
+                ending_date: dateRange.ending_date,
+                branch: paymentReportBranches()
             }
         }, function (response) {
             loader.find('.loadingSpinner:first').remove();
