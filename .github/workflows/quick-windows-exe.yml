@@ -1,5 +1,5 @@
-name: Quick Windows EXE (no tests)
-# Build the current feature-branch snapshot as installer and portable EXEs; deliberately no test steps.
+name: Quick Windows Installer EXE (no tests)
+# Build the current feature-branch snapshot as the Windows installer only; deliberately no test steps.
 
 on:
   workflow_dispatch:
@@ -34,6 +34,11 @@ on:
       - "frontend/static/script/js/modules/js/report_dailysales.js"
       - "frontend/static/script/js/modules/js/report_sales.js"
       - "frontend/static/script/js/modules/js/report_payment.js"
+      - "frontend/modules/customerdebts.html"
+      - "frontend/static/script/js/modules/js/customerdebts.js"
+      - "api/src/controllers/credit.controller.js"
+      - "api/src/services/credit.service.js"
+      - "api/src/routes/credit.routes.js"
       - "frontend/static/script/js/modules/js/report_return.js"
       - "frontend/static/script/js/modules/js/report_pending.js"
       - "frontend/static/script/js/modules/js/report_registers.js"
@@ -78,7 +83,7 @@ permissions:
 
 jobs:
   build-windows:
-    name: Build Windows installer and portable EXE without running tests
+    name: Build Windows installer only without running tests
     runs-on: windows-latest
     env:
       POSNIC_MINIFY: "0"
@@ -120,15 +125,14 @@ jobs:
       - name: Prepare bundled app resources
         run: npm run prepare:bundle
 
-      - name: Build Windows installer and portable EXE
-        run: npx electron-builder --win nsis portable --x64 --publish never --config.win.verifyUpdateCodeSignature=false
+      - name: Build Windows installer only
+        run: npx electron-builder --win nsis --x64 --publish never --config.win.verifyUpdateCodeSignature=false
 
-      - name: Upload Windows EXE builds
+      - name: Upload Windows installer
         uses: actions/upload-artifact@v7
         with:
-          name: Posnic-Windows-Installer-and-Portable-EXE
+          name: Posnic-Windows-Installer
           path: |
             dist/*-windows-x64-installer.exe
-            dist/*-windows-x64-portable.exe
           if-no-files-found: error
           retention-days: 7
