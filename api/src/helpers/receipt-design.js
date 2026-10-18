@@ -36,6 +36,9 @@
     letter: { name: 'US Letter', width: 215.9, height: 279.4, content: 191.9, font: 12 },
   };
   const fields = {
+    receipt_number: 'Sale number',
+    receipt_date: 'Sale date',
+    seller_name: 'Seller / cashier',
     customer_name: 'Customer name',
     customer_phone: 'Customer phone',
     customer_email: 'Customer email',
