@@ -694,7 +694,12 @@ PosnicPro.registers = {
                     '<style>html,body{background:#fff;color:#222;font-family:Arial,Helvetica,sans-serif;margin:0;padding:12px}*{box-sizing:border-box}table{width:100%;border-collapse:collapse}th,td{padding:6px 8px;border-bottom:1px solid #d8dee8;text-align:left}img{max-width:100%}.posnic-close-tender-summary{margin-top:18px;page-break-inside:avoid}.posnic-close-tender-summary h3{font-size:15px;margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid #222}@media print{@page{size:A4;margin:10mm}html,body{padding:0}}</style>' +
                     '</head><body>' + contents + url + '</body></html>';
                 window.electronAPI.printer.print(desktopPrintHtml, {
-                    showPrintDialog: true,
+                    // Match the receipt designer's Electron print contract: the
+                    // native dialog is controlled by showDialog (not showPrintDialog).
+                    showDialog: true,
+                    silent: false,
+                    forceHtml: true,
+                    printBackground: true,
                     pageSize: 'a4',
                     docName: 'Clôture de caisse'
                 }).then(function (result) {
