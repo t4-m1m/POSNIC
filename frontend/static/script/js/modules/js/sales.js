@@ -14542,10 +14542,6 @@ $(document).ready(function () {
             add.textContent = '+ Nouveau client';
             add.addEventListener('click', function () { self.create(); });
             bar.appendChild(add);
-            var hint = document.createElement('span');
-            hint.className = 'posnic-basket-hint';
-            hint.textContent = 'Utilisez les onglets pour basculer';
-            bar.appendChild(hint);
         },
         init: function () {
             if (this.initialized) return;
