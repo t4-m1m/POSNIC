@@ -693,6 +693,7 @@ PosnicPro.registers = {
             // PDF or a failed "Microsoft Print to PDF" save.
             var printWindow = frame1[0].contentWindow;
             var disposed = false;
+            var printStarted = false;
             var disposeFrame = function () {
                 if (disposed) return;
                 disposed = true;
@@ -700,7 +701,9 @@ PosnicPro.registers = {
             };
             if (printWindow) {
                 printWindow.onafterprint = disposeFrame;
-                frame1.on('load.registerClosePrint', function () {
+                var startPrint = function () {
+                    if (disposed || printStarted) return;
+                    printStarted = true;
                     try {
                         printWindow.focus();
                         printWindow.print();
@@ -709,21 +712,11 @@ PosnicPro.registers = {
                         PosnicPro.alert('error', 'Could not open the cash-register closing print dialog. Please try printing the closing report again.');
                         console.error('Register close print failed:', error);
                     }
-                });
+                };
+                frame1.on('load.registerClosePrint', startPrint);
                 // Some Electron versions do not emit load for a document written
                 // into an iframe; schedule printing after the current write stack.
-                window.setTimeout(function () {
-                    if (!disposed && frame1[0] && frame1[0].contentWindow) {
-                        try {
-                            printWindow.focus();
-                            printWindow.print();
-                        } catch (error) {
-                            disposeFrame();
-                            PosnicPro.alert('error', 'Could not open the cash-register closing print dialog. Please try printing the closing report again.');
-                            console.error('Register close print failed:', error);
-                        }
-                    }
-                }, 150);
+                window.setTimeout(startPrint, 150);
             } else {
                 disposeFrame();
                 PosnicPro.alert('error', 'The cash-register closing print frame could not be created.');
