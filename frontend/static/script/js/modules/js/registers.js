@@ -666,6 +666,8 @@ PosnicPro.registers = {
             $('#total_transaction').text($('#register_transaction').text());
 
             var contents = $("#printRegister_a4_form").html();
+            let printUrl = PosnicPro.local.get('print_url');
+            let url = ((printUrl === 'true') ? '<div class="col-md-12 col-sm-12 col-xs-12 text-center" style="margin-top: -30px;">' + PosnicPro.BRAND_URL + '</div>' : '');
 
             // Desktop builds must use the native print window instead of a
             // hidden renderer iframe. Electron can suppress window.print()
@@ -697,8 +699,6 @@ PosnicPro.registers = {
                 "position": "absolute",
                 "top": "-1000000px"
             });
-            let printUrl = PosnicPro.local.get('print_url');
-            let url = ((printUrl === 'true') ? '<div class="col-md-12 col-sm-12 col-xs-12 text-center" style="margin-top: -30px;">' + PosnicPro.BRAND_URL + '</div>' : '');
             $("body").append(frame1);
             var frameDoc = frame1[0].contentWindow ? frame1[0].contentWindow : frame1[0].contentDocument.document ? frame1[0].contentDocument.document : frame1[0].contentDocument;
             frameDoc.document.open();
