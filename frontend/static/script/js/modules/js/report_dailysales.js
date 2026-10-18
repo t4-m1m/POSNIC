@@ -1057,6 +1057,37 @@ PosnicPro.quickreport = {
     var paymentRows = (report.payments || []).map(function (p) { return line(p.label, money(p.amount), false); }).join('');
     var products = settings.showProducts ? '<h3>Articles vendus</h3>' + (report.products || []).slice(0, 30).map(function (p) { return line(p.name + ' × ' + p.qty, money(p.total), false); }).join('') : '';
     var profit = settings.showProfit ? line('Marge nette estimée', money(report.netProfit), false) + line('Marge avant remises', money(report.grossProfit), false) : '';
+    // Electron's secure window policy blocks renderer-created popups. Use the native
+    // print bridge in the desktop app; retain the popup only for ordinary browsers.
+    if (window.electronAPI && window.electronAPI.printer && window.electronAPI.printer.printReport) {
+      var closeDoc = PosnicPro.quickreport._slipDoc(report);
+      closeDoc.title = settings.title;
+      closeDoc.sections = (closeDoc.sections || []).filter(function (section) {
+        if (!settings.showProfit && /SALES \(EXCLUDING TAX\)/i.test(section.name || '')) {
+          section.rows = (section.rows || []).filter(function (row) {
+            return !/profit/i.test(typeof row === 'string' ? row : row.label || '');
+          });
+        }
+        return settings.showProducts || !/TOP ITEMS BY VALUE/i.test(section.name || '');
+      });
+      if (settings.footer) closeDoc.sections.push({ type: 'note', text: settings.footer });
+      Promise.resolve(PosnicPro.resolveReceiptPrinter())
+        .then(function (chosen) { return chosen || window.electronAPI.printer.getDefault(); })
+        .then(function (printerName) {
+          if (printerName && typeof printerName === 'object') printerName = printerName.name || null;
+          if (!printerName) throw new Error('No printer found. Choose one in Hardware Manager, Receipt Printer.');
+          return window.electronAPI.printer.printReport(closeDoc, {
+            printerName: printerName, paperWidth: settings.width, docName: settings.title
+          });
+        })
+        .then(function (result) {
+          if (!result || !result.success) PosnicPro.alert('error', (result && result.error) || 'Print failed');
+        })
+        .catch(function (err) {
+          PosnicPro.alert('error', (err && err.message) || 'Print failed');
+        });
+      return false;
+    }
     var w = window.open('', '_blank', 'width=520,height=760');
     if (!w) { PosnicPro.alert('error', 'The print window was blocked. Allow pop-ups for Posnic and retry.'); return false; }
     w.document.open();
