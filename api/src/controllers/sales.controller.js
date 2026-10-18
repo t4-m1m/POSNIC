@@ -558,7 +558,7 @@ class SalesController extends BaseController {
       const customerId = String(payload.customer_id || '').trim();
       const customerName = String(payload.customer_name || '').trim();
       if (!customerId || !mongoose.Types.ObjectId.isValid(customerId) ||
-          /walk.?in|cash customer|comptoir/i.test(customerName)) {
+          /walk.?in|cash customer|comptoir|client\\s+de\\s+passage/i.test(customerName)) {
         return {
           blocked: true,
           error: 'Partial payment and customer credit are available only for a registered customer. Collect the full amount for walk-in sales.',
@@ -574,7 +574,7 @@ class SalesController extends BaseController {
         is_deleted: { $ne: true },
         status: { $nin: ['inactive', 'blocked'] },
       }, { projection: { _id: 1, name: 1 } });
-      if (!customer || /walk.?in|cash customer|comptoir/i.test(String(customer.name || ''))) {
+      if (!customer || /walk.?in|cash customer|comptoir|client\\s+de\\s+passage/i.test(String(customer.name || ''))) {
         return {
           blocked: true,
           error: 'Select an active, registered customer account before accepting a partial payment.',
