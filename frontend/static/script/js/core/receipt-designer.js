@@ -208,7 +208,7 @@
         var gstNumber = [data.customer_gstin, data.customer_gstin_number, data.customer_gst_number].find(present);
         var taxNumber = present(gstNumber) ? gstNumber : data.customer_tax_number;
         var registrationLabel = contract.taxRegistrationLabel(data, PosnicPro.local.get('country_setting'));
-        var fieldLabel = function (field) { return label({ receipt_number: 'Receipt number', receipt_date: 'Date', seller_name: 'Seller', customer_name: 'Name', customer_phone: 'Phone', customer_email: 'Email', customer_address: 'Address', customer_tax_number: present(gstNumber) ? registrationLabel : PosnicPro.i18n.t('lang_tax_id', 'Tax ID'), fssai: 'FSSAI' }[field] || contract.fields[field] || field); };
+        var fieldLabel = function (field) { return label({ receipt_number: 'Ticket number', receipt_date: 'Date', seller_name: 'Vendeur', customer_name: 'Client', customer_phone: 'Client phone', customer_email: 'Client email', customer_address: 'Client address', customer_tax_number: present(gstNumber) ? registrationLabel : PosnicPro.i18n.t('lang_tax_id', 'Tax ID'), fssai: 'FSSAI' }[field] || contract.fields[field] || field); };
         var pendingGoods = data.pending_goods_receipt === true;
         var beforePayment = pendingGoods || preview || !data.sales_id;
         var documentTitle = pendingGoods ? label('Bill') : beforePayment ? (present(data.branch_gstin_number) || on(data.gst) ? label('Tax invoice') : label('Bill')) : label('Receipt');
@@ -250,27 +250,12 @@
                 var formattedDate = transactionDate(receiptDate, b, data.receipt_date_order);
                 var customLabel = typeof b.labelText === 'string';
                 if (sheet) {
-                    content = '<div class="rd-invoice-meta"><div class="rd-invoice-title">' + esc(documentTitle) + '</div><dl>';
-                    if (data.sales_id) content += '<dt>' + esc(customLabel ? b.labelText : beforePayment ? PosnicPro.i18n.t('lang_bill_no', 'Bill no') : PosnicPro.i18n.t('lang_rd_receipt_number', 'Receipt number')) + '</dt><dd>' + esc(data.sales_id) + '</dd>';
-                    content += '<dt>' + esc(PosnicPro.i18n.t('lang_date_title', 'Date')) + '</dt><dd>' + esc(receiptDate) + '</dd></dl></div>';
+                    content = '<div class="rd-invoice-meta"><dl>';
+                    if (data.sales_id) content += '<dt>' + esc(customLabel && b.labelText ? b.labelText : 'Ticket number') + '</dt><dd>' + esc(data.sales_id) + '</dd>';
+                    content += '</dl></div>';
                 } else {
-                    var billPrefix = '';
-                    if (b.showTitle === false && data.sales_id) {
-                        var prefix = PosnicPro.i18n.t('lang_bill_no', 'Bill no') + ': ';
-                        var headerText = prefix + data.sales_id + formattedDate;
-                        // Thermal headers use monospace. Reserve a small gap and allow
-                        // for bold glyphs; omit only the label when the row is too wide.
-                        var headerSize = Number(b.fontSize) || layout.fontSize;
-                        if (Array.from(headerText).length * headerSize * 0.605 + 4 <= contract.formats[format].content * 96 / 25.4) billPrefix = prefix;
-                    }
-                    var saleNumberLabel = customLabel ? b.labelText : PosnicPro.i18n.t('lang_bill_no', 'Bill no');
-                    var sellerName = data.user_name || data.created_by || data.seller_name || data.steward_name || data.steward || data.cashier_name || '';
-                    content = '<div class="rd-transaction rd-sale-details">' +
-                        '<div class="rd-sale-meta"><strong>' + esc(saleNumberLabel) + (data.sales_id ? ': ' + headerValue(data.sales_id) : '') + '</strong><span class="rd-transaction-date">' + thermalDate(formattedDate) + '</span></div>' +
-                        '<hr class="rd-divider rd-sale-separator" style="width:100%;margin:4px 0">' +
-                        (sellerName && b.showCashier !== false ? '<div class="rd-cashier"><strong>' + esc(label('Vendeur')) + ':</strong> ' + esc(sellerName) + '</div>' : '') +
-                        (present(data.customer_name) ? '<div class="rd-sale-client"><strong>' + esc(label('Client')) + ':</strong> ' + esc(String(data.customer_name).trim()) + '</div>' : '') +
-                        '</div>';
+                    var saleNumberLabel = customLabel && b.labelText ? b.labelText : 'Ticket number';
+                    content = '<div class="rd-transaction rd-sale-details"><strong>' + esc(saleNumberLabel) + (data.sales_id ? ': ' + headerValue(data.sales_id) : '') + '</strong></div>';
                 }
                 if (!data.sales_id && !pendingGoods) content += '<p class="rd-pending-number">' + esc(PosnicPro.i18n.t('lang_receipt_number_after_save', 'Receipt number is assigned after saving the sale.')) + '</p>';
                 if (present(taxNumber) && !hasField('customer_tax_number')) content += '<p class="rd-customer-tax">' + esc(fieldLabel('customer_tax_number')) + ': ' + esc(String(taxNumber).trim()) + '</p>';
@@ -349,11 +334,20 @@
             }
             else {
                 var logo = data.logo || data.branch_image;
-                var src = b.type === 'logo' ? safeImage(b.src || (!logo || logo === 'store.png' ? 'static/images/default/store.png' : logo)) : b.type === 'barcode' ? barcode(data.sales_id || 'PREVIEW-RECEIPT-0001') : safeImage(b.src);
+                var saleBarcodeValue = String(data.sales_id || data.sale_number || 'PREVIEW-RECEIPT-0001');
+                var src = b.type === 'logo' ? safeImage(b.src || (!logo || logo === 'store.png' ? 'static/images/default/store.png' : logo)) : b.type === 'barcode' ? barcode(saleBarcodeValue) : safeImage(b.src);
                 if (!src) return '';
                 var imageWidth = b.type === 'logo' ? Math.max(5, Math.min(250, Number(b.w != null ? b.w : b.width) || (sheet ? 22 : 45))) : b.type === 'barcode' ? 90 : b.width;
-                var imageHeight = b.type === 'logo' ? Math.max(8, Math.min(2000, Number(b.h) || 44)) : b.type === 'barcode' ? Math.max(24, Math.min(200, Number(b.h) || 58)) : Number(b.h) || 32;
-                content = '<img src="' + esc(src) + '" alt="' + esc(label(b.type === 'qr' ? 'QR code' : b.type === 'logo' ? 'Store logo' : b.type === 'barcode' ? PosnicPro.i18n.t('lang_rd_receipt_barcode', 'Receipt barcode') : PosnicPro.i18n.t('lang_image', 'Image'))) + '" style="display:block;width:' + (sheet ? contract.formats[format].content * imageWidth / 100 + 'mm' : (b.type === 'barcode' ? '100%' : imageWidth + '%')) + ';height:' + (sheet ? imageHeight * 25.4 / 96 + 'mm' : imageHeight + 'px') + ';max-width:100%;object-fit:contain;margin-left:' + (b.align === 'center' ? 'auto' : '0') + ';margin-right:' + (b.align === 'left' ? 'auto' : '0') + ';">' + (b.type === 'barcode' ? '<div class="rd-barcode-value" style="font:bold 12px/1 Tahoma,sans-serif;text-align:center;letter-spacing:0;margin-top:0;white-space:nowrap;">' + esc(data.sales_id || 'PREVIEW-RECEIPT-0001') + '</div>' : '');
+                var imageHeight = b.type === 'logo' ? Math.max(8, Math.min(2000, Number(b.h) || 44)) : b.type === 'barcode' ? Math.max(24, Math.min(200, Number(b.h) || 42)) : Number(b.h) || 32;
+                if (b.type === 'barcode') {
+                    var barcodeWidth = sheet ? contract.formats[format].content * imageWidth / 100 + 'mm' : imageWidth + '%';
+                    var barcodeHeight = sheet ? imageHeight * 25.4 / 96 + 'mm' : imageHeight + 'px';
+                    content = '<div class="rd-sale-barcode" style="width:' + barcodeWidth + ';max-width:100%;margin:0 auto;text-align:center;line-height:0;">' +
+                        '<img src="' + esc(src) + '" alt="Sale barcode ' + esc(saleBarcodeValue) + '" style="display:block;width:100%;height:' + barcodeHeight + ';max-width:100%;object-fit:fill;margin:0 auto;">' +
+                        '<div class="rd-barcode-value" style="font-family:Tahoma,sans-serif;font-size:12px;font-weight:700;line-height:14px;text-align:center;letter-spacing:0;margin:0;padding:0;white-space:nowrap;">' + esc(saleBarcodeValue) + '</div></div>';
+                } else {
+                    content = '<img src="' + esc(src) + '" alt="' + esc(label(b.type === 'qr' ? 'QR code' : b.type === 'logo' ? 'Store logo' : label('Image'))) + '" style="display:block;width:' + (sheet ? contract.formats[format].content * imageWidth / 100 + 'mm' : imageWidth + '%') + ';height:' + (sheet ? imageHeight * 25.4 / 96 + 'mm' : imageHeight + 'px') + ';max-width:100%;object-fit:contain;margin-left:' + (b.align === 'center' ? 'auto' : '0') + ';margin-right:' + (b.align === 'left' ? 'auto' : '0') + ';">';
+                }
             }
             var style = 'text-align:' + b.align;
             if (b.rotation != null && Number.isFinite(Number(b.rotation)) && Number(b.rotation) !== 0) {
