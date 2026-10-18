@@ -4624,6 +4624,7 @@ PosnicPro.sales.addSale = {
             } else {
                 payment_mode_val = $('.payment_mode').val();
             }
+            if (fullyUnpaidNewSale) payment_mode_val = 'Credit';
             let register_id = PosnicPro.sales.saleRegisterId();
             var isKotNewSale = (PosnicPro.sales.saleProcess === 'KOT');
             var newSaleTableNumber = '';
@@ -12809,6 +12810,14 @@ PosnicPro.sales.refreshCustomerDebtButton = function (data) {
         }
     });
 };
+$(document).on('click', '#sales-customer-credit-inline', function () {
+    var customerId = String($('#sales_new_customer_id').val() || '').trim();
+    var customerName = String($('#sales_new_customer_name').val() || '').trim();
+    if (!/^[a-f0-9]{24}$/i.test(customerId)) return;
+    PosnicPro.sales._debtCustomerToOpen = { id: customerId, name: customerName };
+    if (typeof hasher !== 'undefined' && hasher.setHash) hasher.setHash('customerdebts');
+    else window.location.hash = '#/customerdebts';
+});
 PosnicPro.sales.applyCustomerPick = function (data) {
     var customerRecord = [];
     PosnicPro.local.set('customerName', data.name);
