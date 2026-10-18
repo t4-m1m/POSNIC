@@ -204,12 +204,8 @@ const enrichSaleContext = async (context = {}) => {
     updated.stockManagement = branchDoc.stock_management !== false;
     // The branch's prefix wins, even if it is blank (a shop may want plain
     // numbers); only when it was never set do we keep the prior value or 'S'.
-    updated.salesPrefix =
-      branchDoc.sales_prefix != null
-        ? branchDoc.sales_prefix
-        : updated.salesPrefix != null
-          ? updated.salesPrefix
-          : 'S';
+    // Sale numbers are now seven digits without branch-configured prefixes.
+    updated.salesPrefix = '';
     updated.branchName = branchDoc.branch_name || updated.branchName;
     updated.branchState = (branchDoc.store_state || branchDoc.state || branchDoc.branch_state || '')
       .toString()
@@ -1016,7 +1012,7 @@ const processSale = async (
     // for any shop with a custom prefix of another length.
     let prefixId = '';
     if (id === '') {
-      const prefixValue = context.salesPrefix != null ? context.salesPrefix : 'S';
+      const prefixValue = '';
       // Readable scheme (SB1D1-000045) once this till has its branch and its
       // gateway-assigned device code; until then a till-tagged number that is
       // already collision-free. Either way, two tills can never clash.
@@ -1692,7 +1688,7 @@ const processSale = async (
         // If the unique bill-number index catches a one-in-a-million clash,
         // take the next number and retry rather than fail the sale.
         result = await salesRepository.createSaleUnique(finalSaleData, async () => {
-          const pv = context.salesPrefix || 'INV';
+          const pv = '';
           return salesRepository.generateSalesIdForBranch(branchId, { fallbackPrefix: pv });
         });
       } catch (error) {
