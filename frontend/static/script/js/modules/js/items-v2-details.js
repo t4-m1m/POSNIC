@@ -11,10 +11,10 @@
             var bytes = new Uint32Array(1);
             if (root.crypto && typeof root.crypto.getRandomValues === 'function') root.crypto.getRandomValues(bytes);
             else bytes[0] = Math.floor(Math.random() * 0xFFFFFFFF);
-            var code = String(bytes[0] % 1000000).padStart(6, '0');
+            var code = String(1000000 + (bytes[0] % 9000000));
             if (!used.has(code)) return code;
         }
-        throw new Error('Could not generate a unique six-digit barcode.');
+        throw new Error('Could not generate a unique seven-digit barcode.');
     }
     function validGtin(value) {
         var code = String(value || '').replace(/[\s-]/g, '');
