@@ -1143,9 +1143,52 @@ class RegisterRepository {
         throw new Error(ERROR_MESSAGES.DOCUMENT_NOT_FOUND);
       }
 
+      // Enrich register sale references with saved sale totals and line costs.
+      // The register ledger stores IDs and tender totals, so the closing slip
+      // reads canonical sale rows to calculate cost of goods and profit.
+      const registerSales = Array.isArray(document.register_sales) ? document.register_sales : [];
+      const saleIds = registerSales
+        .map((entry) => entry && (entry.sales_id || entry.sale_id))
+        .filter((id) => id && ObjectId.isValid(String(id)))
+        .map((id) => (id instanceof ObjectId ? id : new ObjectId(String(id))));
+      const salesById = new Map();
+      if (saleIds.length) {
+        const salesCollection = await this.model.getCollection('sales');
+        const sales = await salesCollection
+          .find({ _id: { $in: saleIds } })
+          .project({ items: 1, sales_total: 1, grand_total: 1, total: 1, multi_payment: 1, payment_mode: 1, payment_status: 1, payment_pending: 1, paid_amount: 1 })
+          .toArray();
+        sales.forEach((sale) => salesById.set(String(sale._id), sale));
+      }
+      const data = BaseModel.simplifyFields(document);
+      data.register_sales = (data.register_sales || []).map((entry) => {
+        const id = String((entry && (entry.sales_id || entry.sale_id)) || '');
+        const sale = salesById.get(id);
+        if (!sale) return entry;
+        const items = Array.isArray(sale.items) ? sale.items : [];
+        const costTotal = items.reduce((sum, item) => {
+          const lineCost = Number(item && item.company_price_total);
+          if (item && item.company_price_total != null && Number.isFinite(lineCost)) return sum + lineCost;
+          const rawUnitCost = item && (item.company_price ?? item.purchase_cost ?? item.cost_price);
+          const unitCost = Number(rawUnitCost);
+          const quantity = Number((item && (item.quantity || item.qty)) || 1);
+          return sum + (rawUnitCost != null && Number.isFinite(unitCost) ? unitCost * quantity : 0);
+        }, 0);
+        const total = Number(sale.sales_total ?? sale.grand_total ?? sale.total ?? entry.register_amount ?? 0);
+        return {
+          ...entry,
+          sales_total: total,
+          grand_total: total,
+          cost_total: costTotal,
+          multi_payment: sale.multi_payment || entry.multi_payment || {},
+          payment_mode: sale.payment_mode || entry.register_paymentmode || 'Cash',
+          payment_status: sale.payment_status || '',
+          payment_pending: Number(sale.payment_pending || 0),
+        };
+      });
       return {
         status: true,
-        data: BaseModel.simplifyFields(document),
+        data,
         message: SUCCESS_MESSAGES.REGISTER_FETCHED,
       };
     } catch (error) {
