@@ -408,6 +408,8 @@ PosnicPro.quickreport = {
           expenses: response.data && (response.data.expenses_total != null ? response.data.expenses_total : response.data.total_expenses != null ? response.data.total_expenses : response.data.expenses),
         };
         $(document).trigger('dayCloseReportUpdated', [PosnicPro.quickreport.lastReport]);
+        var _dcs=PosnicPro.quickreport.lastReport||{},_dcm=function(v){return 'DZD '+(Number(v)||0).toLocaleString('fr-DZ',{minimumFractionDigits:2,maximumFractionDigits:2});};
+        $('#dc-summary-sales').text(_dcm(_dcs.total));$('#dc-summary-cost').text(_dcm(_dcs.cost_of_goods));$('#dc-summary-gross').text(_dcm(_dcs.gross_profit));$('#dc-summary-expenses').text(_dcm(_dcs.expenses));$('#dc-summary-net').text(_dcm((Number(_dcs.gross_profit)||0)-(Number(_dcs.expenses)||0)));$('#dc-summary-count').text((_dcs.sales_count==null?'—':_dcs.sales_count)+' ventes');
 
         var summaryCash = 0, summaryCard = 0;
         PosnicPro.quickreport.lastReport.payments.forEach(function (payment) {

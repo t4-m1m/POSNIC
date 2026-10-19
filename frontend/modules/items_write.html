@@ -319,15 +319,10 @@
                                             id="items_company_price" name="items_company_price" minlength="1"
                                             maxlength="7" value="0.00" placeholder="Cost" data-t-placeholder="lang_companyamount_title" autocomplete="off">
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-control-placeholder" for="items_mrp_price">
-                                            <lang class="lang_m_r_p"> M.R.P </lang>
-                                        </label>
-                                        <input inputmode="decimal" type="text"
-                                            class="form-control allow_decimal text-right clear_text_item hide_price_digit"
-                                            id="items_mrp_price" name="items_mrp_price" minlength="1" maxlength="7"
-                                            value="0.00" placeholder="M.R.P" autocomplete="off">
-                                    </div>
+                                    <div class="d-none" aria-hidden="true"><input type="hidden"
+                                            class="data-preserve-mrp-hidden"
+                                            id="items_mrp_price" name="items_mrp_price"
+                                            value="0.00"></div>
                                 </div>
                                 <div class="row">
 

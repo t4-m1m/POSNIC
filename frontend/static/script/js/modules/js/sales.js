@@ -7967,6 +7967,10 @@ PosnicPro.sales.categoryPicture = function (name, image) {
     return 'static/images/categories/shop.svg';
 };
 
+/* Brand filter enhancement: filters rendered item tiles only. */
+(function($){function apply(){var v=String($('#sales_brand_filter').val()||'');$('#sales_new_productList [data-item-brand]').each(function(){$(this).toggle(!v||String($(this).attr('data-item-brand')||'')===v);});}
+function refresh(){var $s=$('#sales_brand_filter'),brands={},cur=$s.val()||'';if(!$s.length)return;$('#sales_new_productList [data-item-brand]').each(function(){var b=String($(this).attr('data-item-brand')||'').trim();if(b)brands[b]=1;});var keys=Object.keys(brands).sort();$s.empty().append($('<option>').val('').text('Toutes les marques'));keys.forEach(function(b){$s.append($('<option>').val(b).text(b.charAt(0).toUpperCase()+b.slice(1)));});$('#sales-brand-filter-wrap').toggle(keys.length>0);$s.val(keys.indexOf(cur)>=0?cur:'');apply();}
+$(document).on('change','#sales_brand_filter',apply);$(function(){refresh();var t=document.getElementById('sales_new_productList');if(t&&window.MutationObserver)new MutationObserver(refresh).observe(t,{childList:true,subtree:true});});})(jQuery);
 PosnicPro.sales.itemsMenu = {
     /*sales Product Display*/
     onlineProductList: function (categoryId, offset) {
@@ -8077,7 +8081,7 @@ PosnicPro.sales.itemsMenu = {
                                     '<div style="width:62%;aspect-ratio:1/1;' + _shapeCss + 'background:' + _tileColor + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:34px;font-weight:700;">' + _initial + '</div>' +
                                     '</div></div>';
                             }
-                            var product = '<div class="wsk-cp cbutton--effect-novak" id="' + getItemdata[i]['id'] + '" onclick="PosnicPro.sales.itemsMenu.addToLineItemsList(this.id)">' +
+                            var _brandValue = String(getItemdata[i].brand || getItemdata[i].brand_name || getItemdata[i].company_name || '').trim().toLowerCase(); var product = '<div class="wsk-cp cbutton--effect-novak" data-item-brand="' + $('<i>').text(_brandValue).html() + '" id="' + getItemdata[i]['id'] + '" onclick="PosnicPro.sales.itemsMenu.addToLineItemsList(this.id)">' +
                                 '<div class="wsk-cp-product">' +
                                 '<div class="description-prod">' +
                                 '<p data-searchval="' + _escName + '" data-toggle="tooltip" title="' + _escName + '">' + _escName + '</p>' +
