@@ -301,7 +301,7 @@
                                     <div class="col-md-2 form-group"><label>Du</label><input id="settlement_from" type="date" class="form-control"></div>
                                     <div class="col-md-2 form-group"><label>Au</label><input id="settlement_to" type="date" class="form-control"></div>
                                     <div class="col-md-2 form-group"><label>Statut</label><select id="settlement_status" class="form-control"><option value="all">Tous</option><option value="pending">En attente / partiel</option><option value="collected">Encaissé</option></select></div>
-                                    <div class="col-md-4 form-group"><button class="btn btn-primary mr-2" onclick="PosnicPro.paymentsettlements.load()">Appliquer les filtres</button><button class="btn btn-success" onclick="PosnicPro.paymentsettlements.collectSelected()">Enregistrer les encaissements sélectionnés</button></div>
+                                    <div class="col-md-4 form-group"><button class="btn btn-primary mr-2" onclick="PosnicPro.paymentsettlements.load()">Appliquer les filtres</button><button type="button" class="btn btn-success" id="settlement_collect_selected">Enregistrer les encaissements sélectionnés</button></div>
                                 </div>
                                 <div class="row mb-3">
                                     <div class="col-md-6"><div class="alert alert-light border mb-2"><strong>TPE</strong> — total: <span id="settlement_tpe_total">0</span> · encaissé : <span id="settlement_tpe_collected">0</span> · en attente : <span id="settlement_tpe_pending">0</span></div></div>
