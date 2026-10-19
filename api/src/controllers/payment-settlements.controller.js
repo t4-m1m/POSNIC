@@ -15,7 +15,7 @@ const saleAmountForMethod = (sale, method) => {
   const breakdown = sale.payment_breakdown || sale.payment_details || sale.payments || sale.payment_methods;
   if (Array.isArray(breakdown)) {
     return money(breakdown.reduce((sum, row) => {
-      const mode = normMethod(row.method || row.payment_mode || row.name || row.payment_method);
+      const mode = normMethod(row.payment_mode || row.payment_method || row.name || row.method || row.reference || row.notes || '');
       return sum + (mode === method ? Number(row.amount || row.value || row.paid_amount || 0) : 0);
     }, 0));
   }
