@@ -105,7 +105,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-windows:
@@ -154,11 +154,33 @@ jobs:
       - name: Build Windows installer only
         run: npx electron-builder --win nsis --x64 --publish never --config.compression=maximum --config.win.verifyUpdateCodeSignature=false
 
-      - name: Upload Windows installer
+      - name: Normalize installer filename
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem -Path "dist/*-windows-x64-installer.exe" -File)
+          if ($installers.Count -ne 1) {
+            throw "Expected exactly one Windows installer, found $($installers.Count)."
+          }
+          Move-Item -LiteralPath $installers[0].FullName -Destination "dist/Posnic-Windows-Installer.exe" -Force
+
+      - name: Upload Windows installer artifact
         uses: actions/upload-artifact@v7
         with:
           name: Posnic-Windows-Installer
-          path: |
-            dist/*-windows-x64-installer.exe
+          path: dist/Posnic-Windows-Installer.exe
           if-no-files-found: error
           retention-days: 7
+
+      - name: Publish installer to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: installer-${{ github.run_number }}
+          name: POSNIC Windows Installer (build ${{ github.run_number }})
+          body: |
+            Automatically published Windows installer from the successful POSNIC installer build.
+
+            Download **Posnic-Windows-Installer.exe** below. This release contains the installer only.
+          files: dist/Posnic-Windows-Installer.exe
+          draft: false
+          prerelease: false
+          make_latest: true
