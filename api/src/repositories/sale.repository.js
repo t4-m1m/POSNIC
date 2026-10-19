@@ -4156,7 +4156,6 @@ class SalesRepository {
         extra_discount_type: 1,
         sale_method: 1,
         order: 1,
-        multi_payment: 1,
         table_id: 1,
         table_number: 1,
         dine_type: 1,
