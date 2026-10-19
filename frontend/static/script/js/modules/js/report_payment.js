@@ -241,7 +241,7 @@ PosnicPro.paymentransaction = {
                             let customer = val.user_name;
                             let mode = val.payment_mode;
                             let total = val.report_amount ?? val.items_total;
-                            paymentsalereportexportdata.push({SaleId: id, Date: date, UserName: customer, PaymentMethod: mode, Amount: total});
+                            paymentsalereportexportdata.push({SaleId: id, Date: date, UserName: customer, PaymentMethod: mode, Amount: total, TPECollected: val.tpe_collected || 0, TPEUncollected: val.tpe_uncollected || 0, BaridiMobCollected: val.baridimob_collected || 0, BaridiMobUncollected: val.baridimob_uncollected || 0});
                         });
                         PosnicPro.JSONToCSVConvertor(paymentsalereportexportdata, 'payment-sales-reports', true);
                         PosnicPro.paymentransaction.paymentransactionTable();
