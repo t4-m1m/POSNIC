@@ -625,7 +625,7 @@ PosnicPro.registers = {
         try { var savedClosing = localStorage.getItem("posnicClosingStudioTemplateV3"); if (savedClosing) content = savedClosing; } catch (e) {}
         paper.html(content);
         paper.find("[data-closing-value]").each(function(){var key=$(this).attr("data-closing-value");if(Object.prototype.hasOwnProperty.call(dynamicValues,key))$(this).text(dynamicValues[key]);});
-        paper.find('> *').each(function(){ $(this).attr('data-pcs-block','1').attr('draggable','true'); });
+        paper.find('> *').each(function(){ if ($(this).css('display') !== 'none') $(this).attr('data-pcs-block','1').attr('draggable','true'); });
         paper.find('td,th,span,p,h1,h2,h3,h4,address').attr('contenteditable','true');
         var dragNode = null;
         var selectedBlock = paper.find("[data-pcs-block]").first().addClass("pcs-selected")[0] || null;
@@ -674,7 +674,7 @@ PosnicPro.registers = {
             else node=$('<p data-pcs-block="1" draggable="true" contenteditable="true">Texte personnalisable</p>');
             paper.append(node);
         });
-        shell.on('click','.pcs-reset',function(){paper.html(content);paper.find('> *').attr('data-pcs-block','1').attr('draggable','true');paper.find('td,th,span,p,h1,h2,h3,h4,address').attr('contenteditable','true');});
+        shell.on('click','.pcs-reset',function(){paper.html(content);paper.find('> *').each(function(){if($(this).css('display')!=='none')$(this).attr('data-pcs-block','1').attr('draggable','true');});paper.find('td,th,span,p,h1,h2,h3,h4,address').attr('contenteditable','true');});
         shell.on('click','.pcs-save-template',function(){try{localStorage.setItem('posnicClosingStudioTemplateV3',paper.html());PosnicPro.alert('success','Modèle de clôture enregistré sur cet appareil.');}catch(e){PosnicPro.alert('error','Impossible d’enregistrer le modèle sur cet appareil.');}});
         shell.on('click','.pcs-print',function(){
             var format = shell.find('.pcs-print-format').val() || '80';
@@ -754,8 +754,7 @@ PosnicPro.registers = {
                     tallyRows += '<tr><th>' + esc(method) + '</th><td style="text-align:right"><span data-closing-value="tender-' + esc(method.toLowerCase().replace(/[^a-z0-9]+/g, '-')) + '">' + moneyText(data.paymentTally[method]) + '</span></td></tr>';
                 });
             }
-            var contents = '<div class="closing-slip-default">' +
-                '<h2 style="text-align:center">Clôture de caisse</h2>' +
+            var contents = '<h2 style="text-align:center">Clôture de caisse</h2>' +
                 '<p><strong>Caisse :</strong> <span data-closing-value="register-name">' + esc(data.register_name || '') + '</span></p>' +
                 '<p><strong>Ouverture :</strong> <span data-closing-value="opened-at">' + esc(data.register_opendate || '') + '</span></p>' +
                 '<p><strong>Clôture :</strong> <span data-closing-value="closed-at">' + esc(data.register_closedate || '') + '</span></p>' +
