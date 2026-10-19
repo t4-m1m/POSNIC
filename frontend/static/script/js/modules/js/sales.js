@@ -11781,12 +11781,19 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
             '</div></div></div>');
     }
     function askCashier(key) {
-        if (cashierPromptOpen) return;
+        ensureCashierModal();
+        var $modal = $('#posnic-vendeur-modal');
+        // A hidden event can be missed when Bootstrap is interrupted during checkout.
+        // Never let a stale in-memory guard block F2 on the next sale: the modal's
+        // actual visibility is the source of truth for whether the picker is open.
+        if (cashierPromptOpen && !$modal.hasClass('show')) {
+            cashierPromptOpen = false;
+        }
+        if (cashierPromptOpen || $modal.hasClass('show')) return;
         // Always show the cashier picker for each new checkout attempt. The tender sidebar
         // can remain visible from the previous sale, so it is not a reliable checkout-state test.
         cashierPromptOpen = true;
-        ensureCashierModal();
-        var names = cashierNames(), $modal = $('#posnic-vendeur-modal');
+        var names = cashierNames();
         $modal.data('pending-key', key).data('pending-name', selectedCashier || '');
         var $select = $('#posnic-vendeur-select');
         $select.html('<option value="">Sélectionner un vendeur…</option>' + names.map(function (name) {
