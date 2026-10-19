@@ -679,7 +679,7 @@ PosnicPro.registers = {
         shell.on('click','.pcs-print',function(){
             try { localStorage.setItem('posnicClosingStudioTemplate',paper.html()); } catch (e) {}
             var output='<!doctype html><html><head><meta charset="utf-8"><title>Clôture de caisse</title><style>html,body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:0;padding:10mm}*{box-sizing:border-box}table{width:100%;border-collapse:collapse}th,td{padding:6px;border-bottom:1px solid #ddd;text-align:left}hr{border:0;border-top:1px solid #999}@page{size:A4;margin:10mm}</style></head><body>'+paper.html().replace(/\scontenteditable="true"/g,'').replace(/\sdraggable="true"/g,'').replace(/\sdata-pcs-block="1"/g,'')+'</body></html>';
-            var printContent = paper.html().replace(/\scontenteditable="true"/g, '').replace(/\sdraggable="true"/g, '').replace(/\sdata-pcs-block="1"/g, '').replace(/\sclass="pcs-selected"/g, '');
+            var printContent = '<style>html,body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:0;padding:10mm}*{box-sizing:border-box}table{width:100%;border-collapse:collapse}th,td{padding:6px;border-bottom:1px solid #ddd;text-align:left}hr{border:0;border-top:1px solid #999}@page{size:A4;margin:10mm}</style>' + paper.html().replace(/\scontenteditable="true"/g, '').replace(/\sdraggable="true"/g, '').replace(/\sdata-pcs-block="1"/g, '').replace(/\sclass="pcs-selected"/g, '');
             var receiptEngine = PosnicPro.receiptDesigner;
             if (receiptEngine && typeof receiptEngine.print === 'function') {
                 receiptEngine.print(printContent, 'a4', { showDialog: true, sample: true }).then(function (result) {
