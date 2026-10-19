@@ -23,6 +23,10 @@ on:
       - "api/src/helpers/receipt-design.js"
       - "frontend/static/script/js/core/receipt-designer.js"
       - "frontend/static/script/js/modules/js/receipt-studio.js"
+      - "frontend/static/script/js/modules/js/registers.js"
+      - "frontend/static/script/js/core/PosnicPro.js"
+      - "api/src/controllers/payment-settlements.controller.js"
+      - "api/src/routes/payment-settlements.routes.js"
       - "frontend/modules/items.html"
       - "frontend/modules/items_v2.html"
       - "frontend/modules/sales_read.html"
@@ -147,7 +151,7 @@ jobs:
         run: npm run prepare:bundle
 
       - name: Build Windows installer only
-        run: npx electron-builder --win nsis --x64 --publish never --config.win.verifyUpdateCodeSignature=false
+        run: npx electron-builder --win nsis --x64 --publish never --config.compression=maximum --config.win.verifyUpdateCodeSignature=false
 
       - name: Upload Windows installer
         uses: actions/upload-artifact@v7

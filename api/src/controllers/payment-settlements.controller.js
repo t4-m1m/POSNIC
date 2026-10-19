@@ -4,24 +4,34 @@ const COLLECTION = 'payment_settlements';
 const SUPPORTED = ['tpe', 'baridimob'];
 const money = (v) => Math.round((Number(v) || 0) * 100) / 100;
 const normMethod = (value) => {
-  const key = String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const key = String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
   if (key.includes('baridimob')) return 'baridimob';
-  if (key === 'tpe' || key.includes('terminalepayment') || key.includes('creditcard')) return 'tpe';
+  if (key === 'tpe' || key.includes('terminal') || key.includes('creditcard') || key === 'card' || key.includes('cartebancaire') || key === 'pos') return 'tpe';
   return '';
 };
 const saleId = (sale) => String(sale.sales_id || sale.sale_id || sale.invoice_number || sale._id || '');
 const saleDate = (sale) => sale.updated_date || sale.created_date || sale.sale_date || sale.date || null;
 const saleAmountForMethod = (sale, method) => {
-  const breakdown = sale.payment_breakdown || sale.payment_details || sale.payments || sale.payment_methods;
+  // Split tenders are normally stored in multi_payment as an object, such as
+  // { Cash: 500, TPE: 1200, BaridiMob: 800 }. Also accept legacy array shapes.
+  const breakdown = sale.multi_payment || sale.payment_breakdown || sale.payment_details || sale.payments || sale.payment_methods || sale.captain_payments;
+  const amountOf = (value) => {
+    if (value && typeof value === 'object') return Number(value.amount || value.value || value.paid_amount || value.collected || 0);
+    return Number(value || 0);
+  };
   if (Array.isArray(breakdown)) {
     return money(breakdown.reduce((sum, row) => {
-      const mode = normMethod(row.payment_mode || row.payment_method || row.name || row.method || row.reference || row.notes || '');
-      return sum + (mode === method ? Number(row.amount || row.value || row.paid_amount || 0) : 0);
+      if (!row || typeof row !== 'object') return sum;
+      const mode = normMethod(row.payment_mode || row.payment_method || row.label || row.name || row.method || row.reference || row.notes || row.tender || '');
+      return sum + (mode === method ? amountOf(row.amount != null ? row.amount : row.value != null ? row.value : row.paid_amount) : 0);
     }, 0));
   }
-  const mode = normMethod(sale.payment_mode || sale.payment_method);
+  if (breakdown && typeof breakdown === 'object') {
+    return money(Object.keys(breakdown).reduce((sum, key) => normMethod(key) === method ? sum + amountOf(breakdown[key]) : sum, 0));
+  }
+  const mode = normMethod(sale.payment_mode || sale.payment_method || sale.register_paymentmode);
   if (mode !== method) return 0;
-  return money(sale.paid_amount || sale.sales_total || sale.total_paid || sale.items_total || sale.grand_total || sale.total || 0);
+  return money(sale.paid_amount || sale.sales_total || sale.total_paid || sale.items_total || sale.grand_total || sale.total || sale.register_amount || 0);
 };
 const actor = (req) => {
   const u = req.user || {};

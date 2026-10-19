@@ -614,17 +614,24 @@ PosnicPro.registers = {
         if (existing.length) existing.remove();
         var style = '<style>.pcs-shell{position:fixed;inset:3vh 3vw;z-index:20000;background:#f4f7fb;border:1px solid #d7dfeb;border-radius:14px;box-shadow:0 24px 80px #10182855;display:flex;flex-direction:column;color:#26364d;font:13px/1.45 Arial,sans-serif}.pcs-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;background:#fff;border-bottom:1px solid #dfe6ef}.pcs-head h3{margin:0;font-size:18px}.pcs-actions{display:flex;gap:8px;flex-wrap:wrap}.pcs-btn{border:1px solid #cbd5e1;background:#fff;border-radius:7px;padding:8px 12px;font-weight:600;cursor:pointer}.pcs-primary{background:#2563eb;border-color:#2563eb;color:#fff}.pcs-body{display:grid;grid-template-columns:180px minmax(0,1fr);gap:14px;padding:14px;overflow:auto;min-height:0;flex:1}.pcs-library,.pcs-canvas{background:#fff;border:1px solid #dfe6ef;border-radius:10px;padding:12px}.pcs-library button{display:block;width:100%;text-align:left;margin:5px 0;padding:8px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:grab}.pcs-paper{background:#fff;min-height:400px;padding:24px;box-shadow:0 3px 15px #10182812;outline:1px dashed #cbd5e1}.pcs-paper [data-pcs-block]{position:relative;padding:5px;margin:4px 0;border:1px dashed transparent;cursor:move;white-space:normal}.pcs-paper [data-pcs-block]:hover,.pcs-paper [data-pcs-block]:focus{border-color:#2563eb;outline:0}.pcs-hint{color:#64748b;font-size:11px;margin:0 0 10px}@media(max-width:700px){.pcs-shell{inset:1vh 1vw}.pcs-body{grid-template-columns:1fr}.pcs-library{display:flex;flex-wrap:wrap;gap:5px}.pcs-library button{width:auto}}</style>';
         var shell = $('<div id="posnic-closing-studio" class="pcs-shell" role="dialog" aria-modal="true"></div>');
-        shell.html(style + '<div class="pcs-head"><div><h3>Clôture de caisse · Receipt Studio</h3><div style="color:#64748b;font-size:11px">Edit text directly, drag blocks to reorder, then print or save as PDF.</div></div><div class="pcs-actions"><button type="button" class="pcs-btn pcs-reset">Reset preview</button><button type="button" class="pcs-btn pcs-close">Close</button><button type="button" class="pcs-btn pcs-primary pcs-print">Print / Save PDF</button></div></div><div class="pcs-body"><aside class="pcs-library"><strong>Elements</strong><p class="pcs-hint">Drag to reorder. Click text to edit.</p><button type="button" data-add="heading">＋ Heading</button><button type="button" data-add="text">＋ Text block</button><button type="button" data-add="separator">＋ Separator</button><button type="button" data-add="note">＋ Closing note</button></aside><section class="pcs-canvas"><p class="pcs-hint">Live print preview · edited text is included in the printed PDF.</p><div class="pcs-paper" contenteditable="false"></div></section></div>');
+        shell.html(style + '<div class="pcs-head"><div><h3>Clôture de caisse · Receipt Studio</h3><div style="color:#64748b;font-size:11px">Modifiez les textes, glissez-déposez les blocs, puis imprimez ou enregistrez en PDF.</div></div><div class="pcs-actions"><button type="button" class="pcs-btn pcs-reset">Réinitialiser</button><button type="button" class="pcs-btn pcs-save-template">Enregistrer le modèle</button><button type="button" class="pcs-btn pcs-close">Fermer</button><button type="button" class="pcs-btn pcs-primary pcs-print">Imprimer / Enregistrer en PDF</button></div></div><div class="pcs-body"><aside class="pcs-library"><strong>Éléments</strong><p class="pcs-hint">Glissez les blocs pour les réordonner. Cliquez sur le texte pour le modifier.</p><button type="button" draggable="true" data-add="heading">＋ Titre</button><button type="button" draggable="true" data-add="text">＋ Texte libre</button><button type="button" draggable="true" data-add="separator">＋ Séparateur</button><button type="button" draggable="true" data-add="note">＋ Note de clôture</button><button type="button" draggable="true" data-add="field-sales-count">＋ Nombre de ventes</button><button type="button" draggable="true" data-add="field-sales-total">＋ Total des ventes</button><button type="button" draggable="true" data-add="field-cost">＋ Coût des marchandises</button><button type="button" draggable="true" data-add="field-gross">＋ Bénéfice brut</button><button type="button" draggable="true" data-add="field-expenses">＋ Dépenses</button><button type="button" draggable="true" data-add="field-net">＋ Bénéfice net</button><button type="button" draggable="true" data-add="field-cash">＋ Total espèces</button><button type="button" draggable="true" data-add="field-credit">＋ Total crédit</button><button type="button" draggable="true" data-add="field-tpe">＋ Total TPE</button><button type="button" draggable="true" data-add="field-bm">＋ Total BaridiMob</button></aside><section class="pcs-canvas"><p class="pcs-hint">Live print preview · edited text is included in the printed PDF.</p><div class="pcs-paper" contenteditable="false"></div></section></div>');
         $('body').append(shell);
         var paper = shell.find('.pcs-paper');
         var doc = $('<div></div>').html(html);
         doc.find('script,iframe,object,embed').remove();
         var content = doc.html();
+        var dynamicValues = {};
+        doc.find("[data-closing-value]").each(function(){dynamicValues[$(this).attr("data-closing-value")]=$(this).text();});
+        try { var savedClosing = localStorage.getItem("posnicClosingStudioTemplate"); if (savedClosing) content = savedClosing; } catch (e) {}
         paper.html(content);
+        paper.find("[data-closing-value]").each(function(){var key=$(this).attr("data-closing-value");if(Object.prototype.hasOwnProperty.call(dynamicValues,key))$(this).text(dynamicValues[key]);});
         paper.find('> *').each(function(){ $(this).attr('data-pcs-block','1').attr('draggable','true'); });
         paper.find('td,th,span,p,h1,h2,h3,h4,address').attr('contenteditable','true');
         var dragNode = null;
         paper.on('dragstart', '[data-pcs-block]', function(e){dragNode=this;e.originalEvent.dataTransfer.setData('text/plain','block');});
+        shell.on('dragstart','[data-add]',function(e){e.originalEvent.dataTransfer.setData('application/x-posnic-closing-block',$(this).attr('data-add'));});
+        paper.on('dragover',function(e){e.preventDefault();});
+        paper.on('drop',function(e){var type=e.originalEvent.dataTransfer.getData('application/x-posnic-closing-block');if(!type)return;e.preventDefault();shell.find('[data-add="'+type+'"]').trigger('click');});
         paper.on('dragover', '[data-pcs-block]', function(e){e.preventDefault();});
         paper.on('drop', '[data-pcs-block]', function(e){e.preventDefault();if(dragNode&&dragNode!==this)$(this).before(dragNode);});
         shell.on('click','.pcs-close',function(){shell.remove();});
@@ -633,15 +640,27 @@ PosnicPro.registers = {
             if(type==='heading') node=$('<h2 data-pcs-block="1" draggable="true" contenteditable="true">Clôture de caisse</h2>');
             else if(type==='separator') node=$('<hr data-pcs-block="1" draggable="true">');
             else if(type==='note') node=$('<p data-pcs-block="1" draggable="true" contenteditable="true">Remarques : </p>');
+            else if(type==='field-sales-count') node=$('<p data-pcs-block="1" draggable="true" contenteditable="true"><strong>Nombre de ventes :</strong> <span data-closing-value="sales-count">0</span></p>');
+            else if(type==='field-sales-total') node=$('<p data-pcs-block="1" draggable="true" contenteditable="true"><strong>Total des ventes :</strong> <span data-closing-value="sales-total">0,00</span></p>');
+            else if(type==='field-cost') node=$('<p data-pcs-block="1" draggable="true" contenteditable="true"><strong>Coût des marchandises :</strong> <span data-closing-value="cost">—</span></p>');
+            else if(type==='field-gross') node=$('<p data-pcs-block="1" draggable="true" contenteditable="true"><strong>Bénéfice brut :</strong> <span data-closing-value="gross">—</span></p>');
+            else if(type==='field-expenses') node=$('<p data-pcs-block="1" draggable="true" contenteditable="true"><strong>Dépenses :</strong> <span data-closing-value="expenses">0,00</span></p>');
+            else if(type==='field-net') node=$('<p data-pcs-block="1" draggable="true" contenteditable="true"><strong>Bénéfice net :</strong> <span data-closing-value="net">—</span></p>');
+            else if(type==='field-cash') node=$('<p data-pcs-block="1" draggable="true" contenteditable="true"><strong>Total espèces :</strong> <span data-closing-value="cash">0,00</span></p>');
+            else if(type==='field-credit') node=$('<p data-pcs-block="1" draggable="true" contenteditable="true"><strong>Total crédit :</strong> <span data-closing-value="credit">0,00</span></p>');
+            else if(type==='field-tpe') node=$('<p data-pcs-block="1" draggable="true" contenteditable="true"><strong>Total TPE :</strong> <span data-closing-value="tpe">0,00</span></p>');
+            else if(type==='field-bm') node=$('<p data-pcs-block="1" draggable="true" contenteditable="true"><strong>Total BaridiMob :</strong> <span data-closing-value="baridimob">0,00</span></p>');
             else node=$('<p data-pcs-block="1" draggable="true" contenteditable="true">Texte personnalisable</p>');
             paper.append(node);
         });
         shell.on('click','.pcs-reset',function(){paper.html(content);paper.find('> *').attr('data-pcs-block','1').attr('draggable','true');paper.find('td,th,span,p,h1,h2,h3,h4,address').attr('contenteditable','true');});
+        shell.on('click','.pcs-save-template',function(){try{localStorage.setItem('posnicClosingStudioTemplate',paper.html());PosnicPro.alert('success','Modèle de clôture enregistré sur cet appareil.');}catch(e){PosnicPro.alert('error','Impossible d’enregistrer le modèle sur cet appareil.');}});
         shell.on('click','.pcs-print',function(){
+            try { localStorage.setItem('posnicClosingStudioTemplate',paper.html()); } catch (e) {}
             var output='<!doctype html><html><head><meta charset="utf-8"><title>Clôture de caisse</title><style>html,body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:0;padding:10mm}*{box-sizing:border-box}table{width:100%;border-collapse:collapse}th,td{padding:6px;border-bottom:1px solid #ddd;text-align:left}hr{border:0;border-top:1px solid #999}@page{size:A4;margin:10mm}</style></head><body>'+paper.html().replace(/\scontenteditable="true"/g,'').replace(/\sdraggable="true"/g,'').replace(/\sdata-pcs-block="1"/g,'')+'</body></html>';
             var printer=window.electronAPI&&window.electronAPI.printer;
             if(printer&&typeof printer.print==='function'){
-                printer.print(output,{showPrintDialog:true,silent:false,forceHtml:true,printBackground:true,pageSize:'a4',docName:'Clôture de caisse'}).then(function(result){if(result&&result.success===false)PosnicPro.alert('error',result.error||'Impossible d’imprimer la clôture.');}).catch(function(err){PosnicPro.alert('error',err&&err.message||'Impossible d’imprimer la clôture.');});
+                printer.print(output,{showDialog:true,silent:false,forceHtml:true,printBackground:true,pageSize:'a4',docName:'Clôture de caisse'}).then(function(result){if(result&&result.success===false)PosnicPro.alert('error',result.error||'Impossible d’imprimer la clôture.');}).catch(function(err){PosnicPro.alert('error',err&&err.message||'Impossible d’imprimer la clôture.');});
             }else{
                 var frame=$('<iframe style="position:fixed;width:1px;height:1px;left:-10000px;top:0"></iframe>').appendTo('body');
                 frame[0].srcdoc=output;frame.on('load',function(){try{frame[0].contentWindow.focus();frame[0].contentWindow.print();}catch(e){PosnicPro.alert('error','Impossible d’ouvrir la fenêtre d’impression.');}setTimeout(function(){frame.remove();},1500);});
@@ -727,8 +746,51 @@ PosnicPro.registers = {
                 contents += '<section class="posnic-close-tender-summary"><h3>Payment summary</h3><table><thead><tr><th>Payment method</th><th style="text-align:right">Expected amount</th></tr></thead><tbody>' + tallyRows + '</tbody></table></section>';
             }
 
+            var closeSales = Array.isArray(data.register_sales) ? data.register_sales : [];
+            var closeCount = closeSales.length, closeTotal = 0, closeCash = 0, closeCredit = 0, closeTpe = 0, closeBaridi = 0, closeCost = 0, hasCost = false;
+            function closeMoney(v) { return (Number(v) || 0).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+            function closeTender(method, amount) {
+                var k = String(method || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+                amount = Number(amount) || 0;
+                if (k.indexOf('baridimob') >= 0) closeBaridi += amount;
+                else if (k === 'tpe' || k.indexOf('terminal') >= 0 || k.indexOf('creditcard') >= 0 || k === 'card' || k === 'pos') closeTpe += amount;
+                else if (k === 'credit' || k === 'pending' || k === 'unpaid') closeCredit += amount;
+                else if (k.indexOf('cash') >= 0 || k === 'especes') closeCash += amount;
+            }
+            closeSales.forEach(function(sale) {
+                closeTotal += Number(sale.grand_total || sale.sales_total || sale.total || sale.register_amount || 0);
+                var split = sale.multi_payment;
+                if (split && typeof split === 'object' && !Array.isArray(split)) Object.keys(split).forEach(function(k) { closeTender(k, split[k] && typeof split[k] === 'object' ? split[k].amount : split[k]); });
+                else if (Array.isArray(split)) split.forEach(function(t) { closeTender(t.payment_mode || t.method || t.name, t.amount || t.value); });
+                else closeTender(sale.payment_mode || sale.register_paymentmode || 'Cash', sale.grand_total || sale.sales_total || sale.total || sale.register_amount || 0);
+                var items = sale.items || sale.sale_items || sale.registerItems || sale.register_items || [];
+                var saleHasCost = false;
+                if (Array.isArray(items)) items.forEach(function(item) {
+                    var qty = Number(item.quantity || item.qty || 1);
+                    var cost = item.purchase_cost != null ? item.purchase_cost : item.cost_price != null ? item.cost_price : item.company_price != null ? item.company_price : item.cost;
+                    if (cost != null && Number.isFinite(Number(cost))) { closeCost += Number(cost) * qty; saleHasCost = true; hasCost = true; }
+                });
+                if (!saleHasCost) {
+                    var explicitCost = sale.cost_total != null ? sale.cost_total : sale.cost_of_goods != null ? sale.cost_of_goods : sale.purchase_cost_total;
+                    if (explicitCost != null && Number.isFinite(Number(explicitCost))) { closeCost += Number(explicitCost); hasCost = true; }
+                }
+            });
+            var closeExpenses = cash_outData, closeGross = hasCost ? closeTotal - closeCost : null, closeNet = closeGross == null ? null : closeGross - closeExpenses;
+            var closeValues = {'sales-count':String(closeCount),'sales-total':closeMoney(closeTotal),cost:hasCost?closeMoney(closeCost):'—',gross:closeGross==null?'—':closeMoney(closeGross),expenses:closeMoney(closeExpenses),net:closeNet==null?'—':closeMoney(closeNet),cash:closeMoney(closeCash),credit:closeMoney(closeCredit),tpe:closeMoney(closeTpe),baridimob:closeMoney(closeBaridi)};
+            contents += '<section class="posnic-close-daily-summary"><h3>Récapitulatif de clôture</h3><table><tbody>' +
+                '<tr><th>Nombre de ventes</th><td data-closing-value="sales-count">' + closeValues['sales-count'] + '</td></tr>' +
+                '<tr><th>Total des ventes</th><td data-closing-value="sales-total">' + closeValues['sales-total'] + '</td></tr>' +
+                '<tr><th>Coût des marchandises</th><td data-closing-value="cost">' + closeValues.cost + '</td></tr>' +
+                '<tr><th>Bénéfice brut</th><td data-closing-value="gross">' + closeValues.gross + '</td></tr>' +
+                '<tr><th>Dépenses</th><td data-closing-value="expenses">' + closeValues.expenses + '</td></tr>' +
+                '<tr><th>Bénéfice net</th><td data-closing-value="net">' + closeValues.net + '</td></tr>' +
+                '<tr><th>Total espèces</th><td data-closing-value="cash">' + closeValues.cash + '</td></tr>' +
+                '<tr><th>Total crédit</th><td data-closing-value="credit">' + closeValues.credit + '</td></tr>' +
+                '<tr><th>Total TPE</th><td data-closing-value="tpe">' + closeValues.tpe + '</td></tr>' +
+                '<tr><th>Total BaridiMob</th><td data-closing-value="baridimob">' + closeValues.baridimob + '</td></tr>' +
+                '</tbody></table></section>';
+
             // Receipt Studio-style closing slip editor: edit before printing.
-            if (typeof PosnicPro.registers.openClosingStudio === 'function') {
                 PosnicPro.registers.openClosingStudio(contents + url);
                 return;
             }

@@ -224,7 +224,7 @@ PosnicPro.paymentransaction = {
                             let DateFormat = moment(update_timeStamp_value).tz(timeZone).format('YYYY/MM/DD LT');
                             let updateDate = PosnicPro.convertDate(DateFormat);
                             let row_no = (table.data('current_page') - 1) * table.data('per_page') + i + 1;
-                            let trow = '<tr> <td scope="row">' + row_no + '</td>  <td>' + row.sales_id + '</td> <td>' + updateDate + '</td> <td>' + row.user_name + '</td> <td>' + row.payment_mode + '</td> <td class="text-right">' + currency + '&nbsp;<span class="number">' + (row.report_amount ?? row.items_total) + '</span></td><td class="text-right">' + currency + '&nbsp;<span class="number">' + (row.tpe_collected || 0) + '</span></td><td class="text-right">' + currency + '&nbsp;<span class="number">' + (row.tpe_uncollected || 0) + '</span></td><td class="text-right">' + currency + '&nbsp;<span class="number">' + (row.baridimob_collected || 0) + '</span></td><td class="text-right">' + currency + '&nbsp;<span class="number">' + (row.baridimob_uncollected || 0) + '</span></td></tr>';
+                            let trow = '<tr> <td scope="row">' + row_no + '</td> <td>' + row.sales_id + '</td> <td>' + updateDate + '</td> <td>' + row.user_name + '</td> <td>' + row.payment_mode + '</td> <td class="text-right">' + currency + '&nbsp;<span class="number">' + (row.report_amount ?? row.items_total) + '</span></td></tr>;
                             $('#view_paymentransaction').children('tbody').append(trow);
                             var digits = Number.isInteger(row.currencyDigits) && row.currencyDigits >= 0 && row.currencyDigits <= 4 ? row.currencyDigits : 2;
                             $('#view_paymentransaction tbody tr:last span.number').number(true, digits);
@@ -241,7 +241,7 @@ PosnicPro.paymentransaction = {
                             let customer = val.user_name;
                             let mode = val.payment_mode;
                             let total = val.report_amount ?? val.items_total;
-                            paymentsalereportexportdata.push({SaleId: id, Date: date, UserName: customer, PaymentMethod: mode, Amount: total, TPECollected: val.tpe_collected || 0, TPEUncollected: val.tpe_uncollected || 0, BaridiMobCollected: val.baridimob_collected || 0, BaridiMobUncollected: val.baridimob_uncollected || 0});
+                            paymentsalereportexportdata.push({SaleId: id, Date: date, UserName: customer, PaymentMethod: mode, Amount: total});
                         });
                         PosnicPro.JSONToCSVConvertor(paymentsalereportexportdata, 'payment-sales-reports', true);
                         PosnicPro.paymentransaction.paymentransactionTable();
@@ -518,7 +518,7 @@ PosnicPro.paymentsettlements = {
         };
         PosnicPro.get({ url: 'payment-settlements', data: query }, function (response) {
             if (!response || response.type !== 'success') {
-                PosnicPro.alert('error', (response && response.message) || 'Could not load settlements.');
+                PosnicPro.alert('error', (response && response.message) || 'Impossible de charger les règlements.');
                 return;
             }
             var data = response.data || {};
@@ -532,17 +532,17 @@ PosnicPro.paymentsettlements = {
             });
             self.renderRows();
             self.renderHistory(data.history || []);
-        }, function () { PosnicPro.alert('error', 'Could not load settlement records.'); });
+        }, function () { PosnicPro.alert('error', 'Impossible de charger les règlements.'); });
     },
     renderRows: function () {
         var self = this;
         if (!this.rows.length) {
-            $('#settlement_rows').html('<tr><td colspan="10" class="text-center text-muted">No matching TPE or BaridiMob sales.</td></tr>');
+            $('#settlement_rows').html('<tr><td colspan="10" class="text-center text-muted">Aucune vente TPE ou BaridiMob correspondante.</td></tr>');
             return;
         }
         $('#settlement_rows').html(this.rows.map(function (r, i) {
             var date = r.date ? moment(r.date).format('YYYY-MM-DD') : '—';
-            var status = r.status === 'collected' ? '<span class="badge badge-success">Collected</span>' : (r.status === 'partial' ? '<span class="badge badge-warning">Partially collected</span>' : '<span class="badge badge-danger">Pending</span>');
+            var status = r.status === 'collected' ? '<span class="badge badge-success">Encaissé</span>' : (r.status === 'partial' ? '<span class="badge badge-warning">Partiellement encaissé</span>' : '<span class="badge badge-danger">En attente</span>');
             var disabled = Number(r.outstanding) <= 0 ? 'disabled' : '';
             return '<tr><td><input class="settlement_pick" type="checkbox" data-index="' + i + '" ' + disabled + '></td>' +
                 '<td>' + self.safe(date) + '</td><td>' + self.safe(r.sale_id) + '</td><td>' + self.safe(r.method.toUpperCase()) + '</td><td>' + self.safe(r.customer || '—') + '</td>' +
@@ -554,7 +554,7 @@ PosnicPro.paymentsettlements = {
     renderHistory: function (history) {
         var self = this;
         if (!history.length) {
-            $('#settlement_history').html('<tr><td colspan="7" class="text-center text-muted">No collections have been recorded yet.</td></tr>');
+            $('#settlement_history').html('<tr><td colspan="7" class="text-center text-muted">Aucun encaissement n’a encore été enregistré.</td></tr>');
             return;
         }
         $('#settlement_history').html(history.map(function (r) {
@@ -569,21 +569,21 @@ PosnicPro.paymentsettlements = {
             var amount = Number($('.settlement_amount[data-index="' + $(this).data('index') + '"]').val());
             if (row && amount > 0 && amount <= Number(row.outstanding) + 0.001) selected.push({ sale_key: row.sale_key, method: row.method, amount: amount });
         });
-        if (!selected.length) { PosnicPro.alert('warning', 'Select one or more transactions and enter valid collection amounts.'); return; }
-        var reference = window.prompt('Bank / collection reference (optional):', '') || '';
-        var note = window.prompt('Collection note (optional):', '') || '';
-        var collectedAt = window.prompt('Actual collection date (YYYY-MM-DD):', moment().format('YYYY-MM-DD')) || moment().format('YYYY-MM-DD');
+        if (!selected.length) { PosnicPro.alert('warning', 'Sélectionnez une ou plusieurs lignes et saisissez des montants valides.'); return; }
+        var reference = window.prompt('Référence bancaire / d’encaissement (facultatif) :', '') || '';
+        var note = window.prompt('Note d’encaissement (facultatif) :', '') || '';
+        var collectedAt = window.prompt('Date réelle d’encaissement (AAAA-MM-JJ) :', moment().format('YYYY-MM-DD')) || moment().format('YYYY-MM-DD');
         if (!/^\d{4}-\d{2}-\d{2}$/.test(collectedAt) || !moment(collectedAt, 'YYYY-MM-DD', true).isValid()) {
-            PosnicPro.alert('error', 'Enter the collection date as YYYY-MM-DD.');
+            PosnicPro.alert('error', 'Saisissez la date au format AAAA-MM-JJ.');
             return;
         }
         PosnicPro.request({ url: 'payment-settlements', method: 'POST', data: { lines: selected, reference: reference, note: note, collected_at: collectedAt } }, function (response) {
             if (response && response.type === 'success') {
-                PosnicPro.alert('success', response.message || 'Collection recorded.');
+                PosnicPro.alert('success', response.message || 'Encaissement enregistré.');
                 self.load();
-            } else PosnicPro.alert('error', (response && response.message) || 'Could not record collection.');
+            } else PosnicPro.alert('error', (response && response.message) || 'Impossible d’enregistrer l’encaissement.');
         }, function (xhr) {
-            var message = 'Could not record collection.';
+            var message = 'Impossible d’enregistrer l’encaissement.';
             try { message = JSON.parse(xhr.responseText).message || message; } catch (e) {}
             PosnicPro.alert('error', message);
         });
