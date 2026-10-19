@@ -622,7 +622,7 @@ PosnicPro.registers = {
         var content = doc.html();
         var dynamicValues = {};
         doc.find("[data-closing-value]").each(function(){dynamicValues[$(this).attr("data-closing-value")]=$(this).text();});
-        try { var savedClosing = localStorage.getItem("posnicClosingStudioTemplateV3"); if (savedClosing) content = savedClosing; } catch (e) {}
+        try { var savedClosing = localStorage.getItem("posnicClosingStudioTemplateV4"); if (savedClosing) content = savedClosing; } catch (e) {}
         paper.html(content);
         paper.find("[data-closing-value]").each(function(){var key=$(this).attr("data-closing-value");if(Object.prototype.hasOwnProperty.call(dynamicValues,key))$(this).text(dynamicValues[key]);});
         paper.find('> *').each(function(){ if ($(this).css('display') !== 'none') $(this).attr('data-pcs-block','1').attr('draggable','true'); });
@@ -674,8 +674,8 @@ PosnicPro.registers = {
             else node=$('<p data-pcs-block="1" draggable="true" contenteditable="true">Texte personnalisable</p>');
             paper.append(node);
         });
-        shell.on('click','.pcs-reset',function(){paper.html(content);paper.find('> *').each(function(){if($(this).css('display')!=='none')$(this).attr('data-pcs-block','1').attr('draggable','true');});paper.find('td,th,span,p,h1,h2,h3,h4,address').attr('contenteditable','true');});
-        shell.on('click','.pcs-save-template',function(){try{localStorage.setItem('posnicClosingStudioTemplateV3',paper.html());PosnicPro.alert('success','Modèle de clôture enregistré sur cet appareil.');}catch(e){PosnicPro.alert('error','Impossible d’enregistrer le modèle sur cet appareil.');}});
+        shell.on('click','.pcs-reset',function(){paper.html(content);paper.find('> *').each(function(){if($(this).css('display')!=='none')$(this).attr('data-pcs-block','1').attr('draggable','true');});paper.find('td,th,span,p,h1,h2,h3,h4,address').attr('contenteditable','true');selectedBlock=paper.find('[data-pcs-block]').first()[0]||null;paper.find('[data-pcs-block]').removeClass('pcs-selected');if(selectedBlock)$(selectedBlock).addClass('pcs-selected');});
+        shell.on('click','.pcs-save-template',function(){try{localStorage.setItem('posnicClosingStudioTemplateV4',paper.html());PosnicPro.alert('success','Modèle de clôture enregistré sur cet appareil.');}catch(e){PosnicPro.alert('error','Impossible d’enregistrer le modèle sur cet appareil.');}});
         shell.on('click','.pcs-print',function(){
             var format = shell.find('.pcs-print-format').val() || '80';
             var isThermal = ['58','80','112'].indexOf(format) !== -1;
@@ -688,7 +688,7 @@ PosnicPro.registers = {
                 ? '<style>html,body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;padding:1mm;font-size:10px}*{box-sizing:border-box}body{width:100%}.pcs-paper{padding:0;min-height:0;box-shadow:none;outline:0}.pcs-paper>*{break-inside:avoid;page-break-inside:avoid}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{padding:2px 0;border-bottom:1px solid #aaa;text-align:left;overflow-wrap:anywhere}hr{border:0;border-top:1px solid #555}@page{size:' + format + 'mm auto;margin:0}</style>'
                 : '<style>html,body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:0;padding:10mm}*{box-sizing:border-box}.pcs-paper{padding:0;min-height:0;box-shadow:none;outline:0}table{width:100%;border-collapse:collapse}th,td{padding:6px;border-bottom:1px solid #ddd;text-align:left}hr{border:0;border-top:1px solid #999}@page{size:A4;margin:10mm}</style>';
             var printContent = styles + clean.html();
-            try { localStorage.setItem('posnicClosingStudioTemplateV3', paper.html()); } catch (e) {}
+            try { localStorage.setItem('posnicClosingStudioTemplateV4', paper.html()); } catch (e) {}
             var receiptEngine = PosnicPro.receiptDesigner;
             if (!receiptEngine || typeof receiptEngine.print !== 'function') {
                 PosnicPro.alert('error', 'Le moteur d’impression du ticket est indisponible. Rechargez l’application puis réessayez.');
@@ -696,9 +696,10 @@ PosnicPro.registers = {
             }
             var printButton = shell.find('.pcs-print');
             printButton.prop('disabled', true).text('Impression…');
-            var printOptions = { sample: true, showDialog: true };
+            // Thermal rolls go straight to the configured receipt printer; only A4 needs the OS dialog.
+            var printOptions = { sample: true, showDialog: !isThermal };
             Promise.resolve(receiptEngine.print(printContent, format, printOptions)).then(function (result) {
-                if (result && result.success) PosnicPro.alert('success', isThermal ? 'Fenêtre d’impression ouverte. Sélectionnez votre imprimante thermique puis confirmez.' : 'Fenêtre d’impression ouverte. Choisissez Microsoft Print to PDF pour enregistrer le ticket.');
+                if (result && result.success) PosnicPro.alert('success', isThermal ? 'Ticket de clôture envoyé à l’imprimante thermique configurée.' : 'Fenêtre d’impression ouverte. Choisissez Microsoft Print to PDF pour enregistrer le ticket.');
                 else PosnicPro.alert('error', 'L’impression n’a pas été confirmée.');
             }).catch(function (err) {
                 PosnicPro.alert('error', err && err.message || 'Impossible d’imprimer la clôture.');
