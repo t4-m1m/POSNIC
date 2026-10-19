@@ -27,6 +27,7 @@ on:
       - "frontend/static/script/js/core/PosnicPro.js"
       - "api/src/controllers/payment-settlements.controller.js"
       - "api/src/repositories/register.repository.js"
+      - "api/src/repositories/sale.repository.js"
       - "api/src/routes/payment-settlements.routes.js"
       - "frontend/modules/items.html"
       - "frontend/modules/items_v2.html"
