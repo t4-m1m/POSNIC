@@ -248,7 +248,27 @@
         };
         var fixedItems = !sheet && layout.blocks.find(function (b) { return b.type === 'items' && b.itemLayout === 'columns'; });
         var headerFssai = layout.blocks.some(function (b) { return b.type === 'store' && b.fssaiInHeader; });
-        var rendered = layout.blocks.map(function (b) {
+        // Expand the basket's saved canvas slot to fit every printed item and
+        // shift later blocks down by the extra height. This prevents totals,
+        // payment details and footer blocks from colliding with long baskets.
+        var dynamicItemsShift = 0;
+        if (layout.canvas && !sheet) {
+            var basketBlock = layout.blocks.find(function (block) { return block.type === 'items'; });
+            if (basketBlock) {
+                var basketHeight = (receiptItems || []).reduce(function (total, item) {
+                    var itemName = PosnicPro.printItemName ? PosnicPro.printItemName(item, 'receipt') : item.item_name;
+                    var lines = Math.max(1, Math.ceil(Array.from(String(itemName || '')).length / (format === '58' ? 14 : 22)));
+                    return total + 18 * lines + 8;
+                }, 28);
+                dynamicItemsShift = Math.max(0, basketHeight - Math.max(28, Number(basketBlock.h) || 0));
+            }
+        }
+        var rendered = layout.blocks.map(function (originalBlock) {
+            var b = Object.assign({}, originalBlock);
+            var basket = layout.blocks.find(function (block) { return block.type === 'items'; });
+            if (dynamicItemsShift && basket && b.id !== basket.id && Number(b.y) >= Number(basket.y) + Math.max(28, Number(basket.h) || 0)) {
+                b.y = Number(b.y) + dynamicItemsShift;
+            }
             var content = '';
             if (b.type === 'field' && ((b.field === 'fssai' && headerFssai) || (b.field === 'total_quantity' && fixedItems))) return '';
             if (b.type === 'field' && ['receipt_number', 'receipt_date', 'seller_name'].indexOf(b.field) === -1 && !contract.fieldAvailable(b.field, data) && !(b.field === 'sale_note' && typeof b.text === 'string' && b.text.trim())) return '';
