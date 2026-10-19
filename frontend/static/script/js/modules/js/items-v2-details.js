@@ -203,7 +203,7 @@
             card.appendChild(grid); box.appendChild(card);
         }); notify();
     }
-    function isFamily() { return checked('has-variants') && document.querySelector('#items_v2 [name="iv2-kind"]:checked').value !== 'service'; }
+    function isFamily() { return document.querySelector('#items_v2 [name="iv2-kind"]:checked').value !== 'service'; }
     function validate() {
         var invalid = document.querySelector('#iv2-fields input:invalid, #iv2-fields select:invalid, #iv2-fields textarea:invalid');
         if (invalid) return { error: invalid.validationMessage, field: invalid.id };
@@ -291,11 +291,11 @@
     function update(capabilities, kind) {
         caps=capabilities;
         el('food-extra').hidden=!caps.restaurant || kind==='service'; el('tax-extra').hidden=true;
-        el('service-unit').parentElement.hidden=kind!=='service'; el('variants').hidden=kind==='service'; el('variant-editor').hidden=!isFamily();
+        el('service-unit').parentElement.hidden=kind!=='service'; el('variants').hidden=false; el('variant-editor').hidden=false;
         ['food-extra','tax-extra','variants'].forEach(function(id){el(id).querySelectorAll('input,select,textarea,button').forEach(function(input){input.disabled=el(id).hidden;});});
         ['reorder','purchase-unit','pack-size','weight'].forEach(function(id){el(id).closest(id==='weight'?'label':'div').hidden=kind==='service';});
         ['plu','sku','barcode','gtin','alt-barcodes','same-sku'].forEach(function(id){el(id).disabled=isFamily();});
-        el('variant-editor').querySelectorAll('input,select,button').forEach(function(input){input.disabled=!isFamily();});
+        el('variant-editor').querySelectorAll('input,select,button').forEach(function(input){input.disabled=kind==='service';});
         el('weight').closest('label').hidden=!caps.weight || kind==='service';
         el('weight').disabled=!caps.weight || kind==='service';
         el('discount').max=val('discount-type')==='percentage'?'100':'';
