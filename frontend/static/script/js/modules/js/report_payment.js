@@ -577,7 +577,7 @@ PosnicPro.paymentsettlements = {
             PosnicPro.alert('error', 'Saisissez la date au format AAAA-MM-JJ.');
             return;
         }
-        PosnicPro.request({ url: 'payment-settlements', method: 'POST', data: { lines: selected, reference: reference, note: note, collected_at: collectedAt } }, function (response) {
+        PosnicPro.request({ url: 'payment-settlements', method: 'POST', contentType: 'application/json', processData: false, data: JSON.stringify({ lines: selected, reference: reference, note: note, collected_at: collectedAt }) }, function (response) {
             if (response && response.type === 'success') {
                 PosnicPro.alert('success', response.message || 'Encaissement enregistré.');
                 self.load();
