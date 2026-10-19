@@ -500,3 +500,95 @@ PosnicPro.commissionreport = {
             '<th class="text-right">' + money(totals.net) + '</th></tr>');
     }
 };
+
+
+/* Dedicated settlement ledger: records actual cash received from TPE/BaridiMob
+ * separately from the original sale payment. Partial collections remain open. */
+PosnicPro.paymentsettlements = {
+    rows: [],
+    money: function (v) { return (PosnicPro.local.get('currencySign') || '') + ' ' + (Number(v) || 0).toFixed(2); },
+    safe: function (v) { return $('<div>').text(v == null ? '' : String(v)).html(); },
+    load: function () {
+        var self = this;
+        var query = {
+            method: $('#settlement_method').val() || 'all',
+            status: $('#settlement_status').val() || 'all',
+            from: $('#settlement_from').val() || '',
+            to: $('#settlement_to').val() || ''
+        };
+        PosnicPro.get({ url: 'payment-settlements', data: query }, function (response) {
+            if (!response || response.type !== 'success') {
+                PosnicPro.alert('error', (response && response.message) || 'Could not load settlements.');
+                return;
+            }
+            var data = response.data || {};
+            self.rows = data.rows || [];
+            var totals = data.totals || {};
+            [['tpe','tpe'],['baridimob','bm']].forEach(function (pair) {
+                var t = totals[pair[0]] || {};
+                $('#settlement_' + pair[1] + '_total').text(self.money(t.amount));
+                $('#settlement_' + pair[1] + '_collected').text(self.money(t.collected));
+                $('#settlement_' + pair[1] + '_pending').text(self.money(t.outstanding));
+            });
+            self.renderRows();
+            self.renderHistory(data.history || []);
+        }, function () { PosnicPro.alert('error', 'Could not load settlement records.'); });
+    },
+    renderRows: function () {
+        var self = this;
+        if (!this.rows.length) {
+            $('#settlement_rows').html('<tr><td colspan="10" class="text-center text-muted">No matching TPE or BaridiMob sales.</td></tr>');
+            return;
+        }
+        $('#settlement_rows').html(this.rows.map(function (r, i) {
+            var date = r.date ? moment(r.date).format('YYYY-MM-DD') : '—';
+            var status = r.status === 'collected' ? '<span class="badge badge-success">Collected</span>' : (r.status === 'partial' ? '<span class="badge badge-warning">Partially collected</span>' : '<span class="badge badge-danger">Pending</span>');
+            var disabled = Number(r.outstanding) <= 0 ? 'disabled' : '';
+            return '<tr><td><input class="settlement_pick" type="checkbox" data-index="' + i + '" ' + disabled + '></td>' +
+                '<td>' + self.safe(date) + '</td><td>' + self.safe(r.sale_id) + '</td><td>' + self.safe(r.method.toUpperCase()) + '</td><td>' + self.safe(r.customer || '—') + '</td>' +
+                '<td class="text-right">' + self.money(r.amount) + '</td><td class="text-right">' + self.money(r.collected) + '</td><td class="text-right">' + self.money(r.outstanding) + '</td><td>' + status + '</td>' +
+                '<td style="min-width:120px"><input type="number" min="0.01" max="' + Number(r.outstanding).toFixed(2) + '" step="0.01" class="form-control form-control-sm settlement_amount" data-index="' + i + '" value="' + Number(r.outstanding).toFixed(2) + '" ' + disabled + '></td></tr>';
+        }).join(''));
+        $('#settlement_select_all').prop('checked', false);
+    },
+    renderHistory: function (history) {
+        var self = this;
+        if (!history.length) {
+            $('#settlement_history').html('<tr><td colspan="7" class="text-center text-muted">No collections have been recorded yet.</td></tr>');
+            return;
+        }
+        $('#settlement_history').html(history.map(function (r) {
+            return '<tr><td>' + self.safe(r.collected_at ? moment(r.collected_at).format('YYYY-MM-DD HH:mm') : '') + '</td><td>' + self.safe(r.sale_key) + '</td><td>' + self.safe(String(r.method || '').toUpperCase()) + '</td><td class="text-right">' + self.money(r.amount) + '</td><td>' + self.safe(r.reference || '—') + '</td><td>' + self.safe(r.note || '—') + '</td><td>' + self.safe(r.recorded_by || '—') + '</td></tr>';
+        }).join(''));
+    },
+    collectSelected: function () {
+        var self = this;
+        var selected = [];
+        $('.settlement_pick:checked').each(function () {
+            var row = self.rows[Number($(this).data('index'))];
+            var amount = Number($('.settlement_amount[data-index="' + $(this).data('index') + '"]').val());
+            if (row && amount > 0 && amount <= Number(row.outstanding) + 0.001) selected.push({ sale_key: row.sale_key, method: row.method, amount: amount });
+        });
+        if (!selected.length) { PosnicPro.alert('warning', 'Select one or more transactions and enter valid collection amounts.'); return; }
+        var reference = window.prompt('Bank / collection reference (optional):', '') || '';
+        var note = window.prompt('Collection note (optional):', '') || '';
+        var collectedAt = window.prompt('Actual collection date (YYYY-MM-DD):', moment().format('YYYY-MM-DD')) || moment().format('YYYY-MM-DD');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(collectedAt) || !moment(collectedAt, 'YYYY-MM-DD', true).isValid()) {
+            PosnicPro.alert('error', 'Enter the collection date as YYYY-MM-DD.');
+            return;
+        }
+        PosnicPro.request({ url: 'payment-settlements', method: 'POST', data: { lines: selected, reference: reference, note: note, collected_at: collectedAt } }, function (response) {
+            if (response && response.type === 'success') {
+                PosnicPro.alert('success', response.message || 'Collection recorded.');
+                self.load();
+            } else PosnicPro.alert('error', (response && response.message) || 'Could not record collection.');
+        }, function (xhr) {
+            var message = 'Could not record collection.';
+            try { message = JSON.parse(xhr.responseText).message || message; } catch (e) {}
+            PosnicPro.alert('error', message);
+        });
+    }
+};
+$(document).on('change', '#settlement_select_all', function () {
+    $('.settlement_pick:not(:disabled)').prop('checked', this.checked);
+});
