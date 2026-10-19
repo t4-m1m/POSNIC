@@ -756,7 +756,7 @@ PosnicPro.registers = {
                 });
             }
             var contents = '<div class="closing-slip-default">' +
-                '<h2 data-closing-value="title" style="text-align:center">Clôture de caisse</h2>' +
+                '<h2 style="text-align:center">Clôture de caisse</h2>' +
                 '<p><strong>Caisse :</strong> <span data-closing-value="register-name">' + esc(data.register_name || '') + '</span></p>' +
                 '<p><strong>Ouverture :</strong> <span data-closing-value="opened-at">' + esc(data.register_opendate || '') + '</span></p>' +
                 '<p><strong>Clôture :</strong> <span data-closing-value="closed-at">' + esc(data.register_closedate || '') + '</span></p>' +
@@ -764,6 +764,15 @@ PosnicPro.registers = {
                 '<p><strong>Fond de caisse :</strong> <span data-closing-value="opening-float">' + moneyText(data.opening_float) + '</span></p>' +
                 '<p><strong>Total des ventes :</strong> <span data-closing-value="sales-total">' + esc(salesTotal) + '</span></p>' +
                 '<p><strong>Nombre de transactions :</strong> <span data-closing-value="transactions">' + esc(transactionCount) + '</span></p>' +
+                '<span style="display:none" data-closing-value="sales-count">' + esc(transactionCount) + '</span>' +
+                '<span style="display:none" data-closing-value="sales-total">' + esc(salesTotal) + '</span>' +
+                '<span style="display:none" data-closing-value="cash">' + moneyText(data.paymentTally && (data.paymentTally.Cash || data.paymentTally.cash) || 0) + '</span>' +
+                '<span style="display:none" data-closing-value="credit">' + moneyText(data.paymentTally && (data.paymentTally.Credit || data.paymentTally.credit) || 0) + '</span>' +
+                '<span style="display:none" data-closing-value="tpe">' + moneyText(data.paymentTally && (data.paymentTally.TPE || data.paymentTally.tpe) || 0) + '</span>' +
+                '<span style="display:none" data-closing-value="baridimob">' + moneyText(data.paymentTally && (data.paymentTally.BaridiMob || data.paymentTally.baridimob) || 0) + '</span>' +
+                '<span style="display:none" data-closing-value="expenses">' + moneyText(cashOut) + '</span>' +
+                '<span style="display:none" data-closing-value="gross">—</span>' +
+                '<span style="display:none" data-closing-value="cost">—</span>' +
                 '<p><strong>Entrées espèces :</strong> <span data-closing-value="cash-in">' + moneyText(cashIn) + '</span></p>' +
                 '<p><strong>Sorties espèces :</strong> <span data-closing-value="cash-out">' + moneyText(cashOut) + '</span></p>' +
                 '<p><strong>Net :</strong> <span data-closing-value="net">' + esc(netAmount) + '</span></p>' +

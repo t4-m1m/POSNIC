@@ -616,7 +616,7 @@ PosnicPro.paymentsettlements = {
             return;
         }
         var collectedAt = $('#settlement_collect_date').val();
-        if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(collectedAt || '') || !moment(collectedAt, 'YYYY-MM-DD', true).isValid()) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(collectedAt || '') || !moment(collectedAt, 'YYYY-MM-DD', true).isValid()) {
             PosnicPro.alert('error', 'Saisissez une date valide au format AAAA-MM-JJ.');
             return;
         }
@@ -663,6 +663,16 @@ $(document).off('click', '#settlement_collect_selected').on('click', '#settlemen
         PosnicPro.alert('error', 'Le module de règlements n’est pas chargé. Rechargez le rapport puis réessayez.');
     }
 });
-$(document).off('submit', '#settlement_collect_form').on('submit', '#settlement_collect_form', function (event) {\n    event.preventDefault();\n    if (PosnicPro.paymentsettlements) PosnicPro.paymentsettlements.saveSelected();\n});\n$(document).on('change', '.settlement_amount', function () {\n    var index = Number($(this).data('index'));\n    var row = PosnicPro.paymentsettlements && PosnicPro.paymentsettlements.rows[index];\n    var amount = Number($(this).val());\n    $(this).toggleClass('is-invalid', !row || !Number.isFinite(amount) || amount <= 0 || amount > Number(row.outstanding) + 0.001);\n});\n$(document).on('change', '#settlement_select_all', function () {
+$(document).off('submit', '#settlement_collect_form').on('submit', '#settlement_collect_form', function (event) {
+    event.preventDefault();
+    if (PosnicPro.paymentsettlements) PosnicPro.paymentsettlements.saveSelected();
+});
+$(document).on('change', '.settlement_amount', function () {
+    var index = Number($(this).data('index'));
+    var row = PosnicPro.paymentsettlements && PosnicPro.paymentsettlements.rows[index];
+    var amount = Number($(this).val());
+    $(this).toggleClass('is-invalid', !row || !Number.isFinite(amount) || amount <= 0 || amount > Number(row.outstanding) + 0.001);
+});
+$(document).on('change', '#settlement_select_all', function () {
     $('.settlement_pick:not(:disabled)').prop('checked', this.checked);
 });
