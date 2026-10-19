@@ -2816,10 +2816,6 @@ PosnicPro = {
         ] },
         { name: 'Money', items: [
             { hash: 'paymentreport', label: 'Payment', t: 'lang_payment_2', icon: 'dollar-sign' },
-            { hash: 'taxreport', label: 'Tax', t: 'lang_module_tax', icon: 'percent', module: 'module_tax_enable' },
-            { hash: 'taxsummaryreport', label: 'Tax Summary', t: 'lang_taxsummary_title', icon: 'layers', module: 'module_tax_enable' },
-            { hash: 'taxpayable', label: 'Tax Payable', t: 'lang_taxpayable_title', icon: 'trending-up', module: 'module_tax_enable' },
-            { hash: 'gstreadiness', label: 'GST 2.0 Readiness', t: 'lang_gstreadiness_title', icon: 'check-square', module: 'module_tax_enable' },
             { hash: 'expensesreport', label: 'Cash Book', t: 'lang_expense_title', icon: 'file-text', module: 'module_cashbook_enable' },
         ] },
     ],
