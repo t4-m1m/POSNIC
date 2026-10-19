@@ -12087,7 +12087,7 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
 
         // F2 is the "open payment" action, never the fast/full-cash action.
         // If payment is already open, take the cashier directly to the amount field.
-        if ($('#infobar-settings-sidebar-tender-details').hasClass('sidebarview') && $('#tenderpage').length) {
+        if ($('#infobar-settings-sidebar-tender-details').hasClass('sidebarview') && $('#tenderpage').length && $('#tenderpage').is(':visible')) {
             var amountField = document.getElementById('Partial_amount') || document.getElementById('tendered_amount');
             if (amountField) { amountField.focus(); if (amountField.select) amountField.select(); }
             return;
