@@ -11784,7 +11784,7 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         if (cashierPromptOpen) return;
         // If F2 is pressed again after payment has opened, keep the original
         // behavior: focus the payment amount instead of opening a second picker.
-        if (key === 'F2' && $('#infobar-settings-sidebar-tender-details').hasClass('sidebarview') && $('#tenderpage').length) {
+        if (key === 'F2' && $('#infobar-settings-sidebar-tender-details').hasClass('sidebarview') && $('#tenderpage').length && $('#tenderpage').is(':visible')) {
             var amountField = document.getElementById('Partial_amount') || document.getElementById('tendered_amount');
             if (amountField) { amountField.focus(); if (amountField.select) amountField.select(); }
             return;
