@@ -565,30 +565,68 @@ PosnicPro.paymentsettlements = {
         var self = this;
         var selected = [];
         $('.settlement_pick:checked').each(function () {
-            var row = self.rows[Number($(this).data('index'))];
-            var amount = Number($('.settlement_amount[data-index="' + $(this).data('index') + '"]').val());
-            if (row && amount > 0 && amount <= Number(row.outstanding) + 0.001) selected.push({ sale_key: row.sale_key, method: row.method, amount: amount });
+            var index = Number($(this).data('index'));
+            var row = self.rows[index];
+            var field = $('.settlement_amount[data-index="' + index + '"]');
+            var amount = Number(field.val());
+            if (row && amount > 0 && amount <= Number(row.outstanding) + 0.001) {
+                selected.push({ sale_key: row.sale_key, method: row.method, amount: amount });
+            }
         });
-        if (!selected.length) { PosnicPro.alert('warning', 'Sélectionnez une ou plusieurs lignes et saisissez des montants valides.'); return; }
-        var reference = window.prompt('Référence bancaire / d’encaissement (facultatif) :', '') || '';
-        var note = window.prompt('Note d’encaissement (facultatif) :', '') || '';
-        var collectedAt = window.prompt('Date réelle d’encaissement (AAAA-MM-JJ) :', moment().format('YYYY-MM-DD')) || moment().format('YYYY-MM-DD');
+        if (!selected.length) {
+            PosnicPro.alert('warning', 'Cochez au moins une vente TPE / BaridiMob et vérifiez le montant à encaisser.');
+            return;
+        }
+        var reference = window.prompt('Référence bancaire / d’encaissement (facultatif) :', '');
+        if (reference === null) return;
+        var note = window.prompt('Note d’encaissement (facultatif) :', '');
+        if (note === null) return;
+        var collectedAt = window.prompt('Date réelle d’encaissement (AAAA-MM-JJ) :', moment().format('YYYY-MM-DD'));
+        if (collectedAt === null) return;
         if (!/^\d{4}-\d{2}-\d{2}$/.test(collectedAt) || !moment(collectedAt, 'YYYY-MM-DD', true).isValid()) {
             PosnicPro.alert('error', 'Saisissez la date au format AAAA-MM-JJ.');
             return;
         }
-        PosnicPro.request({ url: 'payment-settlements', method: 'POST', contentType: 'application/json', processData: false, data: JSON.stringify({ lines: selected, reference: reference, note: note, collected_at: collectedAt }) }, function (response) {
+        var button = $('#settlement_collect_selected');
+        if (button.prop('disabled')) return;
+        button.prop('disabled', true).text('Enregistrement…');
+        PosnicPro.request({
+            url: 'payment-settlements',
+            method: 'POST',
+            contentType: 'application/json; charset=UTF-8',
+            processData: false,
+            data: JSON.stringify({
+                lines: selected,
+                reference: String(reference || '').trim(),
+                note: String(note || '').trim(),
+                collected_at: collectedAt
+            })
+        }, function (response) {
             if (response && response.type === 'success') {
                 PosnicPro.alert('success', response.message || 'Encaissement enregistré.');
                 self.load();
-            } else PosnicPro.alert('error', (response && response.message) || 'Impossible d’enregistrer l’encaissement.');
+            } else {
+                PosnicPro.alert('error', (response && response.message) || 'Le serveur n’a pas confirmé l’enregistrement.');
+            }
+            button.prop('disabled', false).text('Enregistrer les encaissements sélectionnés');
         }, function (xhr) {
             var message = 'Impossible d’enregistrer l’encaissement.';
-            try { message = JSON.parse(xhr.responseText).message || message; } catch (e) {}
+            try {
+                var body = xhr.responseJSON || JSON.parse(xhr.responseText || '{}');
+                message = body.message || message;
+            } catch (e) {}
             PosnicPro.alert('error', message);
+            button.prop('disabled', false).text('Enregistrer les encaissements sélectionnés');
         });
     }
 };
+$(document).off('click', '#settlement_collect_selected').on('click', '#settlement_collect_selected', function () {
+    if (PosnicPro.paymentsettlements && typeof PosnicPro.paymentsettlements.collectSelected === 'function') {
+        PosnicPro.paymentsettlements.collectSelected();
+    } else {
+        PosnicPro.alert('error', 'Le module de règlements n’est pas chargé. Rechargez le rapport puis réessayez.');
+    }
+});
 $(document).on('change', '#settlement_select_all', function () {
     $('.settlement_pick:not(:disabled)').prop('checked', this.checked);
 });
