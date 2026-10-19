@@ -738,7 +738,7 @@ PosnicPro.registers = {
             $('#total_transaction').text($('#register_transaction').text());
 
             // Generate the new closing-slip document directly from this register record.
-            // Do not read #printRegister_a4_form: that was the legacy, non-editable designer.
+            // The legacy #printRegister_a4_form modal has been removed from frontend/modals/registers.html; the new studio owns this flow.
             var esc = function (value) {
                 return String(value == null ? '' : value).replace(/[&<>"]/g, function (character) {
                     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[character];
