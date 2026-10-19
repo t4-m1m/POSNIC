@@ -163,6 +163,27 @@ jobs:
           }
           Move-Item -LiteralPath $installers[0].FullName -Destination "dist/Posnic-Windows-Installer.exe" -Force
 
+      - name: Mirror installer to GoFile (free third-party host)
+        id: gofile
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $installer = Get-Item "dist/Posnic-Windows-Installer.exe"
+          $response = Invoke-RestMethod -Uri "https://upload.gofile.is/uploadfile" -Method Post -Form @{ file = $installer }
+          if ($response.status -ne "ok") {
+            throw "GoFile upload failed: $($response.status)"
+          }
+          $url = $response.data.downloadPage
+          if (-not $url -and $response.data.code) {
+            $url = "https://gofile.is/d/$($response.data.code)"
+          }
+          if (-not $url) {
+            throw "GoFile upload returned no share URL."
+          }
+          "download_url=$url" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "### Alternative installer download (GoFile)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          "$url" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
       - name: Upload Windows installer artifact
         uses: actions/upload-artifact@v7
         with:
@@ -178,6 +199,8 @@ jobs:
           name: POSNIC Windows Installer (build ${{ github.run_number }})
           body: |
             Automatically published Windows installer from the successful POSNIC installer build.
+
+            **Alternative download (GoFile):** ${{ steps.gofile.outputs.download_url || 'GoFile mirror unavailable for this build; use the GitHub asset below.' }}
 
             Download **Posnic-Windows-Installer.exe** below. This release contains the installer only.
           files: dist/Posnic-Windows-Installer.exe
