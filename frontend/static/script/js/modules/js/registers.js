@@ -622,7 +622,7 @@ PosnicPro.registers = {
         var content = doc.html();
         var dynamicValues = {};
         doc.find("[data-closing-value]").each(function(){dynamicValues[$(this).attr("data-closing-value")]=$(this).text();});
-        try { var savedClosing = localStorage.getItem("posnicClosingStudioTemplateV2"); if (savedClosing) content = savedClosing; } catch (e) {}
+        try { var savedClosing = localStorage.getItem("posnicClosingStudioTemplateV3"); if (savedClosing) content = savedClosing; } catch (e) {}
         paper.html(content);
         paper.find("[data-closing-value]").each(function(){var key=$(this).attr("data-closing-value");if(Object.prototype.hasOwnProperty.call(dynamicValues,key))$(this).text(dynamicValues[key]);});
         paper.find('> *').each(function(){ $(this).attr('data-pcs-block','1').attr('draggable','true'); });
@@ -675,7 +675,7 @@ PosnicPro.registers = {
             paper.append(node);
         });
         shell.on('click','.pcs-reset',function(){paper.html(content);paper.find('> *').attr('data-pcs-block','1').attr('draggable','true');paper.find('td,th,span,p,h1,h2,h3,h4,address').attr('contenteditable','true');});
-        shell.on('click','.pcs-save-template',function(){try{localStorage.setItem('posnicClosingStudioTemplateV2',paper.html());PosnicPro.alert('success','Modèle de clôture enregistré sur cet appareil.');}catch(e){PosnicPro.alert('error','Impossible d’enregistrer le modèle sur cet appareil.');}});
+        shell.on('click','.pcs-save-template',function(){try{localStorage.setItem('posnicClosingStudioTemplateV3',paper.html());PosnicPro.alert('success','Modèle de clôture enregistré sur cet appareil.');}catch(e){PosnicPro.alert('error','Impossible d’enregistrer le modèle sur cet appareil.');}});
         shell.on('click','.pcs-print',function(){
             var format = shell.find('.pcs-print-format').val() || '80';
             var isThermal = ['58','80','112'].indexOf(format) !== -1;
@@ -688,7 +688,7 @@ PosnicPro.registers = {
                 ? '<style>html,body{font-family:Arial,Helvetica,sans-serif;color:#000;margin:0;padding:1mm;font-size:10px}*{box-sizing:border-box}body{width:100%}.pcs-paper{padding:0;min-height:0;box-shadow:none;outline:0}.pcs-paper>*{break-inside:avoid;page-break-inside:avoid}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{padding:2px 0;border-bottom:1px solid #aaa;text-align:left;overflow-wrap:anywhere}hr{border:0;border-top:1px solid #555}@page{size:' + format + 'mm auto;margin:0}</style>'
                 : '<style>html,body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:0;padding:10mm}*{box-sizing:border-box}.pcs-paper{padding:0;min-height:0;box-shadow:none;outline:0}table{width:100%;border-collapse:collapse}th,td{padding:6px;border-bottom:1px solid #ddd;text-align:left}hr{border:0;border-top:1px solid #999}@page{size:A4;margin:10mm}</style>';
             var printContent = styles + clean.html();
-            try { localStorage.setItem('posnicClosingStudioTemplateV2', paper.html()); } catch (e) {}
+            try { localStorage.setItem('posnicClosingStudioTemplateV3', paper.html()); } catch (e) {}
             var receiptEngine = PosnicPro.receiptDesigner;
             if (!receiptEngine || typeof receiptEngine.print !== 'function') {
                 PosnicPro.alert('error', 'Le moteur d’impression du ticket est indisponible. Rechargez l’application puis réessayez.');
@@ -738,27 +738,37 @@ PosnicPro.registers = {
             $('#total_sale').text($('#register_total_sales').text());
             $('#total_transaction').text($('#register_transaction').text());
 
-            var contents = $('#printRegister_a4_form').html() || '';
-            var printUrl = PosnicPro.local.get('print_url');
-            if (printUrl === 'true') {
-                contents += '<div class="text-center" style="margin-top:12px">' + PosnicPro.BRAND_URL + '</div>';
-            }
-
+            // Generate the new closing-slip document directly from this register record.
+            // Do not read #printRegister_a4_form: that was the legacy, non-editable designer.
+            var esc = function (value) {
+                return String(value == null ? '' : value).replace(/[&<>"]/g, function (character) {
+                    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[character];
+                });
+            };
+            var moneyText = function (value) { return (Number(value) || 0).toFixed(2); };
+            var salesTotal = $('#register_total_sales').text() || data.register_amount || data.total_sales || 0;
+            var transactionCount = $('#register_transaction').text() || data.transaction_count || data.total_transaction || 0;
+            var netAmount = $('#net_receipt').text() || data.net_amount || 0;
             var tallyRows = '';
             if (data.paymentTally && typeof data.paymentTally === 'object') {
                 Object.keys(data.paymentTally).forEach(function (method) {
-                    var amount = Number(data.paymentTally[method]) || 0;
-                    var safeMethod = String(method).replace(/[&<>"]/g, function (character) {
-                        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[character];
-                    });
-                    tallyRows += '<tr><th>' + safeMethod + '</th><td style="text-align:right">' + amount.toFixed(2) + '</td></tr>';
+                    tallyRows += '<tr><th>' + esc(method) + '</th><td style="text-align:right"><span data-closing-value="tender-' + esc(method.toLowerCase().replace(/[^a-z0-9]+/g, '-')) + '">' + moneyText(data.paymentTally[method]) + '</span></td></tr>';
                 });
             }
-            if (tallyRows) {
-                contents += '<section class="posnic-close-tender-summary"><h3>Payment summary</h3><table><thead><tr><th>Payment method</th><th style="text-align:right">Expected amount</th></tr></thead><tbody>' + tallyRows + '</tbody></table></section>';
-            }
-
-            // Keep the editable Receipt Studio as the single closing-ticket print path.
+            var contents = '<div class="closing-slip-default">' +
+                '<h2 data-closing-value="title" style="text-align:center">Clôture de caisse</h2>' +
+                '<p><strong>Caisse :</strong> <span data-closing-value="register-name">' + esc(data.register_name || '') + '</span></p>' +
+                '<p><strong>Ouverture :</strong> <span data-closing-value="opened-at">' + esc(data.register_opendate || '') + '</span></p>' +
+                '<p><strong>Clôture :</strong> <span data-closing-value="closed-at">' + esc(data.register_closedate || '') + '</span></p>' +
+                '<p><strong>Utilisateur :</strong> <span data-closing-value="user">' + esc(data.current_user || '') + '</span></p><hr>' +
+                '<p><strong>Fond de caisse :</strong> <span data-closing-value="opening-float">' + moneyText(data.opening_float) + '</span></p>' +
+                '<p><strong>Total des ventes :</strong> <span data-closing-value="sales-total">' + esc(salesTotal) + '</span></p>' +
+                '<p><strong>Nombre de transactions :</strong> <span data-closing-value="transactions">' + esc(transactionCount) + '</span></p>' +
+                '<p><strong>Entrées espèces :</strong> <span data-closing-value="cash-in">' + moneyText(cashIn) + '</span></p>' +
+                '<p><strong>Sorties espèces :</strong> <span data-closing-value="cash-out">' + moneyText(cashOut) + '</span></p>' +
+                '<p><strong>Net :</strong> <span data-closing-value="net">' + esc(netAmount) + '</span></p>' +
+                (tallyRows ? '<hr><h3>Récapitulatif par mode de paiement</h3><table style="width:100%;border-collapse:collapse"><thead><tr><th>Mode</th><th style="text-align:right">Montant attendu</th></tr></thead><tbody>' + tallyRows + '</tbody></table>' : '') +
+                '<hr><p contenteditable="true" data-pcs-block="1">Signature / remarques :</p></div>';
             PosnicPro.registers.openClosingStudio(contents);
         }, function (xhr) {
             var response = {};

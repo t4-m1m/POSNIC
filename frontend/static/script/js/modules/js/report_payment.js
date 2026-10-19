@@ -564,30 +564,63 @@ PosnicPro.paymentsettlements = {
     collectSelected: function () {
         var self = this;
         var selected = [];
+        var invalid = false;
         $('.settlement_pick:checked').each(function () {
             var index = Number($(this).data('index'));
             var row = self.rows[index];
             var field = $('.settlement_amount[data-index="' + index + '"]');
             var amount = Number(field.val());
-            if (row && amount > 0 && amount <= Number(row.outstanding) + 0.001) {
-                selected.push({ sale_key: row.sale_key, method: row.method, amount: amount });
+            if (!row || !Number.isFinite(amount) || amount <= 0 || amount > Number(row.outstanding) + 0.001) {
+                invalid = true;
+                field.addClass('is-invalid');
+                return;
             }
+            field.removeClass('is-invalid');
+            selected.push({ sale_key: row.sale_key, method: row.method, amount: Math.round(amount * 100) / 100 });
         });
+        if (invalid) {
+            PosnicPro.alert('error', 'Corrigez les montants sélectionnés : chaque montant doit être positif et ne pas dépasser le reste à encaisser.');
+            return;
+        }
         if (!selected.length) {
             PosnicPro.alert('warning', 'Cochez au moins une vente TPE / BaridiMob et vérifiez le montant à encaisser.');
             return;
         }
-        var reference = window.prompt('Référence bancaire / d’encaissement (facultatif) :', '');
-        if (reference === null) return;
-        var note = window.prompt('Note d’encaissement (facultatif) :', '');
-        if (note === null) return;
-        var collectedAt = window.prompt('Date réelle d’encaissement (AAAA-MM-JJ) :', moment().format('YYYY-MM-DD'));
-        if (collectedAt === null) return;
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(collectedAt) || !moment(collectedAt, 'YYYY-MM-DD', true).isValid()) {
-            PosnicPro.alert('error', 'Saisissez la date au format AAAA-MM-JJ.');
+        this._pendingLines = selected;
+        var total = selected.reduce(function (sum, line) { return sum + line.amount; }, 0);
+        var modal = $('#settlement_collect_modal');
+        if (!modal.length) {
+            modal = $('<div id="settlement_collect_modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="settlement_collect_title" aria-hidden="true">' +
+                '<div class="modal-dialog modal-dialog-centered" role="document"><div class="modal-content">' +
+                '<div class="modal-header"><h5 class="modal-title" id="settlement_collect_title">Enregistrer les encaissements</h5><button type="button" class="close" data-dismiss="modal" aria-label="Fermer"><span aria-hidden="true">&times;</span></button></div>' +
+                '<form id="settlement_collect_form"><div class="modal-body">' +
+                '<p class="mb-3">Montant total sélectionné : <strong id="settlement_collect_total">0,00</strong></p>' +
+                '<div class="form-group"><label for="settlement_collect_reference">Référence bancaire / d’encaissement</label><input id="settlement_collect_reference" class="form-control" maxlength="160" autocomplete="off"></div>' +
+                '<div class="form-group"><label for="settlement_collect_note">Note</label><textarea id="settlement_collect_note" class="form-control" rows="2" maxlength="1000"></textarea></div>' +
+                '<div class="form-group mb-0"><label for="settlement_collect_date">Date réelle d’encaissement</label><input id="settlement_collect_date" type="date" class="form-control" required></div>' +
+                '</div><div class="modal-footer"><button type="button" class="btn btn-light" data-dismiss="modal">Annuler</button><button type="submit" id="settlement_collect_confirm" class="btn btn-success">Confirmer l’encaissement</button></div></form>' +
+                '</div></div></div>');
+            $('body').append(modal);
+        }
+        modal.find('#settlement_collect_total').text(this.money(total));
+        modal.find('#settlement_collect_date').val(moment().format('YYYY-MM-DD'));
+        modal.find('#settlement_collect_reference').val('');
+        modal.find('#settlement_collect_note').val('');
+        modal.modal('show');
+    },
+    saveSelected: function () {
+        var self = this;
+        var selected = this._pendingLines || [];
+        if (!selected.length) {
+            PosnicPro.alert('warning', 'Sélection vide. Cochez les ventes à encaisser puis réessayez.');
             return;
         }
-        var button = $('#settlement_collect_selected');
+        var collectedAt = $('#settlement_collect_date').val();
+        if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(collectedAt || '') || !moment(collectedAt, 'YYYY-MM-DD', true).isValid()) {
+            PosnicPro.alert('error', 'Saisissez une date valide au format AAAA-MM-JJ.');
+            return;
+        }
+        var button = $('#settlement_collect_confirm');
         if (button.prop('disabled')) return;
         button.prop('disabled', true).text('Enregistrement…');
         PosnicPro.request({
@@ -597,28 +630,31 @@ PosnicPro.paymentsettlements = {
             processData: false,
             data: JSON.stringify({
                 lines: selected,
-                reference: String(reference || '').trim(),
-                note: String(note || '').trim(),
+                reference: String($('#settlement_collect_reference').val() || '').trim(),
+                note: String($('#settlement_collect_note').val() || '').trim(),
                 collected_at: collectedAt
             })
         }, function (response) {
+            button.prop('disabled', false).text('Confirmer l’encaissement');
             if (response && response.type === 'success') {
+                $('#settlement_collect_modal').modal('hide');
+                self._pendingLines = [];
                 PosnicPro.alert('success', response.message || 'Encaissement enregistré.');
                 self.load();
             } else {
                 PosnicPro.alert('error', (response && response.message) || 'Le serveur n’a pas confirmé l’enregistrement.');
             }
-            button.prop('disabled', false).text('Enregistrer les encaissements sélectionnés');
         }, function (xhr) {
+            button.prop('disabled', false).text('Confirmer l’encaissement');
             var message = 'Impossible d’enregistrer l’encaissement.';
             try {
                 var body = xhr.responseJSON || JSON.parse(xhr.responseText || '{}');
                 message = body.message || message;
             } catch (e) {}
             PosnicPro.alert('error', message);
-            button.prop('disabled', false).text('Enregistrer les encaissements sélectionnés');
         });
     }
+
 };
 $(document).off('click', '#settlement_collect_selected').on('click', '#settlement_collect_selected', function () {
     if (PosnicPro.paymentsettlements && typeof PosnicPro.paymentsettlements.collectSelected === 'function') {
@@ -627,6 +663,6 @@ $(document).off('click', '#settlement_collect_selected').on('click', '#settlemen
         PosnicPro.alert('error', 'Le module de règlements n’est pas chargé. Rechargez le rapport puis réessayez.');
     }
 });
-$(document).on('change', '#settlement_select_all', function () {
+$(document).off('submit', '#settlement_collect_form').on('submit', '#settlement_collect_form', function (event) {\n    event.preventDefault();\n    if (PosnicPro.paymentsettlements) PosnicPro.paymentsettlements.saveSelected();\n});\n$(document).on('change', '.settlement_amount', function () {\n    var index = Number($(this).data('index'));\n    var row = PosnicPro.paymentsettlements && PosnicPro.paymentsettlements.rows[index];\n    var amount = Number($(this).val());\n    $(this).toggleClass('is-invalid', !row || !Number.isFinite(amount) || amount <= 0 || amount > Number(row.outstanding) + 0.001);\n});\n$(document).on('change', '#settlement_select_all', function () {
     $('.settlement_pick:not(:disabled)').prop('checked', this.checked);
 });
