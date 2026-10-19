@@ -93,6 +93,11 @@ on:
       - "src/escpos-report.js"
       - "src/escpos-receipt.js"
 
+# Keep only the newest queued installer request for this ref; a newer push supersedes stale pending builds.
+concurrency:
+  group: posnic-quick-installer-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
