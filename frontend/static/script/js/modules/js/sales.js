@@ -11782,13 +11782,8 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
     }
     function askCashier(key) {
         if (cashierPromptOpen) return;
-        // If F2 is pressed again after payment has opened, keep the original
-        // behavior: focus the payment amount instead of opening a second picker.
-        if (key === 'F2' && $('#infobar-settings-sidebar-tender-details').hasClass('sidebarview') && $('#tenderpage').length && $('#tenderpage').is(':visible')) {
-            var amountField = document.getElementById('Partial_amount') || document.getElementById('tendered_amount');
-            if (amountField) { amountField.focus(); if (amountField.select) amountField.select(); }
-            return;
-        }
+        // Always show the cashier picker for each new checkout attempt. The tender sidebar
+        // can remain visible from the previous sale, so it is not a reliable checkout-state test.
         cashierPromptOpen = true;
         ensureCashierModal();
         var names = cashierNames(), $modal = $('#posnic-vendeur-modal');
@@ -11830,7 +11825,8 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
     }
     $(document).on('click.cashier', '#posnic-vendeur-confirm', continueCheckout);
     $(document).on('click.cashier', '#posnic-vendeur-cancel', function () { $('#posnic-vendeur-modal').modal('hide'); });
-    $('#posnic-vendeur-modal').on('hidden.bs.modal.cashierReset', function () { cashierPromptOpen = false; });
+    // Delegate because the modal is created lazily by ensureCashierModal().
+    $(document).on('hidden.bs.modal.cashierReset', '#posnic-vendeur-modal', function () { cashierPromptOpen = false; });
     $(document).on('keydown.cashier', '#posnic-vendeur-select', function (e) {
         if (e.key === 'Enter' && !$('#posnic-vendeur-confirm').prop('disabled')) { e.preventDefault(); continueCheckout(); }
     });
