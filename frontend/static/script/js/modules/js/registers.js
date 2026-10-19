@@ -670,74 +670,47 @@ PosnicPro.registers = {
 
     // cash register button closed then click print screen function
     printRegisterscreen: function (id) {
-        let params = {
+        var params = {
             url: 'registers/getCashRegister',
-            data: {
-                id: id
-            }
+            data: { id: id }
         };
         PosnicPro.get(params, function (response) {
-            PosnicPro.local.set('cash_register_id', '');
+            if (!response || response.type !== 'success' || !response.data) {
+                PosnicPro.alert(response && response.type || 'error', response && response.message || 'Impossible de charger la clôture de caisse.');
+                return;
+            }
             var data = response.data;
-            var cash_inData = 0;
-            var cash_outData = 0;
-            $.each(data.cashInOutDetail, function (index, val) {
-                cash_inData += parseFloat(val.cashin_amount);
-                cash_outData += parseFloat(val.cashout_amount);
+            var cashIn = 0;
+            var cashOut = 0;
+            $.each(data.cashInOutDetail || [], function (index, item) {
+                cashIn += Number(item.cashin_amount) || 0;
+                cashOut += Number(item.cashout_amount) || 0;
             });
-            $('.print_register_name').html(data.register_name);
-            $('.print_registeropendate').html(data.register_opendate);
-            $('.print_registerclosedate').html(data.register_closedate);
-
-            // Dynamically populate payment types from payment tally
-            var $paymentTypesBody = $('#payment_types_print_tbody').empty();
-            console.log('=== Payment Tally Print Debug ===');
-            $('#payment_tally_tbody tr').each(function() {
-                var $row = $(this);
-                var paymentType = $row.find('th').text().trim();
-                var expectedAmount = $row.find('span[id^="expected_"]').text().trim();
-                var countedAmount = $row.find('a[id^="counted_"]').text().trim() || '0';
-                var diffAmount = $row.find('span[id^="diffrent_"]').text().trim();
-                
-                if (paymentType && paymentType !== '') {
-                    var $printRow = $('<tr></tr>').css('border-bottom', '1px solid #eee');
-                    [paymentType, expectedAmount, countedAmount, diffAmount].forEach(function (value, index) {
-                        $('<td class="print-deatils-size-family"></td>')
-                            .toggleClass('article', index === 0)
-                            .attr('align', index === 0 ? 'left' : 'right')
-                            .css({ color: '#333', fontSize: '13px', padding: '8px 5px', fontWeight: index === 0 ? 500 : (index === 3 ? 600 : 400) })
-                            .text(value)
-                            .appendTo($printRow);
-                    });
-                    $paymentTypesBody.append($printRow);
-                }
-            });
-
-            $paymentTypesBody.append('<tr><td height="20"></td></tr><tr><td height="1" colspan="4" style="border-bottom:1px solid #000"></td></tr><tr><td height="20"></td></tr>');
-
-            $('.currentUser').text(data.current_user);
-            $('#opening_Amount').text(data.opening_float);
-            $('#in_Amount').text(cash_inData);
-            $('#out_Amount').text(cash_outData);
+            $('.print_register_name').text(data.register_name || '');
+            $('.print_registeropendate').text(data.register_opendate || '');
+            $('.print_registerclosedate').text(data.register_closedate || '');
+            $('.currentUser').text(data.current_user || '');
+            $('#opening_Amount').text(data.opening_float == null ? '0' : data.opening_float);
+            $('#in_Amount').text(cashIn);
+            $('#out_Amount').text(cashOut);
             $('#received_Amount').text($('#payment_receive').text());
             $('#refund_Amount').text($('#register_refund').text());
             $('#net_Amount').text($('#net_receipt').text());
             $('#total_sale').text($('#register_total_sales').text());
             $('#total_transaction').text($('#register_transaction').text());
 
-            var contents = $("#printRegister_a4_form").html();
-            let printUrl = PosnicPro.local.get('print_url');
-            let url = ((printUrl === 'true') ? '<div class="col-md-12 col-sm-12 col-xs-12 text-center" style="margin-top: -30px;">' + PosnicPro.BRAND_URL + '</div>' : '');
+            var contents = $('#printRegister_a4_form').html() || '';
+            var printUrl = PosnicPro.local.get('print_url');
+            if (printUrl === 'true') {
+                contents += '<div class="text-center" style="margin-top:12px">' + PosnicPro.BRAND_URL + '</div>';
+            }
 
-            // The close slip must reconcile every tender, not only cash. The
-            // report's editable tally can be empty on first render, so derive
-            // the print copy directly from the register API response.
             var tallyRows = '';
             if (data.paymentTally && typeof data.paymentTally === 'object') {
                 Object.keys(data.paymentTally).forEach(function (method) {
                     var amount = Number(data.paymentTally[method]) || 0;
-                    var safeMethod = String(method).replace(/[&<>"]/g, function (c) {
-                        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);
+                    var safeMethod = String(method).replace(/[&<>"]/g, function (character) {
+                        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[character];
                     });
                     tallyRows += '<tr><th>' + safeMethod + '</th><td style="text-align:right">' + amount.toFixed(2) + '</td></tr>';
                 });
@@ -746,143 +719,15 @@ PosnicPro.registers = {
                 contents += '<section class="posnic-close-tender-summary"><h3>Payment summary</h3><table><thead><tr><th>Payment method</th><th style="text-align:right">Expected amount</th></tr></thead><tbody>' + tallyRows + '</tbody></table></section>';
             }
 
-            var closeSales = Array.isArray(data.register_sales) ? data.register_sales : [];
-            var closeCount = closeSales.length, closeTotal = 0, closeCash = 0, closeCredit = 0, closeTpe = 0, closeBaridi = 0, closeCost = 0, hasCost = false;
-            function closeMoney(v) { return (Number(v) || 0).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
-            function closeTender(method, amount) {
-                var k = String(method || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]/g, '');
-                amount = Number(amount) || 0;
-                if (k.indexOf('baridimob') >= 0) closeBaridi += amount;
-                else if (k === 'tpe' || k.indexOf('terminal') >= 0 || k.indexOf('creditcard') >= 0 || k === 'card' || k === 'pos') closeTpe += amount;
-                else if (k === 'credit' || k === 'pending' || k === 'unpaid') closeCredit += amount;
-                else if (k.indexOf('cash') >= 0 || k === 'especes') closeCash += amount;
-            }
-            closeSales.forEach(function(sale) {
-                closeTotal += Number(sale.grand_total || sale.sales_total || sale.total || sale.register_amount || 0);
-                var split = sale.multi_payment;
-                if (split && typeof split === 'object' && !Array.isArray(split)) Object.keys(split).forEach(function(k) { closeTender(k, split[k] && typeof split[k] === 'object' ? split[k].amount : split[k]); });
-                else if (Array.isArray(split)) split.forEach(function(t) { closeTender(t.payment_mode || t.method || t.name, t.amount || t.value); });
-                else closeTender(sale.payment_mode || sale.register_paymentmode || 'Cash', sale.grand_total || sale.sales_total || sale.total || sale.register_amount || 0);
-                var items = sale.items || sale.sale_items || sale.registerItems || sale.register_items || [];
-                var saleHasCost = false;
-                if (Array.isArray(items)) items.forEach(function(item) {
-                    var qty = Number(item.quantity || item.qty || 1);
-                    var cost = item.purchase_cost != null ? item.purchase_cost : item.cost_price != null ? item.cost_price : item.company_price != null ? item.company_price : item.cost;
-                    if (cost != null && Number.isFinite(Number(cost))) { closeCost += Number(cost) * qty; saleHasCost = true; hasCost = true; }
-                });
-                if (!saleHasCost) {
-                    var explicitCost = sale.cost_total != null ? sale.cost_total : sale.cost_of_goods != null ? sale.cost_of_goods : sale.purchase_cost_total;
-                    if (explicitCost != null && Number.isFinite(Number(explicitCost))) { closeCost += Number(explicitCost); hasCost = true; }
-                }
-            });
-            var closeExpenses = cash_outData, closeGross = hasCost ? closeTotal - closeCost : null, closeNet = closeGross == null ? null : closeGross - closeExpenses;
-            var closeValues = {'sales-count':String(closeCount),'sales-total':closeMoney(closeTotal),cost:hasCost?closeMoney(closeCost):'—',gross:closeGross==null?'—':closeMoney(closeGross),expenses:closeMoney(closeExpenses),net:closeNet==null?'—':closeMoney(closeNet),cash:closeMoney(closeCash),credit:closeMoney(closeCredit),tpe:closeMoney(closeTpe),baridimob:closeMoney(closeBaridi)};
-            contents += '<section class="posnic-close-daily-summary"><h3>Récapitulatif de clôture</h3><table><tbody>' +
-                '<tr><th>Nombre de ventes</th><td data-closing-value="sales-count">' + closeValues['sales-count'] + '</td></tr>' +
-                '<tr><th>Total des ventes</th><td data-closing-value="sales-total">' + closeValues['sales-total'] + '</td></tr>' +
-                '<tr><th>Coût des marchandises</th><td data-closing-value="cost">' + closeValues.cost + '</td></tr>' +
-                '<tr><th>Bénéfice brut</th><td data-closing-value="gross">' + closeValues.gross + '</td></tr>' +
-                '<tr><th>Dépenses</th><td data-closing-value="expenses">' + closeValues.expenses + '</td></tr>' +
-                '<tr><th>Bénéfice net</th><td data-closing-value="net">' + closeValues.net + '</td></tr>' +
-                '<tr><th>Total espèces</th><td data-closing-value="cash">' + closeValues.cash + '</td></tr>' +
-                '<tr><th>Total crédit</th><td data-closing-value="credit">' + closeValues.credit + '</td></tr>' +
-                '<tr><th>Total TPE</th><td data-closing-value="tpe">' + closeValues.tpe + '</td></tr>' +
-                '<tr><th>Total BaridiMob</th><td data-closing-value="baridimob">' + closeValues.baridimob + '</td></tr>' +
-                '</tbody></table></section>';
-
-            // Receipt Studio-style closing slip editor: edit before printing.
-                PosnicPro.registers.openClosingStudio(contents + url);
-                return;
-            }
-
-            // Desktop builds must use the same native print dialog path as the
-            // working receipt printer. Keep the browser iframe fallback for web.
-            if (window.electronAPI && window.electronAPI.printer &&
-                typeof window.electronAPI.printer.print === 'function') {
-                var desktopPrintHtml = '<!doctype html><html><head><meta charset="utf-8"><title>Clôture de caisse</title>' +
-                    '<style>html,body{background:#fff;color:#222;font-family:Arial,Helvetica,sans-serif;margin:0;padding:12px}*{box-sizing:border-box}table{width:100%;border-collapse:collapse}th,td{padding:6px 8px;border-bottom:1px solid #d8dee8;text-align:left}img{max-width:100%}.posnic-close-tender-summary{margin-top:18px;page-break-inside:avoid}.posnic-close-tender-summary h3{font-size:15px;margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid #222}@media print{@page{size:A4;margin:10mm}html,body{padding:0}}</style>' +
-                    '</head><body>' + contents + url + '</body></html>';
-                window.electronAPI.printer.print(desktopPrintHtml, {
-                    // Match the receipt designer's Electron print contract: the
-                    // native dialog is controlled by showDialog (not showPrintDialog).
-                    showDialog: true,
-                    silent: false,
-                    forceHtml: true,
-                    printBackground: true,
-                    pageSize: 'a4',
-                    docName: 'Clôture de caisse'
-                }).then(function (result) {
-                    if (result && result.success === false) {
-                        PosnicPro.alert('error', result.error || 'Impossible d’ouvrir la fenêtre d’impression de la clôture de caisse.');
-                    }
-                }).catch(function (error) {
-                    console.error('Register close desktop print failed:', error);
-                    PosnicPro.alert('error', 'Impossible d’ouvrir la fenêtre d’impression de la clôture de caisse.');
-                });
-                return;
-            }
-
-            var frame1 = $('<iframe />');
-            frame1[0].name = "frame1";
-            frame1.css({
-                "position": "absolute",
-                "top": "-1000000px"
-            });
-            $("body").append(frame1);
-            var frameDoc = frame1[0].contentWindow ? frame1[0].contentWindow : frame1[0].contentDocument.document ? frame1[0].contentDocument.document : frame1[0].contentDocument;
-            frameDoc.document.open();
-            //Create a new HTML document.
-            frameDoc.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Clôture de caisse</title>');
-            // Keep the closing slip self-contained: external application stylesheets
-            // are not reliably available from a sandboxed/hidden print frame.
-            frameDoc.document.write('<style>html,body{background:#fff;color:#222;font-family:Arial,Helvetica,sans-serif;margin:0;padding:12px}*{box-sizing:border-box}table{width:100%;border-collapse:collapse}img{max-width:100%}@media print{@page{size:auto;margin:8mm}html,body{padding:0}}</style>');
-            frameDoc.document.write('</head><body>');
-            frameDoc.document.write(contents);
-            frameDoc.document.write(url);
-            frameDoc.document.write('</body></html>');
-            frameDoc.document.close();
-
-            // Wait until the document is ready before invoking the native print
-            // dialog. Printing during document.write/close races can yield a blank
-            // PDF or a failed "Microsoft Print to PDF" save.
-            var printWindow = frame1[0].contentWindow;
-            var disposed = false;
-            var printStarted = false;
-            var disposeFrame = function () {
-                if (disposed) return;
-                disposed = true;
-                frame1.remove();
-            };
-            if (printWindow) {
-                printWindow.onafterprint = disposeFrame;
-                var startPrint = function () {
-                    if (disposed || printStarted) return;
-                    printStarted = true;
-                    try {
-                        printWindow.focus();
-                        printWindow.print();
-                    } catch (error) {
-                        disposeFrame();
-                        PosnicPro.alert('error', 'Could not open the cash-register closing print dialog. Please try printing the closing report again.');
-                        console.error('Register close print failed:', error);
-                    }
-                };
-                frame1.on('load.registerClosePrint', startPrint);
-                // Some Electron versions do not emit load for a document written
-                // into an iframe; schedule printing after the current write stack.
-                window.setTimeout(startPrint, 150);
-            } else {
-                disposeFrame();
-                PosnicPro.alert('error', 'The cash-register closing print frame could not be created.');
-            }
-
+            // Keep the editable Receipt Studio as the single closing-ticket print path.
+            PosnicPro.registers.openClosingStudio(contents);
         }, function (xhr) {
-            var response = jQuery.parseJSON(xhr.responseText);
-            PosnicPro.alert(response.type, response.message);
+            var response = {};
+            try { response = jQuery.parseJSON(xhr.responseText); } catch (error) {}
+            PosnicPro.alert(response.type || 'error', response.message || 'Impossible de charger la clôture de caisse.');
         });
         return false;
     },
-    // register in /out detail saved cash register collection
     registerInOutSubmit: function () {
         let inAmountDescription = $('#cash_button_note').val();
         let outAmountDescription = $('#cash_outbutton_note').val();
