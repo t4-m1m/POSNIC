@@ -19,19 +19,22 @@ const saleAmountForMethod = (sale, method) => {
     if (value && typeof value === 'object') return Number(value.amount || value.value || value.paid_amount || value.collected || 0);
     return Number(value || 0);
   };
+  let splitAmount = 0;
   if (Array.isArray(breakdown)) {
-    return money(breakdown.reduce((sum, row) => {
+    splitAmount = money(breakdown.reduce((sum, row) => {
       if (!row || typeof row !== 'object') return sum;
       const mode = normMethod(row.payment_mode || row.payment_method || row.label || row.name || row.method || row.reference || row.notes || row.tender || '');
       return sum + (mode === method ? amountOf(row.amount != null ? row.amount : row.value != null ? row.value : row.paid_amount) : 0);
     }, 0));
+  } else if (breakdown && typeof breakdown === 'object') {
+    splitAmount = money(Object.keys(breakdown).reduce((sum, key) => normMethod(key) === method ? sum + amountOf(breakdown[key]) : sum, 0));
   }
-  if (breakdown && typeof breakdown === 'object') {
-    return money(Object.keys(breakdown).reduce((sum, key) => normMethod(key) === method ? sum + amountOf(breakdown[key]) : sum, 0));
-  }
-  const mode = normMethod(sale.payment_mode || sale.payment_method || sale.register_paymentmode);
+  // Some older sales have a multi-payment field present but empty or only
+  // containing other tenders. Do not let that suppress their primary method.
+  if (splitAmount > 0) return splitAmount;
+  const mode = normMethod(sale.payment_mode || sale.payment_method || sale.register_paymentmode || sale.paymentmode || sale.payment_type);
   if (mode !== method) return 0;
-  return money(sale.paid_amount || sale.sales_total || sale.total_paid || sale.items_total || sale.grand_total || sale.total || sale.register_amount || 0);
+  return money(sale.paid_amount || sale.sales_total || sale.total_paid || sale.items_total || sale.grand_total || sale.total || sale.register_amount || sale.amount || 0);
 };
 const actor = (req) => {
   const u = req.user || {};
