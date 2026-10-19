@@ -102,36 +102,75 @@
         <p class="meal-help" id="daily-meal-status" role="status" aria-live="polite"></p>
     </section>
 
-    <section id="day-close-ticket-tools" class="day-close-tools" aria-label="Cash closing ticket designer">
-        <div class="day-close-tools-head">
-            <div><strong><i class="feather icon-sliders mr-1"></i> Clôture de caisse · Receipt Studio</strong><p>Design and preview the closing ticket before printing or saving as PDF.</p></div>
-            <button type="button" class="btn btn-primary" id="day-close-ticket-print"><i class="feather icon-printer mr-1"></i> Print / Save PDF</button>
+    <section id="day-close-ticket-tools" class="day-close-tools" aria-label="Cash closing ticket studio">
+      <div class="day-close-tools-head">
+        <div><strong><i class="feather icon-sliders mr-1"></i> Clôture de caisse · Ticket Studio</strong><p>Composez votre ticket thermique 80 mm par glisser-déposer. Le rapport A4 reste inchangé.</p></div>
+        <div class="d-flex flex-wrap" style="gap:8px">
+          <button type="button" class="btn btn-outline-secondary" id="day-close-history-refresh">Historique</button>
+          <button type="button" class="btn btn-primary" id="day-close-ticket-print"><i class="feather icon-printer mr-1"></i> Imprimer le ticket</button>
         </div>
-        <div class="day-close-workspace">
-            <details class="day-close-designer" open>
-                <summary>Ticket settings</summary>
-                <div class="day-close-fields">
-                    <label>Ticket title<input id="day-close-title" class="form-control" maxlength="80" value="CLÔTURE DE CAISSE"></label>
-                    <label>Footer / thank-you text<input id="day-close-footer" class="form-control" maxlength="180" value="Clôture effectuée. Merci."></label>
-                    <label>Paper width<select id="day-close-width" class="form-control"><option value="58">58 mm</option><option value="80" selected>80 mm</option></select></label>
-                    <label class="day-close-check"><input type="checkbox" id="day-close-show-profit" checked> Show profitability figures</label>
-                    <label class="day-close-check"><input type="checkbox" id="day-close-show-products"> Include item summary</label>
-                </div>
-                <button type="button" class="btn btn-primary btn-sm" id="day-close-save-design">Save ticket settings</button>
-                <span id="day-close-save-status" role="status" aria-live="polite"></span>
-            </details>
-            <div class="day-close-preview-wrap">
-                <div class="day-close-preview-label">Live preview</div>
-                <div id="day-close-ticket-preview" aria-live="polite">
-                    <h4>CLÔTURE DE CAISSE</h4><div class="dc-preview-muted">Generate the report to preview closing figures</div><hr class="dc-preview-rule">
-                    <div class="dc-preview-line"><span>Chiffre d’affaires</span><strong>—</strong></div>
-                    <div class="dc-preview-line"><span>Encaissements</span><strong>—</strong></div>
-                    <div class="dc-preview-line"><span>Crédit / impayés</span><strong>—</strong></div>
-                    <hr class="dc-preview-rule"><div class="dc-preview-muted">Clôture effectuée. Merci.</div>
-                </div>
-            </div>
+      </div>
+      <div class="dc-studio-layout">
+        <aside class="dc-studio-sidebar">
+          <h5>Éléments du ticket</h5>
+          <p class="text-muted small">Glissez un élément dans le ticket ou cliquez pour l’ajouter.</p>
+          <div id="dc-studio-palette" class="dc-studio-palette">
+            <button type="button" draggable="true" data-dc-type="title">Titre</button>
+            <button type="button" draggable="true" data-dc-type="date">Date de clôture</button>
+            <button type="button" draggable="true" data-dc-type="sales">Ventes</button>
+            <button type="button" draggable="true" data-dc-type="cost">Coût des marchandises</button>
+            <button type="button" draggable="true" data-dc-type="gross">Bénéfice brut</button>
+            <button type="button" draggable="true" data-dc-type="expenses">Dépenses</button>
+            <button type="button" draggable="true" data-dc-type="net">Bénéfice net</button>
+            <button type="button" draggable="true" data-dc-type="payments">Détail des paiements</button>
+            <button type="button" draggable="true" data-dc-type="count">Nombre de ventes</button>
+            <button type="button" draggable="true" data-dc-type="text">Texte libre</button>
+            <button type="button" draggable="true" data-dc-type="divider">Séparateur</button>
+            <button type="button" draggable="true" data-dc-type="footer">Pied de ticket</button>
+          </div>
+          <hr>
+          <h5>Personnaliser</h5>
+          <label class="small">Texte / libellé<input class="form-control" id="dc-studio-label" maxlength="120"></label>
+          <label class="small">Taille du texte<select class="form-control" id="dc-studio-size"><option value="10">10 px</option><option value="12" selected>12 px</option><option value="14">14 px</option><option value="16">16 px</option><option value="20">20 px</option></select></label>
+          <label class="small">Alignement<select class="form-control" id="dc-studio-align"><option value="left">Gauche</option><option value="center">Centré</option><option value="right">Droite</option></select></label>
+          <div class="d-flex flex-wrap" style="gap:6px"><button type="button" class="btn btn-sm btn-outline-danger" id="dc-studio-delete">Supprimer</button><button type="button" class="btn btn-sm btn-outline-secondary" id="dc-studio-up">Monter</button><button type="button" class="btn btn-sm btn-outline-secondary" id="dc-studio-down">Descendre</button></div>
+          <hr>
+          <label class="small">Largeur papier<select class="form-control" id="dc-studio-width"><option value="80" selected>80 mm</option><option value="58">58 mm</option></select></label>
+          <button type="button" class="btn btn-primary btn-sm" id="dc-studio-save">Enregistrer le modèle</button>
+          <span id="day-close-save-status" role="status" aria-live="polite"></span>
+        </aside>
+        <div class="dc-studio-preview-area">
+          <div class="dc-studio-preview-label">Aperçu en direct · déposez les éléments ici</div>
+          <div id="day-close-ticket-preview" class="dc-studio-paper" aria-live="polite" tabindex="0">
+            <div class="dc-studio-drop-hint">Glissez des éléments ici</div>
+          </div>
+          <section class="dc-studio-history"><h5>Historique des clôtures</h5><p class="small text-muted">Sélectionnez une clôture déjà consultée pour réimprimer son ticket.</p><div id="dc-studio-history-list"></div></section>
         </div>
+      </div>
     </section>
+
+<style id="dc-studio-styles">
+#day-close-ticket-tools .dc-studio-layout{display:grid;grid-template-columns:minmax(230px,290px) minmax(260px,1fr);gap:18px;margin-top:16px}
+#day-close-ticket-tools .dc-studio-sidebar{background:var(--bs-card-bg,#fff);border:1px solid #e5e7eb;border-radius:8px;padding:14px;min-width:0}
+#day-close-ticket-tools .dc-studio-palette{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+#day-close-ticket-tools .dc-studio-palette button{border:1px solid #d1d5db;background:#f8fafc;border-radius:5px;padding:8px;font-size:12px;cursor:grab;text-align:left}
+#day-close-ticket-tools .dc-studio-palette button:active{cursor:grabbing}
+#day-close-ticket-tools .dc-studio-sidebar label{display:block;margin:10px 0}
+#day-close-ticket-tools .dc-studio-preview-area{min-width:0}
+#day-close-ticket-tools .dc-studio-paper{box-sizing:border-box;width:80mm;max-width:100%;min-height:220px;margin:8px auto;background:#fff;color:#111;padding:5mm 4mm;box-shadow:0 2px 16px #0002;font-family:Arial,sans-serif;font-size:12px}
+#day-close-ticket-tools .dc-studio-block{position:relative;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 3px;border:1px dashed transparent;cursor:pointer;white-space:pre-wrap;overflow-wrap:anywhere}
+#day-close-ticket-tools .dc-studio-block:hover,#day-close-ticket-tools .dc-studio-block.is-selected{border-color:#448aff;background:#eaf3ff}
+#day-close-ticket-tools .dc-studio-block .dc-value{font-weight:700;text-align:right}
+#day-close-ticket-tools .dc-studio-block[data-dc-type="title"],#day-close-ticket-tools .dc-studio-block[data-dc-type="text"],#day-close-ticket-tools .dc-studio-block[data-dc-type="footer"]{display:block;text-align:center}
+#day-close-ticket-tools .dc-studio-block[data-dc-type="divider"]{border-top:1px dashed #333;height:1px;margin:5px 0;padding:0}
+#day-close-ticket-tools .dc-studio-drop-hint{text-align:center;color:#777;padding:16px;border:1px dashed #bbb}
+#day-close-ticket-tools .dc-studio-preview-label{font-size:12px;color:#6b7280;text-align:center}
+#day-close-ticket-tools .dc-studio-history{max-width:600px;margin:20px auto}
+#day-close-ticket-tools .dc-history-row{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #e5e7eb}
+#day-close-ticket-tools .dc-history-row button{white-space:nowrap}
+@media(max-width:767px){#day-close-ticket-tools .dc-studio-layout{grid-template-columns:1fr}#day-close-ticket-tools .dc-studio-paper{width:100%;max-width:80mm}}
+@media print{body.dc-print-dayclose *{visibility:hidden!important}body.dc-print-dayclose #day-close-ticket-preview,body.dc-print-dayclose #day-close-ticket-preview *{visibility:visible!important}body.dc-print-dayclose #day-close-ticket-preview{position:absolute;left:0;top:0;width:72mm;box-shadow:none;margin:0;padding:0}}
+</style>
     <!-- Start Contentbar -->
     <div class="contentbar">
     <div class="row mb-3" id="day-end-expense-report-link"><div class="col-12"><a class="btn btn-outline-primary" href="#/expensesreport"><i class="feather icon-file-text mr-2"></i>Détails des dépenses</a></div></div>
