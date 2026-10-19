@@ -4116,6 +4116,7 @@ class SalesRepository {
         customer_gst_number: 1,
         payment_pending: 1,
         payment_mode: 1,
+        multi_payment: 1,
         partial_balance: 1,
         partial_check: 1,
         payment_description: 1,
@@ -4172,12 +4173,50 @@ class SalesRepository {
         .lean();
 
       const list = (Array.isArray(rawList) ? rawList : []).map((row) => {
-        if (!row.captain_payments?.length || row.payment_status !== 'Paid') return row;
+        // Reconcile card and BaridiMob tenders on each sale row. multi_payment
+        // stores the actual tender amounts; payment_pending remains the unpaid
+        // balance and is not counted as collected money.
+        const methodAmounts = {};
+        const rawMulti = row.multi_payment;
+        let multi = rawMulti;
+        if (typeof rawMulti === 'string') {
+          try { multi = JSON.parse(rawMulti); } catch (_) { multi = null; }
+        }
+        if (multi && typeof multi === 'object') {
+          (Array.isArray(multi) ? multi : Object.entries(multi).map(([method, amount]) => ({ method, amount }))).forEach((entry) => {
+            const method = Array.isArray(multi) ? (entry.method || entry.payment_mode || entry.name || '') : entry.method;
+            const amount = Array.isArray(multi) ? (entry.amount ?? entry.value ?? entry.paid_amount) : entry.amount;
+            const key = String(method || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const value = Number(amount);
+            if (key && Number.isFinite(value) && value > 0) methodAmounts[key] = (methodAmounts[key] || 0) + value;
+          });
+        }
+        const methodValue = (test) => Object.entries(methodAmounts).reduce((sum, [key, value]) => sum + (test(key) ? value : 0), 0);
+        const isTpe = (key) => /^(tpe|terminal|carte|card|paymentcard|creditcard)$/.test(key) || key.includes('tpe');
+        const isBaridi = (key) => key.includes('baridimob') || key.includes('baridi');
+        const modeKey = String(row.payment_mode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        let tpeCollected = methodValue(isTpe);
+        let baridiCollected = methodValue(isBaridi);
+        if (!Object.keys(methodAmounts).length) {
+          if (isTpe(modeKey)) tpeCollected = Math.max(0, Number(row.paid_amount ?? row.items_total ?? row.sales_total ?? 0) - Number(row.payment_pending || 0));
+          if (isBaridi(modeKey)) baridiCollected = Math.max(0, Number(row.paid_amount ?? row.items_total ?? row.sales_total ?? 0) - Number(row.payment_pending || 0));
+        }
+        const pending = Math.max(0, Number(row.payment_pending || 0));
+        const allTenders = Object.values(methodAmounts).reduce((sum, value) => sum + value, 0);
+        const hasCreditTender = Object.keys(methodAmounts).some((key) => /credit|debt|unpaid|pending|later|account/.test(key));
+        const pendingShare = (collected) => {
+          if (pending <= 0 || hasCreditTender || allTenders <= 0) return 0;
+          return Math.min(pending, pending * collected / allTenders);
+        };
         const digits = row.captain_transfer_allocation?.currencyDigits;
         return {
           ...row,
-          report_amount: row.paid_amount,
+          report_amount: row.captain_payments?.length && row.payment_status === 'Paid' ? row.paid_amount : row.report_amount,
           currencyDigits: Number.isInteger(digits) && digits >= 0 && digits <= 4 ? digits : 2,
+          tpe_collected: tpeCollected,
+          tpe_uncollected: pendingShare(tpeCollected),
+          baridimob_collected: baridiCollected,
+          baridimob_uncollected: pendingShare(baridiCollected),
         };
       });
 
