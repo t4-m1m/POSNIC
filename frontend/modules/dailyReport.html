@@ -144,7 +144,12 @@
           <div id="day-close-ticket-preview" class="dc-studio-paper" aria-live="polite" tabindex="0">
             <div class="dc-studio-drop-hint">Glissez des éléments ici</div>
           </div>
-          <section class="dc-studio-history"><h5>Historique des clôtures</h5><p class="small text-muted">Sélectionnez une clôture déjà consultée pour réimprimer son ticket.</p><div id="dc-studio-history-list"></div></section>
+          <section class="dc-studio-history">
+    <div class="dc-agenda-head"><h5>Agenda des clôtures</h5><div class="dc-agenda-nav"><button type="button" class="btn btn-sm btn-outline-secondary" id="dc-agenda-prev" aria-label="Mois précédent">‹</button><strong id="dc-agenda-month"></strong><button type="button" class="btn btn-sm btn-outline-secondary" id="dc-agenda-next" aria-label="Mois suivant">›</button></div></div>
+    <p class="small text-muted">Cliquez sur une date pour charger le rapport réel de cette journée et prévisualiser le ticket avec votre modèle enregistré.</p>
+    <div id="dc-studio-agenda" class="dc-studio-agenda" aria-label="Agenda des clôtures"></div>
+    <div id="dc-agenda-status" class="small text-muted" role="status" aria-live="polite"></div>
+  </section>
         </div>
       </div>
     </section>
@@ -165,7 +170,17 @@
 #day-close-ticket-tools .dc-studio-block[data-dc-type="divider"]{border-top:1px dashed #333;height:1px;margin:5px 0;padding:0}
 #day-close-ticket-tools .dc-studio-drop-hint{text-align:center;color:#777;padding:16px;border:1px dashed #bbb}
 #day-close-ticket-tools .dc-studio-preview-label{font-size:12px;color:#6b7280;text-align:center}
-#day-close-ticket-tools .dc-studio-history{max-width:600px;margin:20px auto}
+#day-close-ticket-tools .dc-studio-history{max-width:760px;margin:20px auto}
+#day-close-ticket-tools .dc-agenda-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+#day-close-ticket-tools .dc-agenda-head h5{margin:0}
+#day-close-ticket-tools .dc-agenda-nav{display:flex;align-items:center;gap:12px}
+#day-close-ticket-tools .dc-studio-agenda{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-top:12px}
+#day-close-ticket-tools .dc-agenda-weekday{font-size:11px;font-weight:700;text-align:center;color:#64748b;padding:6px 0}
+#day-close-ticket-tools .dc-agenda-day{min-height:42px;border:1px solid #dbe3ef;border-radius:6px;background:#fff;color:#243247;cursor:pointer}
+#day-close-ticket-tools .dc-agenda-day:hover{border-color:#2877e8;background:#eff6ff}
+#day-close-ticket-tools .dc-agenda-day.is-selected{background:#1d5fbf;color:#fff;border-color:#1d5fbf}
+#day-close-ticket-tools .dc-agenda-day.is-empty{visibility:hidden}
+#day-close-ticket-tools .dc-agenda-day.is-today{box-shadow:inset 0 0 0 2px #8bb8f5}
 #day-close-ticket-tools .dc-history-row{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #e5e7eb}
 #day-close-ticket-tools .dc-history-row button{white-space:nowrap}
 @media(max-width:767px){#day-close-ticket-tools .dc-studio-layout{grid-template-columns:1fr}#day-close-ticket-tools .dc-studio-paper{width:100%;max-width:80mm}}
