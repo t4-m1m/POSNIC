@@ -698,7 +698,7 @@ PosnicPro.registers = {
             printButton.prop('disabled', true).text('Impression…');
             var printOptions = { sample: true, showDialog: true };
             Promise.resolve(receiptEngine.print(printContent, format, printOptions)).then(function (result) {
-                if (result && result.success) PosnicPro.alert('success', isThermal ? 'Ticket envoyé à l’imprimante thermique.' : 'Fenêtre d’impression ouverte. Choisissez Microsoft Print to PDF pour enregistrer le ticket.');
+                if (result && result.success) PosnicPro.alert('success', isThermal ? 'Fenêtre d’impression ouverte. Sélectionnez votre imprimante thermique puis confirmez.' : 'Fenêtre d’impression ouverte. Choisissez Microsoft Print to PDF pour enregistrer le ticket.');
                 else PosnicPro.alert('error', 'L’impression n’a pas été confirmée.');
             }).catch(function (err) {
                 PosnicPro.alert('error', err && err.message || 'Impossible d’imprimer la clôture.');
