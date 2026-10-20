@@ -228,9 +228,7 @@
                                             <lang class="lang_itemcut_title">Items</lang>
                                         </a>
                                     </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link items_head" id="sales-brand-tab-justified" data-toggle="tab" href="#sales-brand-justified" role="tab" aria-controls="sales-brand" aria-selected="false" onclick="PosnicPro.sales.brandMenu.list();"><i class="feather icon-tag mr-1"></i><lang class="lang_brand_title">Marques</lang></a>
-                                    </li>
+                                    <li class="nav-item sales-brand-filter-nav" id="sales-brand-filter-wrap" style="display:none;min-width:145px;padding:5px 8px"><label for="sales-brand-filter" class="sr-only">Marque</label><select id="sales-brand-filter" class="form-control form-control-sm" aria-label="Filtrer les articles par marque" style="min-width:130px;max-width:180px"><option value="">Toutes les marques</option></select></li>
                                     <li class="nav-item">
                                         <a class="nav-link items_head" id="profile-tab-justified"
                                             data-toggle="tab" href="#profile-justified" role="tab"
@@ -265,7 +263,6 @@
                                     <!-- category list section -->
 
                                 </div>
-                                <div id="sales_new_brandList" class="loader-category scroll_width" style="display:none;"></div>
                             </div>
                         </div>
 

@@ -7969,12 +7969,12 @@ PosnicPro.sales.categoryPicture = function (name, image) {
 
 /* POSNIC_BRAND_FILTER_SAFE: enhance the existing product shelf without replacing its renderer or pagination. */
 (function($){
- var brandsById={}, brandItems=[], selectedBrand='';
+ var brandsById={};
  function norm(v){return String(v==null?'':v).trim();}
  function brandOf(it){return norm(it&&it.brand&&typeof it.brand==='object'?(it.brand.name||it.brand.brand_name):it&&it.brand || it&&it.items_brand || it&&it.brand_name);}
  function fill(items){
   var $select=$('#sales-brand-filter'); if(!$select.length)return;
-  brandItems=items||brandItems; (items||[]).forEach(function(it){if(it&&it.id!=null)brandsById[String(it.id)]=brandOf(it);});
+  (items||[]).forEach(function(it){if(it&&it.id!=null)brandsById[String(it.id)]=brandOf(it);});
   var chosen=$select.val()||'',all={};
   Object.keys(brandsById).forEach(function(id){if(brandsById[id])all[brandsById[id].toLowerCase()]=brandsById[id];});
   $select.empty().append($('<option>').val('').text('Toutes les marques'));
@@ -7992,18 +7992,8 @@ PosnicPro.sales.categoryPicture = function (name, image) {
   });
  }
  $(document).on('change','#sales-brand-filter',apply);
- function listBrands(){
-  $('#sales_new_productList,#sales_new_categoryList').hide();
-  var $pane=$('#sales_new_brandList').empty().show(), all={};
-  (brandItems||[]).forEach(function(it){var b=brandOf(it);if(b)all[b.toLowerCase()]=b;});
-  var $wrap=$('<div class="row"></div>').appendTo($pane);
-  $('<button type="button" class="btn btn-outline-secondary m-2">Toutes les marques / Tous les articles</button>').appendTo($wrap).on('click',function(){selectedBrand='';$('#sales_new_brandList').hide();$('#sales_new_productList').show();PosnicPro.sales.itemsMenu.onlineProductList();});
-  Object.keys(all).sort().forEach(function(k){$('<button type="button" class="btn m-2"></button>').addClass(selectedBrand===k?'btn-primary':'btn-outline-primary').text(all[k]).appendTo($wrap).on('click',function(){selectedBrand=k;$('#sales_new_brandList').hide();$('#sales_new_categoryList').hide();$('#sales_new_productList').show();PosnicPro.sales.itemsMenu.onlineProductList();});});
-  if(!Object.keys(all).length)$('<div class="p-3 text-muted">Aucune marque trouvée. Vérifiez que les articles ont une marque enregistrée.</div>').appendTo($pane);
- }
- window.PosnicSafeBrandFilter={fill:fill,apply:apply,list:listBrands,getSelected:function(){return selectedBrand;},brandOf:brandOf};
+ window.PosnicSafeBrandFilter={fill:fill,apply:apply};
 })(jQuery);
-PosnicPro.sales.brandMenu = { list: function(){ if(window.PosnicSafeBrandFilter) window.PosnicSafeBrandFilter.list(); } };
 PosnicPro.sales.itemsMenu = {
     /*sales Product Display*/
     onlineProductList: function (categoryId, offset) {
@@ -8015,16 +8005,11 @@ PosnicPro.sales.itemsMenu = {
         $("<div class='loadingSpinner'></div>").appendTo(loader);
         $('#sales_new_productList').show();
         $('#sales_new_categoryList').hide();
-        $('#sales_new_brandList').hide();
         PosnicPro.sales.loadSalesTilePage(offset, categoryId, function (response) {
             loader.find(".loadingSpinner:first").remove();
             if (response.type === 'success') {
-                var getItemdata = response.data || [];
-                if (window.PosnicSafeBrandFilter) {
-                    window.PosnicSafeBrandFilter.fill(getItemdata);
-                    var selectedBrand = window.PosnicSafeBrandFilter.getSelected();
-                    if (selectedBrand) getItemdata = getItemdata.filter(function(it) { return String(window.PosnicSafeBrandFilter.brandOf(it) || '').trim().toLowerCase() === selectedBrand; });
-                }
+                var getItemdata = response.data;
+                if (window.PosnicSafeBrandFilter) window.PosnicSafeBrandFilter.fill(getItemdata || []);
                 /* The panel lives on <body>, so removing the grid does not take
                    it with it - a category change would otherwise leave a list
                    of sizes floating over a shelf that no longer contains them. */
