@@ -27,29 +27,7 @@
                     </div>
                 </div>
             </div>
-            <style>
-#sales_history_calendar{margin:10px 0 14px;padding:12px;border:1px solid var(--theme-border-color,#dce3ec);border-radius:10px;background:var(--theme-card-bg,#fff)}
-#sales_history_calendar .shc-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
-#sales_history_calendar .shc-toolbar input{max-width:190px}
-#sales_history_calendar .shc-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
-#sales_history_calendar .shc-weekday{text-align:center;font-size:12px;font-weight:600;color:var(--theme-muted-color,#687385);padding:4px}
-#sales_history_calendar .shc-day{min-height:38px;border:1px solid var(--theme-border-color,#dce3ec);border-radius:6px;background:transparent;color:inherit}
-#sales_history_calendar .shc-day:hover,#sales_history_calendar .shc-day.is-selected{background:var(--theme-primary-color,#2563eb);color:white}
-#sales_history_calendar .shc-day.is-today{border-color:var(--theme-primary-color,#2563eb);font-weight:700}
-@media(max-width:575px){#sales_history_calendar .shc-day{min-height:34px;padding:4px 0}}
-</style>
-<section id="sales_history_calendar" aria-label="Sales calendar">
-  <div class="shc-toolbar">
-    <strong>Find sales by day</strong>
-    <button type="button" class="btn btn-sm btn-light" data-sales-calendar-nav="-1" aria-label="Previous month">‹</button>
-    <input type="month" id="sales_calendar_month" class="form-control form-control-sm" aria-label="Choose calendar month">
-    <button type="button" class="btn btn-sm btn-light" data-sales-calendar-nav="1" aria-label="Next month">›</button>
-    <button type="button" class="btn btn-sm btn-outline-secondary" id="sales_calendar_clear">Clear day filter</button>
-  </div>
-  <div id="sales_calendar_heading" class="mb-2 text-muted" aria-live="polite"></div>
-  <div id="sales_calendar_grid" class="shc-grid" role="grid" aria-label="Choose a day"></div>
-</section>
-<div class="sales-history-topline">
+            <div class="sales-history-topline">
             <div id="sales_quick_dates" class="d-flex flex-wrap my-2" style="gap:8px" role="group" aria-label="Filter sales" data-t-aria-label="lang_filter_sales">
                 <button type="button" class="btn btn-outline-primary" style="min-height:44px" data-sales-date="today" aria-pressed="false"><lang class="lang_this_day">Today</lang></button>
                 <button type="button" class="btn btn-outline-primary" style="min-height:44px" data-sales-date="yesterday" aria-pressed="false"><lang class="lang_yesterday">Yesterday</lang></button>
