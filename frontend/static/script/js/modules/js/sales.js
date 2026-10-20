@@ -146,7 +146,9 @@ PosnicPro.sales = {
         if (PosnicPro.local.get('table_options') === 'enable') {
             PosnicPro.sales.clear.cartItems(false);
         }
-        PosnicPro.kotorder.kotHideShow();
+        if (PosnicPro.kotorder && typeof PosnicPro.kotorder.kotHideShow === 'function') {
+            PosnicPro.kotorder.kotHideShow();
+        }
         $('.addDisc-hide-show').hide();
         if (PosnicPro.sales.syncNotesCellSpan) { PosnicPro.sales.syncNotesCellSpan(); }
         $('#extraDisc').prop('disabled', false);
@@ -168,11 +170,15 @@ PosnicPro.sales = {
         $('#table_return_page,#table_sale_page').find('table').removeAttr('id');
         PosnicPro.sales.EditRecentSaleParams = [];
         var myobj = document.getElementById("table_return_page");
-        myobj.remove();
+        if (myobj && myobj.parentNode) {
+            myobj.parentNode.removeChild(myobj);
+        }
         var newDiv = document.createElement("div");
         newDiv.id = "table_return_page";
         var element = document.getElementById("table_return_page_parent");
-        element.appendChild(newDiv);
+        if (element) {
+            element.appendChild(newDiv);
+        }
         $('#sales_table').find('table').attr('id', 'sales_new_items_table');
         $('#show-sale-already-return-table').hide();
         if (PosnicPro.sales.SaleAction === 'return' || PosnicPro.sales.SaleAction === 'edit') {
