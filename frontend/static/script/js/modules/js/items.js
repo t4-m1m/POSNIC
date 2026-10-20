@@ -1,3 +1,4 @@
+$(document).on('change','#product_with_variant,#product_without_variant',function(){var enabled=$('#product_with_variant').is(':checked');$('#item_variant_list,#item_variant_list_2').prop('required',enabled);});$(function(){var enabled=$('#product_with_variant').is(':checked');$('#item_variant_list,#item_variant_list_2').prop('required',enabled);});
 PosnicPro.items = {
     itemStatus: '',
     imageParams: [],
@@ -1203,7 +1204,7 @@ PosnicPro.items = {
                 return;
             }
 
-            var variant_list = $('#item_variant_list').val();
+            var variant_list = $('#item_variant_list').val() || [];
             var variant_array = ["variant"];
             var variant_value = (variant_list.length > 0) ? $('#item_variant_list').val() : variant_array;
             Array.from(variant_value || []).forEach(function (variantName, key) {

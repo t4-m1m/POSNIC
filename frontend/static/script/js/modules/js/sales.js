@@ -8081,7 +8081,7 @@ PosnicPro.sales.itemsMenu = {
                                     '<div style="width:62%;aspect-ratio:1/1;' + _shapeCss + 'background:' + _tileColor + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:34px;font-weight:700;">' + _initial + '</div>' +
                                     '</div></div>';
                             }
-                            var _brandValue = String(getItemdata[i].brand || getItemdata[i].brand_name || getItemdata[i].company_name || '').trim().toLowerCase(); var product = '<div class="wsk-cp cbutton--effect-novak" data-item-brand="' + $('<i>').text(_brandValue).html() + '" id="' + getItemdata[i]['id'] + '" onclick="PosnicPro.sales.itemsMenu.addToLineItemsList(this.id)">' +
+                            var _brandValue = String((getItemdata[i].brand && (getItemdata[i].brand.name || getItemdata[i].brand.brand_name || getItemdata[i].brand)) || getItemdata[i].items_brand || getItemdata[i].brand_name || getItemdata[i].company_name || '').trim().toLowerCase(); var product = '<div class="wsk-cp cbutton--effect-novak" data-item-brand="' + $('<i>').text(_brandValue).html() + '" id="' + getItemdata[i]['id'] + '" onclick="PosnicPro.sales.itemsMenu.addToLineItemsList(this.id)">' +
                                 '<div class="wsk-cp-product">' +
                                 '<div class="description-prod">' +
                                 '<p data-searchval="' + _escName + '" data-toggle="tooltip" title="' + _escName + '">' + _escName + '</p>' +

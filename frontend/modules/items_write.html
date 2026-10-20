@@ -386,7 +386,7 @@
                                         <input type="text" class="form-control clear_text_item" id="items_barcodeid"
                                             name="items_barcodeid" minlength="1" maxlength="100"
                                             placeholder="Scan From Bar Code Reader" data-t-placeholder="lang_scan_from_bar_code_reader" autocomplete="off">
-                                    </div>
+                                    </div><div class="form-group col-md-6" id="item-stock-step2-wrap"><label for="items_available_quantity_step2">Stock quantity (without variants)</label><input type="number" min="0" step="any" class="form-control text-right" id="items_available_quantity_step2" value="0" inputmode="decimal"><small class="form-text text-muted">For a single item using one general barcode.</small></div>
                                     <!--
                                         The GLOBAL identifier, deliberately its own
                                         field rather than reusing the barcode above.
@@ -1382,3 +1382,7 @@
         </div>
     </div>
 </div>
+
+<style id="hide-mrp-item-ui">#items_mrp_price,[id^="items_mrp_price_"]{display:none!important}label[for="items_mrp_price"],label[for^="items_mrp_price_"]{display:none!important}</style>
+
+<script id="single-item-stock-sync">(function($){function syncStock(){var without=$('#product_without_variant').is(':checked');$('#item-stock-step2-wrap').toggle(without);if(without){$('#items_available_quantity_step2').val($('#items_available_quantity').val()||'0');}}function start(){syncStock();var root=document.body;if(root&&window.MutationObserver)new MutationObserver(syncStock).observe(root,{childList:true,subtree:true});}$(document).on('input change','#items_available_quantity_step2',function(){$('#items_available_quantity').val(this.value);});$(document).on('input change','#items_available_quantity',function(){$('#items_available_quantity_step2').val(this.value);});$(document).on('change','#product_without_variant,#product_with_variant',syncStock);$(document).on('change','#product_with_variant',function(){$('#item-stock-step2-wrap').hide();});if(document.readyState==='loading')$(start);else start();})(jQuery);</script>
