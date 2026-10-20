@@ -89,6 +89,38 @@ class CreditController extends BaseController {
     }
   }
 
+
+  /** GET /credit/collections?date=YYYY-MM-DD - debt money actually received on that day. */
+  async collections(req, res) {
+    try {
+      const ctx = this._ctx(req);
+      const date = String(req.query.date || '').trim();
+      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) return this.error(res, 'A valid date is required (YYYY-MM-DD).', 400);
+      const start = new Date(date + 'T00:00:00');
+      const end = new Date(date + 'T23:59:59.999');
+      const db = await BaseModel.getDb();
+      const query = { license: BaseModel.license, received_at: { $gte: start, $lte: end } };
+      if (ctx.branchId) {
+        const ObjectId = require('mongodb').ObjectId;
+        query.branch_id = ObjectId.isValid(String(ctx.branchId)) ? new ObjectId(String(ctx.branchId)) : ctx.branchId;
+      }
+      const rows = await db.collection('credit_payments').find(query).sort({ received_at: 1, _id: 1 }).toArray();
+      const totals = { cash: 0, card: 0, bank_transfer: 0, other: 0, total: 0 };
+      const collections = rows.map(function (row) {
+        const method = String(row.method || 'other').toLowerCase();
+        const amount = Math.round((Number(row.amount) || 0) * 100) / 100;
+        const key = Object.prototype.hasOwnProperty.call(totals, method) && method !== 'total' ? method : 'other';
+        totals[key] = Math.round((totals[key] + amount) * 100) / 100;
+        totals.total = Math.round((totals.total + amount) * 100) / 100;
+        return { date: row.received_at, amount, method: key, customer: row.customer_name || 'Client', received_by: row.received_by || '', register_id: row.register_id ? String(row.register_id) : '', note: row.note || '', payment_id: String(row._id || ''), allocations: Array.isArray(row.allocations) ? row.allocations : [], branch_id: row.branch_id ? String(row.branch_id) : '' };
+      });
+      return this.success(res, { date, totals, collections }, 'Debt collections for the selected date');
+    } catch (e) {
+      console.error('Error in credit.collections:', e);
+      return this.error(res, e.message || 'Unable to load debt collections.', 500);
+    }
+  }
+
   /** GET /credit/check-limit?customerId=&amount= - would this credit sale fit? */
   async checkLimit(req, res) {
     try {

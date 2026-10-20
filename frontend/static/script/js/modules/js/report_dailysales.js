@@ -1232,9 +1232,9 @@ $(document).on('change', '#dailysale_branch_value', function () {
 (function($){
 'use strict';
 var key='posnic_day_close_studio_v2', historyKey='posnic_day_close_history', selected=null, blocks=[], reportCache=null;
-var agendaDate=new Date(), selectedDate=new Date(), loadingDay=false;
-var defaults=[['title','CLÔTURE DE CAISSE'],['date','Date de clôture'],['sales','Ventes'],['cost','Coût des marchandises'],['gross','Bénéfice brut'],['expenses','Dépenses'],['net','Bénéfice net'],['payments','Détail des paiements'],['count','Nombre de ventes'],['footer','Clôture effectuée. Merci.']];
-var labels={title:'CLÔTURE DE CAISSE',date:'Date de clôture',sales:'Ventes',cost:'Coût des marchandises',gross:'Bénéfice brut',expenses:'Dépenses',net:'Bénéfice net',payments:'Détail des paiements',count:'Nombre de ventes',text:'Texte libre',divider:'',footer:'Clôture effectuée. Merci.'};
+var agendaDate=new Date(), selectedDate=new Date(), loadingDay=false, debtCollections={cash:0,card:0,bank_transfer:0,other:0,total:0,rows:[]}, debtCollectionRequest=0;
+var defaults=[['title','CLÔTURE DE CAISSE'],['date','Date de clôture'],['sales','Ventes'],['cost','Coût des marchandises'],['gross','Bénéfice brut'],['expenses','Dépenses'],['net','Bénéfice net'],['payments','Détail des paiements'],['debtcollections','Encaissements de dettes'],['count','Nombre de ventes'],['footer','Clôture effectuée. Merci.']];
+var labels={title:'CLÔTURE DE CAISSE',date:'Date de clôture',sales:'Ventes',cost:'Coût des marchandises',gross:'Bénéfice brut',expenses:'Dépenses',net:'Bénéfice net',payments:'Détail des paiements',debtcollections:'Encaissements de dettes',count:'Nombre de ventes',text:'Texte libre',divider:'',footer:'Clôture effectuée. Merci.'};
 function id(){return 'dc-'+Math.random().toString(36).slice(2,10);}
 function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function load(){try{var d=JSON.parse(localStorage.getItem(key)||'null');if(d&&Array.isArray(d.blocks)){blocks=d.blocks;$('#dc-studio-width').val(d.width||'80');return;}}catch(e){}blocks=defaults.map(function(x){return {id:id(),type:x[0],label:x[1],size:x[0]==='title'?16:12,align:x[0]==='title'?'center':'left'};});}
@@ -1249,7 +1249,7 @@ function metrics(){
  return {date:date,sales:total,cost:cost,gross:gross,expenses:expenses,net:gross-expenses,count:count,pay:pay,report:r};
 }
 function money(v){return num(v).toLocaleString('fr-DZ',{minimumFractionDigits:2,maximumFractionDigits:2})+' DA';}
-function value(b,m){switch(b.type){case'date':return m.date;case'sales':return money(m.sales);case'cost':return m.report.cost_of_goods!=null||m.report.total_cost!=null?money(m.cost):'Non disponible dans le rapport';case'gross':return m.report.gross_profit!=null||m.report.profit!=null?money(m.gross):'Non disponible dans le rapport';case'expenses':return m.report.expenses!=null||m.report.total_expenses!=null?money(m.expenses):'Non disponible dans le rapport';case'net':return (m.report.gross_profit!=null||m.report.profit!=null)?money(m.net):'Non disponible dans le rapport';case'count':return m.count==null?'Non disponible dans le rapport':String(m.count);case'payments':return 'Espèces: '+money(m.pay.cash)+' · Crédit: '+money(m.pay.credit)+' · TPE: '+money(m.pay.tpe)+' · BaridiMob: '+money(m.pay.baridimob)+(m.pay.other?' · Autres: '+money(m.pay.other):'');default:return '';}}
+function value(b,m){switch(b.type){case'date':return m.date;case'sales':return money(m.sales);case'cost':return m.report.cost_of_goods!=null||m.report.total_cost!=null?money(m.cost):'Non disponible dans le rapport';case'gross':return m.report.gross_profit!=null||m.report.profit!=null?money(m.gross):'Non disponible dans le rapport';case'expenses':return m.report.expenses!=null||m.report.total_expenses!=null?money(m.expenses):'Non disponible dans le rapport';case'net':return (m.report.gross_profit!=null||m.report.profit!=null)?money(m.net):'Non disponible dans le rapport';case'count':return m.count==null?'Non disponible dans le rapport':String(m.count);case'payments':return 'Espèces: '+money(m.pay.cash+debtCollections.cash)+' · Crédit: '+money(m.pay.credit)+' · TPE: '+money(m.pay.tpe+debtCollections.card)+' · BaridiMob: '+money(m.pay.baridimob)+' · Virements: '+money(debtCollections.bank_transfer)+(m.pay.other||debtCollections.other?' · Autres: '+money(m.pay.other+debtCollections.other):'');case'debtcollections':return debtCollections.rows.length?debtCollections.rows.map(function(x){return x.customer+' — '+x.method+' — '+money(x.amount)+(x.received_by?' — '+x.received_by:'')+(x.register_id?' — caisse '+x.register_id:'');}).join(' | '):'Aucun encaissement de dette ce jour';default:return '';}}
 function render(){
  var m=metrics(),$p=$('#day-close-ticket-preview').empty().css('width',($('#dc-studio-width').val()||80)+'mm');
  if(!blocks.length)$p.append('<div class="dc-studio-drop-hint">Glissez des éléments ici</div>');
@@ -1267,6 +1267,7 @@ function printTicket(snapshot){
  try{var result=engine.print(html,width===58?'58':'80',{showDialog:true,showPreview:true,title:'Clôture de caisse'});if(result&&typeof result.then==='function')result.then(function(r){if(r&&r.success===false)PosnicPro.alert('error',r.message||'Impossible d’ouvrir l’impression.');}).catch(function(e){PosnicPro.alert('error',e.message||'Erreur d’impression.');});}
  catch(e){PosnicPro.alert('error',e.message||'Erreur lors de la préparation du ticket.');}
 }
+function loadDebtCollections(date){var req=++debtCollectionRequest;PosnicPro.get({url:'credit/collections',data:{date:date}},function(res){if(req!==debtCollectionRequest)return;if(!res||res.type!=='success'){debtCollections={cash:0,card:0,bank_transfer:0,other:0,total:0,rows:[]};render();$('#dc-agenda-status').text('Rapport chargé, mais les encaissements de dettes ne sont pas disponibles.');return;}var data=res.data||{},t=data.totals||{};debtCollections={cash:num(t.cash),card:num(t.card),bank_transfer:num(t.bank_transfer),other:num(t.other),total:num(t.total),rows:Array.isArray(data.collections)?data.collections:[]};render();});}
 function renderAgenda(){
  var $a=$('#dc-studio-agenda').empty(),y=agendaDate.getFullYear(),mo=agendaDate.getMonth(),first=new Date(y,mo,1),days=new Date(y,mo+1,0).getDate(),offset=(first.getDay()+6)%7;
  $('#dc-agenda-month').text(agendaDate.toLocaleDateString('fr-FR',{month:'long',year:'numeric'}));
@@ -1276,6 +1277,7 @@ function renderAgenda(){
  for(var d=1;d<=days;d++){var date=new Date(y,mo,d),keyDate=iso(date),$btn=$('<button type="button" class="dc-agenda-day">').text(d).attr('data-date',keyDate);if(keyDate===today)$btn.addClass('is-today');if(keyDate===chosen)$btn.addClass('is-selected');$a.append($btn);}
 }
 function loadDay(date){
+ loadDebtCollections(date);
  selectedDate=new Date(date+'T12:00:00');renderAgenda();$('#dc-agenda-status').text('Chargement du rapport réel pour '+date+'…');loadingDay=true;
  var start=moment(selectedDate).startOf('day').format('YYYY/MM/DD h:mm A'),end=moment(selectedDate).endOf('day').format('YYYY/MM/DD h:mm A');
  var $range=$('#view_dailysale_report_daterange');$range.val(start+' - '+end);$range.find('span').first().text(start+' - '+end);
@@ -1283,7 +1285,7 @@ function loadDay(date){
  else $('#dc-agenda-status').text('Le rapport des ventes est indisponible.');
 }
 $(function(){
- if(!$('#day-close-ticket-tools').length)return;load();render();renderAgenda();
+ if(!$('#day-close-ticket-tools').length)return;load();render();renderAgenda();loadDebtCollections(iso(selectedDate));
  $('#dc-studio-palette').on('click','button',function(){add($(this).data('dc-type'));}).on('dragstart','button',function(e){e.originalEvent.dataTransfer.setData('text/plain',$(this).data('dc-type'));});
  $('#day-close-ticket-preview').on('dragover',function(e){e.preventDefault();}).on('drop',function(e){e.preventDefault();var t=e.originalEvent.dataTransfer.getData('text/plain');if(t.indexOf('move:')===0)return;add(t);}).on('click','.dc-studio-block',function(){selected=$(this).data('dc-id');render();}).on('dragstart','.dc-studio-block',function(e){e.originalEvent.dataTransfer.setData('text/plain','move:'+$(this).data('dc-id'));}).on('dragover','.dc-studio-block',function(e){e.preventDefault();}).on('drop','.dc-studio-block',function(e){e.preventDefault();var raw=e.originalEvent.dataTransfer.getData('text/plain'),target=blocks.findIndex(function(b){return b.id===$(this).data('dc-id');}.bind(this));if(raw.indexOf('move:')===0){var from=blocks.findIndex(function(b){return b.id===raw.slice(5);});if(from>=0&&target>=0){var moved=blocks.splice(from,1)[0];blocks.splice(target,0,moved);selected=moved.id;render();}}else add(raw,target);});
  $('#dc-studio-label').on('input',function(){var b=blocks.find(function(x){return x.id===selected;});if(b){b.label=this.value;var pos=this.selectionStart;render();$('#dc-studio-label').trigger('focus').get(0).setSelectionRange(pos,pos);}});
@@ -1296,7 +1298,7 @@ $(function(){
  $('#dc-agenda-prev').on('click',function(){agendaDate=new Date(agendaDate.getFullYear(),agendaDate.getMonth()-1,1);renderAgenda();});
  $('#dc-agenda-next').on('click',function(){agendaDate=new Date(agendaDate.getFullYear(),agendaDate.getMonth()+1,1);renderAgenda();});
  $('#dc-studio-agenda').on('click','.dc-agenda-day[data-date]',function(){loadDay($(this).data('date'));});
- $(document).on('dayCloseReportUpdated',function(e,report){if(!report)return;reportCache=report;render();historySave();$('#dc-agenda-status').text('Rapport chargé pour '+iso(selectedDate)+'. Aperçu actualisé avec les données disponibles.');loadingDay=false;});
+ $(document).on('dayCloseReportUpdated',function(e,report){if(!report)return;reportCache=report;loadDebtCollections(iso(selectedDate));render();historySave();$('#dc-agenda-status').text('Rapport chargé pour '+iso(selectedDate)+'. Aperçu actualisé avec les données disponibles.');loadingDay=false;});
  var original=PosnicPro.quickreport.salereportTable;
  PosnicPro.quickreport.salereportTable=function(){var ret=original.apply(this,arguments);return ret;};
 });

@@ -7986,8 +7986,8 @@ PosnicPro.sales.categoryPicture = function (name, image) {
  function apply(){
   var chosen=String($('#sales-brand-filter').val()||'').toLowerCase();
   $('#item-lists .wsk-cp, #item-lists .cbutton--effect-novak').each(function(){
-   var $tile=$(this),id=String($tile.attr('id')||''),b=String($tile.attr('data-item-brand')||brandsById[id]||'').toLowerCase();
-   if(!$tile.attr('data-item-brand')&&brandsById[id])$tile.attr('data-item-brand',brandsById[id]);
+   var $tile=$(this),id=String($tile.attr('id')||''),b=String(brandsById[id]||$tile.attr('data-item-brand')||'').trim().toLowerCase();
+   if(brandsById[id])$tile.attr('data-item-brand',brandsById[id]);
    $tile.toggle(!chosen||b===chosen);
   });
  }
@@ -8050,7 +8050,7 @@ PosnicPro.sales.itemsMenu = {
                         if (familyRows && familyRows.length > 1) {
                             if (renderedGroups[familyGid]) { continue; }
                             renderedGroups[familyGid] = true;
-                            tiles.push(PosnicPro.sales.itemsMenu._familyTile(familyRows, currency));
+                            var _familyBrand = $('<i>').text((familyRows[0].brand && typeof familyRows[0].brand === 'object' ? (familyRows[0].brand.name || familyRows[0].brand.brand_name) : familyRows[0].brand) || familyRows[0].items_brand || familyRows[0].brand_name || '').html(); tiles.push(PosnicPro.sales.itemsMenu._familyTile(familyRows, currency).replace('class="wsk-cp wsk-variant', 'data-item-brand="' + _familyBrand + '" class="wsk-cp wsk-variant'));
                             continue;
                         }
                         var list_item_name = PosnicPro.itemName ? PosnicPro.itemName(getItemdata[i]) : (getItemdata[i].item_name || getItemdata[i].name);
