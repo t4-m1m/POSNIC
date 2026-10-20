@@ -448,7 +448,7 @@
                                     </label>
                                     <select class="form-control select2 border-control items_choose_error"
                                         name="item_variant_list[]" id="item_variant_list" multiple="multiple"
-                                        data-placeholder="Select variant fields" style="width: 100%;" required>
+                                        data-placeholder="Select variant fields" style="width: 100%;">
                                         <option></option>
                                     </select>
                                 </div>
@@ -1385,4 +1385,4 @@
 
 <style id="hide-mrp-item-ui">#items_mrp_price,[id^="items_mrp_price_"]{display:none!important}label[for="items_mrp_price"],label[for^="items_mrp_price_"]{display:none!important}</style>
 
-<script id="single-item-stock-sync">(function($){function syncStock(){var without=$('#product_without_variant').is(':checked');$('#item-stock-step2-wrap').toggle(without);if(without){$('#items_available_quantity_step2').val($('#items_available_quantity').val()||'0');}}function start(){syncStock();var root=document.body;if(root&&window.MutationObserver)new MutationObserver(syncStock).observe(root,{childList:true,subtree:true});}$(document).on('input change','#items_available_quantity_step2',function(){$('#items_available_quantity').val(this.value);});$(document).on('input change','#items_available_quantity',function(){$('#items_available_quantity_step2').val(this.value);});$(document).on('change','#product_without_variant,#product_with_variant',syncStock);$(document).on('change','#product_with_variant',function(){$('#item-stock-step2-wrap').hide();});if(document.readyState==='loading')$(start);else start();})(jQuery);</script>
+

@@ -1,3 +1,18 @@
+/* single-item-stock-sync-runtime: quantity field is an alternate view of the canonical stock input. */
+(function($){
+ function sync(){
+  var $step=$('#items_available_quantity_step2'),$base=$('#items_available_quantity');
+  if(!$step.length||!$base.length)return;
+  var without=$('#product_without_variant').is(':checked');
+  $('#item-stock-step2-wrap').toggle(without);
+  if(without&&document.activeElement!==$step)$step.val($base.val()||'0');
+ }
+ $(document).on('input change','#items_available_quantity_step2',function(){$('#items_available_quantity').val(this.value);});
+ $(document).on('input change','#items_available_quantity',function(){if(document.activeElement!==document.getElementById('items_available_quantity_step2'))$('#items_available_quantity_step2').val(this.value);});
+ $(document).on('change','#product_without_variant,#product_with_variant',sync);
+ if(window.MutationObserver&&document.body)new MutationObserver(sync).observe(document.body,{childList:true,subtree:true});
+ $(function(){sync();});
+})(jQuery);
 $(document).on('change','#product_with_variant,#product_without_variant',function(){var enabled=$('#product_with_variant').is(':checked');$('#item_variant_list,#item_variant_list_2').prop('required',enabled);});$(function(){var enabled=$('#product_with_variant').is(':checked');$('#item_variant_list,#item_variant_list_2').prop('required',enabled);});
 PosnicPro.items = {
     itemStatus: '',
