@@ -186,7 +186,7 @@
                 return prior;
             }
             var code = makeInternalBarcode(Array.from(usedCodes)); usedCodes.add(code);
-            return { variant_value: name, selling_price: val('price'), available_quantity: '0', company_price: val('cost'), mrp_price: val('mrp'), position: val('position'), barcode_id: code, sku_id: '', gtin: '', discount_amount: val('discount-type') === 'amount' ? val('discount') : '', discount_percentage: val('discount-type') === 'percentage' ? val('discount') : '' };
+            return { variant_value: name, selling_price: val('price'), available_quantity: '0', company_price: val('cost'), mrp_price: 0, position: val('position'), barcode_id: code, sku_id: '', gtin: '', discount_amount: val('discount-type') === 'amount' ? val('discount') : '', discount_percentage: val('discount-type') === 'percentage' ? val('discount') : '' };
         });
         signature = variantSignature(); var box = el('variant-rows'); box.replaceChildren();
         variants.forEach(function (row, i) {
@@ -245,7 +245,7 @@
         });
     }
     function data() {
-        var u = option('unit'), supplier = option('supplier'), auto = checked('auto-tile') && P.autoTile ? P.autoTile(val('name')) : null;
+        var u = option('unit'), auto = checked('auto-tile') && P.autoTile ? P.autoTile(val('name')) : null;
         var eurRaw = val('cost-eur'), eur = Number(eurRaw), rate = Number(val('exchange-rate')) || 280, extraCost = Number(val('purchase-vat'));
         var purchaseBase = eurRaw !== '' && Number.isFinite(eur) && eur >= 0 ? Math.round((eur * rate + Number.EPSILON) * 100) / 100 : null;
         var purchaseExtraCost = purchaseBase === null ? null : Math.round((Math.max(0, Number.isFinite(extraCost) ? extraCost : 0) + Number.EPSILON) * 100) / 100;
@@ -389,7 +389,6 @@
         el('axis2').addEventListener('change',function(){el('values2').replaceChildren();fillVariantValues('axis2','values2');clearGeneratedVariants();});
         loadVariantDefinitions();
         requestOptions('unit','setting/getUnitAjaxList',function(r){return {id:r.unit_id,name:r.unit_name,unit:r.unit_value};});
-        requestOptions('supplier','suppliers/getSuppliersAjaxList',function(r){return {id:r.id,name:r.name};});
         requestOptions('goes-with','items',function(r){return {id:r.id||r._id,name:r.name||r.value};});
         var channels=P.itemChannels;
         if(channels) {
