@@ -8026,7 +8026,7 @@ PosnicPro.sales.itemsMenu = {
                         if (familyRows && familyRows.length > 1) {
                             if (renderedGroups[familyGid]) { continue; }
                             renderedGroups[familyGid] = true;
-                            tiles.push(PosnicPro.sales.itemsMenu._familyTile(familyRows, currency));
+                            var _familyTileHtml = PosnicPro.sales.itemsMenu._familyTile(familyRows, currency); var _familyBrand = String((familyRows[0].brand && (familyRows[0].brand.name || familyRows[0].brand.brand_name || familyRows[0].brand)) || familyRows[0].items_brand || familyRows[0].brand_name || '').trim().toLowerCase(); _familyTileHtml = _familyTileHtml.replace('class="wsk-cp cbutton--effect-novak"', 'class="wsk-cp cbutton--effect-novak" data-item-brand="' + $('<i>').text(_familyBrand).html() + '"'); tiles.push(_familyTileHtml);
                             continue;
                         }
                         var list_item_name = PosnicPro.itemName ? PosnicPro.itemName(getItemdata[i]) : (getItemdata[i].item_name || getItemdata[i].name);
