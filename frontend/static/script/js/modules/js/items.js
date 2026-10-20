@@ -974,8 +974,8 @@ PosnicPro.items = {
             tax_method = 'default';
         }
         return {
-            supplier_id: $('#items_supplier_id').val(),
-            supplier_name: $('#items_supplier').val(),
+
+
             category_id: PosnicPro.items.selectAttr('#items_category', 'data-category-id'),
             /* category_name was the one unguarded read left on this line - the id
                beside it already had a length check. Category is optional, so an
@@ -1241,7 +1241,7 @@ PosnicPro.items = {
                         mrp_price: 0,
                         company_price: $('#items_company_price').val(),
                         selling_price: $('#items_selling_price').val(),
-                        available_quantity: $('#items_available_quantity').val(),
+                        available_quantity: $('#items_available_quantity_step2').length ? $('#items_available_quantity_step2').val() : $('#items_available_quantity').val(),
                         position: $('#items_sort').val(),
                         items_mfg_date: $('#items_mfg_date').val(),
                         items_expiry_date: $('#items_expiry_date').val(),
@@ -3985,7 +3985,7 @@ PosnicPro.items = {
             $('#items_supplier_id').val(defaultsupplier.supplier_id);
             $('#items_supplier').val(defaultsupplier.supplier_name);
         }
-        $('#items_company_price,#items_mrp_price,#items_selling_price').val('0.00');
+        $('#items_company_price,#items_selling_price').val('0.00');
         $('#items_available_quantity').val('0');
         $('#items_sort').val('99');
         $('#item_tax_default,#item_tax_inclusive').prop('checked', true);
