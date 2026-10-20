@@ -8015,6 +8015,7 @@ PosnicPro.sales.itemsMenu = {
         $("<div class='loadingSpinner'></div>").appendTo(loader);
         $('#sales_new_productList').show();
         $('#sales_new_categoryList').hide();
+        $('#sales_new_brandList').hide();
         PosnicPro.sales.loadSalesTilePage(offset, categoryId, function (response) {
             loader.find(".loadingSpinner:first").remove();
             if (response.type === 'success') {
