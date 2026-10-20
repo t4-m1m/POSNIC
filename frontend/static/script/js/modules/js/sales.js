@@ -7967,6 +7967,33 @@ PosnicPro.sales.categoryPicture = function (name, image) {
     return 'static/images/categories/shop.svg';
 };
 
+/* POSNIC_BRAND_FILTER_SAFE: enhance the existing product shelf without replacing its renderer or pagination. */
+(function($){
+ var brandsById={};
+ function norm(v){return String(v==null?'':v).trim();}
+ function brandOf(it){return norm(it&&it.brand&&typeof it.brand==='object'?(it.brand.name||it.brand.brand_name):it&&it.brand || it&&it.items_brand || it&&it.brand_name);}
+ function fill(items){
+  var $select=$('#sales-brand-filter'); if(!$select.length)return;
+  (items||[]).forEach(function(it){if(it&&it.id!=null)brandsById[String(it.id)]=brandOf(it);});
+  var chosen=$select.val()||'',all={};
+  Object.keys(brandsById).forEach(function(id){if(brandsById[id])all[brandsById[id].toLowerCase()]=brandsById[id];});
+  $select.empty().append($('<option>').val('').text('Toutes les marques'));
+  Object.keys(all).sort().forEach(function(k){$select.append($('<option>').val(k).text(all[k]));});
+  if(all[chosen])$select.val(chosen);
+  $select.closest('#sales-brand-filter-wrap').toggle(Object.keys(all).length>0);
+  apply();
+ }
+ function apply(){
+  var chosen=String($('#sales-brand-filter').val()||'').toLowerCase();
+  $('#item-lists .wsk-cp, #item-lists .cbutton--effect-novak').each(function(){
+   var $tile=$(this),id=String($tile.attr('id')||''),b=String($tile.attr('data-item-brand')||brandsById[id]||'').toLowerCase();
+   if(!$tile.attr('data-item-brand')&&brandsById[id])$tile.attr('data-item-brand',brandsById[id]);
+   $tile.toggle(!chosen||b===chosen);
+  });
+ }
+ $(document).on('change','#sales-brand-filter',apply);
+ window.PosnicSafeBrandFilter={fill:fill,apply:apply};
+})(jQuery);
 PosnicPro.sales.itemsMenu = {
     /*sales Product Display*/
     onlineProductList: function (categoryId, offset) {
@@ -7982,6 +8009,7 @@ PosnicPro.sales.itemsMenu = {
             loader.find(".loadingSpinner:first").remove();
             if (response.type === 'success') {
                 var getItemdata = response.data;
+                if (window.PosnicSafeBrandFilter) window.PosnicSafeBrandFilter.fill(getItemdata || []);
                 /* The panel lives on <body>, so removing the grid does not take
                    it with it - a category change would otherwise leave a list
                    of sizes floating over a shelf that no longer contains them. */
@@ -8077,7 +8105,7 @@ PosnicPro.sales.itemsMenu = {
                                     '<div style="width:62%;aspect-ratio:1/1;' + _shapeCss + 'background:' + _tileColor + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:34px;font-weight:700;">' + _initial + '</div>' +
                                     '</div></div>';
                             }
-                            var product = '<div class="wsk-cp cbutton--effect-novak" id="' + getItemdata[i]['id'] + '" onclick="PosnicPro.sales.itemsMenu.addToLineItemsList(this.id)">' +
+                            var product = '<div class="wsk-cp cbutton--effect-novak" data-item-brand="' + String(getItemdata[i].brand || getItemdata[i].items_brand || getItemdata[i].brand_name || '').replace(/[&<>"\']/g, '') + '" id="' + getItemdata[i]['id'] + '" onclick="PosnicPro.sales.itemsMenu.addToLineItemsList(this.id)">' +
                                 '<div class="wsk-cp-product">' +
                                 '<div class="description-prod">' +
                                 '<p data-searchval="' + _escName + '" data-toggle="tooltip" title="' + _escName + '">' + _escName + '</p>' +
@@ -8102,6 +8130,7 @@ PosnicPro.sales.itemsMenu = {
                 }
                 $('span.number').number(true, 2);
                 PosnicPro.sales.itemsMenu.clickEffect();
+                if (window.PosnicSafeBrandFilter) window.PosnicSafeBrandFilter.apply();
             } else {
                 $('#item-lists .sale-tile-pages button').each(function () {
                     $(this).prop('disabled', $(this).data('was-disabled') === true);
