@@ -95,7 +95,7 @@ class CreditController extends BaseController {
     try {
       const ctx = this._ctx(req);
       const date = String(req.query.date || '').trim();
-      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) return this.error(res, 'A valid date is required (YYYY-MM-DD).', 400);
+      if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date)) return this.error(res, 'A valid date is required (YYYY-MM-DD).', 400);
       const start = new Date(date + 'T00:00:00');
       const end = new Date(date + 'T23:59:59.999');
       const db = await BaseModel.getDb();
