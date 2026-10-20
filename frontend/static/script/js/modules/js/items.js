@@ -1147,7 +1147,7 @@ PosnicPro.items = {
                 variant_value: variantName,
                 sku_id: $('#items_itemid_' + key + '').val(),
                 barcode_id: '', // Server allocates a branch-unique seven-digit numeric Code 128 value.
-                mrp_price: $('#items_mrp_price_' + key + '').val(),
+                mrp_price: 0,
                 company_price: $('#items_company_price_' + key + '').val(),
                 selling_price: $('#items_selling_price_' + key + '').val(),
                 available_quantity: $('#items_available_quantity_' + key + '').val(),
@@ -1238,7 +1238,7 @@ PosnicPro.items = {
                     var param_fields = {
                         sku_id: $('#items_itemid').val(),
                         barcode_id: $('#items_barcodeid').val(),
-                        mrp_price: $('#items_mrp_price').val(),
+                        mrp_price: 0,
                         company_price: $('#items_company_price').val(),
                         selling_price: $('#items_selling_price').val(),
                         available_quantity: $('#items_available_quantity').val(),
@@ -1255,7 +1255,7 @@ PosnicPro.items = {
                     var param_fields = {
                         sku_id: $('#items_itemid_' + key + '').val(),
                         barcode_id: $('#items_barcodeid_' + key + '').val(),
-                        mrp_price: $('#items_mrp_price_' + key + '').val(),
+                        mrp_price: 0,
                         company_price: $('#items_company_price_' + key + '').val(),
                         selling_price: $('#items_selling_price_' + key + '').val(),
                         available_quantity: $('#items_available_quantity_' + key + '').val(),
@@ -1736,7 +1736,7 @@ PosnicPro.items = {
             variant_parent_name: fam.parent,
             sku_id: '',
             barcode_id: ($('#family_add_barcode').val() || '').trim(),
-            mrp_price: $('#items_mrp_price').val(),
+            mrp_price: 0,
             company_price: $('#items_company_price').val(),
             selling_price: $('#family_add_price').val(),
             available_quantity: $('#family_add_qty').val() || '0',
@@ -3210,7 +3210,7 @@ PosnicPro.items = {
                 itemid: $('#items_itemid_' + i).val(),
                 barcodeid: $('#items_barcodeid_' + i).val(),
                 company_price: $('#items_company_price_' + i).val(),
-                mrp_price: $('#items_mrp_price_' + i).val(),
+                mrp_price: 0,
                 selling_price: $('#items_selling_price_' + i).val(),
                 available_quantity: $('#items_available_quantity_' + i).val(),
                 sort: $('#items_sort_' + i).val(),
@@ -3330,12 +3330,6 @@ PosnicPro.items = {
                 html = html + '<lang class="lang_company_title"> Cost </lang>';
                 html = html + '</label>';
                 html = html + '<input type="text" class="form-control allow_decimal text-right" id="items_company_price_' + key + '" name="items_company_price_' + key + '" minlength="1" maxlength="10" value="0.00" placeholder="Cost" data-t-placeholder="lang_companyamount_title">';
-                html = html + '</div>';
-                html = html + '<div class="col-md-6">';
-                html = html + '<label class="form-control-placeholder" for="items_mrp_price_' + key + '">';
-                html = html + '<lang class="lang_m_r_p"> M.R.P </lang>';
-                html = html + '</label>';
-                html = html + '<input type="text" class="form-control allow_decimal text-right" id="items_mrp_price_' + key + '" name="items_mrp_price_' + key + '" minlength="1" maxlength="10" value="0.00" placeholder="M.R.P">';
                 html = html + '</div>';
                 html = html + '</div>';
                 html = html + '<div class="row">';
