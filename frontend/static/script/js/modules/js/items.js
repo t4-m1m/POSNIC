@@ -1285,8 +1285,6 @@ PosnicPro.items = {
                 var formData = {
                     id: $('#itemid').val(),
                     name: name,
-                    supplier_id: $('#items_supplier_id').val(),
-                    supplier_name: $('#items_supplier').val(),
                     category_id: PosnicPro.items.selectAttr('#items_category', 'data-category-id'),
                     category_name: PosnicPro.items.selectAttr('#items_category', 'data-category-name'),
                     cover_image: $('#item_logo').val(),
