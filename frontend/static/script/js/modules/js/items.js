@@ -1,3 +1,7 @@
+/* Item entry: stock field beside barcode syncs to the canonical quantity submitted by existing save logic. */
+(function($){function sync(){var $v=$('#items_available_quantity_step2'),$c=$('#items_available_quantity');if(!$v.length||!$c.length)return;if(document.activeElement!==$v)$v.val($c.val()||'0');}
+$(document).on('input change','#items_available_quantity_step2',function(){$('#items_available_quantity').val(this.value);});
+$(document).on('input change','#items_available_quantity',sync);$(function(){sync();});})(jQuery);
 /* single-item-stock-sync-runtime: quantity field is an alternate view of the canonical stock input. */
 (function($){
  function sync(){

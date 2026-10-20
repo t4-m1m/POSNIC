@@ -1,4 +1,7 @@
-<div class="vertical-layout page_loader" id="items_new" style="display: none">
+<style id="item-entry-requested-ui-fixes">
+label[for="items_mrp_price"],#items_mrp_price,label[for^="items_mrp_price_"],input[id^="items_mrp_price_"],label[for*="mrp"],input[id*="mrp_price"],.items-mrp-field,.item-mrp-field{display:none!important}
+label[for="items_supplier"],#items_supplier:not(input[type="hidden"]),#items_supplier_id,.items-supplier-field,.item-supplier-field{display:none!important}
+</style><div class="vertical-layout page_loader" id="items_new" style="display: none">
     <!-- Start Containerbar -->
     <div id="containerbar">
         <!-- Start Breadcrumbbar -->
@@ -361,7 +364,8 @@
                                         <input type="text" class="form-control clear_text_item" id="items_barcodeid"
                                             name="items_barcodeid" minlength="1" maxlength="100"
                                             placeholder="Scan From Bar Code Reader" data-t-placeholder="lang_scan_from_bar_code_reader" autocomplete="off">
-                                    </div><div class="form-group col-md-6" id="item-stock-step2-wrap" style="display:none"><label for="items_available_quantity_step2">Stock quantity (without variants)</label><input type="number" min="0" step="any" class="form-control text-right" id="items_available_quantity_step2" value="0" inputmode="decimal"><small class="form-text text-muted">Quantity for this item using one general barcode.</small></div>
+                                    </div>
+<div class="form-group col-md-6" id="item-stock-step2-wrap"><label for="items_available_quantity_step2">Stock quantity (without variants)</label><input type="number" min="0" step="any" class="form-control text-right" id="items_available_quantity_step2" value="0" inputmode="decimal"><small class="text-muted">For a single item using one general barcode.</small></div>
                                     <!--
                                         The GLOBAL identifier, deliberately its own
                                         field rather than reusing the barcode above.
