@@ -251,7 +251,7 @@
         var purchaseExtraCost = purchaseBase === null ? null : Math.round((Math.max(0, Number.isFinite(extraCost) ? extraCost : 0) + Number.EPSILON) * 100) / 100;
         var enteredPurchaseCost = val('cost') === '' ? null : Number(val('cost'));
         var finalPurchaseCost = manualPurchaseCost && Number.isFinite(enteredPurchaseCost) && enteredPurchaseCost >= 0 ? Math.round((enteredPurchaseCost + Number.EPSILON) * 100) / 100 : (purchaseBase === null ? null : purchaseBase + purchaseExtraCost);
-        var out = { mrp_price: Number(val('mrp')), reorder_point: number('reorder'), unit_id: val('unit') === 'qty' ? '' : val('unit'), unit: u && u.dataset.unit || 'qty', supplier_id: val('supplier'), supplier_name: supplier && supplier.dataset.name || '',
+        var out = { mrp_price: 0, reorder_point: number('reorder'), unit_id: val('unit') === 'qty' ? '' : val('unit'), unit: u && u.dataset.unit || 'qty', supplier_id: '', supplier_name: '',
             selling_price_2: val('price-2') === '' ? 0 : Number(val('price-2')), selling_price_3: val('price-3') === '' ? 0 : Number(val('price-3')), open_price: checked('open-price'), service_unit: val('service-unit'), item_weight_machine_based: caps.weight && checked('weight'),
             discount_amount: val('discount-type') === 'amount' ? Number(val('discount')) : 0, discount_percentage: val('discount-type') === 'percentage' ? Number(val('discount')) : 0,
             plu_code: val('plu'), gtin: val('gtin'), barcodes: list(val('alt-barcodes')), purchase_unit: val('purchase-unit'), conversion_factor: number('pack-size'), brand: val('brand'), article_type: val('type-name'), brand_abbreviation: val('brand-abbr'), reference_date: val('reference-date'), model_reference: val('reference'), tags: list(val('tags')), position: Number(val('position')),
@@ -432,7 +432,7 @@
             el('reference').value = '';
             el('type-name').required = false; el('brand-abbr').required = false; el('reference').required = false;
         }
-        var mapping = {mrp:'mrp_price',reorder:'reorder_point',plu:'plu_code',gtin:'gtin','purchase-unit':'purchase_unit','pack-size':'conversion_factor',brand:'brand',position:'sort_order',icon:'icon','tile-color':'tile_color','tile-shape':'tile_shape','service-unit':'service_unit','hsn':'hsncode','hsn-description':'hsndescription','hsn-rate':'tax','prep-note':'prep_note','prep-minutes':'prep_minutes'};
+        var mapping = {reorder:'reorder_point',plu:'plu_code',gtin:'gtin','purchase-unit':'purchase_unit','pack-size':'conversion_factor',brand:'brand',position:'sort_order',icon:'icon','tile-color':'tile_color','tile-shape':'tile_shape','service-unit':'service_unit','hsn':'hsncode','hsn-description':'hsndescription','hsn-rate':'tax','prep-note':'prep_note','prep-minutes':'prep_minutes'};
         Object.keys(mapping).forEach(function(id){if(item[mapping[id]] != null) el(id).value=item[mapping[id]];});
         if (item.selling_price_2 != null) el('price-2').value = item.selling_price_2; else el('price-2').value = '';
          if (item.selling_price_3 != null) el('price-3').value = item.selling_price_3; else el('price-3').value = '';
@@ -457,7 +457,7 @@
         el('discount-type').value=Number(item.discount_percentage)?'percentage':'amount';el('discount').value=item.discount_percentage||item.discount_amount||0;
         el('auto-tile').checked=!item.tile_color; el('open-price').checked=!!item.open_price;el('weight').checked=!!item.item_weight_machine_based;el('spice').checked=!!item.spice_choice;
         function select(id,value,name,unit) {value=String(value||'');if(value&&!Array.from(el(id).options).some(function(o){return o.value===value;})){var o=new Option(name||value,value);o.dataset.name=name||value;o.dataset.unit=unit||'';el(id).add(o);}el(id).value=value;}
-        select('unit',item.unit_id||item.unit||'qty',item.unit,item.unit);select('supplier',item.supplier_id,item.supplier_name);
+        select('unit',item.unit_id||item.unit||'qty',item.unit,item.unit);
         ['goes-with','channel-off'].forEach(function(id){var values=item[id.replace(/-/g,'_')]||[];values.forEach(function(v){select(id,v,v);});Array.from(el(id).options).forEach(function(o){o.selected=values.includes(o.value);});});
         nutrients.forEach(function(n){el('n-'+n).value=item.nutrition&&item.nutrition[n]!=null?item.nutrition[n]:'';});
         foodTags.forEach(function(k){el('food-'+k).checked=(item.food_tags||[]).includes(k);});marks.forEach(function(k){el('mark-'+k).checked=(item.menu_marks||[]).includes(k);});
