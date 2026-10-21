@@ -1,6 +1,6 @@
 name: Quick Windows Installer EXE (no tests)
 # Build the current feature-branch snapshot as the Windows installer only; deliberately no test steps.
-# Build automatically on every push to the active feature branch; workflow_dispatch remains available for manual retries.
+# Manual-only installer build; workflow_dispatch is the only trigger.
 
 on:
   workflow_dispatch:
