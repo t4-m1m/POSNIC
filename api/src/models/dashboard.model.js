@@ -185,6 +185,34 @@ class DashboardModel extends BaseModel {
           },
         ])
         .toArray();
+      // Include debt collections received during the selected date range in
+      // payment-mode cash-flow insights. These are separate receipts and must
+      // not be added to original sale revenue/history.
+      const debtPayments = await (await this.getCollection('credit_payments')).aggregate([
+        { $match: this.getContextMatch({
+          received_at: {
+            $gte: new Date(fromTimestamp || 0),
+            $lte: new Date(toTimestamp || Date.now()),
+          },
+        }) },
+        { $group: { _id: '$method', count: { $sum: 1 }, total_amount: { $sum: '$amount' } } },
+      ]).toArray();
+      const tenderLabels = {
+        cash: 'Cash', card: 'CreditCard', tpe: 'TPE', baridimob: 'BaridiMob',
+        bank_transfer: 'Bank transfer', other: 'Others',
+      };
+      debtPayments.forEach((debt) => {
+        const method = String(debt._id || 'other').toLowerCase();
+        const label = tenderLabels[method] || 'Others';
+        const existing = paymentModes.find((entry) => String(entry._id || '').toLowerCase() === label.toLowerCase());
+        if (existing) {
+          existing.total_amount = (Number(existing.total_amount) || 0) + (Number(debt.total_amount) || 0);
+          existing.count = (Number(existing.count) || 0) + (Number(debt.count) || 0);
+        } else {
+          paymentModes.push({ _id: label, total_amount: Number(debt.total_amount) || 0, count: Number(debt.count) || 0 });
+        }
+      });
+
       const paymodeData = [];
       let totalAmount = 0;
 
