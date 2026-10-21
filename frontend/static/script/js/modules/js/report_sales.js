@@ -572,3 +572,45 @@ $(document).on("click", "#view_salereport tbody tr td .exploder", function () {
 //end
 
 $(document).on('change.servingPeriod', '.sale_branch_value', function () { PosnicPro.salereport.loadPeriods(); });
+
+/* Cash Closing Ticket Studio — hosted in Reports > Sales. */
+(function(){
+'use strict';
+var version=0,latest=null,key='posnic.cashClosingTicketLogo.v1',$=window.jQuery;
+var methods=[['cash','Espèces'],['pending','Crédit'],['credit','Crédit'],['cheque','Chèque'],['creditcard','TPE'],['tpe','TPE'],['baridimob','BaridiMob'],['baridi mob','BaridiMob']];
+function esc(v){return PosnicPro.escapeHtml(String(v==null?'':v));}
+function status(s,bad){$('#closing-ticket-status').text(s).toggleClass('text-danger',!!bad).toggleClass('text-muted',!bad);}
+function range(d){return{start:new Date(d+'T00:00:00').toISOString(),end:new Date(d+'T23:59:59.999').toISOString()};}
+function money(v){var n=Number(v);if(!Number.isFinite(n))n=0;return n.toLocaleString('fr-DZ',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+esc(PosnicPro.local.get('currencySign')||'DA');}
+function method(v){var k=String(v||'').trim().toLowerCase(),m=methods.find(function(x){return x[0]===k;});return m?m[1]:(String(v||'').trim()||'Autre');}
+function render(d){
+var c=Array.isArray(d.common_details)?d.common_details[0]||{}:d.common_details||{},cash=Array.isArray(d.cash_details)?d.cash_details[0]||{}:d.cash_details||{},calc=d.calculated||{},sales=Array.isArray(d.sale_details)?d.sale_details:[],expenses=Array.isArray(d.expenseRows)?d.expenseRows:[],expenseTotal=expenses.reduce(function(n,r){return n+(Number(r.amount)||0);},0),payments=Object.create(null),logo='';
+sales.forEach(function(r){var m=method(r.payment_mode||r.method||r.register_paymentmode);payments[m]=(payments[m]||0)+(Number(r.sale_total!=null?r.sale_total:r.amount)||0);});
+['Espèces','Crédit','TPE','BaridiMob'].forEach(function(m){if(payments[m]==null)payments[m]=0;});
+try{logo=localStorage.getItem(key)||'';}catch(_){}
+var date=$('#closing-ticket-date').val()||'',register=$('#closing-ticket-register option:selected').text()||'Caisse',count=calc.count!=null?calc.count:sales.reduce(function(n,r){return n+(Number(r.count)||0);},0),total=calc.total!=null?calc.total:sales.reduce(function(n,r){return n+(Number(r.sale_total)||0);},0);
+var rows=[['Date',date],['Caisse',register],['Fond d’ouverture',money(c.opening_float)],['Nombre de ventes',String(Number(count)||0)],['Total des ventes',money(total)],['Dépenses',money(expenseTotal)],['Entrées de caisse',money(cash.cashin_amount)],['Sorties de caisse',money(cash.cashout_amount)],['Montant attendu',money(calc.expectedval_data)],['Montant compté',money(c.counted_amount!=null?c.counted_amount:calc.counted_amount)],['Écart',money(calc.difference)]];
+var out='<div class="closing-ticket-print" style="color:#111;background:#fff">';
+if(logo)out+='<div style="text-align:center;margin-bottom:12px"><img src="'+esc(logo)+'" alt="Logo" style="max-width:160px;max-height:90px;object-fit:contain"></div>';
+out+='<h3 style="font-size:18px;text-align:center;margin:0 0 4px">Clôture de caisse</h3><div style="text-align:center;margin-bottom:12px">'+esc(date)+'</div><hr style="border:0;border-top:1px dashed #777">';
+rows.forEach(function(r){out+='<div style="display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-bottom:1px dotted #ddd"><span>'+esc(r[0])+'</span><strong style="text-align:right">'+esc(r[1])+'</strong></div>';});
+out+='<h4 style="font-size:14px;margin:14px 0 5px">Détail des paiements:</h4>';
+Object.keys(payments).forEach(function(m){out+='<div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0"><span>'+esc(m)+':</span><strong style="text-align:right">'+money(payments[m])+'</strong></div>';});
+out+='<hr style="border:0;border-top:1px dashed #777"><small style="display:block;text-align:center;margin-top:8px">Rapport généré depuis les données POSNIC.</small></div>';
+$('#closing-ticket-preview').html(out);latest={html:out,data:d};
+}
+function sync(){var t=$('#closing-ticket-register');if(!t.length)return;var current=t.val()||PosnicPro.local.get('RegisterId')||'',out='<option value="">Sélectionner une caisse…</option>';PosnicPro.get('users/getUserRegisterList',function(x){if(!x||x.type!== 'success'||!Array.isArray(x.data)){status('Impossible de charger la liste des caisses.',true);return;}x.data.forEach(function(r){out+='<option value="'+esc(r.register_id)+'">'+esc(r.register_name)+'</option>';});t.html(out);if(current&&t.find('option').filter(function(){return this.value===current;}).length)t.val(current);else if(x.data.length)t.val(x.data[0].register_id);if(t.val())refresh();});}
+function refresh(){
+var date=$('#closing-ticket-date').val(),reg=$('#closing-ticket-register').val();if(!date){status('Choisissez une date.',true);return;}if(!reg){status('Sélectionnez une caisse.',true);return;}
+var v=++version,r=range(date),state={report:null,expenses:null,failed:false};status('Chargement des données…');
+function done(){if(v!==version||state.failed||!state.report||!state.expenses)return;state.report.expenseRows=state.expenses;render(state.report);status('Données actualisées · '+date);}
+PosnicPro.get({url:'registers/getRegisterReportPdfDetails',data:{starting_date:r.start,ending_date:r.end,register:reg}},function(x){if(v!==version)return;if(!x||x.type!=='success'||!x.data){state.failed=true;status(x&&x.message||'Impossible de charger le rapport de caisse.',true);return;}state.report=x.data;done();},function(){if(v===version){state.failed=true;status('Impossible de charger le rapport de caisse.',true);}});
+PosnicPro.get({url:'expenses',data:{page:1,limit:5000,filters:JSON.stringify({date:{$gte:r.start,$lte:r.end}})}},function(x){if(v!==version)return;if(!x||x.type!=='success'||!x.data){state.failed=true;status(x&&x.message||'Impossible de charger les dépenses.',true);return;}var p=x.data;state.expenses=Array.isArray(p.list)?p.list:(Array.isArray(p.data)?p.data:[]);done();},function(){if(v===version){state.failed=true;status('Impossible de charger les dépenses.',true);}});
+}
+function printTicket(){if(!latest){status('Actualisez les données avant impression.',true);return;}var w=window.open('','_blank');if(!w){status('Autorisez la fenêtre d’impression puis réessayez.',true);return;}w.document.open();w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Clôture de caisse</title><style>@page{size:80mm auto;margin:4mm}body{font:12px Arial,sans-serif;margin:0;color:#111}.closing-ticket-print{width:100%}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>'+latest.html+'<script>window.onload=function(){window.focus();window.print();};<\\/script></body></html>');w.document.close();}
+$(document).off('.cashClosingTicketStudio').on('change.cashClosingTicketStudio','#closing-ticket-date,#closing-ticket-register',refresh).on('click.cashClosingTicketStudio','#closing-ticket-refresh',refresh).on('click.cashClosingTicketStudio','#closing-ticket-print',printTicket).on('change.cashClosingTicketStudio','#closing-ticket-logo',function(){
+var f=this.files&&this.files[0];if(!f)return;if(f.type!=='image/png'||!/\\.png$/i.test(f.name)||f.size>5*1024*1024){status('Choisissez un fichier PNG de 5 Mo maximum.',true);this.value='';return;}
+var reader=new FileReader();reader.onload=function(){var img=new Image();img.onload=function(){var scale=Math.min(1,1200/img.width,1200/img.height),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);try{localStorage.setItem(key,canvas.toDataURL('image/png'));}catch(_){status('Le logo est trop volumineux pour le stockage local.',true);return;}status('Logo PNG enregistré localement.');if(latest)render(latest.data);};img.onerror=function(){status('Le fichier PNG est illisible.',true);};img.src=reader.result;};reader.onerror=function(){status('Impossible de lire le logo.',true);};reader.readAsDataURL(f);
+});
+$(function(){var d=new Date();$('#closing-ticket-date').val(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));sync();});
+}());
