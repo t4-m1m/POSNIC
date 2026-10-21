@@ -233,7 +233,7 @@ class CreditService {
     const registerObjectId = asObjectId(input.register_id);
     const registerBaseQuery = { license: BaseModel.license, register_status: 'Opened' };
     if (registerObjectId) {
-      cashRegister = await registerCollection.findOne({ ...registerBaseQuery, _id: registerObjectId }, { projection: { _id: 1 } });
+      cashRegister = await registerCollection.findOne({ ...registerBaseQuery, _id: registerObjectId, ...(ctx.userId ? { current_user_id: { $in: [String(ctx.userId), ...(userObjectId ? [userObjectId] : [])] } } : {}) }, { projection: { _id: 1 } });
     }
     if (!cashRegister && ctx.userId) {
       const registerQuery = { ...registerBaseQuery, current_user_id: { $in: [String(ctx.userId), ...(userObjectId ? [userObjectId] : [])] } };
@@ -337,7 +337,7 @@ class CreditService {
     // Non-cash tenders remain in the credit payment ledger and never inflate drawer cash.
     if (method === 'cash' && cashRegister) {
       const registerUpdate = await db.collection('cashregister').updateOne(
-        { _id: cashRegister._id, license: BaseModel.license, register_status: 'Opened', current_user_id: oid(ctx.userId) },
+        { _id: cashRegister._id, license: BaseModel.license, register_status: 'Opened', current_user_id: { $in: [String(ctx.userId), ...(asObjectId(ctx.userId) ? [asObjectId(ctx.userId)] : [])] } },
         { $push: { cashInOutDetail: {
           cashin_amount: payment.amount, cashout_amount: 0,
           cashin_description: 'Customer debt payment - ' + (customer.name || customerId),
