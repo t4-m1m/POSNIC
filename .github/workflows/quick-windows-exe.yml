@@ -3,9 +3,6 @@ name: Quick Windows Installer EXE (no tests)
 # Build automatically on every push to the active feature branch; workflow_dispatch remains available for manual retries.
 
 on:
-  push:
-    branches:
-      - feat/article-cost-label-designer-sales-calendar
   workflow_dispatch:
 
 permissions:
