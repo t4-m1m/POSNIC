@@ -1008,9 +1008,40 @@ PosnicPro.sales.view = {
                 // The designer renders directly from sale data. Legacy templates
                 // and their barcode canvas may not exist on a fresh offline till.
                 if (name === 'sale' && PosnicPro.receiptDesigner && !/Return/.test(data.sale_process || '')) {
-                    PosnicPro.receiptDesigner.printSale(data, PosnicPro.sales.view._layoutOverride, !!isKotHistoryPrint);
-                    PosnicPro._printTypeOverride = null;
-                    PosnicPro.sales.view._layoutOverride = null;
+                    // The sale endpoint returns transaction data, not the branch's saved
+                    // Receipt Studio layout. Hydrate it once per branch before printing;
+                    // otherwise the sample uses the design while real sales fall back to
+                    // the built-in POSNIC template on a freshly installed PC.
+                    var printWithSavedDesign = function () {
+                        PosnicPro.receiptDesigner.printSale(data, PosnicPro.sales.view._layoutOverride, !!isKotHistoryPrint);
+                        PosnicPro._printTypeOverride = null;
+                        PosnicPro.sales.view._layoutOverride = null;
+                    };
+                    if (data.receipt_designs) {
+                        printWithSavedDesign();
+                    } else {
+                        var branchId = PosnicPro.local.get('branch_id_set') || 'null';
+                        PosnicPro._receiptDesignCache = PosnicPro._receiptDesignCache || {};
+                        var cachedDesign = PosnicPro._receiptDesignCache[String(branchId)];
+                        if (cachedDesign) {
+                            data.receipt_designs = cachedDesign;
+                            printWithSavedDesign();
+                        } else {
+                            PosnicPro.get({ url: 'branches/getOneStore', data: 'id=' + branchId }, function (settingsResponse) {
+                                var branchSettings = settingsResponse && settingsResponse.data || {};
+                                if (branchSettings.data && !branchSettings.receipt_designs) branchSettings = branchSettings.data;
+                                if (branchSettings.receipt_designs) {
+                                    PosnicPro._receiptDesignCache[String(branchId)] = branchSettings.receipt_designs;
+                                    data.receipt_designs = branchSettings.receipt_designs;
+                                }
+                                printWithSavedDesign();
+                            }, function () {
+                                // Preserve the existing fallback if the settings endpoint is
+                                // temporarily unavailable; never block a cashier indefinitely.
+                                printWithSavedDesign();
+                            });
+                        }
+                    }
                     return;
                 }
                 PosnicPro.sales.view.renderSaleDocument(data, name, isKotHistoryPrint);

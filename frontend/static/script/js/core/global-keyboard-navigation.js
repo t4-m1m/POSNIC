@@ -78,20 +78,32 @@
     }
   }
 
-  function confirmNonFormDialogTarget(event) {
-    if (event.key !== 'Enter') return false;
+  function confirmDialogTarget(event) {
+    if (event.key !== 'Enter' || event.repeat || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return false;
     var target = event.target;
-    if (!target || target.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(target.tagName)) return false;
+    if (!target || target.isContentEditable) return false;
     var modal = target.closest && target.closest('dialog[open], .modal.show, .modal.in, [role="dialog"][aria-modal="true"]');
     if (!modal) return false;
+
+    // Preserve normal keyboard behavior for explicit buttons/links, text areas,
+    // selects, and toggle/file controls. Text and number inputs can confirm a
+    // popup just like the vendor dialog, but never by submitting an unrelated form.
+    var tag = String(target.tagName || '').toUpperCase();
+    var type = String(target.type || '').toLowerCase();
+    if (tag === 'BUTTON' || tag === 'A' || tag === 'TEXTAREA' || tag === 'SELECT') return false;
+    if (tag === 'INPUT' && ['checkbox', 'radio', 'file', 'button', 'submit', 'reset', 'image'].indexOf(type) !== -1) return false;
+
+    var form = target.closest && target.closest('form');
     var primary = modal.querySelector('button[type="submit"], input[type="submit"], .modal-footer .btn-primary, [data-confirm]');
-    if (!primary || !visible(primary) || primary.disabled) return false;
+    if (!primary) return false;
+    if (form && primary.form && primary.form !== form) return false;
+    if (!visible(primary) || primary.disabled || primary.getAttribute('aria-disabled') === 'true') return false;
+
     event.preventDefault();
     event.stopPropagation();
     primary.click();
     return true;
   }
-
   document.addEventListener('keydown', function (event) {
     var key = event.key;
     var digit = /^[1-5]$/.test(key);
@@ -107,9 +119,10 @@
       return;
     }
 
-    // Native form submission remains untouched. For focused non-form controls
-    // inside a dialog, Enter activates that dialog's existing primary action.
-    if (confirmNonFormDialogTarget(event)) return;
+    // Enter activates the existing primary action in a visible popup, including
+    // when the cashier is focused in a text/number input. Explicit buttons and
+    // native form submission keep their own behavior.
+    if (confirmDialogTarget(event)) return;
 
     // Close overlays using their own controls and return focus to the content.
     if (key === 'Escape' && closeOverlay()) {

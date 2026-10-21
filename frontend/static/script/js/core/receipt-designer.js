@@ -575,6 +575,11 @@
         diagnostic({ stage: 'sale-print-start', format: requested || 'configured' });
         try {
             if (PosnicPro.printSettings) await PosnicPro.printSettings.ready();
+            // Remember whether a saved block-based design was supplied. The native
+            // legacy ESC/POS renderer has its own, simpler settings schema and silently
+            // ignored Receipt Studio blocks, which made test prints look right while
+            // real sales printed the default POSNIC receipt.
+            var hasSavedStudioDesign = !!(data && data.receipt_designs && data.receipt_designs.layouts);
             if (!data.receipt_designs) data = Object.assign({}, data, { receipt_designs: defaults(data) });
             var targets = window.electronAPI && PosnicPro.printSettings ? PosnicPro.printSettings.get('sales') : [null];
             if (window.electronAPI && PosnicPro.printSettings && ['a4', 'a5', 'letter'].indexOf(requested) !== -1) {
@@ -594,7 +599,7 @@
                 var pdfTarget = /pdf/i.test(configuredPrinter);
                 diagnostic({ stage: 'sale-document-render', format: chosen, pdfTarget: pdfTarget });
                 // A format explicitly selected for this print takes precedence.
-                if (!pdfTarget && window.electronAPI && window.electronAPI.printer && typeof window.electronAPI.printer.printReceipt === 'function' && ['58', '80', '112'].indexOf(chosen) !== -1 && (!target || ['a4', 'a5', 'letter'].indexOf(String(target.pageSize || '').replace('mm', '')) === -1)) {
+                if (!hasSavedStudioDesign && !pdfTarget && window.electronAPI && window.electronAPI.printer && typeof window.electronAPI.printer.printReceipt === 'function' && ['58', '80', '112'].indexOf(chosen) !== -1 && (!target || ['a4', 'a5', 'letter'].indexOf(String(target.pageSize || '').replace('mm', '')) === -1)) {
                     /*
                      * Thermal sample/designer receipts use the same native
                      * ESC/POS byte renderer and spooler as the known-good
@@ -611,7 +616,7 @@
                     });
                     if (!nativeResult || !nativeResult.success) throw new Error(nativeResult && nativeResult.error || label('Print failed'));
                 } else {
-                    await print(render(data, chosen, kitchenBill), chosen, { target: target, batch: true, sample: true, showDialog: pdfTarget, receiptLog: { saleId: data.sales_id, total: data.items_total, title: kitchenBill ? label('Bill') : label('Receipt'), source: 'Till' } });
+                    await print(render(data, chosen, kitchenBill), chosen, { target: target, batch: true, sample: false, showDialog: pdfTarget, receiptLog: { saleId: data.sales_id, total: data.items_total, title: kitchenBill ? label('Bill') : label('Receipt'), source: 'Till' } });
                 }
             }
             if (!options.preserveWorkspace) PosnicPro.afterPrint();
