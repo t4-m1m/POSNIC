@@ -2297,6 +2297,7 @@ PosnicPro.sales = {
         } else {
             $('#tenderpage').show();
             $('#newsalespage').hide();
+            PosnicPro.sales.bindTenderKeyboardShortcuts();
         }
         if (PosnicPro.sales.SaleAction === 'return') {
             $('.cancel-save-hide-show').hide();
@@ -14703,4 +14704,99 @@ $(document).ready(function () {
             lastShift = now;
         }
     }, true);
+
+/* Payment-sidebar keyboard shortcuts are active only while the tender panel is open. */
+PosnicPro.sales._tenderKeyboardHandler = null;
+PosnicPro.sales._tenderKeyboardObserver = null;
+
+PosnicPro.sales.unbindTenderKeyboardShortcuts = function (stopObserving) {
+    if (PosnicPro.sales._tenderKeyboardHandler) {
+        document.removeEventListener('keydown', PosnicPro.sales._tenderKeyboardHandler, true);
+        PosnicPro.sales._tenderKeyboardHandler = null;
+    }
+    if (stopObserving && PosnicPro.sales._tenderKeyboardObserver) {
+        PosnicPro.sales._tenderKeyboardObserver.disconnect();
+        PosnicPro.sales._tenderKeyboardObserver = null;
+    }
+};
+
+PosnicPro.sales.bindTenderKeyboardShortcuts = function () {
+    var panel = document.getElementById('infobar-settings-sidebar-tender-details');
+    if (!panel || !panel.classList.contains('sidebarview') || !$(panel).is(':visible')) return;
+
+    if (!PosnicPro.sales._tenderKeyboardObserver && window.MutationObserver) {
+        PosnicPro.sales._tenderKeyboardObserver = new MutationObserver(function () {
+            var activePanel = document.getElementById('infobar-settings-sidebar-tender-details');
+            if (!activePanel || !activePanel.classList.contains('sidebarview') || !$(activePanel).is(':visible')) {
+                PosnicPro.sales.unbindTenderKeyboardShortcuts(true);
+                return;
+            }
+            var saveButton = document.getElementById('save_btn');
+            if (saveButton && !saveButton.disabled && !PosnicPro.sales.submissionInProgress &&
+                !PosnicPro.sales._tenderKeyboardHandler) {
+                PosnicPro.sales.bindTenderKeyboardShortcuts();
+            }
+        });
+        PosnicPro.sales._tenderKeyboardObserver.observe(panel, {
+            attributes: true,
+            attributeFilter: ['class', 'style']
+        });
+        var observedSaveButton = document.getElementById('save_btn');
+        if (observedSaveButton) {
+            PosnicPro.sales._tenderKeyboardObserver.observe(observedSaveButton, {
+                attributes: true,
+                attributeFilter: ['disabled']
+            });
+        }
+    }
+
+    if (PosnicPro.sales._tenderKeyboardHandler) return;
+    PosnicPro.sales._tenderKeyboardHandler = function (event) {
+        var activePanel = document.getElementById('infobar-settings-sidebar-tender-details');
+        if (!activePanel || !activePanel.classList.contains('sidebarview') || !$(activePanel).is(':visible')) {
+            PosnicPro.sales.unbindTenderKeyboardShortcuts(true);
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            var cancelButton = activePanel.querySelector('.cancel-save-hide-show .infobar-tender-close');
+            if (!cancelButton || !$(cancelButton).is(':visible')) {
+                cancelButton = activePanel.querySelector('.tender-close-button');
+            }
+            PosnicPro.sales.unbindTenderKeyboardShortcuts(false);
+            if (cancelButton) cancelButton.click();
+            return;
+        }
+
+        if (event.key !== 'Enter' || event.repeat || event.isComposing) return;
+        var target = event.target;
+        // Preserve normal Enter behavior in editable fields and native buttons.
+        if (target && target.closest &&
+            target.closest('input, textarea, select, [contenteditable="true"], button, a, [role="button"]')) return;
+
+        var saveButton = document.getElementById('save_btn');
+        if (!saveButton || saveButton.disabled || !$(saveButton).is(':visible') ||
+            PosnicPro.sales.submissionInProgress) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        saveButton.click();
+    };
+    document.addEventListener('keydown', PosnicPro.sales._tenderKeyboardHandler, true);
+};
+
+// Unbind immediately on an explicit close or submit. The observer restores Enter
+// only if validation leaves the tender panel open and the Pay button is enabled.
+$(document)
+    .off('click.posnicTenderKeyboard', '#infobar-settings-sidebar-tender-details .infobar-tender-close')
+    .on('click.posnicTenderKeyboard', '#infobar-settings-sidebar-tender-details .infobar-tender-close', function () {
+        PosnicPro.sales.unbindTenderKeyboardShortcuts(true);
+    })
+    .off('click.posnicTenderKeyboard', '#save_btn')
+    .on('click.posnicTenderKeyboard', '#save_btn', function () {
+        PosnicPro.sales.unbindTenderKeyboardShortcuts(false);
+    });
+
 })();
