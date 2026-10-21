@@ -67,6 +67,31 @@
     return false;
   }
 
+  function focusMainContent() {
+    var candidates = ['#containerbar', '#main-content', '#content', 'main', '#sales_new', '#items'];
+    for (var i = 0; i < candidates.length; i++) {
+      var el = document.querySelector(candidates[i]);
+      if (!visible(el)) continue;
+      if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
+      try { el.focus({ preventScroll: true }); } catch (_) { el.focus(); }
+      return;
+    }
+  }
+
+  function confirmNonFormDialogTarget(event) {
+    if (event.key !== 'Enter') return false;
+    var target = event.target;
+    if (!target || target.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON|A)$/.test(target.tagName)) return false;
+    var modal = target.closest && target.closest('dialog[open], .modal.show, .modal.in, [role="dialog"][aria-modal="true"]');
+    if (!modal) return false;
+    var primary = modal.querySelector('button[type="submit"], input[type="submit"], .modal-footer .btn-primary, [data-confirm]');
+    if (!primary || !visible(primary) || primary.disabled) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    primary.click();
+    return true;
+  }
+
   document.addEventListener('keydown', function (event) {
     var key = event.key;
     var digit = /^[1-5]$/.test(key);
@@ -82,15 +107,19 @@
       return;
     }
 
-    // Let the app's existing Escape handlers run unless an overlay can be
-    // closed through its own close/toggle control.
+    // Native form submission remains untouched. For focused non-form controls
+    // inside a dialog, Enter activates that dialog's existing primary action.
+    if (confirmNonFormDialogTarget(event)) return;
+
+    // Close overlays using their own controls and return focus to the content.
     if (key === 'Escape' && closeOverlay()) {
       event.preventDefault();
       event.stopPropagation();
+      window.setTimeout(focusMainContent, 0);
     }
 
-    // Enter is deliberately not intercepted: native form submission and the
-    // application's existing payment/selection handlers remain authoritative.
+    // Enter on inputs/forms is deliberately left to native submission and the
+    // application's existing payment handlers. Sales F-keys are never handled here.
   }, true);
 
   var tabSelector = '[role="tablist"], .nav-tabs, .nav-pills';
