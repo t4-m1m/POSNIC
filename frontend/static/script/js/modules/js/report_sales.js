@@ -577,7 +577,7 @@ $(document).on('change.servingPeriod', '.sale_branch_value', function () { Posni
 (function(){
 'use strict';
 var version=0,latest=null,key='posnic.cashClosingTicketLogo.v1',$=window.jQuery;
-var methods=[['cash','Espèces'],['pending','Crédit'],['credit','Crédit'],['cheque','Chèque'],['creditcard','TPE'],['tpe','TPE'],['baridimob','BaridiMob'],['baridi mob','BaridiMob']];
+var methods=[['cash','Espèces'],['pending','Crédit'],['credit','Crédit'],['cheque','Chèque'],['creditcard','TPE'],['card','TPE'],['tpe','TPE'],['baridimob','BaridiMob'],['baridi mob','BaridiMob'],['bank_transfer','Virement bancaire'],['other','Autre']];
 function esc(v){return PosnicPro.escapeHtml(String(v==null?'':v));}
 function status(s,bad){$('#closing-ticket-status').text(s).toggleClass('text-danger',!!bad).toggleClass('text-muted',!bad);}
 function range(d){var p=String(d||'').split('-');return{start:p[0]+'/'+p[1]+'/'+p[2]+' 12:00 AM',end:p[0]+'/'+p[1]+'/'+p[2]+' 11:59 PM'};}
