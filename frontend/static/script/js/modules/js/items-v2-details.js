@@ -203,7 +203,15 @@
             card.appendChild(grid); box.appendChild(card);
         }); notify();
     }
-    function isFamily() { return document.querySelector('#items_v2 [name="iv2-kind"]:checked').value !== 'service'; }
+    function isFamily() {
+        var kind = document.querySelector('#items_v2 [name="iv2-kind"]:checked');
+        if (!kind || kind.value === 'service' || !el('has-variants').checked) return false;
+        /* A product is not a variant family merely because it is a product.
+           Only selected variant values opt into family validation and the
+           atomic createFamily endpoint. An untouched/empty variant editor is
+           a valid standalone item. */
+        return selectedValues('values1').length > 0 || selectedValues('values2').length > 0;
+    }
     function validate() {
         var invalid = document.querySelector('#iv2-fields input:invalid, #iv2-fields select:invalid, #iv2-fields textarea:invalid');
         if (invalid) return { error: invalid.validationMessage, field: invalid.id };

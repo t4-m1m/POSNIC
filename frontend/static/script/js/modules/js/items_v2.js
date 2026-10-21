@@ -226,6 +226,15 @@
         function unlock() { busy = false; document.getElementById('iv2-fields').disabled = false; document.getElementById('iv2-save').disabled = false; text('iv2-save', 'Save item →'); render(); }
         P.itemsV2Details.upload().then(function(){
         Object.assign(data, P.itemsV2Details.data());
+        /* Standalone items use the canonical inventory field. Keep the stock
+           input authoritative after advanced details are merged, for both
+           POST creation and PUT editing. Variant-family quantities remain
+           owned by their individual generated rows. */
+        if (!f.family) {
+            var standaloneQuantity = Number(value('iv2-quantity'));
+            data.available_quantity = f.kind !== 'service' && f.stock === 'tracked' && Number.isFinite(standaloneQuantity)
+                ? Math.max(0, standaloneQuantity) : 0;
+        }
         var requestData = Object.assign({}, data);
         if (editing && existingItem && editBaseline) {
             var changes = {};
