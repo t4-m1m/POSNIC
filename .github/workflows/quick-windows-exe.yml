@@ -3,9 +3,6 @@ name: Quick Windows Installer EXE (no tests)
 # Manual-only installer build; workflow_dispatch is the only trigger.
 
 on:
-  push:
-    branches:
-      - feat/article-cost-label-designer-sales-calendar
   workflow_dispatch:
 
 permissions:
