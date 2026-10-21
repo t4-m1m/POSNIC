@@ -1197,23 +1197,25 @@ PosnicPro.items = {
 
             /* CREATE with variants: the atomic family path. Edits and
                plain items keep the legacy flow below untouched. */
-            if (PosnicPro.action === 'add' && $('#product_with_variant').is(':checked')
-                && ($('#item_variant_list').val() || []).length > 0) {
+            /* A checked variant-mode toggle alone is not a variant family.
+               Only selected variant values create variants; otherwise use the
+               ordinary item path and persist the standalone opening quantity. */
+            var variant_list = $('#item_variant_list').val() || [];
+            var hasVariants = $('#product_with_variant').is(':checked') && variant_list.length > 0;
+            if (PosnicPro.action === 'add' && hasVariants) {
                 PosnicPro.items.saveVariantFamily(loader);
                 return;
             }
 
-            var variant_list = $('#item_variant_list').val();
-            var variant_array = ["variant"];
-            var variant_value = (variant_list.length > 0) ? $('#item_variant_list').val() : variant_array;
-            Array.from(variant_value || []).forEach(function (variantName, key) {
+            var variant_value = hasVariants ? variant_list : ["variant"];
+            Array.from(variant_value).forEach(function (variantName, key) {
                 var itemName = $("#items_name").val();
                 var unitDetail = $("#items_unit").select2("data");
                 let unitVariantDetail = $('#items_unit_' + key + '');
                 let unitVariantValue = unitVariantDetail.find(':selected').attr('data-unit-value');
                 let unitVariantId = unitVariantDetail.find(':selected').attr('data-unit-id');
 
-                if ($("#product_without_variant").is(":checked")) {
+                if (!hasVariants) {
                     var name = itemName;
                     var param_fields = {
                         sku_id: $('#items_itemid').val(),
@@ -1221,7 +1223,7 @@ PosnicPro.items = {
                         mrp_price: $('#items_mrp_price').val(),
                         company_price: $('#items_company_price').val(),
                         selling_price: $('#items_selling_price').val(),
-                        available_quantity: $('#items_available_quantity').val(),
+                        available_quantity: Math.max(0, Number($('#items_available_quantity').val()) || 0),
                         position: $('#items_sort').val(),
                         items_mfg_date: $('#items_mfg_date').val(),
                         items_expiry_date: $('#items_expiry_date').val(),
@@ -4646,10 +4648,16 @@ $(document).ready(function () {
                 maxlength: 1000
             },
             items_variant: {
-                required: true
+                required: function () {
+                    return $('#product_with_variant').is(':checked')
+                        && (($('#item_variant_list').val() || []).length > 0);
+                }
             },
             item_variant_list: {
-                required: true
+                required: function () {
+                    return $('#product_with_variant').is(':checked')
+                        && (($('#item_variant_list').val() || []).length > 0);
+                }
             },
             items_mfg_date: {
                 dateISO: true
