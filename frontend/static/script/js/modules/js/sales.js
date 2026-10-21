@@ -8897,7 +8897,7 @@ PosnicPro.sales.recentMenu = {
         var loader = $(".loader-product");
         $("<div class='loadingSpinner'></div>").appendTo(loader);
         $('#sales_new_productList').show();
-        $('#sales_new_categoryList').hide();
+        $('#sales_new_categoryList, #sales_new_brandList').hide();
         $('#item-lists').remove();
         $('#sales_new_productList').append(' <div id="item-lists" style="margin-left: 7px;"/>');
         $('#item-lists').append("<div id='recent_sales_list' class='m-b-30'></div>");
@@ -9348,7 +9348,7 @@ PosnicPro.sales.parkedMenu = {
         var loader = $(".loader-product");
         $("<div class='loadingSpinner'></div>").appendTo(loader);
         $('#sales_new_productList').show();
-        $('#sales_new_categoryList').hide();
+        $('#sales_new_categoryList, #sales_new_brandList').hide();
         $('#item-lists').remove();
         $('#sales_new_productList').append(' <div id="item-lists" style="margin-left: 7px;"/>');
         $('#item-lists').append(
@@ -13695,8 +13695,8 @@ $(document).ready(function () {
 
     $(window).resize(function () {
         var height = $(window).height() - 270;
-        $('#sales_new_productList,#sales_new_categoryList').height(height);
-        $('#sales_new_productList,#sales_new_categoryList').css({ 'max-height': height, overflow: 'auto' });
+        $('#sales_new_productList,#sales_new_categoryList,#sales_new_brandList').height(height);
+        $('#sales_new_productList,#sales_new_categoryList,#sales_new_brandList').css({ 'max-height': height, overflow: 'auto' });
         var imgHeight = $(window).height() - 500;
         $('.sales-cart-image').height(imgHeight);
     });
