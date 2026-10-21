@@ -132,9 +132,8 @@
         var price = Number(f.price);
         show('iv2-zero-price', (attempted || touched.has('iv2-price')) && price === 0 && !f.openPrice);
         show('iv2-quantity-row', tracked && !f.family);
-        document.getElementById('iv2-quantity').disabled = editing || !tracked || f.family;
+        document.getElementById('iv2-quantity').disabled = !tracked || f.family;
         document.getElementById('iv2-has-variants').disabled = editing;
-        if (editing) show('iv2-quantity-row', false);
         show('iv2-zero-stock', (attempted || touched.has('iv2-quantity')) && tracked && Number(f.quantity) === 0);
         document.querySelector('#items_v2 input[name="iv2-stock"][value="tracked"]').disabled = f.kind === 'service' || busy || saved;
         text('iv2-stock-note', tracked ? (f.zeroStock === 'negative' ? PosnicPro.i18n.t('lang_for_this_item_only_sales_can_take_its_stoc', 'For this item only: sales can take its stock below zero.') : PosnicPro.i18n.t('lang_stock_tracking_applies_to_this_item_only', 'Stock tracking applies to this item only.')) : 'This item can be sold without an opening stock quantity.');
@@ -237,7 +236,6 @@
                 cover_image:existingItem.image, image:existingItem.multi_image || []}, changes);
             ['_id','id','branch_id','branch_access','license','created_date','updated_date'].forEach(function(k){delete requestData[k];});
         }
-        if (editing) delete requestData.available_quantity;
         P.request({ url: editing ? 'items/' + encodeURIComponent(savedItemId) + '/details' : f.family ? 'items/createFamily' : 'items', method: editing ? 'PUT' : 'POST', data: JSON.stringify(f.family ? P.itemsV2Details.family(requestData) : requestData) }, function (r) {
             unlock();
             if (!r || r.type !== 'success') { fail(r && r.message || 'Couldn’t save. Your entries are still here.'); return; }
