@@ -233,7 +233,7 @@ class CreditService {
     const registerObjectId = asObjectId(input.register_id);
     const registerBaseQuery = { license: BaseModel.license, register_status: 'Opened' };
     if (registerObjectId) {
-      cashRegister = await registerCollection.findOne({ ...registerBaseQuery, _id: registerObjectId, ...(ctx.userId ? { current_user_id: { $in: [String(ctx.userId), ...(userObjectId ? [userObjectId] : [])] } } : {}) }, { projection: { _id: 1 } });
+      cashRegister = await registerCollection.findOne({ ...registerBaseQuery, _id: registerObjectId, ...(ctx.userId ? { current_user_id: { $in: [String(ctx.userId), ...(userObjectId ? [userObjectId] : [])] } } : {}) }, { projection: { _id: 1, register_id: 1 } });
     }
     if (!cashRegister && ctx.userId) {
       const registerQuery = { ...registerBaseQuery, current_user_id: { $in: [String(ctx.userId), ...(userObjectId ? [userObjectId] : [])] } };
@@ -329,7 +329,7 @@ class CreditService {
       customer_id: oid(customerId), customer_name: customer.name || '',
       amount: round2(amount - remaining), method, allocations, branch_id: ctx.branchId ? oid(ctx.branchId) : null,
       license: BaseModel.license, received_by: ctx.userName || '', received_at: now,
-      register_id: cashRegister ? cashRegister._id : (input.register_id && ObjectId.isValid(String(input.register_id)) ? oid(input.register_id) : null),
+      register_id: cashRegister ? cashRegister.register_id : (input.register_id && ObjectId.isValid(String(input.register_id)) ? oid(input.register_id) : null),
       note: String(input.note || '').slice(0, 500),
     };
     const inserted = await db.collection('credit_payments').insertOne(payment);
