@@ -3175,6 +3175,9 @@ class ItemRepository extends BaseModel {
        * sample the moment the purge lands.
        */
       const demoClause = await demoData.filter({ licenseId, branchId });
+      const requestedBrand = typeof params.brand === 'string' ? params.brand.trim() : '';
+      // Brand is free text in the item editor. Ignore case and surrounding
+      // whitespace so one shelf doesn't split on typing style.
       const match = {
         $and: [
           ...(Object.keys(demoClause).length ? [demoClause] : []),
@@ -3182,8 +3185,15 @@ class ItemRepository extends BaseModel {
           { 'branch_access.branch_id': branchObjectId },
           { item_status: { $ne: 'instant' } },
           ...(licenseObjectId ? [{ license: licenseObjectId }] : []),
-          ...(typeof params.brand === 'string' && params.brand.trim()
-            ? [{ brand: params.brand.trim() }]
+          ...(requestedBrand
+            ? [{
+                $expr: {
+                  $eq: [
+                    { $toLower: { $trim: { input: { $ifNull: ['$brand', ''] } } } },
+                    requestedBrand.toLowerCase(),
+                  ],
+                },
+              }]
             : []),
         ],
       };
