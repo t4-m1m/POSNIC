@@ -7,8 +7,6 @@ on:
   push:
     branches:
       - feat/article-cost-label-designer-sales-calendar
-    paths:
-      - .github/workflows/quick-windows-exe.yml
 
 jobs:
   build-windows:
