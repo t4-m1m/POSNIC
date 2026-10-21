@@ -1264,6 +1264,251 @@
     #sales_new #pay_hide.posnic-total-focus-label,#sales_new #pay_total_hide.posnic-total-focus-value{padding:10px!important}
     #sales_new #pay_total_hide.posnic-total-focus-value{min-width:0}
 }
+
+/* Desktop tender sidebar: fit the complete payment flow inside the viewport. */
+#infobar-settings-sidebar-tender-details.sidebarview {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    box-sizing: border-box;
+}
+#infobar-settings-sidebar-tender-details .infobar-settings-sidebar-head {
+    position: absolute !important;
+    top: 0;
+    right: 0;
+    z-index: 10;
+    height: 42px;
+}
+#infobar-settings-sidebar-tender-details .infobar-settings-sidebar-body,
+#infobar-settings-sidebar-tender-details .custom-mode-setting,
+#infobar-settings-sidebar-tender-details .slider-modal-body,
+#infobar-settings-sidebar-tender-details .contentbar-new.loader-qrimg {
+    height: 100%;
+    max-height: 100vh;
+    min-height: 0;
+    overflow: hidden !important;
+    box-sizing: border-box;
+}
+#infobar-settings-sidebar-tender-details .contentbar-new.loader-qrimg > .row {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 100vh;
+    min-height: 0;
+    width: min(100%, 850px);
+    margin: 0 auto;
+    padding: 8px 12px 0;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+#infobar-settings-sidebar-tender-details .loader-qrimg > .row > .col-lg-4:nth-child(3) {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
+    padding: 0;
+}
+#infobar-settings-sidebar-tender-details .email-rightbar {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
+    margin: 0;
+}
+#infobar-settings-sidebar-tender-details #tenderpage {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    margin: 0;
+    overflow: hidden;
+}
+#infobar-settings-sidebar-tender-details #tenderpage > .card-header {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 8px 48px 8px 14px;
+}
+#infobar-settings-sidebar-tender-details #tenderpage > .card-body.posnic-payment-redesign {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    padding: 8px 12px;
+    overflow: hidden;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-redesign .posnic-pay-summary {
+    display: grid;
+    flex: 0 1 auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 6px 10px;
+    min-height: 0;
+    margin: 0 0 6px;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-redesign .posnic-pay-total {
+    grid-column: 1;
+    grid-row: 1;
+    padding: 8px 12px;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-redesign .posnic-pay-total > span,
+#infobar-settings-sidebar-tender-details .posnic-payment-redesign .posnic-pay-entered label {
+    margin-bottom: 3px;
+    font-size: 11px;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-redesign .posnic-pay-total strong {
+    font-size: clamp(22px, 2.1vw, 30px);
+    line-height: 1.1;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-redesign .posnic-pay-entered {
+    grid-column: 1;
+    grid-row: 2;
+    padding: 5px 12px;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-redesign .posnic-pay-entered input {
+    height: 38px;
+    font-size: clamp(20px, 2vw, 27px);
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-split-summary {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: stretch;
+    min-width: 0;
+    margin: 0;
+    padding: 8px 10px;
+    overflow: hidden;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-split-heading {
+    gap: 4px;
+    margin-bottom: 4px;
+    font-size: 12px;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-split-heading small {
+    font-size: 10px;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-split-lines {
+    gap: 3px;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-split-row {
+    gap: 6px;
+    padding-top: 3px;
+    font-size: 11px;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-split-footer {
+    gap: 6px;
+    margin-top: 5px;
+    padding-top: 5px;
+    font-size: 11px;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-redesign .posnic-pay-methods {
+    flex: 0 0 auto;
+    margin: 4px 0 6px;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-redesign .posnic-pay-methods > strong {
+    margin-bottom: 5px;
+    font-size: 11px;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-redesign #payment_id {
+    gap: 6px;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-redesign #payment_id .btn {
+    min-height: 38px;
+    padding: 6px 8px;
+    font-size: 12px;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-redesign .posnic-pay-due {
+    flex: 0 0 auto;
+    min-height: 44px;
+    margin-top: 0;
+    padding: 7px 12px;
+    font-size: 12px;
+}
+#infobar-settings-sidebar-tender-details .posnic-payment-redesign .posnic-pay-due strong {
+    font-size: 18px;
+}
+#infobar-settings-sidebar-tender-details .cancel-save-hide-show {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 10px;
+    margin: 0;
+    padding: 8px 12px 10px;
+    background: #fff;
+    border-top: 1px solid var(--posnic-border, #e2e8f0);
+}
+#infobar-settings-sidebar-tender-details .cancel-save-hide-show > button {
+    flex: 1 1 0;
+    width: auto !important;
+    min-height: 44px;
+    margin: 0;
+    border-radius: 9px;
+    font-weight: 750;
+}
+#infobar-settings-sidebar-tender-details #save_btn {
+    color: #fff !important;
+    background: #16834a !important;
+    border: 1px solid #16834a !important;
+    box-shadow: 0 3px 8px rgba(22, 131, 74, .2);
+}
+#infobar-settings-sidebar-tender-details #save_btn:hover,
+#infobar-settings-sidebar-tender-details #save_btn:focus {
+    color: #fff !important;
+    background: #116b3b !important;
+    border-color: #116b3b !important;
+}
+#infobar-settings-sidebar-tender-details .cancel-save-hide-show .infobar-tender-close {
+    color: #334155;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+}
+@media (max-height: 650px) {
+    #infobar-settings-sidebar-tender-details .contentbar-new.loader-qrimg > .row {
+        padding-top: 4px;
+    }
+    #infobar-settings-sidebar-tender-details #tenderpage > .card-header {
+        min-height: 38px;
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+    #infobar-settings-sidebar-tender-details #tenderpage > .card-body.posnic-payment-redesign {
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+    #infobar-settings-sidebar-tender-details .posnic-payment-redesign .posnic-pay-total,
+    #infobar-settings-sidebar-tender-details .posnic-payment-redesign .posnic-pay-entered,
+    #infobar-settings-sidebar-tender-details .posnic-payment-split-summary {
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+    #infobar-settings-sidebar-tender-details .posnic-payment-redesign #payment_id .btn {
+        min-height: 34px;
+        padding-top: 4px;
+        padding-bottom: 4px;
+    }
+    #infobar-settings-sidebar-tender-details .cancel-save-hide-show {
+        padding-top: 5px;
+        padding-bottom: 6px;
+    }
+}
+@media (max-width: 560px) {
+    #infobar-settings-sidebar-tender-details .posnic-payment-redesign .posnic-pay-summary {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto auto auto;
+    }
+    #infobar-settings-sidebar-tender-details .posnic-payment-redesign .posnic-pay-total,
+    #infobar-settings-sidebar-tender-details .posnic-payment-redesign .posnic-pay-entered,
+    #infobar-settings-sidebar-tender-details .posnic-payment-split-summary {
+        grid-column: 1;
+        grid-row: auto;
+    }
+    #infobar-settings-sidebar-tender-details .posnic-payment-split-summary {
+        display: none;
+    }
+}
 </style>
 
 <script id="posnic-payment-split-runtime">
