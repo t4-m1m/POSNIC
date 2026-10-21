@@ -299,11 +299,12 @@
     function update(capabilities, kind) {
         caps=capabilities;
         el('food-extra').hidden=!caps.restaurant || kind==='service'; el('tax-extra').hidden=true;
-        el('service-unit').parentElement.hidden=kind!=='service'; el('variants').hidden=false; el('variant-editor').hidden=false;
+        el('service-unit').parentElement.hidden=kind!=='service'; el('variants').hidden=false; el('variant-editor').hidden=kind==='service' || !el('has-variants').checked; el('quantity-row').hidden=kind==='service' || el('has-variants').checked;
         ['food-extra','tax-extra','variants'].forEach(function(id){el(id).querySelectorAll('input,select,textarea,button').forEach(function(input){input.disabled=el(id).hidden;});});
         ['reorder','purchase-unit','pack-size','weight'].forEach(function(id){el(id).closest(id==='weight'?'label':'div').hidden=kind==='service';});
         ['plu','sku','barcode','gtin','alt-barcodes','same-sku'].forEach(function(id){el(id).disabled=isFamily();});
-        el('variant-editor').querySelectorAll('input,select,button').forEach(function(input){input.disabled=kind==='service';});
+        el('variant-editor').querySelectorAll('input,select,button').forEach(function(input){input.disabled=kind==='service' || el('variant-editor').hidden;});
+        el('quantity').disabled=kind==='service' || el('has-variants').checked;
         el('weight').closest('label').hidden=!caps.weight || kind==='service';
         el('weight').disabled=!caps.weight || kind==='service';
         el('discount').max=val('discount-type')==='percentage'?'100':'';
@@ -377,6 +378,12 @@
             notify();
         });
         el('hsn').addEventListener('focus', hsnSuggestions);
+        el('has-variants').addEventListener('change', function () {
+            captureVariants();
+            if (!el('has-variants').checked) { variants=[]; signature=''; el('variant-rows').replaceChildren(); }
+            update(caps, document.querySelector('#items_v2 [name="iv2-kind"]:checked').value);
+            notify();
+        });
         el('form').addEventListener('click', function (event) {
             if (!event.target.closest('#iv2-generate-barcode')) return;
             try {

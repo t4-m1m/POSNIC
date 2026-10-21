@@ -114,6 +114,7 @@ class RegisterService {
       ? rawCashDetails[0] || {}
       : rawCashDetails || {};
     const saleDetails = sourceData.sale_details || [];
+    const debtPaymentDetails = sourceData.debt_payment_details || [];
 
     const counted_amount = commonDetails.counted_amount || 0;
 
@@ -163,6 +164,8 @@ class RegisterService {
         common_details: commonDetails,
         cash_details: cashDetails,
         sale_details: saleDetails,
+        debt_payment_details: debtPaymentDetails,
+        debt_payment_total: Number(sourceData.debt_payment_total) || 0,
         calculated: {
           counted_amount,
           pendingtotal,

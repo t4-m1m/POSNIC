@@ -304,6 +304,11 @@ PosnicPro.registerproductreport = {
                         $("#register_report_cashin").html(currency + '&nbsp;<span class="number">' + cashData[i].cashin_amount + '</span>');
                         $("#register_report_cashout").html(currency + '&nbsp;<span class="number">' + cashData[i].cashout_amount + '</span>');
                     }
+                    var debtTenderTotals = { cash: 0, card: 0, tpe: 0, baridimob: 0, bank_transfer: 0, other: 0 };
+                    (response.data.debt_payment_details || []).forEach(function (payment) {
+                        var method = String(payment.payment_mode || '').toLowerCase();
+                        if (Object.prototype.hasOwnProperty.call(debtTenderTotals, method)) debtTenderTotals[method] += Number(payment.amount) || 0;
+                    });
                     var saleData = response.data.sale_details;
                     var refund = 0;
                     var count = 0;
@@ -332,6 +337,13 @@ PosnicPro.registerproductreport = {
                         }
 
                     }
+                    cash += debtTenderTotals.cash;
+                    $('#register_report_cash').html(currency + '&nbsp;<span class="number">' + cash + '</span>');
+                    $('#register_report_card').html(currency + '&nbsp;<span class="number">' + (cheque + debtTenderTotals.card) + '</span>');
+                    $('#register_report_tpe').html(currency + '&nbsp;<span class="number">' + debtTenderTotals.tpe + '</span>');
+                    $('#register_report_baridimob').html(currency + '&nbsp;<span class="number">' + debtTenderTotals.baridimob + '</span>');
+                    $('#register_report_bank_transfer').html(currency + '&nbsp;<span class="number">' + debtTenderTotals.bank_transfer + '</span>');
+                    $('#register_report_other_debt').html(currency + '&nbsp;<span class="number">' + debtTenderTotals.other + '</span>');
                     let payment_report = parseFloat(total) + parseFloat(refund);
                     let recive_payement = parseFloat(payment_report) - parseFloat(pendingtotal);
                     let total_amount = parseFloat(total) - parseFloat(pendingtotal);

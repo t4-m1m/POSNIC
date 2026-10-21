@@ -1643,6 +1643,29 @@ class RegisterRepository {
         cashout_amount: doc.cashout_amount,
       }));
 
+      // Debt collections belong to the date received, not the original sale date.
+      // Keep this separate from sales so tender totals update without rewriting
+      // historical sales totals or transaction counts.
+      const debtPaymentQuery = {
+        license: this.model.licenseId || BaseModel.license,
+        received_at: { $gte: new Date(fromDate), $lte: new Date(toDate) },
+      };
+      if (this.model.branchId && ObjectId.isValid(String(this.model.branchId))) {
+        debtPaymentQuery.branch_id = new ObjectId(this.model.branchId);
+      }
+      if (data.register_id) debtPaymentQuery.register_id = new ObjectId(data.register_id);
+      const debtPaymentList = await (await this.model.getCollection('credit_payments')).aggregate([
+        { $match: debtPaymentQuery },
+        { $group: { _id: '$method', amount: { $sum: '$amount' }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]).toArray();
+      const debtPaymentDetails = debtPaymentList.map((doc) => ({
+        payment_mode: String(doc._id || 'other').toLowerCase(),
+        amount: Number(doc.amount) || 0,
+        count: Number(doc.count) || 0,
+      }));
+      const debtPaymentTotal = debtPaymentDetails.reduce((sum, row) => sum + row.amount, 0);
+
       // Common details aggregation
       const commonList = await collection
         .aggregate([
@@ -1686,6 +1709,8 @@ class RegisterRepository {
         common_details: commonData,
         cash_details: cashData,
         sale_details: tableData,
+        debt_payment_details: debtPaymentDetails,
+        debt_payment_total: debtPaymentTotal,
       };
 
       return {

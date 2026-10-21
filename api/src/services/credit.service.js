@@ -210,7 +210,7 @@ class CreditService {
     if (!ObjectId.isValid(String(customerId || ''))) throw new Error('Invalid customer ID');
     const amount = round2(input.amount);
     if (!(amount > 0)) throw new Error('Enter a payment amount greater than zero');
-    const methodMap = { cash: 'cash', card: 'card', bank_transfer: 'bank_transfer', other: 'other' };
+    const methodMap = { cash: 'cash', card: 'card', tpe: 'tpe', baridimob: 'baridimob', bank_transfer: 'bank_transfer', other: 'other' };
     const method = methodMap[String(input.method || 'cash').toLowerCase()];
     if (!method) throw new Error('Choose a valid payment method');
     const db = await BaseModel.getDb();
@@ -221,11 +221,10 @@ class CreditService {
     const transactions = await db.collection('transaction').find(query).sort({ created_date: 1, _id: 1 }).toArray();
     const due = round2(transactions.reduce((sum, row) => sum + Math.max(0, Number(row.pending) || 0), 0));
     if (amount > due + 0.009) throw new Error('Payment exceeds the customer’s outstanding balance');
-    // Use the active cashier's till journal when one is open, but do not
-    // block debt collection outside a live till session. The credit ledger and
-    // original sale balances remain the authoritative receivable records.
+    // Associate each collection with the current cashier session for daily tender
+    // reporting. Only cash collections affect the physical drawer journal.
     let cashRegister = null;
-    if (method === 'cash' && ctx.userId) {
+    if (ctx.userId) {
       const registerQuery = { license: BaseModel.license, register_status: 'Opened', current_user_id: oid(ctx.userId) };
       if (ctx.branchId) registerQuery.branch_id = oid(ctx.branchId);
       cashRegister = await db.collection('cashregister').findOne(registerQuery, { projection: { _id: 1 } });
@@ -282,21 +281,8 @@ class CreditService {
           // Keep tender reporting in sync as well as the sale's balance and
           // auditable payment history. The sales collection supports both old
           // array-shaped and newer object-shaped multi-payment values.
-          const multi = {};
-          if (Array.isArray(sale.multi_payment)) {
-            sale.multi_payment.forEach((entry) => {
-              if (!entry || typeof entry !== 'object') return;
-              const key = String(entry.payment_mode || entry.method || '').trim();
-              const value = Number(entry.sale_payment != null ? entry.sale_payment : entry.amount) || 0;
-              if (key) multi[key] = (Number(multi[key]) || 0) + value;
-            });
-          } else if (sale.multi_payment && typeof sale.multi_payment === 'object') {
-            Object.keys(sale.multi_payment).forEach((key) => { multi[key] = Number(sale.multi_payment[key]) || 0; });
-          }
-          const creditKey = Object.keys(multi).find((key) => key.toLowerCase() === 'credit');
-          if (creditKey) multi[creditKey] = round2(Math.max(0, multi[creditKey] - paid));
-          multi[method] = round2((Number(multi[method]) || 0) + paid);
-          // Optimistic compare-and-set on the original sale prevents two
+/* Preserve original sale-day tender classification; this collection is dated today. */
+                    // Optimistic compare-and-set on the original sale prevents two
           // simultaneous collections from spending the same outstanding balance.
           const guardedSaleQuery = { ...saleQuery };
           if (sale.payment_pending == null) guardedSaleQuery.payment_pending = { $exists: false };
@@ -305,8 +291,6 @@ class CreditService {
             $set: {
               payment_pending: nextSalePending,
               payment_status: nextSalePending <= 0 ? 'Paid' : 'Partialy Paid',
-              payment_mode: Object.keys(multi).filter((key) => Number(multi[key]) > 0).join(',') || method,
-              multi_payment: multi,
               updated_date: now,
               last_debt_payment_date: now,
             },
