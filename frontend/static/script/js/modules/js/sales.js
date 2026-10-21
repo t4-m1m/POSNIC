@@ -8745,7 +8745,7 @@ PosnicPro.sales.brandMenu = {
     listBrands: function () {
         var generation = (PosnicPro.sales._catalogueGeneration || 0) + 1;
         PosnicPro.sales._catalogueGeneration = generation;
-        var $loader = $(".loader-category");
+        var $loader = $("#sales_new_brandList");
         $loader.find(".loadingSpinner").remove();
         $("<div class='loadingSpinner'></div>").appendTo($loader);
         $('#sales_new_productList, #sales_new_categoryList').hide();
@@ -8778,7 +8778,10 @@ PosnicPro.sales.brandMenu = {
         }
 
         var cached = PosnicPro.sales._brandTilesCache;
-        if (Array.isArray(cached)) { render(cached); return; }
+        if (cached && Array.isArray(cached.brands) && Date.now() - cached.at < 30000) {
+            render(cached.brands);
+            return;
+        }
         var brands = [], seen = Object.create(null);
         function load(offset) {
             if (generation !== PosnicPro.sales._catalogueGeneration) return;
@@ -8800,7 +8803,7 @@ PosnicPro.sales.brandMenu = {
                 var next = Number.isInteger(data.next_offset) && data.next_offset > offset ? data.next_offset : null;
                 if (next !== null) { load(next); return; }
                 brands.sort(function (a, b) { return a.localeCompare(b, undefined, { sensitivity: 'base' }); });
-                PosnicPro.sales._brandTilesCache = brands.slice();
+                PosnicPro.sales._brandTilesCache = { brands: brands.slice(), at: Date.now() };
                 render(brands);
             }, function () {
                 if (generation !== PosnicPro.sales._catalogueGeneration) return;
@@ -8822,7 +8825,7 @@ PosnicPro.sales.categoryMenu = {
      * -------------------------- */
     listCategories: function () {
         PosnicPro.sales._catalogueGeneration = (PosnicPro.sales._catalogueGeneration || 0) + 1;
-        var loader = $(".loader-category");
+        var loader = $("#sales_new_categoryList");
         $("<div class='loadingSpinner'></div>").appendTo(loader);
 
         $('#sales_new_productList, #sales_new_brandList').hide();
@@ -11937,8 +11940,9 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
         }
         if ((e.key === 'Enter' || e.keyCode === 13) && inside &&
             !e.repeat && !e.isComposing && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
-            // The selector is the only editable control in this popup. Confirm
-            // through the same validation and checkout continuation as the button.
+            // Preserve native Enter activation for explicit buttons/links (notably
+            // Cancel); the selector and the popup body use this confirmation path.
+            if (e.target && e.target.closest && e.target.closest('button, a')) return;
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
