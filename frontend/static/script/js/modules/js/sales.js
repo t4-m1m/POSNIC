@@ -8743,7 +8743,9 @@ PosnicPro.sales.brandMenu = {
         var generation = (PosnicPro.sales._catalogueGeneration || 0) + 1;
         PosnicPro.sales._catalogueGeneration = generation;
         var $loader = $("#sales_new_brandList");
-        $loader.find(".loadingSpinner").remove();
+        // Start from a clean, scoped panel so retrying after a network error
+        // cannot leave an old error message behind the successfully loaded grid.
+        $loader.empty();
         $("<div class='loadingSpinner'></div>").appendTo($loader);
         $('#sales_new_productList, #sales_new_categoryList').hide();
         $('#sales_new_brandList').show();
