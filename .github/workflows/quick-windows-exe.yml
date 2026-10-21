@@ -1,6 +1,6 @@
 name: Quick Windows Installer EXE (no tests)
 # Build the current feature-branch snapshot as the Windows installer only; deliberately no test steps.
-# Re-triggered to request a fresh installer build after stale queued runs.
+# Authorized installer build for the current payment-modal changes; restore manual-only after completion.
 
 on:
   workflow_dispatch:
