@@ -1840,6 +1840,25 @@ class SalesController extends BaseController {
         serving_periods: servingPeriods || [],
       };
 
+      // Debt collections are cash flow received during this report period.
+      // Keep them separate from sales revenue so the original sale is never counted twice.
+      const db = await BaseModel.getDb();
+      const debtPaymentRows = await db.collection('credit_payments').aggregate([
+        { $match: {
+          license: BaseModel.license || req.user.license || req.user.license_id,
+          branch_id: branchObjectId,
+          received_at: { $gte: new Date(filteredDateRange.start_date), $lte: new Date(filteredDateRange.end_date) },
+        } },
+        { $group: { _id: '$method', amount: { $sum: '$amount' }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]).toArray();
+      const debtPaymentDetails = debtPaymentRows.map((row) => ({
+        payment_mode: String(row._id || 'other').toLowerCase(),
+        amount: roundToTwo(row.amount || 0),
+        count: Number(row.count) || 0,
+      }));
+      const debtPaymentTotal = roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + row.amount, 0));
+
       // Debt created by bills in this report period. This is receivable,
       // not money collected, so it is separate from payment_details.
       const outstandingAmount = salesPayments.reduce(
@@ -1852,6 +1871,8 @@ class SalesController extends BaseController {
         branch_details: branchDetails,
         product_details: productDetails,
         payment_details: paymentDetails,
+        debt_payment_details: debtPaymentDetails,
+        debt_payment_total: debtPaymentTotal,
         outstanding_amount: roundToTwo(outstandingAmount),
         dine_details: dineDetails,
         tax_details: taxDetails,
