@@ -3,6 +3,8 @@ name: Quick Windows Installer EXE (no tests)
 # Manual-only installer build; workflow_dispatch is the only trigger.
 
 on:
+  push:
+    branches: [backup/working-baseline-2026-10-21]
   workflow_dispatch:
 
 permissions:

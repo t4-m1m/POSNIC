@@ -740,6 +740,7 @@ PosnicPro.items = {
             + (low ? '<span class="rs-pill unpaid"><lang class="lang_low_stock">Low stock</lang></span>' : '')
             + '<span class="ml-auto"></span>'
             + '<button type="button" class="btn btn-sm btn-light" data-module="item" data-access="write" onclick="hasher.setHash(\'items/' + esc(id) + '/edit\');"><i class="feather icon-edit-2 mr-1"></i>Edit</button>'
+            + (real(d.barcode_id) ? '<button type="button" class="btn btn-sm btn-light" title="Quick print price labels" aria-label="Quick print price labels" onclick="PosnicPro.items.quickPrintLabels(\'' + esc(id) + '\');"><i class="feather icon-printer mr-1"></i>Price labels</button>' : '')
             + '<div class="btn-group">'
             + '<button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><lang class="lang_tab_more">More</lang></button>'
             + '<div class="dropdown-menu dropdown-menu-right">'
@@ -2824,6 +2825,58 @@ PosnicPro.items = {
                 }
             });
         }
+    },
+
+    quickPrintLabels: function (id) {
+        id = String(id || '');
+        if (!id || !window.PosnicShelfLabels || typeof window.PosnicShelfLabels.quickPrint !== 'function') return;
+        var modalId = 'quick_price_label_modal';
+        if (!$('#' + modalId).length) {
+            $('body').append(
+                '<div class="modal fade" id="' + modalId + '" tabindex="-1" role="dialog" aria-labelledby="quick_price_label_title" aria-hidden="true">' +
+                '<div class="modal-dialog modal-sm modal-dialog-centered" role="document"><div class="modal-content">' +
+                '<div class="modal-header"><h5 class="modal-title" id="quick_price_label_title"><i class="feather icon-printer mr-2"></i>Print price labels</h5>' +
+                '<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>' +
+                '<div class="modal-body"><div class="form-group mb-0"><label for="quick_price_label_copies">Number of copies</label>' +
+                '<input type="number" class="form-control" id="quick_price_label_copies" min="1" max="999" step="1" value="1" inputmode="numeric" autocomplete="off">' +
+                '<small class="form-text text-danger" id="quick_price_label_error" role="alert" style="display:none"></small></div></div>' +
+                '<div class="modal-footer"><button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>' +
+                '<button type="button" class="btn btn-primary" id="quick_price_label_confirm"><i class="feather icon-printer mr-1"></i>Print</button></div>' +
+                '</div></div></div>'
+            );
+            $('#quick_price_label_modal').on('shown.bs.modal', function () {
+                $('#quick_price_label_copies').trigger('focus').trigger('select');
+            });
+            $('#quick_price_label_modal').on('hidden.bs.modal', function () {
+                $('#quick_price_label_confirm').prop('disabled', false).html('<i class="feather icon-printer mr-1"></i>Print');
+                $('#quick_price_label_error').hide().text('');
+            });
+            $('#quick_price_label_copies').on('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); $('#quick_price_label_confirm').trigger('click'); }
+            });
+            $('#quick_price_label_confirm').on('click', function () {
+                var copies = Number($('#quick_price_label_copies').val());
+                if (!Number.isInteger(copies) || copies < 1 || copies > 999) {
+                    $('#quick_price_label_error').text('Enter a whole number between 1 and 999.').show();
+                    $('#quick_price_label_copies').trigger('focus').trigger('select');
+                    return;
+                }
+                var selectedId = String($('#quick_price_label_modal').data('item-id') || '');
+                if (!selectedId) return;
+                $('#quick_price_label_error').hide().text('');
+                $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span>Printing…');
+                Promise.resolve(window.PosnicShelfLabels.quickPrint(selectedId, copies)).then(function () {
+                    $('#quick_price_label_modal').modal('hide');
+                }).catch(function (error) {
+                    $('#quick_price_label_error').text(error && error.message ? error.message : 'Could not print labels.').show();
+                    $('#quick_price_label_confirm').prop('disabled', false).html('<i class="feather icon-printer mr-1"></i>Print');
+                });
+            });
+        }
+        $('#quick_price_label_modal').data('item-id', id);
+        $('#quick_price_label_copies').val(1);
+        $('#quick_price_label_error').hide().text('');
+        $('#quick_price_label_modal').modal('show');
     },
 
     printLableView: function (id) {

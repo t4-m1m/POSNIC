@@ -606,6 +606,97 @@
         } catch (e) { error(e); }
         return false;
     }
+
+    function quickPrintSettings() {
+        var saved = {};
+        try { saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-layout') || '{}') || {}; } catch (_) {}
+        $('#sl-paper').val(['a4', 'roll'].includes(saved.paper) ? saved.paper : 'roll');
+        $('#sl-width').val(Number.isFinite(Number(saved.width)) && Number(saved.width) > 0 ? Number(saved.width) : 45);
+        $('#sl-height').val(Number.isFinite(Number(saved.height)) && Number(saved.height) > 0 ? Number(saved.height) : 30);
+        $('#sl-margin').val(Number.isFinite(Number(saved.margin)) ? Number(saved.margin) : 0);
+        $('#sl-gap').val(Number.isFinite(Number(saved.gap)) ? Number(saved.gap) : 0);
+        $('#sl-start').val(Number.isFinite(Number(saved.start)) ? Number(saved.start) : 1);
+        $('#sl-guides').prop('checked', saved.guides === true);
+        $('#sl-date').prop('checked', saved.date === true);
+        $('#sl-shop').prop('checked', saved.shop === true);
+        $('#sl-mrp').prop('checked', saved.mrp === true);
+        $('#mfg_checkbox').prop('checked', saved.mfg === true);
+        $('#exp_checkbox').prop('checked', saved.exp === true);
+        $('#sl-show-barcode').prop('checked', saved.barcode !== false);
+        $('#sl-bar-text').prop('checked', saved.barText !== false);
+        if (saved.design) {
+            var d = saved.design;
+            Object.entries({ font: 'font', fontSize: 'bar-fontSize', ink: 'line-color', background: 'background-color', format: 'barcodeLabelType', barWidth: 'bar-width', barHeight: 'bar-height', barMargin: 'bar-margin', textMargin: 'bar-text-margin', top: 'margin_top', bottom: 'margin_bottom', left: 'margin_left', right: 'margin_right' }).forEach(function (pair) {
+                if (d[pair[0]] !== undefined) $('#' + pair[1]).val(d[pair[0]]);
+            });
+            if (['left', 'center', 'right'].includes(d.align)) $('#view_print_lable .text-align').removeClass('btn-primary').filter('[value="' + d.align + '"]').addClass('btn-primary');
+            $('#view_print_lable .font-option').each(function () {
+                $(this).toggleClass('btn-primary', typeof d.fontOptions === 'string' && d.fontOptions.split(' ').includes(this.value));
+            });
+        }
+        state.elementLayout = readElementLayout();
+        state.enabledFields = Array.isArray(saved.enabledFields) ? saved.enabledFields.slice() : readEnabledFields();
+        return settings();
+    }
+    async function quickPrint(id, copies) {
+        id = String(id || '');
+        copies = Number(copies);
+        if (!id) throw Error('Select an article first.');
+        if (!Number.isInteger(copies) || copies < 1 || copies > 999) throw Error('Copies must be between 1 and 999.');
+        var s = quickPrintSettings(), g = geometry(s);
+        var item = await request({ url: 'items/' + encodeURIComponent(id), data: { label_pricing: 'true' } });
+        if (!item || !item._id) throw Error('Could not load the selected article.');
+        if (s.barcode !== false && s.enabledFields.includes('barcode') && !item.barcode_id) throw Error('This article has no saved barcode.');
+        if (String(item.variant_parent_name || '').trim()) {
+            try {
+                var parent = String(item.variant_parent_name).trim();
+                var siblings = await request({ url: 'items', data: { page: 1, limit: 100, filters: JSON.stringify({ variant_parent_name: parent }), label_pricing: 'true' } });
+                var rows = Array.isArray(siblings.list) ? siblings.list : [];
+                var values = Array.from(new Set(rows.map(function (row) { return String(row.variant_value || '').trim(); }).filter(Boolean)));
+                var axes = {};
+                function splitParts(value) { return String(value || '').split(/\s*\/\s*|\s*,\s*/).map(function (part) { return part.trim(); }).filter(Boolean); }
+                rows.forEach(function (row) {
+                    var axisParts = splitParts(row.variant_axis), valueParts = splitParts(row.variant_value);
+                    axisParts.forEach(function (axis, index) {
+                        var value = valueParts[index];
+                        if (!axis || !value) return;
+                        var canonical = axis.toLocaleLowerCase();
+                        var key = Object.keys(axes).find(function (existing) { return existing.toLocaleLowerCase() === canonical; }) || axis;
+                        if (!axes[key]) axes[key] = [];
+                        if (!axes[key].some(function (existing) { return existing.toLocaleLowerCase() === value.toLocaleLowerCase(); })) axes[key].push(value);
+                    });
+                });
+                item.available_variant_values = values;
+                item.available_variant_options = axes;
+            } catch (_) { /* Keep the selected article printable if sibling lookup is unavailable. */ }
+        }
+        var entries = [{ item: item, copies: copies }];
+        var pageCount = Math.ceil((g.start - 1 + copies) / g.capacity), html = '';
+        for (var page = 0; page < pageCount; page++) {
+            var pageSlots = slots(entries, g, page, 1, copies);
+            html += sheet(root.document, pageSlots.cells, s, root.JsBarcode).outerHTML;
+        }
+        var printer = root.electronAPI && root.electronAPI.printer;
+        var selectedPrinter = 'default';
+        try { selectedPrinter = root.localStorage.getItem('posnic.shelf-label-printer') || 'default'; } catch (_) {}
+        if (printer && typeof printer.print === 'function') {
+            var pageWidth = s.paper === 'a4' ? 210 : s.width;
+            var pageHeight = s.paper === 'a4' ? 297 : s.height;
+            var documentHtml = '<!doctype html><html><head><meta charset="utf-8"><title>Price labels</title><style>' + css(s, g) + '</style></head><body>' + html + '</body></html>';
+            var result = await printer.print(documentHtml, {
+                printerName: selectedPrinter === 'default' ? '' : selectedPrinter,
+                pageSize: 'custom', customPageSize: { width: pageWidth, height: pageHeight },
+                copies: 1, silent: true, strictPrinter: true, forceHtml: true,
+                printBackground: true, margins: { marginType: 'none' }
+            });
+            if (!result || !result.success) throw Error(result && result.error || 'Label printing failed.');
+            return result;
+        }
+        if (typeof root.printJS !== 'function') throw Error('Printing is not available in this POSNIC window.');
+        root.printJS({ printable: html, type: 'raw-html', style: css(s, g), scanStyles: false, documentTitle: 'Price labels' });
+        return true;
+    }
+
     function init() {
         if (!root.jQuery || !root.document) return;
         $(root.document).on('click', '[data-sl-step]', function () { setStep(Number(this.getAttribute('data-sl-step'))); });
@@ -859,5 +950,5 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
         $(root.document).on('change', '#sl-paper', function () { $('#sl-start').val(1); refresh(); });        $(root).on('resize', function () { if (state.step > 0) refresh(); });
     }
     init();
-    return { geometry: geometry, count: count, slots: slots, css: css, label: label, sheet: sheet, open: open, print: print, refresh: refresh };
+    return { geometry: geometry, count: count, slots: slots, css: css, label: label, sheet: sheet, open: open, print: print, quickPrint: quickPrint, refresh: refresh };
 });
