@@ -8119,10 +8119,7 @@ PosnicPro.sales.itemsMenu = {
                 });
                 PosnicPro.alert(response.type, response.message || PosnicPro.i18n.t('lang_could_not_load_items_try_again', 'Could not load items - try again.'));
             }
-        }, function (xhr) {
-            var response = jQuery.parseJSON(xhr.responseText);
-            PosnicPro.alert(response.type, response.message);
-        });
+        }, brandName);
     },
     /* One tile for the whole family: parent name, "from" price when the
        members differ, combined stock, a variant-count badge. */
