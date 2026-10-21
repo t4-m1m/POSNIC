@@ -242,38 +242,12 @@
                                         class="select2 items_category items_choose_error" aria-label="Items category" data-t-aria-label="lang_items_category">
                                     </select>
                                 </div>
-                                <div class="form-group col-md-6">
-                                    <label class="form-control-placeholder items-label-inline" for="items_supplier">
-                                        <lang class="lang_choosesupplier_title">Select Supplier</lang>
-                                    </label>
-                                    <!-- Optional (IC1): items routinely arrive without a known
-                                         supplier; receiving is the supplier system of record.
-
-                                         A select2 like Category (owner ask), not a bare
-                                         autocomplete: the list is loaded up front so it opens
-                                         showing real suppliers, and typing filters what is
-                                         already there. An autocomplete that shows nothing until
-                                         you guess a name is only useful to someone who already
-                                         knows what they are looking for.
-
-                                         The two hidden fields stay exactly as they were, so
-                                         every payload builder and edit-fill in items.js keeps
-                                         reading the same ids. -->
-                                    <select id="items_supplier_pick" class="select2 items_supplier_pick"
-                                        style="width:100%;" aria-label="Items supplier pick" data-t-aria-label="lang_items_supplier_pick"></select>
+                                <div hidden aria-hidden="true">
                                     <input type="hidden" id="items_supplier" name="items_supplier">
                                     <input type="hidden" name="items_supplier_id" id="items_supplier_id">
                                 </div>
                             </div>
-<fieldset id="item_stock_policy" class="item-stock-policy"><legend><lang class="lang_item_stock_behavior">Stock & selling</lang></legend><div class="form-row"><div class="form-group col-md-6" id="item_opening_wrap">
-                                    <label class="form-control-placeholder" for="items_available_quantity">
-                                        <lang class="lang_openquantity_title"> In stock (opening) </lang>
-                                    </label>
-                                    <input inputmode="decimal" type="text" class="form-control allow_decimal text-right clear_text_item"
-                                        id="items_available_quantity" name="items_available_quantity" min="0"
-                                        minlength="1" maxlength="10" value="0" placeholder="Available Quantity" data-t-placeholder="lang_availablequatity_title"
-                                        autocomplete="off">
-                                <small id="item_stock_status" class="form-text" role="status"></small></div><div class="form-group col-md-6">
+<fieldset id="item_stock_policy" class="item-stock-policy"><legend><lang class="lang_item_stock_behavior">Stock & selling</lang></legend><div class="form-row"><div class="form-group col-md-6">
                                         <input type="checkbox" class="custom-control-input" id="item_track_inventory"
                                             name="item_track_inventory" checked>
                                         <label class="custom-control-label" for="item_track_inventory">
@@ -319,14 +293,8 @@
                                             id="items_company_price" name="items_company_price" minlength="1"
                                             maxlength="7" value="0.00" placeholder="Cost" data-t-placeholder="lang_companyamount_title" autocomplete="off">
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-control-placeholder" for="items_mrp_price">
-                                            <lang class="lang_m_r_p"> M.R.P </lang>
-                                        </label>
-                                        <input inputmode="decimal" type="text"
-                                            class="form-control allow_decimal text-right clear_text_item hide_price_digit"
-                                            id="items_mrp_price" name="items_mrp_price" minlength="1" maxlength="7"
-                                            value="0.00" placeholder="M.R.P" autocomplete="off">
+                                    <div hidden aria-hidden="true">
+                                        <input type="hidden" id="items_mrp_price" name="items_mrp_price" value="0.00">
                                     </div>
                                 </div>
                                 <div class="row">
@@ -420,6 +388,15 @@
                                             name="items_gtin" maxlength="14" inputmode="numeric"
                                             placeholder="e.g. 5000159484695" autocomplete="off">
                                         <small id="items_gtin_hint" class="form-text text-muted" style="min-height:18px;"></small>
+                                    </div>
+                                </div>
+                                <div class="form-row m-t-10" id="item_opening_wrap">
+                                    <div class="form-group col-md-6">
+                                        <label class="form-control-placeholder" for="items_available_quantity">Quantité en stock</label>
+                                        <input inputmode="decimal" type="number" class="form-control allow_decimal text-right clear_text_item"
+                                            id="items_available_quantity" name="items_available_quantity" min="0" step="any"
+                                            maxlength="10" value="0" placeholder="Quantité en stock" autocomplete="off">
+                                        <small id="item_stock_status" class="form-text" role="status"></small>
                                     </div>
                                 </div>
                             </div>
