@@ -307,11 +307,15 @@ PosnicPro.quickreport = {
           ? response.data.debt_payment_details : [];
         var debtMethodLabels = { cash: 'Cash', card: 'Card', tpe: 'TPE', baridimob: 'BaridiMob', bank_transfer: 'Bank Transfer', other: 'Other' };
         paymentData = paymentData.slice();
-        debtPaymentData.forEach(function (debt) {
-          var raw = String(debt.payment_mode || 'other').toLowerCase();
-          var label = debtMethodLabels[raw] || raw;
-          paymentData.push({ payment_mode: label, sale_payment: safeNum(debt.amount), is_debt_collection: true });
-        });
+        // Debt repayments are cash collected during the day, not new sales.
+        // Add their aggregate to Cash exactly once; retain method details separately for the debt block.
+        var debtPaymentTotal = safeNum(response.data && response.data.debt_payment_total);
+        if (!debtPaymentTotal && debtPaymentData.length) {
+          debtPaymentTotal = debtPaymentData.reduce(function (sum, debt) { return sum + safeNum(debt.amount); }, 0);
+        }
+        if (debtPaymentTotal > 0 && !paymentData.some(function (payment) { return payment.is_debt_collection; })) {
+          paymentData.push({ payment_mode: 'Cash', sale_payment: debtPaymentTotal, is_debt_collection: true });
+        }
         $("#daily_report_tender_details tbody").children("tr").remove();
         var tenderTotal = 0;
         var paymentHeaderRow = ["paymentMode", "amount"];
@@ -415,7 +419,8 @@ PosnicPro.quickreport = {
           gross_profit: safeNum(profit),
           sales_count: response.data && (response.data.sales_count != null ? response.data.sales_count : response.data.number_of_sales != null ? response.data.number_of_sales : response.data.total_sales_count != null ? response.data.total_sales_count : response.data.salesCount),
           expenses: response.data && (response.data.expenses_total != null ? response.data.expenses_total : response.data.total_expenses != null ? response.data.total_expenses : response.data.expenses != null ? response.data.expenses : response.data.expense_total),
-          debt_payment_total: safeNum(response.data && response.data.debt_payment_total),
+          expenses_count: safeNum(response.data && response.data.expenses_count),
+          debt_payment_total: debtPaymentTotal,
           debt_payments: debtPaymentData.map(function (row) { return { method: row.payment_mode, amount: safeNum(row.amount), count: safeNum(row.count) }; }),
         };
         $(document).trigger('dayCloseReportUpdated', [PosnicPro.quickreport.lastReport]);
@@ -438,13 +443,21 @@ PosnicPro.quickreport = {
         // exporter cannot gather, so the numbers ride this hidden table.
         (function () {
           var money = function (n) { return Number(n || 0).toFixed(2); };
-          var rows = '<tr><td><lang class="lang_total_sales">Total sales</lang></td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.total) + '</td></tr>'
-            + '<tr><td><lang class="lang_items_sold">Items sold</lang></td><td class="text-right">' + PosnicPro.quickreport.lastReport.qty + '</td></tr>'
-            + '<tr><td><lang class="lang_payments_received">Payments received</lang></td><td class="text-right">' + money(PosnicPro.quickreport.lastReport.tenderTotal) + '</td></tr>';
-          PosnicPro.quickreport.lastReport.payments.forEach(function (p) {
+          var r = PosnicPro.quickreport.lastReport;
+          var rows = '<tr><td>Total sales</td><td class="text-right">' + money(r.total) + '</td></tr>'
+            + '<tr><td>Number of sales</td><td class="text-right">' + (r.sales_count == null ? 'Non disponible dans le rapport' : String(r.sales_count)) + '</td></tr>'
+            + '<tr><td>Items sold</td><td class="text-right">' + r.qty + '</td></tr>'
+            + '<tr><td>Cost of goods</td><td class="text-right">' + money(r.cost_of_goods) + '</td></tr>'
+            + '<tr><td>Gross profit</td><td class="text-right">' + money(r.gross_profit) + '</td></tr>'
+            + '<tr><td>Expenses</td><td class="text-right">' + (r.expenses == null ? 'Non disponible dans le rapport' : money(r.expenses)) + '</td></tr>'
+            + '<tr><td>Net profit</td><td class="text-right">' + (r.gross_profit == null || r.expenses == null ? 'Non disponible dans le rapport' : money(r.gross_profit - r.expenses)) + '</td></tr>'
+            + '<tr><td>Payments received (including debt collections in Cash)</td><td class="text-right">' + money(r.tenderTotal) + '</td></tr>';
+          r.payments.forEach(function (p) {
             rows += '<tr><td>' + $('<i>').text(p.label).html() + '</td><td class="text-right">' + money(p.amount) + '</td></tr>';
           });
+          rows += '<tr><td>Debt collections included in Cash</td><td class="text-right">' + money(r.debt_payment_total) + '</td></tr>';
           $('#dayend_export_summary_body').html(rows);
+          $('#dayend_live_summary_body').html(rows);
         })();
         
         // Clear existing rows

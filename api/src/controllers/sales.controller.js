@@ -1866,6 +1866,19 @@ class SalesController extends BaseController {
         0
       );
 
+      // Include day-end expenses and sale count in the same payload used by both A4 and thermal previews.
+      const expenseRows = await db.collection('expenses').aggregate([
+        { $match: {
+          license: BaseModel.license || req.user.license || req.user.license_id,
+          branch_id: branchObjectId,
+          date: { $gte: new Date(filteredDateRange.start_date), $lte: new Date(filteredDateRange.end_date) },
+        } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ['$amount', 0] } }, count: { $sum: 1 } } },
+      ]).toArray();
+      const expensesTotal = roundToTwo(expenseRows.length ? expenseRows[0].total || 0 : 0);
+      const expensesCount = expenseRows.length ? Number(expenseRows[0].count) || 0 : 0;
+      const salesCount = salesPayments.length;
+
       // ---- Build response data ----
       const responseData = {
         branch_details: branchDetails,
@@ -1873,6 +1886,9 @@ class SalesController extends BaseController {
         payment_details: paymentDetails,
         debt_payment_details: debtPaymentDetails,
         debt_payment_total: debtPaymentTotal,
+        sales_count: salesCount,
+        expenses_total: expensesTotal,
+        expenses_count: expensesCount,
         outstanding_amount: roundToTwo(outstandingAmount),
         dine_details: dineDetails,
         tax_details: taxDetails,
