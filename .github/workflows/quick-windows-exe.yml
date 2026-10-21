@@ -8,6 +8,9 @@ on:
     branches:
       - feat/article-cost-label-designer-sales-calendar
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     name: Build Windows installer only without running tests
