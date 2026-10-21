@@ -2,18 +2,6 @@ name: Windows EXE - article cost label designer branch
 # Rebuild the latest feature branch and publish only the Windows installer (no tests). Receipt, cash-register, and POS keyboard fixes are included through the frontend/** path trigger.
 
 on:
-  push:
-    branches:
-      - feat/article-cost-label-designer-sales-calendar
-    paths:
-      - '.github/workflows/windows-exe-feature.yml'
-      - 'api/**'
-      - 'frontend/**'
-      - 'src/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'scripts/**'
-      - 'electron-builder*'
   workflow_dispatch:
 
 concurrency:
