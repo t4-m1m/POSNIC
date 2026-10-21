@@ -303,6 +303,15 @@ PosnicPro.quickreport = {
           response.data && response.data.payment_details
             ? response.data.payment_details
             : [];
+        var debtPaymentData = response.data && Array.isArray(response.data.debt_payment_details)
+          ? response.data.debt_payment_details : [];
+        var debtMethodLabels = { cash: 'Cash', card: 'Card', tpe: 'TPE', baridimob: 'BaridiMob', bank_transfer: 'Bank Transfer', other: 'Other' };
+        paymentData = paymentData.slice();
+        debtPaymentData.forEach(function (debt) {
+          var raw = String(debt.payment_mode || 'other').toLowerCase();
+          var label = debtMethodLabels[raw] || raw;
+          paymentData.push({ payment_mode: label, sale_payment: safeNum(debt.amount), is_debt_collection: true });
+        });
         $("#daily_report_tender_details tbody").children("tr").remove();
         var tenderTotal = 0;
         var paymentHeaderRow = ["paymentMode", "amount"];
@@ -406,6 +415,8 @@ PosnicPro.quickreport = {
           gross_profit: safeNum(profit),
           sales_count: response.data && (response.data.sales_count != null ? response.data.sales_count : response.data.number_of_sales != null ? response.data.number_of_sales : response.data.total_sales_count),
           expenses: response.data && (response.data.expenses_total != null ? response.data.expenses_total : response.data.total_expenses != null ? response.data.total_expenses : response.data.expenses),
+          debt_payment_total: safeNum(response.data && response.data.debt_payment_total),
+          debt_payments: debtPaymentData.map(function (row) { return { method: row.payment_mode, amount: safeNum(row.amount), count: safeNum(row.count) }; }),
         };
         $(document).trigger('dayCloseReportUpdated', [PosnicPro.quickreport.lastReport]);
 
