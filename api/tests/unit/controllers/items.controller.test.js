@@ -1215,10 +1215,14 @@ describe('itemSearchTable', () => {
 describe('onlineSalesItemsAjaxLists', () => {
   test('returns 200 with items on success', async () => {
     svc.getOnlineSalesItems.mockResolvedValue({ status: true, data: [], message: 'ok' });
-    const req = mockReq({ query: { limit: '10' }, user: adminUser() });
+    const req = mockReq({ query: { limit: '10', brand: 'Lo Samarina' }, user: adminUser() });
     const res = mockRes();
     await ctrl.onlineSalesItemsAjaxLists(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
+    expect(svc.getOnlineSalesItems).toHaveBeenCalledWith(
+      expect.objectContaining({ brand: 'Lo Samarina' }),
+      expect.any(Object)
+    );
   });
 
   test('returns 404 when service fails', async () => {

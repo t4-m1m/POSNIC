@@ -3182,6 +3182,9 @@ class ItemRepository extends BaseModel {
           { 'branch_access.branch_id': branchObjectId },
           { item_status: { $ne: 'instant' } },
           ...(licenseObjectId ? [{ license: licenseObjectId }] : []),
+          ...(typeof params.brand === 'string' && params.brand.trim()
+            ? [{ brand: params.brand.trim() }]
+            : []),
         ],
       };
 
@@ -3297,6 +3300,7 @@ class ItemRepository extends BaseModel {
           tax_type: item.tax_type || '',
           category_id: item.category_id?.toString?.() || '',
           category_name: item.category_name || '',
+          brand: typeof item.brand === 'string' ? item.brand : '',
           image: item.image || DEFAULTS.IMAGE,
           supplier: item.supplier_name || '',
           // Match PHP: expose items_expiry_date for frontend expiry checks

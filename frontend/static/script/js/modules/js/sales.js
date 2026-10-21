@@ -7836,16 +7836,18 @@ PosnicPro.sales.itemCache = {
         PosnicPro.sales.itemCache._map = {};
         PosnicPro.sales._billingCatalogue = null;
         PosnicPro.sales._catalogueRefreshing = false;
+        PosnicPro.sales._brandTilesCache = null;
         PosnicPro.sales._catalogueGeneration = (PosnicPro.sales._catalogueGeneration || 0) + 1;
     },
 };
 
 // Fetch only the requested shelf page. Search uses its own full-catalogue API.
-PosnicPro.sales.loadSalesTilePage = function (offset, categoryId, done) {
+PosnicPro.sales.loadSalesTilePage = function (offset, categoryId, done, brandName) {
     var generation = (PosnicPro.sales._catalogueGeneration || 0) + 1;
     PosnicPro.sales._catalogueGeneration = generation;
     PosnicPro.get({ url: 'items/onlineSalesItemsAjaxLists', data: {
-        paginate: 'true', tile_page: 'true', limit: 48, offset: offset, category_id: categoryId || ''
+        paginate: 'true', tile_page: 'true', limit: 48, offset: offset,
+        category_id: categoryId || '', brand: brandName || ''
     } }, function (response) {
         if (generation !== PosnicPro.sales._catalogueGeneration) return;
         if (!response || response.type !== 'success') { done(response || { type: 'error' }); return; }
@@ -7970,8 +7972,9 @@ PosnicPro.sales.categoryPicture = function (name, image) {
 
 PosnicPro.sales.itemsMenu = {
     /*sales Product Display*/
-    onlineProductList: function (categoryId, offset) {
+    onlineProductList: function (categoryId, offset, brandName) {
         categoryId = typeof categoryId === "string" ? categoryId : "";
+        brandName = typeof brandName === "string" ? brandName.trim() : "";
         offset = offset || 0;
         /* crash-hunt probe gate: skippable render */
         if (window.__posnicSkip === 'menu' || window.__posnicSkip === 'all') { return; }
@@ -7979,6 +7982,7 @@ PosnicPro.sales.itemsMenu = {
         $("<div class='loadingSpinner'></div>").appendTo(loader);
         $('#sales_new_productList').show();
         $('#sales_new_categoryList').hide();
+        $('#sales_new_brandList').hide();
         PosnicPro.sales.loadSalesTilePage(offset, categoryId, function (response) {
             loader.find(".loadingSpinner:first").remove();
             if (response.type === 'success') {
@@ -7989,7 +7993,13 @@ PosnicPro.sales.itemsMenu = {
                 PosnicPro.sales.itemsMenu.variantPop.close();
                 $('#item-lists').remove();
                 $('#sales_new_productList').append(' <div class="col-md-12" id="item-lists">');
-                if (categoryId) $('<button type="button" class="btn btn-outline-primary mb-3"><lang class="lang_categories">Categories</lang></button>').appendTo('#item-lists').on('click', PosnicPro.sales.categoryMenu.listCategories);
+                if (categoryId) {
+                    $('<button type="button" class="btn btn-outline-primary mb-3"><lang class="lang_categories">Categories</lang></button>')
+                        .appendTo('#item-lists').on('click', PosnicPro.sales.categoryMenu.listCategories);
+                } else if (brandName) {
+                    $('<button type="button" class="btn btn-outline-primary mb-3"><lang class="lang_brand_title">Brands</lang></button>')
+                        .appendTo('#item-lists').on('click', PosnicPro.sales.brandMenu.listBrands);
+                }
                 var currency = PosnicPro.local.get('currencySign');
                 /*
                  * Variant families (V1): members of a family collapse into
@@ -8096,7 +8106,7 @@ PosnicPro.sales.itemsMenu = {
                         }
                     }
                     PosnicPro.sales.renderTilePages($('#item-lists'), tiles, { offset: offset, nextOffset: response.nextOffset,
-                        load: function (next) { PosnicPro.sales.itemsMenu.onlineProductList(categoryId, next); } });
+                        load: function (next) { PosnicPro.sales.itemsMenu.onlineProductList(categoryId, next, brandName); } });
                 } else {
                     app = "<div class='row'></div><div class='row'></div><div class='text-center text-dark'><p><lang class='lang_there_are_no_items_available'>There are no items available ...!!!</lang></p><a href='#/items/new'>Add New Item</a></div>";
                     $('#item-lists').append(app);
@@ -8730,6 +8740,82 @@ PosnicPro.sales.itemsMenu = {
 /******** END SALES PRODUCT MENU ********/
 
 /******** START SALES CATEGORY MENU vs CATEGORY'S ITEMS SUB MENU ********/
+PosnicPro.sales.brandMenu = {
+    _brands: [],
+    listBrands: function () {
+        var generation = (PosnicPro.sales._catalogueGeneration || 0) + 1;
+        PosnicPro.sales._catalogueGeneration = generation;
+        var $loader = $(".loader-category");
+        $loader.find(".loadingSpinner").remove();
+        $("<div class='loadingSpinner'></div>").appendTo($loader);
+        $('#sales_new_productList, #sales_new_categoryList').hide();
+        $('#sales_new_brandList').show();
+        $('#brand-lists').remove();
+
+        function render(brands) {
+            if (generation !== PosnicPro.sales._catalogueGeneration) return;
+            $loader.find(".loadingSpinner:first").remove();
+            PosnicPro.sales.brandMenu._brands = brands.slice();
+            var $list = $('<div class="col col-xs-12" id="brand-lists"></div>').appendTo('#sales_new_brandList');
+            if (!brands.length) {
+                $list.append("<div class='text-center text-dark'><p>No brands found with items available for sale.</p></div>");
+                return;
+            }
+            var app = "<div class='row sale-tile-grid'>";
+            brands.forEach(function (brand, index) {
+                var safeName = $('<i>').text(brand).html();
+                var image = 'static/images/categories/shop.svg';
+                app += '<div class="wsk-cp cbutton--effect-novak col-lg-3 col-md-4 col-sm-6 col-12 mb-3" ' +
+                    'data-brand-index="' + index + '" role="button" tabindex="0" ' +
+                    'onclick="PosnicPro.sales.brandMenu.listItems(this.getAttribute(\'data-brand-index\'))" ' +
+                    'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();PosnicPro.sales.brandMenu.listItems(this.getAttribute(\'data-brand-index\'));}">' +
+                    '<div class="wsk-cp-product"><div class="description-prod"><p data-searchval="' + safeName + '">' + safeName + '</p></div>' +
+                    '<div class="wsk-cp-img"><img loading="lazy" decoding="async" src="' + image + '" alt="Brand" class="img-responsive" /></div></div></div>';
+            });
+            app += '</div>';
+            $list.append(app);
+            PosnicPro.sales.itemsMenu.clickEffect();
+        }
+
+        var cached = PosnicPro.sales._brandTilesCache;
+        if (Array.isArray(cached)) { render(cached); return; }
+        var brands = [], seen = Object.create(null);
+        function load(offset) {
+            if (generation !== PosnicPro.sales._catalogueGeneration) return;
+            PosnicPro.get({ url: 'items/onlineSalesItemsAjaxLists', data: {
+                paginate: 'true', tile_page: 'true', limit: 48, offset: offset, category_id: '', brand: ''
+            } }, function (response) {
+                if (generation !== PosnicPro.sales._catalogueGeneration) return;
+                if (!response || response.type !== 'success') {
+                    $loader.find(".loadingSpinner:first").remove();
+                    $('#sales_new_brandList').html("<div class='text-center text-danger p-3'>Could not load brands. Please try again.</div>");
+                    return;
+                }
+                var data = response.data || {};
+                (Array.isArray(data.items) ? data.items : []).forEach(function (item) {
+                    var brand = String(item.brand || '').trim();
+                    var key = brand.toLocaleLowerCase();
+                    if (brand && !seen[key]) { seen[key] = true; brands.push(brand); }
+                });
+                var next = Number.isInteger(data.next_offset) && data.next_offset > offset ? data.next_offset : null;
+                if (next !== null) { load(next); return; }
+                brands.sort(function (a, b) { return a.localeCompare(b, undefined, { sensitivity: 'base' }); });
+                PosnicPro.sales._brandTilesCache = brands.slice();
+                render(brands);
+            }, function () {
+                if (generation !== PosnicPro.sales._catalogueGeneration) return;
+                $loader.find(".loadingSpinner:first").remove();
+                $('#sales_new_brandList').html("<div class='text-center text-danger p-3'>Could not load brands. Please try again.</div>");
+            });
+        }
+        load(0);
+    },
+    listItems: function (index) {
+        var brand = PosnicPro.sales.brandMenu._brands[Number(index)];
+        if (typeof brand !== 'string' || !brand.trim()) return;
+        PosnicPro.sales.itemsMenu.onlineProductList('', 0, brand);
+    }
+};
 PosnicPro.sales.categoryMenu = {
     /* --------------------------
      * GET SALES CATEGORY TAGS (OLD FORMAT)
@@ -8739,7 +8825,7 @@ PosnicPro.sales.categoryMenu = {
         var loader = $(".loader-category");
         $("<div class='loadingSpinner'></div>").appendTo(loader);
 
-        $('#sales_new_productList').hide();
+        $('#sales_new_productList, #sales_new_brandList').hide();
         $('#sales_new_categoryList').show();
 
         PosnicPro.get('categories/getCategoriesWithValidItems', function (response) {
@@ -11835,9 +11921,30 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
     $(document).on('click.cashier', '#posnic-vendeur-cancel', function () { $('#posnic-vendeur-modal').modal('hide'); });
     // Delegate because the modal is created lazily by ensureCashierModal().
     $(document).on('hidden.bs.modal.cashierReset', '#posnic-vendeur-modal', function () { cashierPromptOpen = false; });
-    $(document).on('keydown.cashier', '#posnic-vendeur-select', function (e) {
-        if (e.key === 'Enter' && !$('#posnic-vendeur-confirm').prop('disabled')) { e.preventDefault(); continueCheckout(); }
-    });
+    // Handle this popup before the generic global overlay handler. Its
+    // Bootstrap keyboard option is intentionally disabled, so both keys are
+    // explicit and cannot accidentally trigger another modal underneath it.
+    window.addEventListener('keydown', function (e) {
+        var modal = document.getElementById('posnic-vendeur-modal');
+        if (!modal || !modal.classList.contains('show')) return;
+        var inside = modal.contains(e.target);
+        if ((e.key === 'Escape' || e.keyCode === 27) && (inside || document.activeElement === modal || document.activeElement === document.body)) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            $('#posnic-vendeur-cancel').trigger('click');
+            return;
+        }
+        if ((e.key === 'Enter' || e.keyCode === 13) && inside &&
+            !e.repeat && !e.isComposing && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+            // The selector is the only editable control in this popup. Confirm
+            // through the same validation and checkout continuation as the button.
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            if (!$('#posnic-vendeur-confirm').prop('disabled')) continueCheckout();
+        }
+    }, true);
     PosnicPro.sales.runFunctionShortcut = function (key) {
         // Both checkout entry points first attribute the sale to a configured cashier.
         // F1 then performs fast checkout; F2 opens the editable payment screen.

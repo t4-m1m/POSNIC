@@ -855,6 +855,7 @@ class ItemsController extends BaseController {
           offset: Math.max(0, parseInt(req.query.offset, 10) || 0),
           tilePage: req.query.tile_page === 'true',
           categoryId: req.query.category_id,
+          brand: typeof req.query.brand === 'string' ? req.query.brand.trim() : '',
         },
         {
           branchId: this.model?.branchId || null,
