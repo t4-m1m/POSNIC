@@ -2,11 +2,6 @@ name: Quick Windows EXE (no tests)
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feat/article-cost-label-designer-sales-calendar
-    paths:
-      - .github/workflows/quick-windows-exe.yml
 
 permissions:
   contents: read
