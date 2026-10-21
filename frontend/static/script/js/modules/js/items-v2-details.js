@@ -299,12 +299,12 @@
     function update(capabilities, kind) {
         caps=capabilities;
         el('food-extra').hidden=!caps.restaurant || kind==='service'; el('tax-extra').hidden=true;
-        el('service-unit').parentElement.hidden=kind!=='service'; el('variants').hidden=false; el('variant-editor').hidden=kind==='service' || !el('has-variants').checked; el('quantity-row').hidden=kind==='service' || el('has-variants').checked;
+        el('service-unit').parentElement.hidden=kind!=='service'; el('variants').hidden=false; el('variant-editor').hidden=kind==='service' || !el('has-variants').checked; el('quantity-row').hidden=kind==='service' || isFamily();
         ['food-extra','tax-extra','variants'].forEach(function(id){el(id).querySelectorAll('input,select,textarea,button').forEach(function(input){input.disabled=el(id).hidden;});});
         ['reorder','purchase-unit','pack-size','weight'].forEach(function(id){el(id).closest(id==='weight'?'label':'div').hidden=kind==='service';});
         ['plu','sku','barcode','gtin','alt-barcodes','same-sku'].forEach(function(id){el(id).disabled=isFamily();});
         el('variant-editor').querySelectorAll('input,select,button').forEach(function(input){input.disabled=kind==='service' || el('variant-editor').hidden;});
-        el('quantity').disabled=kind==='service' || el('has-variants').checked;
+        el('quantity').disabled=kind==='service' || isFamily();
         el('weight').closest('label').hidden=!caps.weight || kind==='service';
         el('weight').disabled=!caps.weight || kind==='service';
         el('discount').max=val('discount-type')==='percentage'?'100':'';
@@ -400,6 +400,7 @@
         ['📦','👕','👟','👜','📱','📚','🧴','✂️','🔧','☕','🍵','🍛','🍜','🍕','🥪','🥗','🍰','🍨','🥤','💧'].forEach(function(icon){var pick=button(icon,function(){el('icon').value=icon;notify();});pick.setAttribute('aria-label',icon);palette.appendChild(pick);});el('icon').after(palette);
         el('form').addEventListener('click',function(e){var target=e.target.closest('[data-iv2-advanced]');if(target&&target.dataset.iv2Advanced==='generate')generate();});
         function clearGeneratedVariants(){variants=[];signature='';el('variant-rows').replaceChildren();notify();}
+        ['values1','values2'].forEach(function(id){el(id).addEventListener('change',function(){update(caps,document.querySelector('#items_v2 [name="iv2-kind"]:checked').value);notify();});});
         el('axis1').addEventListener('change',function(){el('values1').replaceChildren();fillVariantValues('axis1','values1');clearGeneratedVariants();});
         el('axis2').addEventListener('change',function(){el('values2').replaceChildren();fillVariantValues('axis2','values2');clearGeneratedVariants();});
         loadVariantDefinitions();
