@@ -1,8 +1,11 @@
 name: Quick Windows Installer EXE (no tests)
 # Build the current feature-branch snapshot as the Windows installer only; deliberately no test steps.
-# Authorized installer build for the current payment-modal changes; restore manual-only after completion.
+# Build automatically on every push to the active feature branch; workflow_dispatch remains available for manual retries.
 
 on:
+  push:
+    branches:
+      - feat/article-cost-label-designer-sales-calendar
   workflow_dispatch:
 
 permissions:
