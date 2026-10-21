@@ -224,10 +224,21 @@ class CreditService {
     // Associate each collection with the current cashier session for daily tender
     // reporting. Only cash collections affect the physical drawer journal.
     let cashRegister = null;
-    if (ctx.userId) {
-      const registerQuery = { license: BaseModel.license, register_status: 'Opened', current_user_id: oid(ctx.userId) };
-      if (ctx.branchId) registerQuery.branch_id = oid(ctx.branchId);
-      cashRegister = await db.collection('cashregister').findOne(registerQuery, { projection: { _id: 1 } });
+    const registerCollection = db.collection('cashregister');
+    const asObjectId = (value) => {
+      try { return ObjectId.isValid(String(value || '')) ? oid(value) : null; } catch (_) { return null; }
+    };
+    const userObjectId = asObjectId(ctx.userId);
+    const branchObjectId = asObjectId(ctx.branchId);
+    const registerObjectId = asObjectId(input.register_id);
+    const registerBaseQuery = { license: BaseModel.license, register_status: 'Opened' };
+    if (registerObjectId) {
+      cashRegister = await registerCollection.findOne({ ...registerBaseQuery, _id: registerObjectId }, { projection: { _id: 1 } });
+    }
+    if (!cashRegister && ctx.userId) {
+      const registerQuery = { ...registerBaseQuery, current_user_id: { $in: [String(ctx.userId), ...(userObjectId ? [userObjectId] : [])] } };
+      if (ctx.branchId) registerQuery.branch_id = { $in: [String(ctx.branchId), ...(branchObjectId ? [branchObjectId] : [])] };
+      cashRegister = await registerCollection.findOne(registerQuery, { projection: { _id: 1 } });
     }
     // Refuse to collect against a ledger row whose original sale no longer
     // exists. Preflight all affected rows before changing any balances.
