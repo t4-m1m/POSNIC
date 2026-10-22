@@ -30258,77 +30258,68 @@ table.focus-on tfoot tr.focused td {
 /*# sourceMappingURL=style.css.map */
 
 
-/* POSNIC conditional custom scrollbars — Electron/Chromium */
-/* Native scrolling remains conditional: do not force overflow-y: scroll.
-   Existing document and component overflow rules decide when a scrollbar exists.
-   The root fallback also preserves a usable scrollbar in Firefox. */
-:root {
-  scrollbar-color: #777777 #1a1a1a;
-  scrollbar-width: auto;
+/* POSNIC theme-matched draggable scroll indicators.
+   The companion script only activates these on overflowing vertical scrollers. */
+.posnic-overlay-scroll-active {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
-
-/* Chromium / Electron: wide enough to grab, with a high-contrast thumb. */
-::-webkit-scrollbar {
-  width: 16px;
-  height: 16px;
+.posnic-overlay-scroll-active::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
 }
-
-::-webkit-scrollbar-track {
-  background: #1a1a1a;
-  border-left: 1px solid #333333;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #777777;
-  border: 3px solid #1a1a1a;
+.posnic-overlay-scrollbar {
+  position: fixed;
+  z-index: 1085;
+  width: 10px;
+  min-height: 44px;
+  padding: 2px;
+  box-sizing: border-box;
   border-radius: 8px;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .14s ease, background-color .14s ease;
+  touch-action: none;
+  user-select: none;
+}
+.posnic-overlay-scrollbar.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.posnic-overlay-scrollbar:hover,
+.posnic-overlay-scrollbar.is-dragging {
+  background: rgba(80, 111, 228, .10);
+}
+.posnic-overlay-scrollbar-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
   min-height: 28px;
+  border-radius: 5px;
+  background: var(--theme-primary-color, #506fe4);
+  opacity: .68;
+  cursor: grab;
+  transition: opacity .12s ease, background-color .12s ease;
 }
-
-::-webkit-scrollbar-thumb:hover {
-  background: #a0a0a0;
+.posnic-overlay-scrollbar:hover .posnic-overlay-scrollbar-thumb {
+  opacity: .95;
 }
-
-::-webkit-scrollbar-thumb:active {
-  background: #c0c0c0;
+.posnic-overlay-scrollbar-thumb:active,
+.posnic-overlay-scrollbar.is-dragging .posnic-overlay-scrollbar-thumb {
+  opacity: 1;
+  cursor: grabbing;
 }
-
-/* Native WebKit step buttons. Their SVGs are embedded, so the controls work
-   offline in the desktop app and do not depend on remote assets. */
-::-webkit-scrollbar-button:single-button:vertical:decrement {
-  display: block;
-  width: 16px;
-  height: 16px;
-  background-color: #2a2a2a;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffffff' d='M7.25 4.86 2.45 10.34c-.57.65-.11 1.66.75 1.66h9.6c.86 0 1.32-1.01.75-1.66L8.75 4.86a1 1 0 0 0-1.5 0z'/%3E%3C/svg%3E");
+@media (prefers-reduced-motion: reduce) {
+  .posnic-overlay-scrollbar,
+  .posnic-overlay-scrollbar-thumb {
+    transition: none;
+  }
 }
-
-::-webkit-scrollbar-button:single-button:vertical:increment {
-  display: block;
-  width: 16px;
-  height: 16px;
-  background-color: #2a2a2a;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffffff' d='M7.25 4.86 2.45 10.34c-.57.65-.11 1.66.75 1.66h9.6c.86 0 1.32-1.01.75-1.66L8.75 4.86a1 1 0 0 0-1.5 0z' transform='rotate(180 8 8)'/%3E%3C/svg%3E");
-}
-
-::-webkit-scrollbar-button:single-button:vertical:decrement:hover,
-::-webkit-scrollbar-button:single-button:vertical:increment:hover {
-  background-color: #444444;
-}
-
-::-webkit-scrollbar-button:single-button:vertical:decrement:active,
-::-webkit-scrollbar-button:single-button:vertical:increment:active {
-  background-color: #5a5a5a;
-}
-
-/* Keep print output free of interactive screen chrome. */
 @media print {
-  ::-webkit-scrollbar,
-  ::-webkit-scrollbar-button {
+  .posnic-overlay-scrollbar {
     display: none !important;
   }
 }
