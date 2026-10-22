@@ -740,7 +740,7 @@ PosnicPro.items = {
             + (low ? '<span class="rs-pill unpaid"><lang class="lang_low_stock">Low stock</lang></span>' : '')
             + '<span class="ml-auto"></span>'
             + '<button type="button" class="btn btn-sm btn-light" data-module="item" data-access="write" onclick="hasher.setHash(\'items/' + esc(id) + '/edit\');"><i class="feather icon-edit-2 mr-1"></i>Edit</button>'
-            + (real(d.barcode_id) ? '<button type="button" class="btn btn-sm btn-light" title="Quick print price labels" aria-label="Quick print price labels" onclick="PosnicPro.items.quickPrintLabels(\\'' + esc(id) + '\\');"><i class="feather icon-printer mr-1"></i>Price labels</button>' : '')
+            + (real(d.barcode_id) ? '<button type="button" class="btn btn-sm btn-light" title="Quick print price labels" aria-label="Quick print price labels" onclick="PosnicPro.items.quickPrintLabels(\'' + esc(id) + '\');"><i class="feather icon-printer mr-1"></i>Price labels</button>' : '')
             + '<div class="btn-group">'
             + '<button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><lang class="lang_tab_more">More</lang></button>'
             + '<div class="dropdown-menu dropdown-menu-right">'
