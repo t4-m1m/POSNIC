@@ -30256,3 +30256,79 @@ table.focus-on tfoot tr.focused td {
   }
 }
 /*# sourceMappingURL=style.css.map */
+
+
+/* POSNIC conditional custom scrollbars — Electron/Chromium */
+/* Native scrolling remains conditional: do not force overflow-y: scroll.
+   Existing document and component overflow rules decide when a scrollbar exists.
+   The root fallback also preserves a usable scrollbar in Firefox. */
+:root {
+  scrollbar-color: #777777 #1a1a1a;
+  scrollbar-width: auto;
+}
+
+/* Chromium / Electron: wide enough to grab, with a high-contrast thumb. */
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-left: 1px solid #333333;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #777777;
+  border: 3px solid #1a1a1a;
+  border-radius: 8px;
+  min-height: 28px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a0a0a0;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #c0c0c0;
+}
+
+/* Native WebKit step buttons. Their SVGs are embedded, so the controls work
+   offline in the desktop app and do not depend on remote assets. */
+::-webkit-scrollbar-button:single-button:vertical:decrement {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background-color: #2a2a2a;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffffff' d='M7.25 4.86 2.45 10.34c-.57.65-.11 1.66.75 1.66h9.6c.86 0 1.32-1.01.75-1.66L8.75 4.86a1 1 0 0 0-1.5 0z' transform='rotate(180 8 8)'/%3E%3C/svg%3E");
+}
+
+::-webkit-scrollbar-button:single-button:vertical:increment {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background-color: #2a2a2a;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffffff' d='M7.25 4.86 2.45 10.34c-.57.65-.11 1.66.75 1.66h9.6c.86 0 1.32-1.01.75-1.66L8.75 4.86a1 1 0 0 0-1.5 0z'/%3E%3C/svg%3E");
+}
+
+::-webkit-scrollbar-button:single-button:vertical:decrement:hover,
+::-webkit-scrollbar-button:single-button:vertical:increment:hover {
+  background-color: #444444;
+}
+
+::-webkit-scrollbar-button:single-button:vertical:decrement:active,
+::-webkit-scrollbar-button:single-button:vertical:increment:active {
+  background-color: #5a5a5a;
+}
+
+/* Keep print output free of interactive screen chrome. */
+@media print {
+  ::-webkit-scrollbar,
+  ::-webkit-scrollbar-button {
+    display: none !important;
+  }
+}
