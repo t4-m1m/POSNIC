@@ -48,6 +48,13 @@
     function onPointerDown(event) {
       if (event.button !== 0) return;
       event.preventDefault();
+      if (event.target !== thumb) {
+        var trackRect = bar.getBoundingClientRect();
+        var trackRatio = (event.clientY - trackRect.top - thumb.offsetHeight / 2) /
+          Math.max(1, trackRect.height - thumb.offsetHeight - 4);
+        setScrollTop(el, Math.max(0, Math.min(1, trackRatio)) * getMaxScroll(el));
+        update(state);
+      }
       state.dragging = true;
       state.startY = event.clientY;
       state.startScroll = getScrollTop(el);
@@ -131,7 +138,7 @@
     }
     var rect;
     if (isRootScroller(el)) {
-      rect = { top: 0, right: window.innerWidth, height: window.innerHeight, left: 0, width: window.innerWidth };
+      rect = { top: 0, right: window.innerWidth, bottom: window.innerHeight, height: window.innerHeight, left: 0, width: window.innerWidth };
     } else {
       rect = el.getBoundingClientRect();
     }
