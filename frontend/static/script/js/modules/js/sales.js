@@ -7841,11 +7841,12 @@ PosnicPro.sales.itemCache = {
 };
 
 // Fetch only the requested shelf page. Search uses its own full-catalogue API.
-PosnicPro.sales.loadSalesTilePage = function (offset, categoryId, done) {
+PosnicPro.sales.loadSalesTilePage = function (offset, categoryId, brand, done) {
+    if (typeof brand === 'function') { done = brand; brand = ''; }
     var generation = (PosnicPro.sales._catalogueGeneration || 0) + 1;
     PosnicPro.sales._catalogueGeneration = generation;
     PosnicPro.get({ url: 'items/onlineSalesItemsAjaxLists', data: {
-        paginate: 'true', tile_page: 'true', limit: 48, offset: offset, category_id: categoryId || ''
+        paginate: 'true', tile_page: 'true', limit: 48, offset: offset, category_id: categoryId || '', brand: brand || ''
     } }, function (response) {
         if (generation !== PosnicPro.sales._catalogueGeneration) return;
         if (!response || response.type !== 'success') { done(response || { type: 'error' }); return; }
@@ -7970,16 +7971,17 @@ PosnicPro.sales.categoryPicture = function (name, image) {
 
 PosnicPro.sales.itemsMenu = {
     /*sales Product Display*/
-    onlineProductList: function (categoryId, offset) {
+    onlineProductList: function (categoryId, offset, brand) {
         categoryId = typeof categoryId === "string" ? categoryId : "";
+        brand = typeof brand === 'string' ? brand : '';
         offset = offset || 0;
         /* crash-hunt probe gate: skippable render */
         if (window.__posnicSkip === 'menu' || window.__posnicSkip === 'all') { return; }
         var loader = $(".loader-product");
         $("<div class='loadingSpinner'></div>").appendTo(loader);
         $('#sales_new_productList').show();
-        $('#sales_new_categoryList').hide();
-        PosnicPro.sales.loadSalesTilePage(offset, categoryId, function (response) {
+        $('#sales_new_categoryList, #sales_new_brandList').hide();
+        PosnicPro.sales.loadSalesTilePage(offset, categoryId, brand, function (response) {
             loader.find(".loadingSpinner:first").remove();
             if (response.type === 'success') {
                 var getItemdata = response.data;
@@ -7990,6 +7992,7 @@ PosnicPro.sales.itemsMenu = {
                 $('#item-lists').remove();
                 $('#sales_new_productList').append(' <div class="col-md-12" id="item-lists">');
                 if (categoryId) $('<button type="button" class="btn btn-outline-primary mb-3"><lang class="lang_categories">Categories</lang></button>').appendTo('#item-lists').on('click', PosnicPro.sales.categoryMenu.listCategories);
+                if (brand) $('<button type="button" class="btn btn-outline-primary mb-3 ml-2">Marques</button>').appendTo('#item-lists').on('click', PosnicPro.sales.brandMenu.listBrands);
                 var currency = PosnicPro.local.get('currencySign');
                 /*
                  * Variant families (V1): members of a family collapse into
@@ -8729,6 +8732,74 @@ PosnicPro.sales.itemsMenu = {
 };
 /******** END SALES PRODUCT MENU ********/
 
+
+/******** START SALES BRAND / MARQUE MENU ********/
+PosnicPro.sales.brandMenu = {
+    _cache: null,
+    listBrands: function () {
+        PosnicPro.sales._catalogueGeneration = (PosnicPro.sales._catalogueGeneration || 0) + 1;
+        var generation = PosnicPro.sales._catalogueGeneration;
+        $('#sales_new_productList, #sales_new_categoryList').hide();
+        $('#sales_new_brandList').show().empty().append('<div class="loadingSpinner"></div>');
+        var brands = Object.create(null);
+        var offset = 0;
+        var pageLimit = 500;
+        function loadNext() {
+            PosnicPro.get({ url: 'items/onlineSalesItemsAjaxLists', data: {
+                paginate: 'true', limit: pageLimit, offset: offset
+            } }, function (response) {
+                if (generation !== PosnicPro.sales._catalogueGeneration) return;
+                if (!response || response.type !== 'success') {
+                    $('#sales_new_brandList').html('<div class="alert alert-warning">Impossible de charger les marques. Réessayez.</div>');
+                    return;
+                }
+                var payload = response.data || {};
+                var items = Array.isArray(payload.items) ? payload.items : [];
+                items.forEach(function (item) {
+                    var name = String(item.brand || '').trim();
+                    if (name) {
+                        var key = name.toLocaleLowerCase();
+                        if (!brands[key]) brands[key] = name;
+                    }
+                });
+                var next = Number(payload.next_offset);
+                if (Number.isFinite(next) && next > offset && items.length) {
+                    offset = next;
+                    loadNext();
+                    return;
+                }
+                var names = Object.keys(brands).map(function (key) { return brands[key]; })
+                    .sort(function (a, b) { return a.localeCompare(b, undefined, { sensitivity: 'base' }); });
+                PosnicPro.sales.brandMenu._cache = names;
+                var pane = $('#sales_new_brandList').empty();
+                var grid = $('<div class="row sale-tile-grid"></div>').appendTo(pane);
+                if (!names.length) {
+                    $('<div class="col-12 text-muted py-3">Aucune marque renseignée dans les articles.</div>').appendTo(pane);
+                    return;
+                }
+                names.forEach(function (name) {
+                    var card = $('<div class="wsk-cp cbutton--effect-novak col-lg-3 col-md-4 col-sm-6 col-12 mb-3"></div>').appendTo(grid);
+                    var product = $('<div class="wsk-cp-product" role="button" tabindex="0"></div>').appendTo(card);
+                    $('<div class="description-prod"></div>').append($('<p class="brand-tile-name"></p>').text(name)).appendTo(product);
+                    product.on('click', function () { PosnicPro.sales.itemsMenu.onlineProductList('', 0, name); });
+                    product.on('keydown', function (event) {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            PosnicPro.sales.itemsMenu.onlineProductList('', 0, name);
+                        }
+                    });
+                });
+            }, function () {
+                if (generation === PosnicPro.sales._catalogueGeneration) {
+                    $('#sales_new_brandList').html('<div class="alert alert-warning">Impossible de charger les marques. Réessayez.</div>');
+                }
+            });
+        }
+        loadNext();
+    }
+};
+/******** END SALES BRAND / MARQUE MENU ********/
+
 /******** START SALES CATEGORY MENU vs CATEGORY'S ITEMS SUB MENU ********/
 PosnicPro.sales.categoryMenu = {
     /* --------------------------
@@ -8741,6 +8812,7 @@ PosnicPro.sales.categoryMenu = {
 
         $('#sales_new_productList').hide();
         $('#sales_new_categoryList').show();
+        $('#sales_new_brandList').hide();
 
         PosnicPro.get('categories/getCategoriesWithValidItems', function (response) {
             if (response.type === 'success') {
@@ -8809,7 +8881,7 @@ PosnicPro.sales.recentMenu = {
         var loader = $(".loader-product");
         $("<div class='loadingSpinner'></div>").appendTo(loader);
         $('#sales_new_productList').show();
-        $('#sales_new_categoryList').hide();
+        $('#sales_new_categoryList, #sales_new_brandList').hide();
         $('#item-lists').remove();
         $('#sales_new_productList').append(' <div id="item-lists" style="margin-left: 7px;"/>');
         $('#item-lists').append("<div id='recent_sales_list' class='m-b-30'></div>");
@@ -9260,7 +9332,7 @@ PosnicPro.sales.parkedMenu = {
         var loader = $(".loader-product");
         $("<div class='loadingSpinner'></div>").appendTo(loader);
         $('#sales_new_productList').show();
-        $('#sales_new_categoryList').hide();
+        $('#sales_new_categoryList, #sales_new_brandList').hide();
         $('#item-lists').remove();
         $('#sales_new_productList').append(' <div id="item-lists" style="margin-left: 7px;"/>');
         $('#item-lists').append(

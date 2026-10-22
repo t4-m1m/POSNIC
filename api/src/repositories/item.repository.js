@@ -3193,6 +3193,9 @@ class ItemRepository extends BaseModel {
           }
           match.$and.push({ category_id: new ObjectId(params.categoryId) });
         }
+        if (typeof params.brand === 'string' && params.brand.trim()) {
+          match.$and.push({ $expr: { $eq: [{ $toLower: { $ifNull: ['$brand', ''] } }, params.brand.trim().slice(0, 100).toLowerCase()] } });
+        }
         match.$and.push({
           $or: [
             { track_inventory: { $ne: true } },
@@ -3276,6 +3279,7 @@ class ItemRepository extends BaseModel {
           id: item._id?.toString?.() || '',
           name: item.name || '',
           item_name: item.name || '',
+          brand: item.brand || '',
           item_id: item._id?.toString?.() || '',
           plu_code: item.plu_code || '',
           barcode_id: item.barcode_id || '',
