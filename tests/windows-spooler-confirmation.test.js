@@ -45,15 +45,20 @@ test('offline, missing printer and absent USB port never submit to any destinati
   }
 });
 
-test('Electron callback success without a matching spooler job is not success', async () => {
+test('successful driver submission returns immediately without waiting for a transient queue row', async () => {
+  tick = 0;
   queue = online();
   queue.jobs.push({ id: 3, document: 'unrelated receipt' });
-  const r = await service.submit({ printerName: 'Kitchen_Printer', documentName: 'ticket',
-    submit: async () => ({ success: true }) });
-  assert.equal(r.success, false);
-  assert.equal(r.state, 'unknown');
+  let submits = 0;
+  const r = await service.submit({ printerName: 'Kitchen_Printer', documentName: 'ticket', acceptUnverified: true,
+    submit: async () => { submits++; return { success: true }; } });
+  assert.equal(r.success, true);
+  assert.equal(r.state, 'submitted');
+  assert.equal(r.submitted, true);
   assert.equal(r.jobId, null);
-  assert.equal(r.retryable, false, 'absence must not cause a duplicate automatic submission');
+  assert.equal(r.retryable, false, 'a successful submission must never be automatically duplicated');
+  assert.equal(tick, 0, 'a successful print must not wait through the queue polling timeout');
+  assert.equal(submits, 1);
 });
 
 test('positive StartDocPrinter ID confirms even a job that leaves the queue immediately', async () => {

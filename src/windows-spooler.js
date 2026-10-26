@@ -59,7 +59,7 @@ function createSpooler({ inspect = inspectWindows, platform = process.platform,
     if (platform !== 'win32') return null;
     return existing(await inspect(printerName), printerName, documentName);
   }
-  async function perform({ printerName, documentName, submit }) {
+  async function perform({ printerName, documentName, submit, acceptUnverified = false }) {
     if (!printerName) return result('', { error: 'Select an exact printer name' });
     if (platform !== 'win32') return submit(documentName);
     let started = false;
@@ -77,6 +77,15 @@ function createSpooler({ inspect = inspectWindows, platform = process.platform,
       if (Number(submission?.jobId) > 0) return result(printerName, { ...submission,
         jobId: Number(submission.jobId), submitted: true, retryable: false,
         state: submission.success ? 'spooled' : 'blocked' });
+      // Electron's successful callback confirms that the driver accepted this
+      // job. Do not spend five seconds polling for a queue row that can vanish
+      // before WMI sees it, and never retry a successful submission (which
+      // could duplicate a receipt). Only ambiguous/failed submissions need
+      // the slower reconciliation loop below.
+      if (submission?.success === true && acceptUnverified) return result(printerName, {
+        ...submission, jobId: null, submitted: true, retryable: false,
+        state: 'submitted', error: ''
+      });
       const deadline = now() + timeoutMs;
       do {
         const observed = existing(await inspect(printerName), printerName, documentName);

@@ -522,6 +522,9 @@
             if (options.sample) throw error;
             PosnicPro.alert('error', error.message || label('Print failed'));
         };
+        var fastReceiptLines = options.target && options.target.printMode === 'fast' &&
+            ['58', '80', '112'].indexOf(String(format)) !== -1 ? fastLines(html) : null;
+        var useFastReceipt = !!fastReceiptLines;
         if (printer && printer.print && options.showDialog !== true) {
             return Promise.resolve(PosnicPro.syncPrinterPreferences ? PosnicPro.syncPrinterPreferences() : null)
                 .catch(function () {})
@@ -541,8 +544,11 @@
                 copies: options.target ? options.target.copies : 1,
                 receiptLog: options.receiptLog || null,
                 fitReceipt: ['58', '80', '112'].indexOf(format) !== -1,
-                thermalRaster: ['58', '80', '112'].indexOf(format) !== -1 && (!options.target || options.target.printMode !== 'driver'),
-                fastReceiptLines: options.target && options.target.printMode === 'fast' ? fastLines(html) : null,
+                // Exact Studio layouts use Chromium + the installed printer driver,
+                // matching the working sample output. Raw fast mode is used only when
+                // the entire design safely reduces to printable ASCII text.
+                thermalRaster: useFastReceipt,
+                fastReceiptLines: useFastReceipt ? fastReceiptLines : null,
                 silent: true, strictPrinter: true, forceHtml: true, printBackground: true, margins: { marginType: 'none' } }); })
                 .then(function (result) {
                     if (!result || !result.success) throw new Error(result && result.error || label('Print failed'));

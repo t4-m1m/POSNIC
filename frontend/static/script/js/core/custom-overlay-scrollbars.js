@@ -167,42 +167,76 @@
       update(state);
     });
   }
+  var pendingNodes = new Set();
+
+  function isScrollbarNode(el) {
+    return !!(el && el.nodeType === 1 &&
+      (el.classList.contains('posnic-overlay-scrollbar') || el.closest('.posnic-overlay-scrollbar')));
+  }
+
   function scan(rootNode) {
     if (!rootNode || !rootNode.querySelectorAll) return;
     var candidates = [];
-    if (rootNode.nodeType === 1 && canScrollVertically(rootNode)) candidates.push(rootNode);
+    if (rootNode.nodeType === 1 && !isScrollbarNode(rootNode) && canScrollVertically(rootNode)) candidates.push(rootNode);
     rootNode.querySelectorAll('*').forEach(function (el) {
-      if (canScrollVertically(el)) candidates.push(el);
+      if (!isScrollbarNode(el) && canScrollVertically(el)) candidates.push(el);
     });
     candidates.forEach(function (el) { update(makeScroller(el)); });
+  }
+
+  function flushScan() {
+    scheduled = false;
+    var nodes = Array.from(pendingNodes);
+    pendingNodes.clear();
+    nodes.forEach(scan);
+    // Refresh only scroll containers already registered. Do not rescan the
+    // entire POSNIC page after every table, modal, or sale-row mutation.
     active.forEach(function (state, el) {
-      if (!el.isConnected || !canScrollVertically(el)) {
-        state.bar.classList.remove('is-visible');
-        if (!el.isConnected) state.cleanup();
-      } else scheduleUpdate(state);
+      if (!el.isConnected) state.cleanup();
+      else update(state);
     });
   }
 
+  function scheduleScan(node) {
+    if (node && node.nodeType === 1 && !isScrollbarNode(node)) pendingNodes.add(node);
+    if (scheduled) return;
+    scheduled = true;
+    window.requestAnimationFrame(flushScan);
+  }
+
   function start() {
+    // One complete scan at startup; later DOM changes scan only inserted or
+    // directly restyled subtrees. This matters on low-power Pentium tills.
     scan(document);
     window.addEventListener('resize', function () { active.forEach(scheduleUpdate); }, { passive: true });
     window.addEventListener('scroll', function () { active.forEach(scheduleUpdate); }, { passive: true, capture: true });
     if (window.MutationObserver && document.body) {
       new MutationObserver(function (mutations) {
-        var needsScan = false;
+        var needsRefresh = false;
         mutations.forEach(function (m) {
-          if (m.addedNodes.length || m.removedNodes.length || m.type === 'attributes') needsScan = true;
+          if (isScrollbarNode(m.target)) return;
+          if (m.type === 'attributes') {
+            // Our own active class/style changes must not trigger another
+            // subtree scan; its existing scrollbar is refreshed below.
+            if (active.has(m.target)) { needsRefresh = true; return; }
+            if (m.target !== document.body && m.target !== document.documentElement) scheduleScan(m.target);
+            else needsRefresh = true;
+            return;
+          }
+          if (m.type === 'childList') {
+            if (m.removedNodes.length) needsRefresh = true;
+            Array.from(m.addedNodes).forEach(function (node) {
+              if (node.nodeType === 1 && !isScrollbarNode(node)) scheduleScan(node);
+            });
+          }
         });
-        if (!needsScan || scheduled) return;
-        scheduled = true;
-        window.requestAnimationFrame(function () { scheduled = false; scan(document); });
+        if (needsRefresh) scheduleScan(null);
       }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
     }
     if (window.ResizeObserver && document.body) {
       new ResizeObserver(function () { active.forEach(scheduleUpdate); }).observe(document.body);
     }
   }
-
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
 })();
