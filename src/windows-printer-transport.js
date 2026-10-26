@@ -9,13 +9,22 @@ const script = fs.readFileSync(path.join(__dirname, 'windows-printer-health.ps1'
 function inspect(printer, binding = {}, recover = false, action) {
   return new Promise((resolve, reject) => {
     const child = execFile(raw.powershellPath(), ['-NoProfile', '-NonInteractive', '-Command', script],
-      { windowsHide: true, timeout: 12000, maxBuffer: 2 * 1024 * 1024, encoding: 'utf8' }, (error, stdout) => {
-        try {
-          const result = JSON.parse(stdout.replace(/^\uFEFF/, '').trim());
-          if (result.error) throw new Error(result.error);
-          if (error) throw error;
-          resolve(result);
-        } catch (failure) { reject(failure); }
+      { windowsHide: true, timeout: 12000, maxBuffer: 2 * 1024 * 1024, encoding: 'utf8' }, (error, stdout, stderr) => {
+        // PowerShell can emit CLIXML diagnostics on stderr even when stdout
+        // contains the JSON health snapshot. Parse the machine-readable result
+        // first; if it is missing, surface a short actionable error instead of
+        // leaking the raw "#< CLIXML" transport marker into the UI.
+        let result;
+        try { result = JSON.parse(String(stdout || '').replace(/^\uFEFF/, '').trim()); }
+        catch (_) { result = null; }
+        if (result && result.error) return reject(new Error(String(result.error)));
+        if (result && !error) return resolve(result);
+        const detail = String((result && result.error) || (error && error.message) || stderr || stdout || 'No printer status returned')
+          .replace(/#< CLIXML[\\s\\S]*$/i, '')
+          .replace(/[\\r\\n]+/g, ' ')
+          .trim()
+          .slice(0, 400);
+        reject(new Error('Could not inspect the Windows printer queue' + (detail ? ': ' + detail : '')));
       });
     child.stdin.on('error', () => {}); // execFile reports helper failures.
     child.stdin.end(JSON.stringify({ printer, expectedPort: binding.port, pnpId: binding.pnpId, recover, action }));
