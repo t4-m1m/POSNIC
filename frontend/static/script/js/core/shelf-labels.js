@@ -242,6 +242,7 @@
     state.enabledFields = readEnabledFields();
     var editorDrag = null;
     var searchTimer;
+    var resizeTimer;
     function $() { return root.jQuery.apply(null, arguments); }
     function t(key, fallback) { return root.PosnicPro?.i18n?.t(key, fallback) || fallback; }
     function filters() {
@@ -516,7 +517,7 @@
         state.filters = {};
         state.elementLayout = readElementLayout();
         $('#sl-search').val(''); $('#sl-category').val(''); $('#sl-from').val(1); $('#sl-batch').val(1); $('#sl-copies').val(1);
-        $('#sl-width').val(45); $('#sl-height').val(30); $('#sl-paper').val('roll');
+        $('#sl-width').val(30); $('#sl-height').val(45); $('#sl-paper').val('roll');
         try {
             var saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-layout') || 'null');
             if (saved) {
@@ -610,8 +611,8 @@
         var saved = {};
         try { saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-layout') || '{}') || {}; } catch (_) {}
         $('#sl-paper').val(['a4', 'roll'].includes(saved.paper) ? saved.paper : 'roll');
-        $('#sl-width').val(Number.isFinite(Number(saved.width)) && Number(saved.width) > 0 ? Number(saved.width) : 45);
-        $('#sl-height').val(Number.isFinite(Number(saved.height)) && Number(saved.height) > 0 ? Number(saved.height) : 30);
+        $('#sl-width').val(Number.isFinite(Number(saved.width)) && Number(saved.width) > 0 ? Number(saved.width) : 30);
+        $('#sl-height').val(Number.isFinite(Number(saved.height)) && Number(saved.height) > 0 ? Number(saved.height) : 45);
         $('#sl-margin').val(Number.isFinite(Number(saved.margin)) ? Number(saved.margin) : 0);
         $('#sl-gap').val(Number.isFinite(Number(saved.gap)) ? Number(saved.gap) : 0);
         $('#sl-start').val(Number.isFinite(Number(saved.start)) ? Number(saved.start) : 1);
@@ -934,7 +935,7 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
         $(root.document).on('change', '#sl-printer', function () {
             try { root.localStorage.setItem('posnic.shelf-label-printer', String(this.value || 'default')); } catch (_) {}
         });
-        $(root.document).on('hidden.bs.modal', '#view_print_lable', function () { state.token++; state.loading = false; state.bulkLoading = false; clearTimeout(searchTimer); });
+        $(root.document).on('hidden.bs.modal', '#view_print_lable', function () { state.token++; state.loading = false; state.bulkLoading = false; clearTimeout(searchTimer); clearTimeout(resizeTimer); });
         $(root.document).on('change', '#sl-all', function () { if (this.checked) loadAll(); else clear(); });
         $(root.document).on('change', '#sl-page-all', function () { cancelBulk(); var selected = this.checked; state.entries.forEach(function (e) { if (state.viewIds.includes(String(e.item._id))) e.selected = selected; }); state.furthestStep = 0; renderRows(); });
         $(root.document).on('click', '#sl-clear', clear);
@@ -946,7 +947,13 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
         $(root.document).on('click', '#sl-prev,#sl-next', function () { state.page += this.id === 'sl-next' ? 1 : -1; refresh(); });
         $(root.document).on('click', '#sl-test', function () { print(true); });
         $(root.document).on('click', '#sl-print', function () { print(false); });
-        $(root.document).on('change', '#sl-paper', function () { $('#sl-start').val(1); refresh(); });        $(root).on('resize', function () { if (state.step > 0) refresh(); });
+        $(root.document).on('change', '#sl-paper', function () { $('#sl-start').val(1); refresh(); });
+        // Resizing can fire dozens of times per second. Coalesce expensive preview/barcode rendering.
+        $(root).on('resize', function () {
+            if (state.step <= 0) return;
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function () { if (state.step > 0) refresh(); }, 120);
+        });
     }
     init();
     return { geometry: geometry, count: count, slots: slots, css: css, label: label, sheet: sheet, open: open, print: print, quickPrint: quickPrint, refresh: refresh };
