@@ -27,11 +27,12 @@
                     var K = 'posnic_boot_flight';
                     // The detailed flight recorder is opt-in. Its XHR hooks and
                     // frequent localStorage writes were running on every till session.
-                    var diagnosticsEnabled = location.search.indexOf('flight=1') !== -1
-                        || localStorage.getItem('posnic_boot_flight_enabled') === '1';
+                    var diagnosticsEnabled = location.search.indexOf('flight=1') !== -1;
+                    try { diagnosticsEnabled = diagnosticsEnabled || localStorage.getItem('posnic_boot_flight_enabled') === '1'; } catch (e) { }
                     var prev = null;
                     if (diagnosticsEnabled) { try { prev = JSON.parse(localStorage.getItem(K) || 'null'); } catch (e) { } }
                     var now = Date.now();
+                    try { if (Number(navigator.hardwareConcurrency || 8) <= 4) document.documentElement.classList.add('posnic-low-spec'); } catch (e) { }
                     var rec = { started: now, stages: ['head:0'], hash: location.hash, ua: navigator.userAgent.slice(0, 120), clean: false, booted: false };
                     /* set FIRST - the bisect trigger below reads it, and the
                        first shipped order had it defined only later, which
@@ -798,6 +799,18 @@
                windows previously rendered a shorter topbar). */
             .topbar { min-height: 68px; }
             .topbar .infobar > ul { display: flex; align-items: center; }
+            /* Low-core-count tills prioritize input/paint responsiveness over
+               decorative transitions. Functional loading indicators still spin. */
+            html.posnic-low-spec, html.posnic-low-spec body { scroll-behavior: auto !important; }
+            html.posnic-low-spec *, html.posnic-low-spec *::before, html.posnic-low-spec *::after {
+                transition-duration: 0s !important;
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+            }
+            html.posnic-low-spec .fa-spin, html.posnic-low-spec .spinner-border,
+            html.posnic-low-spec .spinner, html.posnic-low-spec .loading-spinner {
+                animation-duration: 0.8s !important; animation-iteration-count: infinite !important;
+            }
         </style>
 
     </head>
