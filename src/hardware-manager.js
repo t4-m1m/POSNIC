@@ -14,7 +14,7 @@ const printTempFiles = require('./print-temp-files');
    never pays the spooler for it, short enough that a printer plugged in
    during service turns up on its own. Measured at about two seconds per
    enumeration on a till with eight queues installed. */
-const LIST_CACHE_MS = 15000;
+const LIST_CACHE_MS = 5 * 60 * 1000;
 
 class HardwareManager {
   constructor() {
