@@ -57,8 +57,8 @@
                 window.JsBarcode(canvas, value, {
                     format: 'CODE128',
                     displayValue: false,
-                    width: 2,
-                    height: 48,
+                    width: 3,
+                    height: 64,
                     margin: 0,
                     marginTop: 1,
                     marginBottom: 0,
@@ -72,7 +72,7 @@
             try {
                 var fallback = $('<canvas>');
                 fallback.barcode(value, 'code128', {
-                    output: 'canvas', barWidth: 2, barHeight: 48, showHRI: false,
+                    output: 'canvas', barWidth: 3, barHeight: 64, showHRI: false,
                     bgColor: '#ffffff', color: '#000000', barWidth: 2
                 });
                 return fallback[0].toDataURL('image/png');
@@ -211,7 +211,7 @@
                 '.rd-total-row{margin:1px 0;}.rd-grand-total{padding-top:4px;margin-top:4px;}' +
                 '.rd-transaction{padding-bottom:4px;}.rd-divider{margin:4px 0;}' +
                 '.rd-block-logo,.rd-block-image,.rd-block-qr,.rd-block-barcode{line-height:0;}.rd-document img{vertical-align:top;}') +
-            '@media print{.rd-document{max-width:none!important;}body{width:auto!important;min-width:0!important;}}';
+            '@media print{.rd-document{max-width:none!important;}body{width:auto!important;min-width:0!important;}.rd-document,.rd-document *{color:#000!important;opacity:1!important;text-shadow:none!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}}';
     }
     function render(data, format, preview) {
         var designs = data.receipt_designs;
@@ -377,11 +377,11 @@
             }
             else {
                 var logo = data.logo || data.branch_image;
-                var saleBarcodeValue = String(data.sales_id || data.sale_number || data.receipt_number || 'PREVIEW-RECEIPT-0001').trim();
+                var saleBarcodeValue = String(data.sale_number || data.receipt_number || data.sales_id || 'PREVIEW-RECEIPT-0001').trim();
                 var src = b.type === 'logo' ? safeImage(b.src || (!logo || logo === 'store.png' ? 'static/images/default/store.png' : logo)) : b.type === 'barcode' ? barcode(saleBarcodeValue) : safeImage(b.src);
                 if (!src) return '';
                 var imageWidth = b.type === 'logo' ? Math.max(5, Math.min(250, Number(b.w != null ? b.w : b.width) || (sheet ? 22 : 45))) : b.type === 'barcode' ? 90 : b.width;
-                var imageHeight = b.type === 'logo' ? Math.max(8, Math.min(2000, Number(b.h) || 44)) : b.type === 'barcode' ? Math.max(24, Math.min(200, Number(b.h) || 42)) : Number(b.h) || 32;
+                var imageHeight = b.type === 'logo' ? Math.max(8, Math.min(2000, Number(b.h) || 44)) : b.type === 'barcode' ? Math.max(56, Math.min(200, Number(b.h) || 56)) : Number(b.h) || 32;
                 if (b.type === 'barcode') {
                     var barcodeWidth = sheet ? contract.formats[format].content * imageWidth / 100 + 'mm' : imageWidth + '%';
                     var barcodeHeight = sheet ? imageHeight * 25.4 / 96 + 'mm' : imageHeight + 'px';
