@@ -1004,7 +1004,11 @@
                                         });
 
 
-                                        PosnicPro.stocklogs.viewLowStockDashboard();
+                                        // Dashboard-only data is expensive and the till opens on sales/new.
+                                        // Do not fetch/render low-stock cards unless the dashboard is the active route.
+                                        if (/^#\/dashboard(?:$|[/?])/.test(String(window.location.hash || ''))) {
+                                            PosnicPro.stocklogs.viewLowStockDashboard();
+                                        }
                                         var branch_id = PosnicPro.local.get('branch_id_set');
                                         $("#branch_name option[value='" + branch_id + "']").prop("selected", "selected");
                                         PosnicPro.settings.viewSettings(branch_id);
@@ -1022,7 +1026,9 @@
                                     PosnicPro.get('users/getUserAccessDetails', function (response) {
                                         PosnicPro.userACL = response.data;
                                         PosnicPro.ACLApplyForAll();
-                                        PosnicPro.dashboard.datePicker();
+                                        if (/^#\/dashboard(?:$|[/?])/.test(String(window.location.hash || ''))) {
+                                            PosnicPro.dashboard.datePicker();
+                                        }
                                         PosnicPro.redirectPage();
                                     });
                                     PosnicPro.configPaymentType = [];
