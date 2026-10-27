@@ -103,7 +103,7 @@
       update(state);
     }
     function onTrackDown(event) {
-      if (event.target === thumb || event.button !== 0) return;
+      if (event.target === thumb || (event.target.closest && event.target.closest('.posnic-overlay-scrollbar-arrow')) || event.button !== 0) return;
       var rect = bar.getBoundingClientRect();
       var thumbTop = parseFloat(thumb.style.top) || 2;
       var direction = event.clientY < rect.top + thumbTop ? -1 : 1;
