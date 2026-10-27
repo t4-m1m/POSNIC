@@ -464,7 +464,13 @@ class WindowsPrintQueue {
       const active = [...this.jobs.values()].some(job => ['waiting', 'offline', 'queued'].includes(job.state));
       if (!this.stopped) { this.timer = setTimeout(poll, active ? 2000 : 30000); this.timer.unref?.(); }
     };
-    this.timer = setTimeout(poll, 2000); this.timer.unref?.();
+    const recovering = [...this.jobs.values()].some(job =>
+      ['waiting', 'offline', 'queued'].includes(job.state) || (job.state === 'failed' && (job.reconnect || job.submitted))
+    );
+    // Defer idle WMI work until after the first dashboard paint. Recovery jobs
+    // still start promptly; a new sale calls run() immediately.
+    this.timer = setTimeout(poll, recovering ? 2000 : 10000);
+    this.timer.unref?.();
   }
 
   stop() { this.stopped = true; clearTimeout(this.timer); this.timer = null; }
