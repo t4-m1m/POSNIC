@@ -1,5 +1,6 @@
 name: Quick Windows Installer EXE (no tests)
 # Priority rebuild requested 2026-10-27; branch concurrency cancels the older installer run.
+# Priority rebuild retry requested 2026-10-27 19:14 local.
 # Build the current feature-branch snapshot as the Windows installer only; deliberately no test steps.
 # Build the installer on each push to the active feature branch; manual dispatch remains available.
 
