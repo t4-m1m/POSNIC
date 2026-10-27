@@ -17,9 +17,13 @@
     var style = document.createElement('style');
     style.id = 'posnic-overlay-scrollbar-styles';
     style.textContent = [
-      '.posnic-overlay-scrollbar{position:fixed;z-index:20000;width:8px;box-sizing:border-box;background:transparent;opacity:0;pointer-events:none;transition:opacity .12s ease;touch-action:none;user-select:none;}',
+      '.posnic-overlay-scrollbar{position:fixed;z-index:20000;width:14px;box-sizing:border-box;background:rgba(220,235,250,.38);opacity:.96;pointer-events:none;transition:opacity .12s ease;touch-action:none;user-select:none;}',
       '.posnic-overlay-scrollbar.is-visible{opacity:1;pointer-events:auto;}',
-      '.posnic-overlay-scrollbar-thumb{position:absolute;left:1px;right:1px;min-height:30px;background:#2474e8;border-radius:2px;box-sizing:border-box;cursor:grab;}',
+      '.posnic-overlay-scrollbar-thumb{position:absolute;left:3px;right:3px;min-height:30px;background:#75b6f5;border:1px solid #398fe0;border-radius:0;box-sizing:border-box;cursor:grab;}',
+      '.posnic-overlay-scrollbar-arrow{position:absolute;left:0;width:14px;height:16px;padding:0;border:1px solid #b6d8f6;border-radius:0;background:#edf7ff;color:#2776bd;font:12px/14px Arial,sans-serif;text-align:center;cursor:pointer;z-index:1;}',
+      '.posnic-overlay-scrollbar-arrow-up{top:0;}',
+      '.posnic-overlay-scrollbar-arrow-down{bottom:0;}',
+      '.posnic-overlay-scrollbar-thumb{top:18px;}'
       '.posnic-overlay-scrollbar.is-dragging .posnic-overlay-scrollbar-thumb{background:#185cc0;cursor:grabbing;}',
       '.posnic-overlay-scrollbar-thumb:hover{background:#185cc0;}',
       '.posnic-overlay-scrollbar:focus{outline:2px solid #2474e8;outline-offset:-2px;}',
@@ -54,12 +58,18 @@
     bar.setAttribute('aria-label', 'Vertical page scroll');
     bar.setAttribute('aria-orientation', 'vertical');
     bar.setAttribute('tabindex', '0');
+    var up = document.createElement('button');
+    up.type = 'button'; up.className = 'posnic-overlay-scrollbar-arrow posnic-overlay-scrollbar-arrow-up';
+    up.setAttribute('aria-label', 'Scroll up'); up.textContent = '▲';
+    var down = document.createElement('button');
+    down.type = 'button'; down.className = 'posnic-overlay-scrollbar-arrow posnic-overlay-scrollbar-arrow-down';
+    down.setAttribute('aria-label', 'Scroll down'); down.textContent = '▼';
     var thumb = document.createElement('div');
     thumb.className = 'posnic-overlay-scrollbar-thumb';
-    bar.appendChild(thumb);
+    bar.appendChild(up); bar.appendChild(thumb); bar.appendChild(down);
     document.body.appendChild(bar);
 
-    var state = { el: el, bar: bar, thumb: thumb, dragging: false, startY: 0, startScroll: 0, frame: 0 };
+    var state = { el: el, bar: bar, thumb: thumb, up: up, down: down, dragging: false, startY: 0, startScroll: 0, frame: 0 };
     active.set(el, state);
     el.classList.add('posnic-overlay-scroll-active');
 
@@ -113,6 +123,14 @@
       update(state);
     }
 
+    function scrollByArrow(event) {
+      var button = event.target.closest && event.target.closest('.posnic-overlay-scrollbar-arrow');
+      if (!button) return;
+      event.preventDefault(); event.stopPropagation();
+      setScrollTop(el, getScrollTop(el) + (button === up ? -Math.max(40, getClientHeight(el) * .12) : Math.max(40, getClientHeight(el) * .12)));
+      update(state);
+    }
+    bar.addEventListener('click', scrollByArrow, true);
     bar.addEventListener('pointerdown', onPointerDown);
     bar.addEventListener('pointermove', onPointerMove);
     bar.addEventListener('pointerup', onPointerUp);
@@ -120,6 +138,7 @@
     bar.addEventListener('click', onTrackDown);
     bar.addEventListener('keydown', onKeyDown);
     state.cleanup = function () {
+      bar.removeEventListener('click', scrollByArrow, true);
       bar.removeEventListener('pointerdown', onPointerDown);
       bar.removeEventListener('pointermove', onPointerMove);
       bar.removeEventListener('pointerup', onPointerUp);
@@ -164,12 +183,14 @@
     var scrollHeight = getScrollHeight(el);
     var maxScroll = Math.max(1, scrollHeight - clientHeight);
     var trackHeight = Math.max(0, rect.height);
-    var thumbHeight = Math.min(trackHeight, Math.max(minThumb, trackHeight * clientHeight / scrollHeight));
-    var travel = Math.max(0, trackHeight - thumbHeight - 4);
-    var top = 2 + (getScrollTop(el) / maxScroll) * travel;
-    state.bar.style.left = Math.max(0, Math.min(window.innerWidth - 12, rect.right - 12)) + 'px';
+    var thumbHeight = Math.min(Math.max(0, trackHeight - 36), Math.max(minThumb, trackHeight * clientHeight / scrollHeight));
+    var travel = Math.max(0, trackHeight - thumbHeight - 36);
+    var top = 18 + (getScrollTop(el) / maxScroll) * travel;
+    state.bar.style.left = Math.max(0, Math.min(window.innerWidth - 14, rect.right - 14)) + 'px';
     state.bar.style.top = Math.max(0, rect.top) + 'px';
     state.bar.style.height = Math.max(0, Math.min(rect.bottom || rect.top + rect.height, window.innerHeight) - Math.max(0, rect.top)) + 'px';
+    state.up.disabled = getScrollTop(el) <= 0;
+    state.down.disabled = getScrollTop(el) >= getMaxScroll(el) - 1;
     state.thumb.style.height = thumbHeight + 'px';
     state.thumb.style.top = top + 'px';
     state.bar.classList.toggle('is-visible', rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight);
@@ -196,10 +217,16 @@
     if (!rootNode) rootNode = document;
     if (!rootNode.querySelectorAll) return;
     var candidates = [];
-    if (rootNode.nodeType === 1 && !isScrollbarNode(rootNode) && canScrollVertically(rootNode)) candidates.push(rootNode);
-    rootNode.querySelectorAll('*').forEach(function (el) {
-      if (!isScrollbarNode(el) && canScrollVertically(el)) candidates.push(el);
-    });
+    function isScrollableCandidate(el) {
+      if (!el || el.nodeType !== 1 || isScrollbarNode(el)) return false;
+      var style = window.getComputedStyle(el);
+      var overflow = style.overflowY;
+      var scrollableOverflow = overflow === 'auto' || overflow === 'scroll' || overflow === 'overlay';
+      // Include app panels with hidden overflow when they are programmatically scrollable.
+      return canScrollVertically(el) || (scrollableOverflow && el.scrollHeight > el.clientHeight + 2 && el.clientHeight > 0);
+    }
+    if (rootNode.nodeType === 1 && isScrollableCandidate(rootNode)) candidates.push(rootNode);
+    rootNode.querySelectorAll('*').forEach(function (el) { if (isScrollableCandidate(el)) candidates.push(el); });
     candidates.forEach(function (el) { update(makeScroller(el)); });
   }
 
