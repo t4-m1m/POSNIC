@@ -17,12 +17,12 @@
     var style = document.createElement('style');
     style.id = 'posnic-overlay-scrollbar-styles';
     style.textContent = [
-      '.posnic-overlay-scrollbar{position:fixed;z-index:20000;width:10px;box-sizing:border-box;background:rgba(31,47,70,.10);opacity:0;pointer-events:none;transition:opacity .12s ease;touch-action:none;user-select:none;}',
-      '.posnic-overlay-scrollbar.is-visible{opacity:.92;pointer-events:auto;}',
-      '.posnic-overlay-scrollbar-thumb{position:absolute;left:2px;right:2px;min-height:34px;background:var(--posnic-primary,#2474e8);border:1px solid rgba(255,255,255,.45);box-sizing:border-box;cursor:grab;}',
-      '.posnic-overlay-scrollbar.is-dragging .posnic-overlay-scrollbar-thumb{background:var(--posnic-primary-dark,#185cc0);cursor:grabbing;}',
-      '.posnic-overlay-scrollbar-thumb:hover{background:var(--posnic-primary-dark,#185cc0);}',
-      '.posnic-overlay-scrollbar:focus{outline:2px solid var(--posnic-primary,#2474e8);outline-offset:-2px;}',
+      '.posnic-overlay-scrollbar{position:fixed;z-index:20000;width:8px;box-sizing:border-box;background:transparent;opacity:0;pointer-events:none;transition:opacity .12s ease;touch-action:none;user-select:none;}',
+      '.posnic-overlay-scrollbar.is-visible{opacity:1;pointer-events:auto;}',
+      '.posnic-overlay-scrollbar-thumb{position:absolute;left:1px;right:1px;min-height:30px;background:#2474e8;border-radius:2px;box-sizing:border-box;cursor:grab;}',
+      '.posnic-overlay-scrollbar.is-dragging .posnic-overlay-scrollbar-thumb{background:#185cc0;cursor:grabbing;}',
+      '.posnic-overlay-scrollbar-thumb:hover{background:#185cc0;}',
+      '.posnic-overlay-scrollbar:focus{outline:2px solid #2474e8;outline-offset:-2px;}',
       '@media(prefers-reduced-motion:reduce){.posnic-overlay-scrollbar{transition:none;}}'
     ].join('');
     (document.head || document.documentElement).appendChild(style);
@@ -193,7 +193,8 @@
   }
 
   function scan(rootNode) {
-    if (!rootNode || !rootNode.querySelectorAll) return;
+    if (!rootNode) rootNode = document;
+    if (!rootNode.querySelectorAll) return;
     var candidates = [];
     if (rootNode.nodeType === 1 && !isScrollbarNode(rootNode) && canScrollVertically(rootNode)) candidates.push(rootNode);
     rootNode.querySelectorAll('*').forEach(function (el) {
