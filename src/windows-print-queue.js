@@ -161,13 +161,13 @@ class WindowsPrintQueue {
     // affects new requests. There is no automatic port reassignment.
   }
 
-  async snapshot(printer, binding) {
+  async snapshot(printer, binding, forceFresh = false) {
     const key = printer.toLowerCase();
     // Reuse a just-verified queue snapshot for back-to-back sales. The spooler
     // probe launches PowerShell/WMI; repeating it twice for one receipt can
     // cost seconds on low-spec Windows tills. Never reuse a stale snapshot.
     const cached = this.health.get(key);
-    if (cached && this.now() - cached.at < 30000) return cached.value;
+    if (!forceFresh && cached && this.now() - cached.at < 30000) return cached.value;
     const health = await this.transport.inspect(printer, binding);
     const serial = JSON.stringify(health);
     if (this.health.get(key)?.serial !== serial) this.log({ printer, port: health.port,
@@ -226,7 +226,7 @@ class WindowsPrintQueue {
     if (!job.submitted && job.state !== 'failed' && job.nextAt > this.now()) return;
     if (job.state === 'failed' && !job.reconnect && !job.submitted) return;
     let health;
-    try { health = await this.snapshot(job.printer, job.binding); }
+    try { health = await this.snapshot(job.printer, job.binding, job.submitted); }
     catch (error) {
       if (job.submitted) return this.transition(job, 'queued', 'Cannot read Windows queue: ' + error.message);
       return this.defer(job, 'Cannot read Windows queue: ' + error.message);
@@ -253,7 +253,7 @@ class WindowsPrintQueue {
       try {
         await this.transport.recover(job.printer, job.binding);
         await this.wait(300);
-        health = await this.snapshot(job.printer, job.binding);
+        health = await this.snapshot(job.printer, job.binding, true);
         reason = readiness(health, job.binding);
       } catch (error) {
         if (job.submitted) return this.transition(job, 'offline', 'Cannot bring printer online: ' + error.message);
@@ -335,9 +335,6 @@ class WindowsPrintQueue {
     job.spoolerId = result.spoolerJobId || null;
     job.accepted = !!result.success;
     this.live.add(job.id);
-    // The cached snapshot predates this submission and must not be used to
-    // reconcile the new job as though it had already left the queue.
-    this.health.delete(job.printer.toLowerCase());
     this.transition(job, 'queued', result.success ? '' : 'Submission outcome uncertain: ' + (result.error || 'No answer'));
     // A positive Windows spooler job ID means the driver accepted the ticket.
     // Return to checkout immediately; background reconciliation still tracks
