@@ -748,15 +748,20 @@ class HardwareManager {
   }
 
   async getDefaultPrinter() {
+    // Avoid repeating even a cached printer-list round trip for every receipt.
+    // Short TTL keeps printer changes visible while reducing lookup overhead.
+    const now = Date.now();
+    if (this._defaultPrinterCache && now - this._defaultPrinterCache.at < 30000) {
+      return this._defaultPrinterCache.value;
+    }
     try {
       const printers = await this.listPrinters();
       const defaultPrinter = printers.find(p => p.isDefault);
-      if (defaultPrinter) {
-        console.log('Default printer:', defaultPrinter.name);
-        return defaultPrinter;
-      }
-      console.warn('No default printer found');
-      return printers.length > 0 ? printers[0] : null;
+      const selected = defaultPrinter || printers[0] || null;
+      this._defaultPrinterCache = { at: Date.now(), value: selected };
+      if (defaultPrinter) console.log('Default printer:', defaultPrinter.name);
+      else if (!selected) console.warn('No default printer found');
+      return selected;
     } catch (error) {
       console.error('Failed to get default printer:', error);
       return null;
