@@ -111,10 +111,12 @@ PosnicPro.sales = {
             state.placeholder.style.height = Math.max(toolbar.offsetHeight, 1) + 'px';
         }
         function schedulePin() {
-            // Scroll events are already coalesced by the browser. Run the
-            // geometry check immediately so nested POS scroll panes cannot
-            // defer pinning until scrolling stops.
-            updatePin();
+            // Coalesce nested/window scroll events into one geometry read per frame.
+            // This avoids repeated synchronous layout on low-core-count tills.
+            if (state.frame) return;
+            state.frame = true;
+            if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(updatePin);
+            else updatePin();
         }
         if (!state.installed) {
             // Capture catches scroll events from nested scrollable POS containers,
@@ -8717,6 +8719,8 @@ PosnicPro.sales.itemsMenu = {
             eventtype = PosnicPro.sales.itemsMenu.mobilecheck() ? 'touchstart' : 'click';
 
         [].slice.call(document.querySelectorAll('.wsk-cp')).forEach(function (el) {
+            if (el.getAttribute('data-posnic-click-effect-bound') === eventtype) return;
+            el.setAttribute('data-posnic-click-effect-bound', eventtype);
             el.addEventListener(eventtype, function (ev) {
                 classie.add(el, 'cbutton--click');
                 onEndAnimation(classie.has(el, 'cbutton--complex') ? el.querySelector('.cbutton__helper') : el, function () {
@@ -12778,7 +12782,12 @@ $(function () {
                 var itemData = suggestion.data || {};
 
                 var selectedId = itemData.item_id || itemData.id || (itemData._id && itemData._id.$oid);
-                PosnicPro.sales.askSearchQuantity(itemData, selectedId);
+                if (selectedId) {
+                    PosnicPro.sales.itemsMenu.addToLineItemsList(selectedId);
+                } else {
+                    itemData.item_quantity = 1;
+                    PosnicPro.sales.addSalesLineItems(itemData);
+                }
 
             }
         },
