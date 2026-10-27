@@ -12818,9 +12818,14 @@ $(function () {
                 var labelId = suggestion.data.item_id || suggestion.data.id ||
                     (suggestion.data._id && (suggestion.data._id.$oid || suggestion.data._id));
                 if (labelId) {
-                    row = row.replace('</div></div>', '<button type="button" class="posnic-search-label-btn" data-item-id="' +
-                        String(labelId).replace(/[^a-zA-Z0-9_-]/g, '') +
-                        '" title="Print price labels" aria-label="Print price labels" style="flex:0 0 30px;width:30px;height:30px;margin-left:8px;border:1px solid #2474e8;background:#fff;color:#2474e8;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border-radius:3px"><i class="feather icon-printer"></i></button></div></div>');
+                    // Insert inside the suggestion's outermost wrapper rather than
+                    // relying on a fragile exact closing-tag sequence in sugRow().
+                    var safeLabelId = String(labelId).replace(/[^a-zA-Z0-9_-]/g, '');
+                    var labelButton = '<button type="button" class="posnic-search-label-btn" data-item-id="' +
+                        safeLabelId +
+                        '" title="Print price labels" aria-label="Print price labels" style="flex:0 0 30px;width:30px;height:30px;margin:4px 6px;border:1px solid #75b6f5;background:#fff;color:#2776bd;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border-radius:0"><i class="feather icon-printer"></i></button>';
+                    var closingTag = row.lastIndexOf('</div>');
+                    if (closingTag >= 0) row = row.slice(0, closingTag) + labelButton + row.slice(closingTag);
                 }
                 return row;
             }
