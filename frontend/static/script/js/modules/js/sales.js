@@ -8090,8 +8090,7 @@ PosnicPro.sales.itemsMenu = {
                                     '<div style="width:62%;aspect-ratio:1/1;' + _shapeCss + 'background:' + _tileColor + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:34px;font-weight:700;">' + _initial + '</div>' +
                                     '</div></div>';
                             }
-                            var product = '<div class="wsk-cp cbutton--effect-novak" id="' + getItemdata[i]['id'] + '" style="position:relative" onclick="PosnicPro.sales.itemsMenu.addToLineItemsList(this.id)">' +
-                                '<button type="button" class="posnic-fast-label-btn" data-item-id="' + String(getItemdata[i]['id']).replace(/[^a-zA-Z0-9_-]/g, '') + '" title="Print price labels" aria-label="Print price labels" style="position:absolute;right:7px;top:7px;z-index:5;width:30px;height:30px;padding:0;border:1px solid var(--posnic-primary,#2474e8);background:var(--posnic-surface,#fff);color:var(--posnic-primary,#2474e8);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.12)"><i class="feather icon-printer" aria-hidden="true"></i></button>' +
+                            var product = '<div class="wsk-cp cbutton--effect-novak" id="' + getItemdata[i]['id'] + '" onclick="PosnicPro.sales.itemsMenu.addToLineItemsList(this.id)">' +
                                 '<div class="wsk-cp-product">' +
                                 '<div class="description-prod">' +
                                 '<p data-searchval="' + _escName + '" data-toggle="tooltip" title="' + _escName + '">' + _escName + '</p>' +
@@ -12812,10 +12811,18 @@ $(function () {
                 var taxEnabled = true;
                 try { taxEnabled = JSON.parse(PosnicPro.local.get('general_settings') || '{}').module_tax_enable !== false; } catch (e) {}
                 var pricing = PosnicBillingSearch.price(suggestion.data, taxEnabled);
-                return PosnicPro.sugRow(suggestion.data,
+                var row = PosnicPro.sugRow(suggestion.data,
                     $.Autocomplete.formatResult(suggestion, currentValue), {
                         sales: true, currency: currency, price: pricing.price, was: pricing.was
                     });
+                var labelId = suggestion.data.item_id || suggestion.data.id ||
+                    (suggestion.data._id && (suggestion.data._id.$oid || suggestion.data._id));
+                if (labelId) {
+                    row = row.replace('</div></div>', '<button type="button" class="posnic-search-label-btn" data-item-id="' +
+                        String(labelId).replace(/[^a-zA-Z0-9_-]/g, '') +
+                        '" title="Print price labels" aria-label="Print price labels" style="flex:0 0 30px;width:30px;height:30px;margin-left:8px;border:1px solid #2474e8;background:#fff;color:#2474e8;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border-radius:3px"><i class="feather icon-printer"></i></button></div></div>');
+                }
+                return row;
             }
         }
     });
@@ -14975,5 +14982,42 @@ $(document)
                 else window.alert(message);
             })
             .finally(function () { button.disabled = false; button.style.opacity = ''; });
+    }, true);
+})();
+
+/* Fast labels launch from item search results (same input used by barcode scanning). */
+(function () {
+    if (window.__posnicSearchLabelActionBound) return;
+    window.__posnicSearchLabelActionBound = true;
+    var loading = null;
+    function getLabelTool() {
+        if (window.PosnicShelfLabels && typeof window.PosnicShelfLabels.quickPrint === 'function') return Promise.resolve(window.PosnicShelfLabels);
+        if (!loading) loading = new Promise(function (resolve, reject) {
+            var script = document.createElement('script');
+            script.src = 'static/script/js/core/shelf-labels.js';
+            script.onload = function () {
+                if (window.PosnicShelfLabels && typeof window.PosnicShelfLabels.quickPrint === 'function') resolve(window.PosnicShelfLabels);
+                else reject(new Error('Price-label printing is unavailable.'));
+            };
+            script.onerror = function () { loading = null; reject(new Error('Could not load price-label printing.')); };
+            document.head.appendChild(script);
+        });
+        return loading;
+    }
+    document.addEventListener('click', function (event) {
+        var button = event.target && event.target.closest && event.target.closest('.posnic-search-label-btn');
+        if (!button) return;
+        event.preventDefault(); event.stopPropagation();
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+        var id = button.getAttribute('data-item-id');
+        var raw = window.prompt('Number of price labels to print:', '1');
+        if (raw === null) return;
+        var copies = Number(String(raw).trim());
+        if (!Number.isInteger(copies) || copies < 1 || copies > 999) { window.alert('Enter a number between 1 and 999.'); return; }
+        button.disabled = true;
+        getLabelTool().then(function (tool) { return tool.quickPrint(id, copies); })
+            .then(function () { if (window.PosnicPro && PosnicPro.alert) PosnicPro.alert('success', 'Price labels sent to printer.'); })
+            .catch(function (err) { var message = err && err.message || 'Price-label printing failed.'; if (window.PosnicPro && PosnicPro.alert) PosnicPro.alert('error', message); else window.alert(message); })
+            .finally(function () { if (button.isConnected) button.disabled = false; });
     }, true);
 })();
