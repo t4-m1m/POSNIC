@@ -11,6 +11,11 @@ on:
 permissions:
   contents: write
 
+# Only build the newest snapshot; rapid fix commits must not publish stale installers.
+concurrency:
+  group: posnic-windows-installer-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-windows:
     name: Build Windows installer only without running tests
