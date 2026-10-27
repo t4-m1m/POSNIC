@@ -9,6 +9,24 @@
   var active = new Map();
   var scheduled = false;
   var minThumb = 34;
+
+  // Theme-owned styling: show a thin draggable scrollbar only when a real
+  // scroll container overflows; don't depend on legacy theme bundle selectors.
+  function installStyles() {
+    if (document.getElementById('posnic-overlay-scrollbar-styles')) return;
+    var style = document.createElement('style');
+    style.id = 'posnic-overlay-scrollbar-styles';
+    style.textContent = [
+      '.posnic-overlay-scrollbar{position:fixed;z-index:20000;width:10px;box-sizing:border-box;background:rgba(31,47,70,.10);opacity:0;pointer-events:none;transition:opacity .12s ease;touch-action:none;user-select:none;}',
+      '.posnic-overlay-scrollbar.is-visible{opacity:.92;pointer-events:auto;}',
+      '.posnic-overlay-scrollbar-thumb{position:absolute;left:2px;right:2px;min-height:34px;background:var(--posnic-primary,#2474e8);border:1px solid rgba(255,255,255,.45);box-sizing:border-box;cursor:grab;}',
+      '.posnic-overlay-scrollbar.is-dragging .posnic-overlay-scrollbar-thumb{background:var(--posnic-primary-dark,#185cc0);cursor:grabbing;}',
+      '.posnic-overlay-scrollbar-thumb:hover{background:var(--posnic-primary-dark,#185cc0);}',
+      '.posnic-overlay-scrollbar:focus{outline:2px solid var(--posnic-primary,#2474e8);outline-offset:-2px;}',
+      '@media(prefers-reduced-motion:reduce){.posnic-overlay-scrollbar{transition:none;}}'
+    ].join('');
+    (document.head || document.documentElement).appendChild(style);
+  }
   var root = function () { return document.scrollingElement || document.documentElement; };
 
   function isRootScroller(el) {
@@ -205,6 +223,7 @@
   }
 
   function start() {
+    installStyles();
     // One complete scan at startup; later DOM changes scan only inserted or
     // directly restyled subtrees. This matters on low-power Pentium tills.
     scan(document);
