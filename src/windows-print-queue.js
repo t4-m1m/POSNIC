@@ -335,6 +335,9 @@ class WindowsPrintQueue {
     job.spoolerId = result.spoolerJobId || null;
     job.accepted = !!result.success;
     this.live.add(job.id);
+    // The cached snapshot predates this submission and must not be used to
+    // reconcile the new job as though it had already left the queue.
+    this.health.delete(job.printer.toLowerCase());
     this.transition(job, 'queued', result.success ? '' : 'Submission outcome uncertain: ' + (result.error || 'No answer'));
     // A positive Windows spooler job ID means the driver accepted the ticket.
     // Return to checkout immediately; background reconciliation still tracks
