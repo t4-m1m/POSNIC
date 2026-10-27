@@ -162,15 +162,20 @@ class WindowsPrintQueue {
   }
 
   async snapshot(printer, binding) {
-    const health = await this.transport.inspect(printer, binding);
     const key = printer.toLowerCase();
+    // Reuse a just-verified queue snapshot for back-to-back sales. The spooler
+    // probe launches PowerShell/WMI; repeating it twice for one receipt can
+    // cost seconds on low-spec Windows tills. Never reuse a stale snapshot.
+    const cached = this.health.get(key);
+    if (cached && this.now() - cached.at < 2000) return cached.value;
+    const health = await this.transport.inspect(printer, binding);
     const serial = JSON.stringify(health);
     if (this.health.get(key)?.serial !== serial) this.log({ printer, port: health.port,
       pnpId: health.pnpId, present: health.present, discovery: health.discovery, candidateCount: health.candidateCount,
       discoveryError: health.discoveryError, workOffline: health.workOffline,
       printerStatus: health.printerStatus, extendedStatus: health.extendedStatus,
       jobs: health.jobs.map(item => ({ id: item.id, status: item.status })) });
-    this.health.set(key, { serial, value: health });
+    this.health.set(key, { serial, value: health, at: this.now() });
     return health;
   }
 
@@ -197,7 +202,14 @@ class WindowsPrintQueue {
     this.write(id + '.json', job);
     this.jobs.set(id, job);
     this.start();
-    return this.run(printer).then(() => this.result(job));
+    return this.run(printer).then(() => {
+      const outcome = this.result(job);
+      if (job.accepted && Number(job.spoolerId) > 0) {
+        return { ...outcome, success: true, pending: true, accepted: true,
+          status: 'Accepted by Windows printer queue', error: undefined };
+      }
+      return outcome;
+    });
   }
 
   defer(job, reason, transient = true) {
@@ -277,7 +289,7 @@ class WindowsPrintQueue {
     }
     if (job.nextAt > this.now()) return;
     const canWake = !reason || (health.present === true && reason === 'Printer offline');
-    if (canWake && job.binding.initialize !== false && this.transport.initialize) {
+    if (canWake && job.binding.wakeBeforePrint === true && this.transport.initialize) {
       if (!job.wakeDocument) {
         job.wakeDocument = 'Posnic-initialize-' + job.id;
         job.wakeStartedAt = this.now();
@@ -324,6 +336,10 @@ class WindowsPrintQueue {
     job.accepted = !!result.success;
     this.live.add(job.id);
     this.transition(job, 'queued', result.success ? '' : 'Submission outcome uncertain: ' + (result.error || 'No answer'));
+    // A positive Windows spooler job ID means the driver accepted the ticket.
+    // Return to checkout immediately; background reconciliation still tracks
+    // completion and errors, without making the customer wait for another WMI probe.
+    if (result.success && Number(result.spoolerJobId) > 0) return;
     await this.wait(300);
     return this.step(job);
   }
