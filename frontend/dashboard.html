@@ -25,8 +25,12 @@
             (function () {
                 try {
                     var K = 'posnic_boot_flight';
+                    // The detailed flight recorder is opt-in. Its XHR hooks and
+                    // frequent localStorage writes were running on every till session.
+                    var diagnosticsEnabled = location.search.indexOf('flight=1') !== -1
+                        || localStorage.getItem('posnic_boot_flight_enabled') === '1';
                     var prev = null;
-                    try { prev = JSON.parse(localStorage.getItem(K) || 'null'); } catch (e) { }
+                    if (diagnosticsEnabled) { try { prev = JSON.parse(localStorage.getItem(K) || 'null'); } catch (e) { } }
                     var now = Date.now();
                     var rec = { started: now, stages: ['head:0'], hash: location.hash, ua: navigator.userAgent.slice(0, 120), clean: false, booted: false };
                     /* set FIRST - the bisect trigger below reads it, and the
@@ -36,6 +40,7 @@
                         && 'ontouchstart' in window;
                     window.__flight = {
                         stamp: function (name) {
+                            if (!diagnosticsEnabled) return;
                             try {
                                 rec.stages.push(name + ':' + (Date.now() - rec.started));
                                 if (name === 'booted-ok') { rec.booted = true; }
@@ -45,7 +50,7 @@
                             } catch (e) { }
                         }
                     };
-                    localStorage.setItem(K, JSON.stringify(rec));
+                    if (diagnosticsEnabled) localStorage.setItem(K, JSON.stringify(rec));
                     /* Owner: "keep record everything ... every movement of
                        browser. when i refresh send previous records." Every
                        route, every tap, every background/foreground and
@@ -53,6 +58,7 @@
                        reads as the device's last minutes, not one number. */
                     rec.moves = [];
                     function move(what) {
+                        if (!diagnosticsEnabled) return;
                         try {
                             rec.moves.push(Math.round((Date.now() - rec.started) / 100) / 10 + 's ' + what);
                             if (rec.moves.length > 25) { rec.moves.splice(0, rec.moves.length - 25); }
@@ -91,7 +97,7 @@
                        api calls etc?") - method, path, status, duration.
                        The one call still marked pending when a record ends
                        is the call that was in flight at death. */
-                    try {
+                    if (diagnosticsEnabled) try {
                         var origOpen = XMLHttpRequest.prototype.open;
                         var origSend = XMLHttpRequest.prototype.send;
                         XMLHttpRequest.prototype.open = function (m, u) {
@@ -121,7 +127,7 @@
                             return origSend.apply(this, arguments);
                         };
                     } catch (e16) { }
-                    document.addEventListener('click', function (ev) {
+                    if (diagnosticsEnabled) document.addEventListener('click', function (ev) {
                         var t = ev.target || {};
                         var d = (t.tagName || '?') + (t.id ? '#' + t.id : '') +
                             (!t.id && t.className && t.className.slice ? '.' + String(t.className).split(' ')[0] : '');
@@ -199,14 +205,14 @@
                             move('resize#' + resizes + ' ' + window.innerWidth + 'x' + window.innerHeight);
                         }
                     });
-                    var micro = setInterval(function () {
+                    var micro = diagnosticsEnabled ? setInterval(function () {
                         try {
                             rec.alive = Date.now() - rec.started;
                             if (rec.alive > 6000) { clearInterval(micro); return; }
                             localStorage.setItem(K, JSON.stringify(rec));
                         } catch (e) { }
-                    }, 250);
-                    setInterval(function () {
+                    }, 250) : null;
+                    if (diagnosticsEnabled) setInterval(function () {
                         try {
                             rec.alive = Date.now() - rec.started;
                             rec.hash = location.hash;
@@ -216,7 +222,7 @@
                             localStorage.setItem(K, JSON.stringify(rec));
                         } catch (e) { }
                     }, 2000);
-                    window.addEventListener('pagehide', function () {
+                    if (diagnosticsEnabled) window.addEventListener('pagehide', function () {
                         try { rec.clean = true; localStorage.setItem(K, JSON.stringify(rec)); } catch (e) { }
                     });
                     /* PROBE: boots with every stylesheet disabled before
@@ -229,7 +235,7 @@
                        and the outcome. */
                     var cd = 0;
                     try { cd = parseInt(localStorage.getItem(K + '_cdeaths') || '0', 10) || 0; } catch (e9) { }
-                    if (prev && prev.started !== now && !prev.clean) { cd += 1; }
+                    if (diagnosticsEnabled && prev && prev.started !== now && !prev.clean) { cd += 1; }
                     try { localStorage.setItem(K + '_cdeaths', String(cd)); } catch (e10) { }
                     /*
                      * SELF-DRIVING CSS BISECT, in the REAL page. The bare
