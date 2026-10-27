@@ -307,7 +307,7 @@
                     });
                     /* Twenty seconds alive in a NORMAL boot resets the
                        death streak. */
-                    setTimeout(function () {
+                    if (diagnosticsEnabled) setTimeout(function () {
                         try {
                             localStorage.setItem(K + '_cdeaths', '0');
                             localStorage.removeItem('posnic_fresh_boot');
