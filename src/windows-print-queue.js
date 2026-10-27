@@ -167,7 +167,7 @@ class WindowsPrintQueue {
     // probe launches PowerShell/WMI; repeating it twice for one receipt can
     // cost seconds on low-spec Windows tills. Never reuse a stale snapshot.
     const cached = this.health.get(key);
-    if (cached && this.now() - cached.at < 2000) return cached.value;
+    if (cached && this.now() - cached.at < 30000) return cached.value;
     const health = await this.transport.inspect(printer, binding);
     const serial = JSON.stringify(health);
     if (this.health.get(key)?.serial !== serial) this.log({ printer, port: health.port,
@@ -462,7 +462,7 @@ class WindowsPrintQueue {
     const poll = async () => {
       try { await this.tick(); } catch (error) { this.log({ error: error.message }); }
       const active = [...this.jobs.values()].some(job => ['waiting', 'offline', 'queued'].includes(job.state));
-      if (!this.stopped) { this.timer = setTimeout(poll, active ? 2000 : 15000); this.timer.unref?.(); }
+      if (!this.stopped) { this.timer = setTimeout(poll, active ? 2000 : 30000); this.timer.unref?.(); }
     };
     this.timer = setTimeout(poll, 2000); this.timer.unref?.();
   }
