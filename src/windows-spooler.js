@@ -59,9 +59,27 @@ function createSpooler({ inspect = inspectWindows, platform = process.platform,
     if (platform !== 'win32') return null;
     return existing(await inspect(printerName), printerName, documentName);
   }
-  async function perform({ printerName, documentName, submit, acceptUnverified = false }) {
+  async function perform({ printerName, documentName, submit, acceptUnverified = false, fastSubmit = false }) {
     if (!printerName) return result('', { error: 'Select an exact printer name' });
     if (platform !== 'win32') return submit(documentName);
+    // Electron's print callback is authoritative for driver/GDI jobs. Avoid
+    // spawning PowerShell/CIM before every receipt or label: it can fail on
+    // restricted Windows installs and costs seconds on low-spec tills.
+    if (fastSubmit) {
+      try {
+        const submission = await submit(documentName);
+        if (submission?.success === true) return result(printerName, {
+          ...submission, jobId: Number(submission.jobId) || null, submitted: true,
+          retryable: false, state: 'submitted', error: ''
+        });
+        return result(printerName, {
+          ...submission, state: 'failed', submitted: !!submission?.submitted,
+          retryable: false, error: submission?.error || submission?.reason || 'Windows print driver rejected the job'
+        });
+      } catch (error) {
+        return result(printerName, { state: 'failed', error: error.message || 'Windows print submission failed', retryable: false });
+      }
+    }
     let started = false;
     try {
       const snapshot = await inspect(printerName);
