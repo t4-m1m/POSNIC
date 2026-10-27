@@ -471,7 +471,7 @@ class HardwareManager {
     printOpts = { ...printOpts, deviceName: printerName };
     const documentName = 'Posnic-' + require('crypto').randomUUID();
     await printWindow.webContents.executeJavaScript(`document.title = ${JSON.stringify(documentName)}`);
-    return spooler.submit({ printerName, documentName, submit, acceptUnverified: true });
+    return spooler.submit({ printerName, documentName, submit, acceptUnverified: true, fastSubmit: true });
   }
 
   async _printViaPdfFallback(printWindow, deviceName, options = {}) {
