@@ -8090,7 +8090,8 @@ PosnicPro.sales.itemsMenu = {
                                     '<div style="width:62%;aspect-ratio:1/1;' + _shapeCss + 'background:' + _tileColor + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:34px;font-weight:700;">' + _initial + '</div>' +
                                     '</div></div>';
                             }
-                            var product = '<div class="wsk-cp cbutton--effect-novak" id="' + getItemdata[i]['id'] + '" onclick="PosnicPro.sales.itemsMenu.addToLineItemsList(this.id)">' +
+                            var product = '<div class="wsk-cp cbutton--effect-novak" id="' + getItemdata[i]['id'] + '" style="position:relative" onclick="PosnicPro.sales.itemsMenu.addToLineItemsList(this.id)">' +
+                                '<button type="button" class="posnic-fast-label-btn" data-item-id="' + String(getItemdata[i]['id']).replace(/[^a-zA-Z0-9_-]/g, '') + '" title="Print price labels" aria-label="Print price labels" style="position:absolute;right:7px;top:7px;z-index:5;width:30px;height:30px;padding:0;border:1px solid var(--posnic-primary,#2474e8);background:var(--posnic-surface,#fff);color:var(--posnic-primary,#2474e8);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.12)"><i class="feather icon-printer" aria-hidden="true"></i></button>' +
                                 '<div class="wsk-cp-product">' +
                                 '<div class="description-prod">' +
                                 '<p data-searchval="' + _escName + '" data-toggle="tooltip" title="' + _escName + '">' + _escName + '</p>' +
@@ -14918,4 +14919,61 @@ $(document)
         PosnicPro.sales.unbindTenderKeyboardShortcuts(false);
     });
 
+})();
+
+
+/* Fast price-label action on sales product tiles. Uses the saved label design
+ * and printer route; only asks for copies, then submits the labels. */
+(function () {
+    if (window.__posnicFastLabelActionBound) return;
+    window.__posnicFastLabelActionBound = true;
+    var labelScriptPromise = null;
+    function loadLabelDesigner() {
+        if (window.PosnicShelfLabels && typeof window.PosnicShelfLabels.quickPrint === 'function') {
+            return Promise.resolve(window.PosnicShelfLabels);
+        }
+        if (!labelScriptPromise) {
+            labelScriptPromise = new Promise(function (resolve, reject) {
+                var script = document.createElement('script');
+                script.src = 'static/script/js/core/shelf-labels.js';
+                script.onload = function () {
+                    if (window.PosnicShelfLabels && typeof window.PosnicShelfLabels.quickPrint === 'function') resolve(window.PosnicShelfLabels);
+                    else reject(new Error('Price-label printing is not available.'));
+                };
+                script.onerror = function () { labelScriptPromise = null; reject(new Error('Could not load the price-label printer.')); };
+                document.head.appendChild(script);
+            });
+        }
+        return labelScriptPromise;
+    }
+    document.addEventListener('click', function (event) {
+        var button = event.target && event.target.closest ? event.target.closest('.posnic-fast-label-btn') : null;
+        if (!button) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+        if (button.disabled) return;
+        var itemId = button.getAttribute('data-item-id');
+        var raw = window.prompt('Number of price labels to print:', '1');
+        if (raw === null) return;
+        var copies = Number(String(raw).trim());
+        if (!Number.isInteger(copies) || copies < 1 || copies > 999) {
+            if (window.PosnicPro && typeof window.PosnicPro.alert === 'function') window.PosnicPro.alert('warning', 'Enter a number of copies between 1 and 999.');
+            else window.alert('Enter a number of copies between 1 and 999.');
+            return;
+        }
+        button.disabled = true;
+        button.style.opacity = '.6';
+        loadLabelDesigner()
+            .then(function (labels) { return labels.quickPrint(itemId, copies); })
+            .then(function () {
+                if (window.PosnicPro && typeof window.PosnicPro.alert === 'function') window.PosnicPro.alert('success', 'Price labels sent to the printer.');
+            })
+            .catch(function (error) {
+                var message = error && error.message ? error.message : 'Price-label printing failed.';
+                if (window.PosnicPro && typeof window.PosnicPro.alert === 'function') window.PosnicPro.alert('error', message);
+                else window.alert(message);
+            })
+            .finally(function () { button.disabled = false; button.style.opacity = ''; });
+    }, true);
 })();
