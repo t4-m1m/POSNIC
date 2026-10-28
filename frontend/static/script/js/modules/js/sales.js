@@ -4793,6 +4793,7 @@ PosnicPro.sales.addSale = {
                         }, function (xhr) {
                             var response = jQuery.parseJSON(xhr.responseText);
                             PosnicPro.alert(response.type, response.message);
+                    if (sendWhatsAppReceiptAfterSave) PosnicPro.sales.showWhatsAppReceipt(response.data.sales_id, response.data.phone || $('#sales_new_customer_phone').val() || '', response.data.name || $('#sales_new_customer_name').val() || '');
                         });
                     }
                     if (response.data.waring === 'warning') {
@@ -4803,6 +4804,8 @@ PosnicPro.sales.addSale = {
                             button: "Ok",
                         });
                     }
+                    var sendWhatsAppReceiptAfterSave = window.__posnicSendWhatsAppReceiptAfterSave === true;
+                    window.__posnicSendWhatsAppReceiptAfterSave = false;
                     var fastSaleSucceeded = window.__posnicFastPayPending === true;
                     var askPrint = (PosnicPro.askposnic && PosnicPro.askposnic.checkout && PosnicPro.askposnic.checkout.print === true)
                         || window.__posnicFastPrintPending === true;
@@ -4862,6 +4865,7 @@ PosnicPro.sales.addSale = {
                     PosnicPro.alert(response.type, response.message);
                 }
             }, function (xhr) {
+                window.__posnicSendWhatsAppReceiptAfterSave = false;
                 loader.find(".loadingSpinner").remove();
                 if (PosnicPro.businessApproval && PosnicPro.businessApproval.failed(xhr)) return;
                 // ✅ Clear submission flag and re-enable button on error
