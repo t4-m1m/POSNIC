@@ -4434,7 +4434,7 @@ PosnicPro.sales.addSale = {
             var unpaidCustomerId = String($('#sales_new_customer_id').val() || '').trim();
             var unpaidCustomerName = String($('#sales_new_customer_name').val() || '').trim();
             var unpaidIsWalkIn = !unpaidCustomerId || !unpaidCustomerName ||
-                /walk.?in|cash customer|comptoir|client\\s+de\\s+passage/i.test(unpaidCustomerName);
+                /walk.?in|cash customer|comptoir|client\s+de\s+passage/i.test(unpaidCustomerName);
             if (unpaidIsWalkIn) {
                 PosnicPro.sales.submissionInProgress = false;
                 $('#save_btn').prop('disabled', false);
