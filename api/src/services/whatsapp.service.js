@@ -119,7 +119,9 @@ class WhatsAppService extends EventEmitter {
         console.log(`Disconnected ${deviceId}:`, reason);
         this.connectionStatus.set(clientKey, 'disconnected');
         this.qrCodes.delete(clientKey);
-        this._safeCleanupClient(clientKey);
+        // A transport disconnect must not erase persisted LocalAuth login data.
+        // Explicit logout/removeDevice still calls _safeCleanupClient and clears it.
+        this.clients.delete(clientKey);
         this.emit('disconnected', { deviceId, clientKey, reason });
       });
 
@@ -136,6 +138,14 @@ class WhatsAppService extends EventEmitter {
       console.error('Error initializing WhatsApp:', error);
       return { status: false, message: error.message, connected: false };
     }
+  }
+
+  hasSavedSession(deviceId, branchId) {
+    try {
+      const clientKey = this._clientKey(deviceId, branchId);
+      const sessionDir = path.join(this.sessionPath, `session-${clientKey}`);
+      return fs.existsSync(sessionDir) && fs.statSync(sessionDir).isDirectory();
+    } catch (_) { return false; }
   }
 
   getQRCode(deviceId, branchId) {
