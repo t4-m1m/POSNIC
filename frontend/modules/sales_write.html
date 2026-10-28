@@ -1533,7 +1533,7 @@
   function renderSplit(){
     var $host=$('#posnic-payment-split-summary');if(!$host.length)return;
     var customerId=String($('#sales_new_customer_id').val()||'').trim(),customerName=String($('#sales_new_customer_name').val()||'').trim();
-    var canCarryCredit=!!customerId&&!!customerName&&!/walk.?in|cash customer|comptoir|client\\s+de\\s+passage/i.test(customerName);
+    var canCarryCredit=!!customerId&&!!customerName&&!/walk.?in|cash customer|comptoir|client\s+de\s+passage/i.test(customerName);
     $('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').first().attr('id')||'').toLowerCase()==='credit';}).find('.payment-amount-input').prop('disabled',!canCarryCredit).prop('readonly',!canCarryCredit).attr('aria-disabled',canCarryCredit?'false':'true');
     var rows=[];$('#payment_id .payment-method-card').each(function(){var $c=$(this),$r=$c.find('.payment_mode').first(),$i=$c.find('.payment-amount-input').first();if(!$r.length||!$i.length)return;var n=Number(String($i.val()||'0').replace(/,/g,''))||0;if(n>0.004)rows.push({name:String($r.val()||$r.attr('id')||'Mode'),amount:n,credit:String($r.attr('id')||'').toLowerCase()==='credit'});});
     if(!rows.length){$host.find('.posnic-payment-split-lines').html('<span class="text-muted">Choisissez un mode et saisissez le montant reçu.</span>');$host.find('.posnic-payment-split-footer').remove();return;}
@@ -1550,7 +1550,7 @@
     // Keep the customer partial-credit flag in sync immediately; the legacy
     // delayed keyup validator must not be the only writer before checkout.
     $('#sales_new_customer_partial_balance').val(due>0.01?'true':'false');
-    $('#unpaid_payment_toggle').prop('checked',due>0.01).trigger('change');
+    $('#unpaid_payment_toggle').prop('checked',true).trigger('change');
     var $credit=$('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').attr('id')||'').toLowerCase()==='credit';}).find('.payment-amount-input').first();if($credit.length)$credit.val(due.toFixed(2));
     if(PosnicPro.sales&&typeof PosnicPro.sales.initPaymentValidation==='function')PosnicPro.sales.initPaymentValidation();renderSplit();
   }
