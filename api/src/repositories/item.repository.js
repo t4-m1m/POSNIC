@@ -3201,23 +3201,70 @@ class ItemRepository extends BaseModel {
       let items, nextOffset;
       if (params.tilePage) {
         if (params.categoryId) {
-          if (typeof params.categoryId !== 'string' || !ObjectId.isValid(params.categoryId)) throw new Error('Invalid category');
+          if (typeof params.categoryId !== 'string' || !ObjectId.isValid(params.categoryId)) {
+            throw new Error('Invalid category');
+          }
           match.$and.push({ category_id: new ObjectId(params.categoryId) });
         }
-        match.$and.push({ $or: [
-          { track_inventory: { $ne: true } },
-          { negative_stock: true },
-          { available_quantity: { $gt: 0 } },
-        ] });
-        // Avoid grouping and materializing the entire eligible catalogue before
-        // pagination. Fetch one indexed/sorted page so the sale screen can open
-        // quickly on large shop databases; subsequent pages remain on demand.
+        match.$and.push({
+          $or: [
+            { track_inventory: { $ne: true } },
+            { negative_stock: true },
+            { available_quantity: { $gt: 0 } },
+          ],
+        });
+        // Expiry can be an epoch string or an ISO date. Missing/invalid dates
+        // remain available, matching the billing search's expiry semantics.
+        const expiry = {
+          $convert: {
+            input: {
+              $ifNull: [
+                {
+                  $convert: {
+                    input: '$items_expiry_date',
+                    to: 'double',
+                    onError: null,
+                    onNull: null,
+                  },
+                },
+                '$items_expiry_date',
+              ],
+            },
+            to: 'date',
+            onError: null,
+            onNull: null,
+          },
+        };
+        match.$and.push({
+          $expr: { $or: [{ $eq: [expiry, null] }, { $gte: [expiry, new Date()] }] },
+        });
         const size = Math.min(limit, 48);
-        let cursor = collection.find(match).sort({ sort_order: 1, name: 1, _id: 1 });
-        if (offset) cursor = cursor.skip(offset);
-        const pageRows = await cursor.limit(size + 1).toArray();
-        nextOffset = pageRows.length > size ? offset + size : null;
-        items = pageRows.slice(0, size);
+        const groups = await collection
+          .aggregate([
+            { $match: match },
+            { $sort: { sort_order: 1, name: 1, _id: 1 } },
+            {
+              $group: {
+                _id: {
+                  $cond: [
+                    { $in: [{ $ifNull: ['$variant_group_id', ''] }, ['', null]] },
+                    { item: '$_id' },
+                    { family: '$variant_group_id' },
+                  ],
+                },
+                sort_order: { $first: '$sort_order' },
+                name: { $first: '$name' },
+                first_id: { $first: '$_id' },
+                items: { $push: '$$ROOT' },
+              },
+            },
+            { $sort: { sort_order: 1, name: 1, first_id: 1 } },
+            { $skip: offset },
+            { $limit: size + 1 },
+          ])
+          .toArray();
+        nextOffset = groups.length > size ? offset + size : null;
+        items = groups.slice(0, size).flatMap((group) => group.items);
       } else {
         let cursor = collection.find(match).sort({ sort_order: 1, name: 1, _id: 1 });
         if (offset) cursor = cursor.skip(offset);
