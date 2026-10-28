@@ -12834,7 +12834,7 @@ $(function () {
                     var safeLabelId = String(labelId).replace(/[^a-zA-Z0-9_-]/g, '');
                     var labelButton = '<button type="button" class="posnic-search-label-btn" data-item-id="' +
                         safeLabelId +
-                        '" title="Print price labels" aria-label="Print price labels" style="flex:0 0 30px;width:30px;height:30px;margin:4px 6px;border:1px solid #75b6f5;background:#fff;color:#2776bd;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border-radius:0"><i class="feather icon-printer"></i></button>';
+                        '" onclick="return window.posnicPrintSearchLabel(this)" title="Print price labels" aria-label="Print price labels" style="flex:0 0 30px;width:30px;height:30px;margin:4px 6px;border:1px solid #75b6f5;background:#fff;color:#2776bd;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border-radius:0"><i class="feather icon-printer"></i></button>';
                     var closingTag = row.lastIndexOf('</div>');
                     if (closingTag >= 0) row = row.slice(0, closingTag) + labelButton + row.slice(closingTag);
                 }
@@ -14945,95 +14945,44 @@ $(document)
 })();
 
 
-/* Fast price-label action on sales product tiles. Uses the saved label design
- * and printer route; only asks for copies, then submits the labels. */
-(function () {
-    if (window.__posnicFastLabelActionBound) return;
-    window.__posnicFastLabelActionBound = true;
-    var labelScriptPromise = null;
-    function loadLabelDesigner() {
-        if (window.PosnicShelfLabels && typeof window.PosnicShelfLabels.quickPrint === 'function') {
-            return Promise.resolve(window.PosnicShelfLabels);
-        }
-        if (!labelScriptPromise) {
-            labelScriptPromise = new Promise(function (resolve, reject) {
-                var script = document.createElement('script');
-                script.src = 'static/script/js/core/shelf-labels.js';
-                script.onload = function () {
-                    if (window.PosnicShelfLabels && typeof window.PosnicShelfLabels.quickPrint === 'function') resolve(window.PosnicShelfLabels);
-                    else reject(new Error('Price-label printing is not available.'));
-                };
-                script.onerror = function () { labelScriptPromise = null; reject(new Error('Could not load the price-label printer.')); };
-                document.head.appendChild(script);
-            });
-        }
-        return labelScriptPromise;
+/* Direct, single entry point for search-result label printing.
+ * Inline dispatch avoids delegated-listener ordering conflicts with autocomplete
+ * and other global POS click handlers. */
+window.posnicPrintSearchLabel = function (button) {
+    if (!button || button.disabled) return false;
+    var itemId = button.getAttribute('data-item-id');
+    var raw = window.prompt('Number of price labels to print:', '1');
+    if (raw === null) return false;
+    var copies = Number(String(raw).trim());
+    if (!Number.isInteger(copies) || copies < 1 || copies > 999) {
+        window.alert('Enter a number of copies between 1 and 999.');
+        return false;
     }
-    document.addEventListener('click', function (event) {
-        var button = event.target && event.target.closest ? event.target.closest('.posnic-fast-label-btn, .posnic-search-label-btn') : null;
-        if (!button) return;
-        event.preventDefault();
-        event.stopPropagation();
-        if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-        if (button.disabled) return;
-        var itemId = button.getAttribute('data-item-id');
-        var raw = window.prompt('Number of price labels to print:', '1');
-        if (raw === null) return;
-        var copies = Number(String(raw).trim());
-        if (!Number.isInteger(copies) || copies < 1 || copies > 999) {
-            if (window.PosnicPro && typeof window.PosnicPro.alert === 'function') window.PosnicPro.alert('warning', 'Enter a number of copies between 1 and 999.');
-            else window.alert('Enter a number of copies between 1 and 999.');
-            return;
-        }
-        button.disabled = true;
-        button.style.opacity = '.6';
-        loadLabelDesigner()
-            .then(function (labels) { return labels.quickPrint(itemId, copies); })
-            .then(function () {
-                if (window.PosnicPro && typeof window.PosnicPro.alert === 'function') window.PosnicPro.alert('success', 'Price labels sent to the printer.');
-            })
-            .catch(function (error) {
-                var message = error && error.message ? error.message : 'Price-label printing failed.';
-                if (window.PosnicPro && typeof window.PosnicPro.alert === 'function') window.PosnicPro.alert('error', message);
-                else window.alert(message);
-            })
-            .finally(function () { button.disabled = false; button.style.opacity = ''; });
-    }, true);
-})();
-
-/* Fast labels launch from item search results (same input used by barcode scanning). */
-(function () {
-    if (window.__posnicSearchLabelActionBound) return;
-    window.__posnicSearchLabelActionBound = true;
-    var loading = null;
-    function getLabelTool() {
+    button.disabled = true;
+    button.style.opacity = '.6';
+    function getTool() {
         if (window.PosnicShelfLabels && typeof window.PosnicShelfLabels.quickPrint === 'function') return Promise.resolve(window.PosnicShelfLabels);
-        if (!loading) loading = new Promise(function (resolve, reject) {
+        return new Promise(function (resolve, reject) {
             var script = document.createElement('script');
             script.src = 'static/script/js/core/shelf-labels.js';
             script.onload = function () {
                 if (window.PosnicShelfLabels && typeof window.PosnicShelfLabels.quickPrint === 'function') resolve(window.PosnicShelfLabels);
                 else reject(new Error('Price-label printing is unavailable.'));
             };
-            script.onerror = function () { loading = null; reject(new Error('Could not load price-label printing.')); };
+            script.onerror = function () { reject(new Error('Could not load price-label printing.')); };
             document.head.appendChild(script);
         });
-        return loading;
     }
-    document.addEventListener('click', function (event) {
-        var button = event.target && event.target.closest && event.target.closest('.posnic-search-label-btn');
-        if (!button) return;
-        event.preventDefault(); event.stopPropagation();
-        if (event.stopImmediatePropagation) event.stopImmediatePropagation();
-        var id = button.getAttribute('data-item-id');
-        var raw = window.prompt('Number of price labels to print:', '1');
-        if (raw === null) return;
-        var copies = Number(String(raw).trim());
-        if (!Number.isInteger(copies) || copies < 1 || copies > 999) { window.alert('Enter a number between 1 and 999.'); return; }
-        button.disabled = true;
-        getLabelTool().then(function (tool) { return tool.quickPrint(id, copies); })
-            .then(function () { if (window.PosnicPro && PosnicPro.alert) PosnicPro.alert('success', 'Price labels sent to printer.'); })
-            .catch(function (err) { var message = err && err.message || 'Price-label printing failed.'; if (window.PosnicPro && PosnicPro.alert) PosnicPro.alert('error', message); else window.alert(message); })
-            .finally(function () { if (button.isConnected) button.disabled = false; });
-    }, true);
-})();
+    getTool().then(function (tool) { return tool.quickPrint(itemId, copies); })
+        .then(function () {
+            if (window.PosnicPro && window.PosnicPro.alert) window.PosnicPro.alert('success', 'Price labels sent to printer.');
+            else window.alert('Price labels sent to printer.');
+        })
+        .catch(function (err) {
+            var message = err && err.message || 'Price-label printing failed.';
+            if (window.PosnicPro && window.PosnicPro.alert) window.PosnicPro.alert('error', message);
+            else window.alert(message);
+        })
+        .finally(function () { button.disabled = false; button.style.opacity = ''; });
+    return false;
+};;
