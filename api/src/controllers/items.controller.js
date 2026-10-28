@@ -854,6 +854,7 @@ class ItemsController extends BaseController {
           limit: Math.min(limit, 500),
           offset: Math.max(0, parseInt(req.query.offset, 10) || 0),
           tilePage: req.query.tile_page === 'true',
+          brandsOnly: req.query.brands_only === 'true',
           categoryId: req.query.category_id,
           brand: typeof req.query.brand === 'string' ? req.query.brand.trim() : '',
         },
