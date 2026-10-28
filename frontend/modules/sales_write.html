@@ -1550,7 +1550,7 @@
     // Keep the customer partial-credit flag in sync immediately; the legacy
     // delayed keyup validator must not be the only writer before checkout.
     $('#sales_new_customer_partial_balance').val(due>0.01?'true':'false');
-    $('#unpaid_payment_toggle').prop('checked',true).trigger('change');
+    $('#unpaid_payment_toggle').prop('checked',paid>0.01).trigger('change');
     var $credit=$('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').attr('id')||'').toLowerCase()==='credit';}).find('.payment-amount-input').first();if($credit.length)$credit.val(due.toFixed(2));
     if(PosnicPro.sales&&typeof PosnicPro.sales.initPaymentValidation==='function')PosnicPro.sales.initPaymentValidation();renderSplit();
   }
@@ -1568,7 +1568,7 @@
     if(!$card.length)$card=$('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').first().attr('id')||'').toLowerCase()!=='credit';}).first();
     if($card.length)$card.find('.payment-amount-input').first().val(paid.toFixed(2));
     $('#sales_new_customer_partial_balance').val(credit>0.01?'true':'false');
-    $('#unpaid_payment_toggle').prop('checked',true).trigger('change');
+    $('#unpaid_payment_toggle').prop('checked',paid>0.01).trigger('change');
     if(PosnicPro.sales&&typeof PosnicPro.sales.initPaymentValidation==='function')PosnicPro.sales.initPaymentValidation();
     renderSplit();
   }
