@@ -14986,3 +14986,18 @@ window.posnicPrintSearchLabel = function (button) {
         .finally(function () { button.disabled = false; button.style.opacity = ''; });
     return false;
 };;
+/* Capture the printer click before autocomplete's parent handlers run.
+ * Otherwise a click on the icon can select the suggestion and add it to sale. */
+if (!window.__posnicCaptureSearchLabelClick) {
+    window.__posnicCaptureSearchLabelClick = true;
+    document.addEventListener('click', function (event) {
+        var target = event.target;
+        var button = target && target.closest ? target.closest('.posnic-search-label-btn') : null;
+        if (!button) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+        window.posnicPrintSearchLabel(button);
+    }, true);
+}
+
