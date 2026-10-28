@@ -3198,6 +3198,19 @@ class ItemRepository extends BaseModel {
         ],
       };
 
+      if (params.brandsOnly) {
+        // Return distinct brand names without repeatedly paging and regrouping
+        // every full product family in the sale-grid query.
+        const rows = await collection.aggregate([
+          { $match: match },
+          { $project: { brand: { $trim: { input: { $ifNull: ['$brand', ''] } } } } },
+          { $match: { brand: { $ne: '' } } },
+          { $group: { _id: { $toLower: '$brand' }, brand: { $first: '$brand' } } },
+          { $sort: { _id: 1 } },
+        ]).toArray();
+        return { status: true, data: rows.map((row) => ({ brand: row.brand })), next_offset: null, message: 'success' };
+      }
+
       let items, nextOffset;
       if (params.tilePage) {
         if (params.categoryId) {
