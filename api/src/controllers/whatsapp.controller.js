@@ -233,6 +233,15 @@ class WhatsAppController extends BaseController {
         });
       }
 
+      // Rehydrate a previously QR-linked session after an application restart.
+      // Only restore when LocalAuth data exists; never create a QR session for a never-linked device.
+      if (whatsappService.hasSavedSession(device_id, resolvedBranchId) &&
+          whatsappService.getConnectionStatus(device_id, resolvedBranchId) === 'not_initialized') {
+        const restored = await whatsappService.initializeClient(device_id, resolvedBranchId);
+        if (!restored.status) {
+          return res.json({ type: 'error', message: restored.message, data: { status: 'disconnected', device_id, connected: false } });
+        }
+      }
       const status = whatsappService.getConnectionStatus(device_id, resolvedBranchId);
 
       return res.json({
