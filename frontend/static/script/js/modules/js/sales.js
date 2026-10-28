@@ -8804,7 +8804,17 @@ PosnicPro.sales.brandMenu = {
                     if (brand && !seen[key]) { seen[key] = true; brands.push(brand); }
                 });
                 var next = Number.isInteger(data.next_offset) && data.next_offset > offset ? data.next_offset : null;
-                if (next !== null) { load(next); return; }
+                // Show brands from the first result page immediately. Continue
+                // collecting the full distinct list in the background so the
+                // POS does not look blocked while every catalogue page loads.
+                if (next !== null) {
+                    if (offset === 0) {
+                        var initialBrands = brands.slice().sort(function (a, b) { return a.localeCompare(b, undefined, { sensitivity: 'base' }); });
+                        render(initialBrands);
+                    }
+                    load(next);
+                    return;
+                }
                 brands.sort(function (a, b) { return a.localeCompare(b, undefined, { sensitivity: 'base' }); });
                 PosnicPro.sales._brandTilesCache = { brands: brands.slice(), at: Date.now() };
                 render(brands);
@@ -12815,8 +12825,9 @@ $(function () {
                     $.Autocomplete.formatResult(suggestion, currentValue), {
                         sales: true, currency: currency, price: pricing.price, was: pricing.was
                     });
-                var labelId = suggestion.data.item_id || suggestion.data.id ||
-                    (suggestion.data._id && (suggestion.data._id.$oid || suggestion.data._id));
+                // Prefer the database ID accepted by GET items/:id. item_id/id may be a display identifier.
+                var rawMongoId = suggestion.data._id && (suggestion.data._id.$oid || suggestion.data._id);
+                var labelId = rawMongoId || suggestion.data.item_id || suggestion.data.id;
                 if (labelId) {
                     // Insert inside the suggestion's outermost wrapper rather than
                     // relying on a fragile exact closing-tag sequence in sugRow().
