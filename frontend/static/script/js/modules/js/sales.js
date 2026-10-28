@@ -14959,7 +14959,7 @@ $(document)
         return labelScriptPromise;
     }
     document.addEventListener('click', function (event) {
-        var button = event.target && event.target.closest ? event.target.closest('.posnic-fast-label-btn') : null;
+        var button = event.target && event.target.closest ? event.target.closest('.posnic-fast-label-btn, .posnic-search-label-btn') : null;
         if (!button) return;
         event.preventDefault();
         event.stopPropagation();
