@@ -8785,46 +8785,32 @@ PosnicPro.sales.brandMenu = {
             render(cached.brands);
             return;
         }
-        var brands = [], seen = Object.create(null);
-        function load(offset) {
+        PosnicPro.get({ url: 'items/onlineSalesItemsAjaxLists', data: {
+            paginate: 'true', brands_only: 'true'
+        } }, function (response) {
             if (generation !== PosnicPro.sales._catalogueGeneration) return;
-            PosnicPro.get({ url: 'items/onlineSalesItemsAjaxLists', data: {
-                paginate: 'true', tile_page: 'true', limit: 48, offset: offset, category_id: '', brand: ''
-            } }, function (response) {
-                if (generation !== PosnicPro.sales._catalogueGeneration) return;
-                if (!response || response.type !== 'success') {
-                    $loader.find(".loadingSpinner:first").remove();
-                    $('#sales_new_brandList').html("<div class='text-center text-danger p-3'>Could not load brands. Please try again.</div>");
-                    return;
-                }
-                var data = response.data || {};
-                (Array.isArray(data.items) ? data.items : []).forEach(function (item) {
-                    var brand = String(item.brand || '').trim();
-                    var key = brand.toLocaleLowerCase();
-                    if (brand && !seen[key]) { seen[key] = true; brands.push(brand); }
-                });
-                var next = Number.isInteger(data.next_offset) && data.next_offset > offset ? data.next_offset : null;
-                // Show brands from the first result page immediately. Continue
-                // collecting the full distinct list in the background so the
-                // POS does not look blocked while every catalogue page loads.
-                if (next !== null) {
-                    if (offset === 0) {
-                        var initialBrands = brands.slice().sort(function (a, b) { return a.localeCompare(b, undefined, { sensitivity: 'base' }); });
-                        render(initialBrands);
-                    }
-                    load(next);
-                    return;
-                }
-                brands.sort(function (a, b) { return a.localeCompare(b, undefined, { sensitivity: 'base' }); });
-                PosnicPro.sales._brandTilesCache = { brands: brands.slice(), at: Date.now() };
-                render(brands);
-            }, function () {
-                if (generation !== PosnicPro.sales._catalogueGeneration) return;
+            if (!response || response.type !== 'success') {
                 $loader.find(".loadingSpinner:first").remove();
                 $('#sales_new_brandList').html("<div class='text-center text-danger p-3'>Could not load brands. Please try again.</div>");
+                return;
+            }
+            var data = response.data || {};
+            var rows = Array.isArray(data.items) ? data.items : [];
+            var brands = [], seen = Object.create(null);
+            rows.forEach(function (item) {
+                var brand = String(item.brand || '').trim();
+                var key = brand.toLocaleLowerCase();
+                if (brand && !seen[key]) { seen[key] = true; brands.push(brand); }
             });
-        }
-        load(0);
+            brands.sort(function (a, b) { return a.localeCompare(b, undefined, { sensitivity: 'base' }); });
+            PosnicPro.sales._brandTilesCache = { brands: brands.slice(), at: Date.now() };
+            render(brands);
+        }, function () {
+            if (generation !== PosnicPro.sales._catalogueGeneration) return;
+            $loader.find(".loadingSpinner:first").remove();
+            $('#sales_new_brandList').html("<div class='text-center text-danger p-3'>Could not load brands. Please try again.</div>");
+        });
+
     },
     listItems: function (index) {
         var brand = PosnicPro.sales.brandMenu._brands[Number(index)];
