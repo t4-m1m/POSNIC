@@ -1532,7 +1532,9 @@
   function sign(){try{return String(PosnicPro.local.get('currencySign')||$('.display-currency').first().text()||'DA').trim();}catch(e){return 'DA';}}
   function renderSplit(){
     var $host=$('#posnic-payment-split-summary');if(!$host.length)return;
-    $('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').first().attr('id')||'').toLowerCase()==='credit';}).find('.payment-amount-input').prop('disabled',false).removeAttr('readonly').removeAttr('aria-disabled');
+    var customerId=String($('#sales_new_customer_id').val()||'').trim(),customerName=String($('#sales_new_customer_name').val()||'').trim();
+    var canCarryCredit=!!customerId&&!!customerName&&!/walk.?in|cash customer|comptoir|client\\s+de\\s+passage/i.test(customerName);
+    $('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').first().attr('id')||'').toLowerCase()==='credit';}).find('.payment-amount-input').prop('disabled',!canCarryCredit).prop('readonly',!canCarryCredit).attr('aria-disabled',canCarryCredit?'false':'true');
     var rows=[];$('#payment_id .payment-method-card').each(function(){var $c=$(this),$r=$c.find('.payment_mode').first(),$i=$c.find('.payment-amount-input').first();if(!$r.length||!$i.length)return;var n=Number(String($i.val()||'0').replace(/,/g,''))||0;if(n>0.004)rows.push({name:String($r.val()||$r.attr('id')||'Mode'),amount:n,credit:String($r.attr('id')||'').toLowerCase()==='credit'});});
     if(!rows.length){$host.find('.posnic-payment-split-lines').html('<span class="text-muted">Choisissez un mode et saisissez le montant reçu.</span>');$host.find('.posnic-payment-split-footer').remove();return;}
     var s=$('<span>').text(sign()).html(),total=0,html=rows.map(function(r){total+=r.amount;return '<div class="posnic-payment-split-row'+(r.credit?' is-credit':'')+'"><span class="posnic-split-method"><i class="posnic-payment-split-dot"></i>'+$('<span>').text(r.name).html()+'</span><strong>'+s+' '+fmt(r.amount)+'</strong></div>';}).join('');
@@ -1545,8 +1547,9 @@
     $card.find('.payment-amount-input').first().val(paid.toFixed(2));
     var total=Number(PosnicPro.sales&&PosnicPro.sales.extraDiscount&&PosnicPro.sales.extraDiscount.sale_new_tot)||0;
     var due=Math.max(0,total-paid);
-    // A short-paid bill always has an explicit Credit remainder. The server and
-    // checkout guard decide whether the selected customer may carry that debt.
+    // Keep the customer partial-credit flag in sync immediately; the legacy
+    // delayed keyup validator must not be the only writer before checkout.
+    $('#sales_new_customer_partial_balance').val(due>0.01?'true':'false');
     $('#unpaid_payment_toggle').prop('checked',due>0.01).trigger('change');
     var $credit=$('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').attr('id')||'').toLowerCase()==='credit';}).find('.payment-amount-input').first();if($credit.length)$credit.val(due.toFixed(2));
     if(PosnicPro.sales&&typeof PosnicPro.sales.initPaymentValidation==='function')PosnicPro.sales.initPaymentValidation();renderSplit();
@@ -1564,7 +1567,8 @@
     var $card=$('#payment_id .payment-method-card').filter(function(){var $c=$(this),m=String($c.find('.payment_mode').first().attr('id')||'').toLowerCase();return m!=='credit'&&($c.find('.btn-payment-method').hasClass('active')||$c.hasClass('payment-active'));}).first();
     if(!$card.length)$card=$('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').first().attr('id')||'').toLowerCase()!=='credit';}).first();
     if($card.length)$card.find('.payment-amount-input').first().val(paid.toFixed(2));
-    $('#unpaid_payment_toggle').prop('checked',credit>0.01);
+    $('#sales_new_customer_partial_balance').val(credit>0.01?'true':'false');
+    $('#unpaid_payment_toggle').prop('checked',true).trigger('change');
     if(PosnicPro.sales&&typeof PosnicPro.sales.initPaymentValidation==='function')PosnicPro.sales.initPaymentValidation();
     renderSplit();
   }
@@ -1581,6 +1585,7 @@
   });
   $(document).off('input.posnicSplit change.posnicSplit','.payment-amount-input, #unpaid_payment_toggle').on('input.posnicSplit change.posnicSplit','.payment-amount-input, #unpaid_payment_toggle',function(){window.setTimeout(renderSplit,0);});
   $(document).off('click.posnicSplit','.btn-payment-method').on('click.posnicSplit','.btn-payment-method',function(){window.setTimeout(renderSplit,0);});
+  $(document).off('change.posnicSplitCustomer input.posnicSplitCustomer','#sales_new_customer_id, #sales_new_customer_name').on('change.posnicSplitCustomer input.posnicSplitCustomer','#sales_new_customer_id, #sales_new_customer_name',function(){window.setTimeout(renderSplit,0);});
   $(function(){renderSplit();var host=document.getElementById('payment_id');if(host&&window.MutationObserver)new MutationObserver(function(){window.setTimeout(renderSplit,0);}).observe(host,{childList:true,subtree:true});});
 })(window.jQuery);
 </script>
