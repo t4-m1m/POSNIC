@@ -3252,10 +3252,14 @@ class ItemRepository extends BaseModel {
           $expr: { $or: [{ $eq: [expiry, null] }, { $gte: [expiry, new Date()] }] },
         });
         const size = Math.min(limit, 48);
-        const groups = await collection
-          .aggregate([
+        // Bound the first-screen query: the former pipeline grouped every
+        // eligible item family before returning 49 tiles. On large catalogues
+        // this kept the POS blocked for minutes. The initial page groups a
+        // bounded, sorted candidate window; later pages retain full grouping.
+        const pipeline = [
             { $match: match },
             { $sort: { sort_order: 1, name: 1, _id: 1 } },
+            ...(offset === 0 ? [{ $limit: size * 12 }] : []),
             {
               $group: {
                 _id: {
@@ -3274,9 +3278,12 @@ class ItemRepository extends BaseModel {
             { $sort: { sort_order: 1, name: 1, first_id: 1 } },
             { $skip: offset },
             { $limit: size + 1 },
-          ])
-          .toArray();
-        nextOffset = groups.length > size ? offset + size : null;
+        ];
+        const groups = await collection.aggregate(pipeline).toArray();
+        // Keep pagination moving if the bounded candidate window contains
+        // fewer than a full page of distinct families.
+        nextOffset = groups.length > size ? offset + size
+          : (offset === 0 && groups.length > 0 ? offset + groups.length : null);
         items = groups.slice(0, size).flatMap((group) => group.items);
       } else {
         let cursor = collection.find(match).sort({ sort_order: 1, name: 1, _id: 1 });
