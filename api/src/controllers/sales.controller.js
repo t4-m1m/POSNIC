@@ -546,10 +546,13 @@ class SalesController extends BaseController {
     }
     // The unpaid toggle overrides any entered amount in processSale, so use
     // the same precedence when deciding whether this sale creates receivables.
-    const creditAmount = isUnpaid
-      ? Math.max(0, total)
-      : isPartial
-        ? Math.max(0, total - paid)
+    // A partial payment is authoritative even if an older UI toggle leaves
+    // the legacy unpaid flag stale. Credit is always total minus amount paid.
+    // Only a non-partial, explicitly unpaid sale carries the entire bill.
+    const creditAmount = isPartial
+      ? Math.max(0, total - paid)
+      : isUnpaid
+        ? Math.max(0, total)
         : 0;
 
     if (creditAmount <= 0) return { blocked: false };
