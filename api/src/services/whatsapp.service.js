@@ -40,10 +40,67 @@ class WhatsAppService extends EventEmitter {
     return `${safe(branchId, 'branch id')}_${safe(deviceId, 'device id')}`;
   }
 
+  resolveBrowserExecutable() {
+    const candidates = [];
+    const add = (value) => {
+      if (typeof value === 'string' && value.trim()) candidates.push(value.trim().replace(/^"|"$/g, ''));
+    };
+
+    // Explicit paths take precedence for managed/portable Chrome installs.
+    add(process.env.PUPPETEER_EXECUTABLE_PATH);
+    add(process.env.CHROME_PATH);
+    add(process.env.CHROMIUM_PATH);
+    add(process.env.EDGE_PATH);
+
+    if (process.platform === 'win32') {
+      const programFiles = process.env.PROGRAMFILES || 'C:\\Program Files';
+      const programFilesX86 = process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)';
+      const localAppData = process.env.LOCALAPPDATA || '';
+      [
+        path.join(programFiles, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+        path.join(programFilesX86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+        path.join(localAppData, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+        path.join(programFiles, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+        path.join(programFilesX86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+        path.join(localAppData, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+      ].forEach(add);
+    } else if (process.platform === 'darwin') {
+      [
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+        '/Applications/Chromium.app/Contents/MacOS/Chromium',
+      ].forEach(add);
+    } else {
+      [
+        '/usr/bin/google-chrome',
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/chromium',
+        '/usr/bin/chromium-browser',
+        '/usr/bin/microsoft-edge',
+        '/snap/bin/chromium',
+      ].forEach(add);
+    }
+
+    // Prefer a system-installed browser; Puppeteer's downloaded browser is a
+    // fallback only, because packaged POSNIC installs may not have its cache.
+    for (const candidate of candidates) {
+      try {
+        if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+      } catch (_) {}
+    }
+    try {
+      const puppeteer = require('puppeteer');
+      const bundled = puppeteer.executablePath();
+      if (bundled && fs.existsSync(bundled)) return bundled;
+    } catch (_) {}
+    return null;
+  }
+
   async initializeClient(deviceId, branchId) {
     try {
       const { Client, LocalAuth } = require('whatsapp-web.js');
       const qrcode = require('qrcode');
+      const browserExecutable = this.resolveBrowserExecutable();
 
       const clientKey = this._clientKey(deviceId, branchId);
 
@@ -85,6 +142,7 @@ class WhatsAppService extends EventEmitter {
         }),
         puppeteer: {
           headless: true,
+          ...(browserExecutable ? { executablePath: browserExecutable } : {}),
           args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
         },
       });
@@ -136,7 +194,10 @@ class WhatsAppService extends EventEmitter {
       };
     } catch (error) {
       console.error('Error initializing WhatsApp:', error);
-      return { status: false, message: error.message, connected: false };
+      const message = /could not find chrome|couldn't find chrome|executable doesn't exist|browser was not found/i.test(String(error && error.message))
+        ? 'WhatsApp could not locate a Chrome/Chromium browser. POSNIC now checks common Chrome and Edge install paths; set CHROME_PATH to the browser executable if it is installed elsewhere.'
+        : (error && error.message ? error.message : 'WhatsApp initialization failed.');
+      return { status: false, message, connected: false };
     }
   }
 
