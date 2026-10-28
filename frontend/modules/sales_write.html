@@ -1549,7 +1549,28 @@
     var $credit=$('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').attr('id')||'').toLowerCase()==='credit';}).find('.payment-amount-input').first();if($credit.length)$credit.val(due.toFixed(2));
     if(PosnicPro.sales&&typeof PosnicPro.sales.initPaymentValidation==='function')PosnicPro.sales.initPaymentValidation();renderSplit();
   }
+  function allocateCredit(){
+    if(!$('#sales_new').is(':visible'))return;
+    var $credit=$('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').first().attr('id')||'').toLowerCase()==='credit';}).find('.payment-amount-input').first();
+    if(!$credit.length)return;
+    $credit.prop('disabled',false).removeAttr('readonly').removeAttr('aria-disabled');
+    var credit=Number(String($credit.val()||'0').replace(/,/g,''));if(!Number.isFinite(credit)||credit<0)return;
+    var total=Number(PosnicPro.sales&&PosnicPro.sales.extraDiscount&&PosnicPro.sales.extraDiscount.sale_new_tot)||0;
+    credit=Math.min(Math.max(0,credit),Math.max(0,total));
+    var paid=Math.max(0,total-credit);
+    $('#Partial_amount').val(paid.toFixed(2));
+    var $card=$('#payment_id .payment-method-card').filter(function(){var $c=$(this),m=String($c.find('.payment_mode').first().attr('id')||'').toLowerCase();return m!=='credit'&&($c.find('.btn-payment-method').hasClass('active')||$c.hasClass('payment-active'));}).first();
+    if(!$card.length)$card=$('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').first().attr('id')||'').toLowerCase()!=='credit';}).first();
+    if($card.length)$card.find('.payment-amount-input').first().val(paid.toFixed(2));
+    $('#unpaid_payment_toggle').prop('checked',credit>0.01);
+    if(PosnicPro.sales&&typeof PosnicPro.sales.initPaymentValidation==='function')PosnicPro.sales.initPaymentValidation();
+    renderSplit();
+  }
   $(document).off('input.posnicSplit change.posnicSplit','#Partial_amount').on('input.posnicSplit change.posnicSplit','#Partial_amount',function(){window.setTimeout(allocatePartial,0);});
+  $(document).off('input.posnicCredit change.posnicCredit','#payment_id .payment-method-card .payment-amount-input').on('input.posnicCredit change.posnicCredit','#payment_id .payment-method-card .payment-amount-input',function(){
+    var method=String($(this).closest('.payment-method-card').find('.payment_mode').first().attr('id')||'').toLowerCase();
+    if(method==='credit')window.setTimeout(allocateCredit,0);
+  });
   $(document).off('input.posnicSplit change.posnicSplit','.payment-amount-input, #unpaid_payment_toggle').on('input.posnicSplit change.posnicSplit','.payment-amount-input, #unpaid_payment_toggle',function(){window.setTimeout(renderSplit,0);});
   $(document).off('click.posnicSplit','.btn-payment-method').on('click.posnicSplit','.btn-payment-method',function(){window.setTimeout(renderSplit,0);});
   $(function(){renderSplit();var host=document.getElementById('payment_id');if(host&&window.MutationObserver)new MutationObserver(function(){window.setTimeout(renderSplit,0);}).observe(host,{childList:true,subtree:true});});
