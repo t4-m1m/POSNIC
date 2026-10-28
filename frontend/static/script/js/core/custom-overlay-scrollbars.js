@@ -23,7 +23,7 @@
       '.posnic-overlay-scrollbar-arrow{position:absolute;left:0;width:14px;height:16px;padding:0;border:1px solid #b6d8f6;border-radius:0;background:#edf7ff;color:#2776bd;font:12px/14px Arial,sans-serif;text-align:center;cursor:pointer;z-index:1;}',
       '.posnic-overlay-scrollbar-arrow-up{top:0;}',
       '.posnic-overlay-scrollbar-arrow-down{bottom:0;}',
-      '.posnic-overlay-scrollbar-thumb{top:18px;}'
+      '.posnic-overlay-scrollbar-thumb{top:18px;}',
       '.posnic-overlay-scrollbar.is-dragging .posnic-overlay-scrollbar-thumb{background:#185cc0;cursor:grabbing;}',
       '.posnic-overlay-scrollbar-thumb:hover{background:#185cc0;}',
       '.posnic-overlay-scrollbar:focus{outline:2px solid #2474e8;outline-offset:-2px;}',
