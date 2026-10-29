@@ -1,6 +1,7 @@
 const EventEmitter = require('events');
 const path = require('path');
 const fs = require('fs');
+const { execFileSync } = require('child_process');
 
 class WhatsAppService extends EventEmitter {
   constructor() {
@@ -43,10 +44,12 @@ class WhatsAppService extends EventEmitter {
   resolveBrowserExecutable() {
     const candidates = [];
     const add = (value) => {
-      if (typeof value === 'string' && value.trim()) candidates.push(value.trim().replace(/^"|"$/g, ''));
+      if (typeof value === 'string' && value.trim()) {
+        candidates.push(value.trim().replace(/^"|"$/g, ''));
+      }
     };
 
-    // Explicit paths take precedence for managed/portable Chrome installs.
+    // Explicit paths are useful for managed, portable, or non-standard installs.
     add(process.env.PUPPETEER_EXECUTABLE_PATH);
     add(process.env.CHROME_PATH);
     add(process.env.CHROMIUM_PATH);
@@ -56,14 +59,50 @@ class WhatsAppService extends EventEmitter {
       const programFiles = process.env.PROGRAMFILES || 'C:\\Program Files';
       const programFilesX86 = process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)';
       const localAppData = process.env.LOCALAPPDATA || '';
+      const userProfile = process.env.USERPROFILE || '';
       [
         path.join(programFiles, 'Google', 'Chrome', 'Application', 'chrome.exe'),
         path.join(programFilesX86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
         path.join(localAppData, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+        path.join(userProfile, 'AppData', 'Local', 'Google', 'Chrome', 'Application', 'chrome.exe'),
         path.join(programFiles, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
         path.join(programFilesX86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
         path.join(localAppData, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+        path.join(userProfile, 'AppData', 'Local', 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
       ].forEach(add);
+
+      // Chrome/Edge may be installed in a per-user or custom location. Read
+      // Windows App Paths registration instead of assuming the standard folder.
+      for (const key of [
+        'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe',
+        'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe',
+        'HKLM\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe',
+        'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe',
+        'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe',
+        'HKLM\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe',
+      ]) {
+        try {
+          const output = execFileSync('reg.exe', ['query', key, '/ve'], {
+            encoding: 'utf8',
+            windowsHide: true,
+            stdio: ['ignore', 'pipe', 'ignore'],
+          });
+          const match = output.match(/REG_SZ\\s+(.+?)\\s*$/im);
+          if (match) add(match[1]);
+        } catch (_) {}
+      }
+
+      // Also honor browser executables available on PATH.
+      for (const executable of ['chrome.exe', 'msedge.exe', 'chromium.exe']) {
+        try {
+          const output = execFileSync('where.exe', [executable], {
+            encoding: 'utf8',
+            windowsHide: true,
+            stdio: ['ignore', 'pipe', 'ignore'],
+          });
+          output.split(/\\r?\\n/).forEach(add);
+        } catch (_) {}
+      }
     } else if (process.platform === 'darwin') {
       [
         '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -81,18 +120,20 @@ class WhatsAppService extends EventEmitter {
       ].forEach(add);
     }
 
-    // Prefer a system-installed browser; Puppeteer's downloaded browser is a
-    // fallback only, because packaged POSNIC installs may not have its cache.
     for (const candidate of candidates) {
       try {
         if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
       } catch (_) {}
     }
+
+    // Use Puppeteer's managed browser only when it actually exists. Do not
+    // silently pass a missing cache path through to whatsapp-web.js.
     try {
       const puppeteer = require('puppeteer');
       const bundled = puppeteer.executablePath();
       if (bundled && fs.existsSync(bundled)) return bundled;
     } catch (_) {}
+
     return null;
   }
 
@@ -101,6 +142,8 @@ class WhatsAppService extends EventEmitter {
       const { Client, LocalAuth } = require('whatsapp-web.js');
       const qrcode = require('qrcode');
       const browserExecutable = this.resolveBrowserExecutable();
+      if (browserExecutable) console.log('[WHATSAPP INIT] Using browser executable:', browserExecutable);
+      else console.warn('[WHATSAPP INIT] No system Chrome/Edge found; checking Puppeteer-managed browser fallback.');
 
       const clientKey = this._clientKey(deviceId, branchId);
 
@@ -128,7 +171,9 @@ class WhatsAppService extends EventEmitter {
           );
         }
 
-        this._safeCleanupClient(clientKey);
+        // Do not clear LocalAuth data when replacing a stale client. A transport
+        // or browser startup failure must never force the user to scan a new QR.
+        this.clients.delete(clientKey);
       }
 
       // Ensure we don't have leftover QR/status from a prior attempt.
