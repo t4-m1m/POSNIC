@@ -9,10 +9,29 @@ class WhatsAppService extends EventEmitter {
     this.clients = new Map();
     this.qrCodes = new Map();
     this.connectionStatus = new Map();
-    this.sessionPath = path.join(__dirname, '../../.wwebjs_auth');
+    const legacySessionPath = path.join(__dirname, '../../.wwebjs_auth');
+    // Keep WhatsApp authentication outside the application install directory so
+    // updates/reinstalls do not replace the user's LocalAuth session.
+    const persistentRoot = process.env.POSNIC_WHATSAPP_SESSION_PATH ||
+      (process.env.APPDATA
+        ? path.join(process.env.APPDATA, 'POSNIC', '.wwebjs_auth')
+        : path.join(require('os').homedir(), '.posnic', '.wwebjs_auth'));
+    this.sessionPath = persistentRoot;
 
-    if (!fs.existsSync(this.sessionPath)) {
-      fs.mkdirSync(this.sessionPath, { recursive: true });
+    try {
+      if (!fs.existsSync(this.sessionPath)) {
+        fs.mkdirSync(path.dirname(this.sessionPath), { recursive: true });
+        if (fs.existsSync(legacySessionPath)) {
+          fs.cpSync(legacySessionPath, this.sessionPath, { recursive: true, errorOnExist: false });
+        } else {
+          fs.mkdirSync(this.sessionPath, { recursive: true });
+        }
+      }
+    } catch (error) {
+      // Fall back to the legacy directory if migration/persistent storage fails.
+      console.warn('[WHATSAPP INIT] Could not prepare persistent session directory:', error?.message || error);
+      this.sessionPath = legacySessionPath;
+      if (!fs.existsSync(this.sessionPath)) fs.mkdirSync(this.sessionPath, { recursive: true });
     }
   }
 
