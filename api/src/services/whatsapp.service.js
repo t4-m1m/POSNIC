@@ -106,7 +106,7 @@ class WhatsAppService extends EventEmitter {
             windowsHide: true,
             stdio: ['ignore', 'pipe', 'ignore'],
           });
-          const match = output.match(/REG_SZ\\s+(.+?)\\s*$/im);
+          const match = output.match(/REG_SZ\s+(.+?)\s*$/im);
           if (match) add(match[1]);
         } catch (_) {}
       }
@@ -119,7 +119,7 @@ class WhatsAppService extends EventEmitter {
             windowsHide: true,
             stdio: ['ignore', 'pipe', 'ignore'],
           });
-          output.split(/\\r?\\n/).forEach(add);
+          output.split(/\r?\n/).forEach(add);
         } catch (_) {}
       }
     } else if (process.platform === 'darwin') {
