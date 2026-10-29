@@ -4793,7 +4793,6 @@ PosnicPro.sales.addSale = {
                         }, function (xhr) {
                             var response = jQuery.parseJSON(xhr.responseText);
                             PosnicPro.alert(response.type, response.message);
-                    if (sendWhatsAppReceiptAfterSave) PosnicPro.sales.showWhatsAppReceipt(response.data.sales_id, response.data.phone || $('#sales_new_customer_phone').val() || '', response.data.name || $('#sales_new_customer_name').val() || '');
                         });
                     }
                     if (response.data.waring === 'warning') {
@@ -4806,6 +4805,14 @@ PosnicPro.sales.addSale = {
                     }
                     var sendWhatsAppReceiptAfterSave = window.__posnicSendWhatsAppReceiptAfterSave === true;
                     window.__posnicSendWhatsAppReceiptAfterSave = false;
+                    if (sendWhatsAppReceiptAfterSave) {
+                        try {
+                            PosnicPro.sales.showWhatsAppReceipt(response.data.sales_id, response.data.phone || $('#sales_new_customer_phone').val() || '', response.data.name || $('#sales_new_customer_name').val() || '');
+                        } catch (whatsAppReceiptError) {
+                            console.error('[WHATSAPP RECEIPT] Could not open receipt dialog:', whatsAppReceiptError);
+                            PosnicPro.alert('warning', 'Vente enregistrée, mais impossible d’ouvrir l’envoi du ticket WhatsApp. Ouvrez le ticket depuis les ventes.');
+                        }
+                    }
                     var fastSaleSucceeded = window.__posnicFastPayPending === true;
                     var askPrint = (PosnicPro.askposnic && PosnicPro.askposnic.checkout && PosnicPro.askposnic.checkout.print === true)
                         || window.__posnicFastPrintPending === true;
