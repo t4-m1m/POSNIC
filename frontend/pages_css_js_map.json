@@ -32,7 +32,8 @@
             "static/style/css/component.css",
             "static/style/plugins/sweet-alert2/sweetalert2.min.css",
             "static/pages/lock-screen.css",
-            "static/style/css/rtl.css"
+            "static/style/css/rtl.css",
+            "static/style/css/theme-surface-overrides.css"
         ],
         "js": [
             "static/script/js/jquery.min.js",

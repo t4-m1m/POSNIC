@@ -1,0 +1,378 @@
+/*
+ * POSNIC theme surface overrides.
+ *
+ * IMPORTANT: this stylesheet is deliberately last in dashboard.css.
+ * The page bundle previously loaded theme-variables.css BEFORE sales.css,
+ * items-v2.css and receipt-designer.css. Their literal white surfaces therefore
+ * won the cascade even though the theme tokens were correct.
+ *
+ * Only dark presets are changed here. Product photographs, logos, charts,
+ * barcode/label previews and the actual white receipt paper remain untouched.
+ */
+:root[data-theme="dark"],
+body[data-theme="dark"],
+:root[data-theme="terminal"],
+body[data-theme="terminal"],
+:root[data-theme="dosblue"],
+body[data-theme="dosblue"],
+:root[data-theme="softdark"],
+body[data-theme="softdark"],
+:root[data-theme="warmnight"],
+body[data-theme="warmnight"] {
+  color-scheme: dark;
+}
+
+/* Legacy sales catalogue, category tiles, basket and cashier shortcuts. */
+[data-theme="dark"] #sales_new .button-list-categories,
+[data-theme="terminal"] #sales_new .button-list-categories,
+[data-theme="dosblue"] #sales_new .button-list-categories,
+[data-theme="softdark"] #sales_new .button-list-categories,
+[data-theme="warmnight"] #sales_new .button-list-categories,
+[data-theme="dark"] #sales_new .touchsale-table-panel,
+[data-theme="terminal"] #sales_new .touchsale-table-panel,
+[data-theme="dosblue"] #sales_new .touchsale-table-panel,
+[data-theme="softdark"] #sales_new .touchsale-table-panel,
+[data-theme="warmnight"] #sales_new .touchsale-table-panel,
+[data-theme="dark"] #sales_new .sales-function-shortcuts,
+[data-theme="terminal"] #sales_new .sales-function-shortcuts,
+[data-theme="dosblue"] #sales_new .sales-function-shortcuts,
+[data-theme="softdark"] #sales_new .sales-function-shortcuts,
+[data-theme="warmnight"] #sales_new .sales-function-shortcuts,
+[data-theme="dark"] #sales_new .sales-function-key,
+[data-theme="terminal"] #sales_new .sales-function-key,
+[data-theme="dosblue"] #sales_new .sales-function-key,
+[data-theme="softdark"] #sales_new .sales-function-key,
+[data-theme="warmnight"] #sales_new .sales-function-key,
+[data-theme="dark"] #sales_new .sales-current-customer,
+[data-theme="terminal"] #sales_new .sales-current-customer,
+[data-theme="dosblue"] #sales_new .sales-current-customer,
+[data-theme="softdark"] #sales_new .sales-current-customer,
+[data-theme="warmnight"] #sales_new .sales-current-customer,
+[data-theme="dark"] #posnic-multi-baskets .posnic-basket-tab-wrap,
+[data-theme="terminal"] #posnic-multi-baskets .posnic-basket-tab-wrap,
+[data-theme="dosblue"] #posnic-multi-baskets .posnic-basket-tab-wrap,
+[data-theme="softdark"] #posnic-multi-baskets .posnic-basket-tab-wrap,
+[data-theme="warmnight"] #posnic-multi-baskets .posnic-basket-tab-wrap {
+  background: var(--theme-card-bg) !important;
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] #sales_new .button-list-categories,
+[data-theme="terminal"] #sales_new .button-list-categories,
+[data-theme="dosblue"] #sales_new .button-list-categories,
+[data-theme="softdark"] #sales_new .button-list-categories,
+[data-theme="warmnight"] #sales_new .button-list-categories {
+  border-bottom-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] #sales_new .sales-function-key kbd,
+[data-theme="terminal"] #sales_new .sales-function-key kbd,
+[data-theme="dosblue"] #sales_new .sales-function-key kbd,
+[data-theme="softdark"] #sales_new .sales-function-key kbd,
+[data-theme="warmnight"] #sales_new .sales-function-key kbd,
+[data-theme="dark"] #sales_new .sales-key-fast,
+[data-theme="terminal"] #sales_new .sales-key-fast,
+[data-theme="dosblue"] #sales_new .sales-key-fast,
+[data-theme="softdark"] #sales_new .sales-key-fast,
+[data-theme="warmnight"] #sales_new .sales-key-fast,
+[data-theme="dark"] #sales_new .sales-key-pay,
+[data-theme="terminal"] #sales_new .sales-key-pay,
+[data-theme="dosblue"] #sales_new .sales-key-pay,
+[data-theme="softdark"] #sales_new .sales-key-pay,
+[data-theme="warmnight"] #sales_new .sales-key-pay,
+[data-theme="dark"] #sales_new .sales-key-price,
+[data-theme="terminal"] #sales_new .sales-key-price,
+[data-theme="dosblue"] #sales_new .sales-key-price,
+[data-theme="softdark"] #sales_new .sales-key-price,
+[data-theme="warmnight"] #sales_new .sales-key-price,
+[data-theme="dark"] #sales_new .sales-key-quantity,
+[data-theme="terminal"] #sales_new .sales-key-quantity,
+[data-theme="dosblue"] #sales_new .sales-key-quantity,
+[data-theme="softdark"] #sales_new .sales-key-quantity,
+[data-theme="warmnight"] #sales_new .sales-key-quantity,
+[data-theme="dark"] #sales_new .sales-key-exchange,
+[data-theme="terminal"] #sales_new .sales-key-exchange,
+[data-theme="dosblue"] #sales_new .sales-key-exchange,
+[data-theme="softdark"] #sales_new .sales-key-exchange,
+[data-theme="warmnight"] #sales_new .sales-key-exchange {
+  background: var(--theme-table-header-bg) !important;
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] #posnic-customer-picker .posnic-customer-picker-list,
+[data-theme="terminal"] #posnic-customer-picker .posnic-customer-picker-list,
+[data-theme="dosblue"] #posnic-customer-picker .posnic-customer-picker-list,
+[data-theme="softdark"] #posnic-customer-picker .posnic-customer-picker-list,
+[data-theme="warmnight"] #posnic-customer-picker .posnic-customer-picker-list,
+[data-theme="dark"] #posnic-customer-picker .posnic-customer-picker-row,
+[data-theme="terminal"] #posnic-customer-picker .posnic-customer-picker-row,
+[data-theme="dosblue"] #posnic-customer-picker .posnic-customer-picker-row,
+[data-theme="softdark"] #posnic-customer-picker .posnic-customer-picker-row,
+[data-theme="warmnight"] #posnic-customer-picker .posnic-customer-picker-row {
+  background: var(--theme-card-bg) !important;
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] #posnic-customer-picker .posnic-customer-picker-row strong,
+[data-theme="terminal"] #posnic-customer-picker .posnic-customer-picker-row strong,
+[data-theme="dosblue"] #posnic-customer-picker .posnic-customer-picker-row strong,
+[data-theme="softdark"] #posnic-customer-picker .posnic-customer-picker-row strong,
+[data-theme="warmnight"] #posnic-customer-picker .posnic-customer-picker-row strong,
+[data-theme="dark"] #posnic-customer-picker .posnic-customer-picker-row small,
+[data-theme="terminal"] #posnic-customer-picker .posnic-customer-picker-row small,
+[data-theme="dosblue"] #posnic-customer-picker .posnic-customer-picker-row small,
+[data-theme="softdark"] #posnic-customer-picker .posnic-customer-picker-row small,
+[data-theme="warmnight"] #posnic-customer-picker .posnic-customer-picker-row small {
+  color: var(--theme-text-secondary) !important;
+}
+[data-theme="dark"] #posnic-customer-picker .posnic-customer-picker-row:hover,
+[data-theme="terminal"] #posnic-customer-picker .posnic-customer-picker-row:hover,
+[data-theme="dosblue"] #posnic-customer-picker .posnic-customer-picker-row:hover,
+[data-theme="softdark"] #posnic-customer-picker .posnic-customer-picker-row:hover,
+[data-theme="warmnight"] #posnic-customer-picker .posnic-customer-picker-row:hover {
+  background: var(--theme-table-row-hover) !important;
+}
+[data-theme="dark"] #posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-tab.is-active,
+[data-theme="terminal"] #posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-tab.is-active,
+[data-theme="dosblue"] #posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-tab.is-active,
+[data-theme="softdark"] #posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-tab.is-active,
+[data-theme="warmnight"] #posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-tab.is-active,
+[data-theme="dark"] #posnic-multi-baskets .posnic-basket-close,
+[data-theme="terminal"] #posnic-multi-baskets .posnic-basket-close,
+[data-theme="dosblue"] #posnic-multi-baskets .posnic-basket-close,
+[data-theme="softdark"] #posnic-multi-baskets .posnic-basket-close,
+[data-theme="warmnight"] #posnic-multi-baskets .posnic-basket-close {
+  background: var(--theme-table-header-bg) !important;
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
+
+/* The cashier selector had a later hard-coded white !important rule. */
+[data-theme="dark"] #posnic-vendeur-modal .posnic-vendeur-content,
+[data-theme="dark"] #posnic-vendeur-modal .posnic-vendeur-header,
+[data-theme="dark"] #posnic-vendeur-modal .modal-body,
+[data-theme="dark"] #posnic-vendeur-modal .modal-footer,
+[data-theme="terminal"] #posnic-vendeur-modal .posnic-vendeur-content,
+[data-theme="terminal"] #posnic-vendeur-modal .posnic-vendeur-header,
+[data-theme="terminal"] #posnic-vendeur-modal .modal-body,
+[data-theme="terminal"] #posnic-vendeur-modal .modal-footer,
+[data-theme="dosblue"] #posnic-vendeur-modal .posnic-vendeur-content,
+[data-theme="dosblue"] #posnic-vendeur-modal .posnic-vendeur-header,
+[data-theme="dosblue"] #posnic-vendeur-modal .modal-body,
+[data-theme="dosblue"] #posnic-vendeur-modal .modal-footer,
+[data-theme="softdark"] #posnic-vendeur-modal .posnic-vendeur-content,
+[data-theme="softdark"] #posnic-vendeur-modal .posnic-vendeur-header,
+[data-theme="softdark"] #posnic-vendeur-modal .modal-body,
+[data-theme="softdark"] #posnic-vendeur-modal .modal-footer,
+[data-theme="warmnight"] #posnic-vendeur-modal .posnic-vendeur-content,
+[data-theme="warmnight"] #posnic-vendeur-modal .posnic-vendeur-header,
+[data-theme="warmnight"] #posnic-vendeur-modal .modal-body,
+[data-theme="warmnight"] #posnic-vendeur-modal .modal-footer {
+  background: var(--theme-card-bg) !important;
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] #posnic-vendeur-modal .modal-title,
+[data-theme="terminal"] #posnic-vendeur-modal .modal-title,
+[data-theme="dosblue"] #posnic-vendeur-modal .modal-title,
+[data-theme="softdark"] #posnic-vendeur-modal .modal-title,
+[data-theme="warmnight"] #posnic-vendeur-modal .modal-title,
+[data-theme="dark"] #posnic-vendeur-modal .modal-body label,
+[data-theme="terminal"] #posnic-vendeur-modal .modal-body label,
+[data-theme="dosblue"] #posnic-vendeur-modal .modal-body label,
+[data-theme="softdark"] #posnic-vendeur-modal .modal-body label,
+[data-theme="warmnight"] #posnic-vendeur-modal .modal-body label,
+[data-theme="dark"] #posnic-vendeur-modal .posnic-vendeur-help,
+[data-theme="terminal"] #posnic-vendeur-modal .posnic-vendeur-help,
+[data-theme="dosblue"] #posnic-vendeur-modal .posnic-vendeur-help,
+[data-theme="softdark"] #posnic-vendeur-modal .posnic-vendeur-help,
+[data-theme="warmnight"] #posnic-vendeur-modal .posnic-vendeur-help {
+  color: var(--theme-text-primary) !important;
+}
+[data-theme="dark"] #posnic-vendeur-modal #posnic-vendeur-select,
+[data-theme="terminal"] #posnic-vendeur-modal #posnic-vendeur-select,
+[data-theme="dosblue"] #posnic-vendeur-modal #posnic-vendeur-select,
+[data-theme="softdark"] #posnic-vendeur-modal #posnic-vendeur-select,
+[data-theme="warmnight"] #posnic-vendeur-modal #posnic-vendeur-select {
+  background: var(--theme-input-bg, var(--theme-card-bg)) !important;
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
+
+/* Items v2: warning, validation and success surfaces keep their semantic hue,
+   but use the selected dark palette instead of pale light-mode fills. */
+[data-theme="dark"] #items_v2 .iv2-callout,
+[data-theme="terminal"] #items_v2 .iv2-callout,
+[data-theme="dosblue"] #items_v2 .iv2-callout,
+[data-theme="softdark"] #items_v2 .iv2-callout,
+[data-theme="warmnight"] #items_v2 .iv2-callout,
+[data-theme="dark"] #items_v2 .iv2-error,
+[data-theme="terminal"] #items_v2 .iv2-error,
+[data-theme="dosblue"] #items_v2 .iv2-error,
+[data-theme="softdark"] #items_v2 .iv2-error,
+[data-theme="warmnight"] #items_v2 .iv2-error,
+[data-theme="dark"] #items_v2 .iv2-success,
+[data-theme="terminal"] #items_v2 .iv2-success,
+[data-theme="dosblue"] #items_v2 .iv2-success,
+[data-theme="softdark"] #items_v2 .iv2-success,
+[data-theme="warmnight"] #items_v2 .iv2-success {
+  background: var(--theme-table-header-bg) !important;
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] #items_v2 .iv2-callout p,
+[data-theme="terminal"] #items_v2 .iv2-callout p,
+[data-theme="dosblue"] #items_v2 .iv2-callout p,
+[data-theme="softdark"] #items_v2 .iv2-callout p,
+[data-theme="warmnight"] #items_v2 .iv2-callout p,
+[data-theme="dark"] #items_v2 .iv2-success button,
+[data-theme="terminal"] #items_v2 .iv2-success button,
+[data-theme="dosblue"] #items_v2 .iv2-success button,
+[data-theme="softdark"] #items_v2 .iv2-success button,
+[data-theme="warmnight"] #items_v2 .iv2-success button {
+  color: var(--theme-text-primary) !important;
+}
+
+/* Receipt designer editing surfaces follow the theme. The paper preview is
+   intentionally excluded: it must represent the white thermal receipt. */
+[data-theme="dark"] #receipt-designer .rd-format-card,
+[data-theme="terminal"] #receipt-designer .rd-format-card,
+[data-theme="dosblue"] #receipt-designer .rd-format-card,
+[data-theme="softdark"] #receipt-designer .rd-format-card,
+[data-theme="warmnight"] #receipt-designer .rd-format-card,
+[data-theme="dark"] #receipt-designer .rd-library,
+[data-theme="terminal"] #receipt-designer .rd-library,
+[data-theme="dosblue"] #receipt-designer .rd-library,
+[data-theme="softdark"] #receipt-designer .rd-library,
+[data-theme="warmnight"] #receipt-designer .rd-library,
+[data-theme="dark"] #receipt-designer .rd-block-card,
+[data-theme="terminal"] #receipt-designer .rd-block-card,
+[data-theme="dosblue"] #receipt-designer .rd-block-card,
+[data-theme="softdark"] #receipt-designer .rd-block-card,
+[data-theme="warmnight"] #receipt-designer .rd-block-card,
+[data-theme="dark"] #receipt-designer .rd-inspector,
+[data-theme="terminal"] #receipt-designer .rd-inspector,
+[data-theme="dosblue"] #receipt-designer .rd-inspector,
+[data-theme="softdark"] #receipt-designer .rd-inspector,
+[data-theme="warmnight"] #receipt-designer .rd-inspector,
+[data-theme="dark"] .rd-workspace-dialog,
+[data-theme="terminal"] .rd-workspace-dialog,
+[data-theme="dosblue"] .rd-workspace-dialog,
+[data-theme="softdark"] .rd-workspace-dialog,
+[data-theme="warmnight"] .rd-workspace-dialog {
+  background: var(--theme-card-bg) !important;
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] #receipt-designer .rd-select,
+[data-theme="terminal"] #receipt-designer .rd-select,
+[data-theme="dosblue"] #receipt-designer .rd-select,
+[data-theme="softdark"] #receipt-designer .rd-select,
+[data-theme="warmnight"] #receipt-designer .rd-select,
+[data-theme="dark"] #receipt-designer .rd-library-buttons button,
+[data-theme="terminal"] #receipt-designer .rd-library-buttons button,
+[data-theme="dosblue"] #receipt-designer .rd-library-buttons button,
+[data-theme="softdark"] #receipt-designer .rd-library-buttons button,
+[data-theme="warmnight"] #receipt-designer .rd-library-buttons button,
+[data-theme="dark"] #receipt-designer .rd-inspector label,
+[data-theme="terminal"] #receipt-designer .rd-inspector label,
+[data-theme="dosblue"] #receipt-designer .rd-inspector label,
+[data-theme="softdark"] #receipt-designer .rd-inspector label,
+[data-theme="warmnight"] #receipt-designer .rd-inspector label {
+  color: var(--theme-text-primary) !important;
+}
+[data-theme="dark"] #receipt-designer .rd-layout,
+[data-theme="terminal"] #receipt-designer .rd-layout,
+[data-theme="dosblue"] #receipt-designer .rd-layout,
+[data-theme="softdark"] #receipt-designer .rd-layout,
+[data-theme="warmnight"] #receipt-designer .rd-layout,
+[data-theme="dark"] #receipt-designer .rd-preview,
+[data-theme="terminal"] #receipt-designer .rd-preview,
+[data-theme="dosblue"] #receipt-designer .rd-preview,
+[data-theme="softdark"] #receipt-designer .rd-preview,
+[data-theme="warmnight"] #receipt-designer .rd-preview {
+  background: var(--theme-body-bg) !important;
+  border-color: var(--theme-border-color) !important;
+}
+
+/* Common light-only Bootstrap and custom surfaces in lazily mounted modules.
+   Keep this list to semantic containers, never every arbitrary DIV. */
+[data-theme="dark"] .bg-white,
+[data-theme="terminal"] .bg-white,
+[data-theme="dosblue"] .bg-white,
+[data-theme="softdark"] .bg-white,
+[data-theme="warmnight"] .bg-white,
+[data-theme="dark"] .white-box,
+[data-theme="terminal"] .white-box,
+[data-theme="dosblue"] .white-box,
+[data-theme="softdark"] .white-box,
+[data-theme="warmnight"] .white-box,
+[data-theme="dark"] .white-panel,
+[data-theme="terminal"] .white-panel,
+[data-theme="dosblue"] .white-panel,
+[data-theme="softdark"] .white-panel,
+[data-theme="warmnight"] .white-panel {
+  background-color: var(--theme-card-bg) !important;
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] .bg-white *,
+[data-theme="terminal"] .bg-white *,
+[data-theme="dosblue"] .bg-white *,
+[data-theme="softdark"] .bg-white *,
+[data-theme="warmnight"] .bg-white * {
+  color: inherit;
+}
+[data-theme="dark"] .modal-content,
+[data-theme="terminal"] .modal-content,
+[data-theme="dosblue"] .modal-content,
+[data-theme="softdark"] .modal-content,
+[data-theme="warmnight"] .modal-content,
+[data-theme="dark"] .modal-header,
+[data-theme="terminal"] .modal-header,
+[data-theme="dosblue"] .modal-header,
+[data-theme="softdark"] .modal-header,
+[data-theme="warmnight"] .modal-header,
+[data-theme="dark"] .modal-body,
+[data-theme="terminal"] .modal-body,
+[data-theme="dosblue"] .modal-body,
+[data-theme="softdark"] .modal-body,
+[data-theme="warmnight"] .modal-body,
+[data-theme="dark"] .modal-footer,
+[data-theme="terminal"] .modal-footer,
+[data-theme="dosblue"] .modal-footer,
+[data-theme="softdark"] .modal-footer {
+  background-color: var(--theme-card-bg) !important;
+  color: var(--theme-text-primary);
+  border-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] .modal-content label,
+[data-theme="terminal"] .modal-content label,
+[data-theme="dosblue"] .modal-content label,
+[data-theme="softdark"] .modal-content label,
+[data-theme="warmnight"] .modal-content label,
+[data-theme="dark"] .modal-content .modal-title,
+[data-theme="terminal"] .modal-content .modal-title,
+[data-theme="dosblue"] .modal-content .modal-title,
+[data-theme="softdark"] .modal-content .modal-title,
+[data-theme="warmnight"] .modal-content .modal-title {
+  color: var(--theme-text-primary) !important;
+}
+[data-theme="dark"] .modal-content input:not([type=checkbox]):not([type=radio]):not([type=range]),
+[data-theme="terminal"] .modal-content input:not([type=checkbox]):not([type=radio]):not([type=range]),
+[data-theme="dosblue"] .modal-content input:not([type=checkbox]):not([type=radio]):not([type=range]),
+[data-theme="softdark"] .modal-content input:not([type=checkbox]):not([type=radio]):not([type=range]),
+[data-theme="warmnight"] .modal-content input:not([type=checkbox]):not([type=radio]):not([type=range]),
+[data-theme="dark"] .modal-content select,
+[data-theme="terminal"] .modal-content select,
+[data-theme="dosblue"] .modal-content select,
+[data-theme="softdark"] .modal-content select,
+[data-theme="warmnight"] .modal-content select,
+[data-theme="dark"] .modal-content textarea,
+[data-theme="terminal"] .modal-content textarea,
+[data-theme="dosblue"] .modal-content textarea,
+[data-theme="softdark"] .modal-content textarea,
+[data-theme="warmnight"] .modal-content textarea {
+  background-color: var(--theme-input-bg, var(--theme-card-bg)) !important;
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
