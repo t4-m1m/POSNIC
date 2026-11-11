@@ -276,11 +276,14 @@ class WindowsPrintQueue {
     }
     // An idle initialization must finish before a receipt is submitted.
     const pulse = this.keepAlive[job.printer.toLowerCase()];
-    if (pulse?.pending && this.pulsePending(pulse, health)) {
-      if (this.now() - pulse.at < 30000) return this.transition(job, 'waiting', pulse.status);
-      // Do not bypass an actual failed Windows job: readiness still applies.
-      // Optional ESC @ traffic alone cannot permanently starve real receipts.
-      pulse.pending = false; pulse.suppressed = true;
+    if (pulse?.pending) {
+      // A keep-alive is optional printer-initialization traffic, not a receipt.
+      // Never make a customer wait for it to disappear from the Windows queue:
+      // the receipt itself carries ESC @ in the same RAW job. The fresh health
+      // snapshot above still blocks submission for an offline printer or a
+      // failed Windows job, while this optional pulse can no longer starve sales.
+      pulse.pending = false;
+      pulse.suppressed = true;
       this.write('keep-alive.json', this.keepAlive);
     }
     if (job.state === 'failed') {
@@ -464,9 +467,11 @@ class WindowsPrintQueue {
     const recovering = [...this.jobs.values()].some(job =>
       ['waiting', 'offline', 'queued'].includes(job.state) || (job.state === 'failed' && (job.reconnect || job.submitted))
     );
-    // Defer idle WMI work until after the first dashboard paint. Recovery jobs
-    // still start promptly; a new sale calls run() immediately.
-    this.timer = setTimeout(poll, recovering ? 2000 : 10000);
+    // Prime the printer health snapshot shortly after startup, in the
+    // background, so the first customer receipt can reuse it instead of
+    // launching a cold PowerShell/WMI inspection during checkout. This does
+    // not block the renderer or delay recovery jobs.
+    this.timer = setTimeout(poll, recovering ? 1000 : 500);
     this.timer.unref?.();
   }
 

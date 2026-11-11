@@ -3570,3 +3570,136 @@ html:not([data-theme]) .loadingSpinner::after {
 @media(max-width:767px) { .sales-history-summary { margin-left:0; width:100%; } }
 /* Recovery notice stays in document flow below the fixed dashboard chrome. */
 #offline_recovery_notice{margin-top:84px!important}
+
+
+/* POSNIC dark-theme compatibility layer for newer modules and custom screens.
+   Loaded after the base theme rules so custom components inherit the same
+   readable surfaces as the legacy screens. Avoid recolouring media/canvases. */
+[data-theme="dark"] {
+  --theme-input-bg: #303033;
+  --theme-input-text: #f4f4f5;
+  --theme-text-color: var(--theme-text-primary);
+  color-scheme: dark;
+}
+[data-theme="dark"] body,
+[data-theme="dark"] .main-content,
+[data-theme="dark"] .content,
+[data-theme="dark"] .page-content,
+[data-theme="dark"] .tab-content,
+[data-theme="dark"] .tab-pane,
+[data-theme="dark"] .card,
+[data-theme="dark"] .card-body,
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-body,
+[data-theme="dark"] .modal-footer,
+[data-theme="dark"] .popover,
+[data-theme="dark"] .offcanvas,
+[data-theme="dark"] .list-group,
+[data-theme="dark"] .list-group-item,
+[data-theme="dark"] .dropdown-menu,
+[data-theme="dark"] .bg-white,
+[data-theme="dark"] [class*="posnic-"]:not(.posnic-brand):not(.posnic-logo),
+[data-theme="dark"] [id^="posnic-"] {
+  background-color: var(--theme-card-bg) !important;
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] .card-header,
+[data-theme="dark"] .card-footer,
+[data-theme="dark"] .modal-title,
+[data-theme="dark"] .modal-header h1,
+[data-theme="dark"] .modal-header h2,
+[data-theme="dark"] .modal-header h3,
+[data-theme="dark"] .modal-header h4,
+[data-theme="dark"] .modal-header h5,
+[data-theme="dark"] .modal-body label,
+[data-theme="dark"] .form-group label,
+[data-theme="dark"] .custom-control-label,
+[data-theme="dark"] .list-group-item,
+[data-theme="dark"] .table,
+[data-theme="dark"] .table td,
+[data-theme="dark"] .table th,
+[data-theme="dark"] table td,
+[data-theme="dark"] table th,
+[data-theme="dark"] .nav-tabs .nav-link,
+[data-theme="dark"] .nav-pills .nav-link {
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+[data-theme="dark"] select,
+[data-theme="dark"] textarea,
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .custom-select,
+[data-theme="dark"] .input-group-text {
+  background-color: var(--theme-input-bg) !important;
+  color: var(--theme-input-text) !important;
+  border-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder,
+[data-theme="dark"] .form-control::placeholder {
+  color: var(--theme-text-muted) !important;
+  opacity: 1;
+}
+[data-theme="dark"] .table-striped tbody tr:nth-of-type(odd),
+[data-theme="dark"] .table-hover tbody tr:hover,
+[data-theme="dark"] .list-group-item:hover,
+[data-theme="dark"] .dropdown-item:hover,
+[data-theme="dark"] .nav-tabs .nav-link:hover {
+  background-color: var(--theme-table-row-hover) !important;
+  color: var(--theme-text-primary) !important;
+}
+[data-theme="dark"] .table thead th,
+[data-theme="dark"] thead th {
+  background-color: var(--theme-table-header-bg) !important;
+  color: var(--theme-text-primary) !important;
+}
+[data-theme="dark"] .nav-tabs .nav-link.active,
+[data-theme="dark"] .nav-pills .nav-link.active,
+[data-theme="dark"] .page-item.active .page-link {
+  background-color: var(--theme-btn-primary-bg) !important;
+  color: #ffffff !important;
+  border-color: var(--theme-btn-primary-bg) !important;
+}
+[data-theme="dark"] .btn-light,
+[data-theme="dark"] .btn-default,
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .btn-outline-secondary {
+  background-color: #37373d !important;
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] .text-dark,
+[data-theme="dark"] .text-body,
+[data-theme="dark"] .text-muted,
+[data-theme="dark"] small,
+[data-theme="dark"] .form-text,
+[data-theme="dark"] .help-block {
+  color: var(--theme-text-secondary) !important;
+}
+[data-theme="dark"] .border,
+[data-theme="dark"] .border-top,
+[data-theme="dark"] .border-right,
+[data-theme="dark"] .border-bottom,
+[data-theme="dark"] .border-left,
+[data-theme="dark"] hr {
+  border-color: var(--theme-border-color) !important;
+}
+/* Keep semantic status colours legible instead of turning them into panel text. */
+[data-theme="dark"] .text-success { color: #6bd6a5 !important; }
+[data-theme="dark"] .text-warning { color: #f0cf72 !important; }
+[data-theme="dark"] .text-danger,
+[data-theme="dark"] .text-error { color: #ff8585 !important; }
+[data-theme="dark"] .text-info { color: #75baff !important; }
+/* The receipt preparation toast must follow the selected application theme. */
+[data-theme="dark"] .toast,
+[data-theme="dark"] .toast-header,
+[data-theme="dark"] .toast-body,
+[data-theme="dark"] .swal2-popup,
+[data-theme="dark"] .sweet-alert {
+  background-color: var(--theme-card-bg) !important;
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
