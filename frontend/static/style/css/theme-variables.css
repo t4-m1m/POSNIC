@@ -3599,7 +3599,14 @@ html:not([data-theme]) .loadingSpinner::after {
 [data-theme="dark"] .list-group-item,
 [data-theme="dark"] .dropdown-menu,
 [data-theme="dark"] .bg-white,
-[data-theme="dark"] [class*="posnic-"]:not(.posnic-brand):not(.posnic-logo),
+[data-theme="dark"] .posnic-card,
+[data-theme="dark"] .posnic-panel,
+[data-theme="dark"] .posnic-section,
+[data-theme="dark"] .posnic-surface,
+[data-theme="dark"] .posnic-settings-panel,
+[data-theme="dark"] .posnic-table-wrap,
+[data-theme="dark"] .posnic-form-panel,
+[data-theme="dark"] .posnic-notice,
 [data-theme="dark"] [id^="posnic-"] {
   background-color: var(--theme-card-bg) !important;
   color: var(--theme-text-primary) !important;
