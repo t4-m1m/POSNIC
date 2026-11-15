@@ -1,4 +1,18 @@
 PosnicPro.itemreport = {
+    activateCustomPanel: function (panel) {
+        var active = panel === 'versements' ? 'versements' : 'stock';
+        window.__posnicActiveItemReportPanel = active;
+        window.__posnicOpenVersements = false;
+        window.__posnicOpenStockHealth = false;
+        $('#stock-health-panel,#versements-panel').hide();
+        if (active === 'versements') {
+            $('#versements-panel').show();
+            if (PosnicPro.versementsRegister) PosnicPro.versementsRegister.load();
+        } else {
+            $('#stock-health-panel').show();
+            if (PosnicPro.stockHealthReport) PosnicPro.stockHealthReport.load();
+        }
+    },
     showDataTablePage: function () {
         var loader = $(".loader-item-report");
         loader.find(".loadingSpinner:first").remove();
@@ -20,13 +34,7 @@ PosnicPro.itemreport = {
         var activePanel = requestedPanel || window.__posnicActiveItemReportPanel || 'stock';
         window.__posnicActiveItemReportPanel = activePanel;
         $('#stock-health-panel,#versements-panel').hide();
-        if(activePanel==='versements'){
-            $('#versements-panel').show();
-            if(PosnicPro.versementsRegister)PosnicPro.versementsRegister.load();
-        } else {
-            $('#stock-health-panel').show();
-            if(PosnicPro.stockHealthReport)PosnicPro.stockHealthReport.load();
-        }
+        PosnicPro.itemreport.activateCustomPanel(activePanel);
         if (false && $('a#item-tab-line').hasClass('active')) {
             PosnicPro.itemreport.itemTableTabClick();
         } else if ($('a#item-expiry-line').hasClass('active')) {
