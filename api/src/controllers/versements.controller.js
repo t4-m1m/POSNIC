@@ -186,7 +186,7 @@ exports.cancel = async (req,res) => {
     }
     const items=req.db.collection('items'), restoreKey=String(current.sale_key||saleKey(sale))+':versement-cancel';
     for (const [itemId,qty] of quantities) {
-      await items.updateOne({_id:new ObjectId(itemId),versement_stock_restore_keys:{$ne:restoreKey}},
+      await items.updateOne({_id:new ObjectId(itemId),track_inventory:{$in:[true,'true']},versement_stock_restore_keys:{$ne:restoreKey}},
         {$inc:{available_quantity:qty},$addToSet:{versement_stock_restore_keys:restoreKey}});
     }
     await req.db.collection('sales').deleteOne({_id:sale._id,versement_checkout:{$exists:true}});

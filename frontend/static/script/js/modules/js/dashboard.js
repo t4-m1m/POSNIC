@@ -697,6 +697,7 @@ PosnicPro.dashboard = {
 
             PosnicPro.dashboard.renderBestSellers(d.topItems || []);
             PosnicPro.dashboard.renderProfit(d.profit, filter);
+            PosnicPro.dashboard.renderAnalytics(d);
             finish(true);
             // Let the layout settle, then match the empty dues card to Best Sellers.
             setTimeout(function () { PosnicPro.dashboard.syncDuesHeight(); }, 60);
@@ -705,6 +706,31 @@ PosnicPro.dashboard = {
             $(PosnicPro.dashboard.KPI_IDS).html('&mdash;');
             finish(false);
         });
+    },
+
+    renderAnalytics: function (data) {
+        var totals=data.totals||{},days=Array.isArray(totals.sales_days)?totals.sales_days:[],amounts=Array.isArray(totals.sales_amounts)?totals.sales_amounts:[];
+        var host=$('#dashboard-sales-trend').empty(),values=amounts.map(function(v){return Number(v)||0;}),max=Math.max(1,...values),w=720,h=190,p=16;
+        if(!values.length){host.text('No sales data for this period.');}else{
+            var pts=values.map(function(v,i){return{x:p+i*(w-2*p)/Math.max(1,values.length-1),y:h-p-v/max*(h-2*p)};});
+            var path=pts.map(function(q,i){return(i?'L':'M')+q.x.toFixed(1)+' '+q.y.toFixed(1);}).join(' ');
+            var svg=$('<svg viewBox="0 0 720 200" role="img" aria-label="Sales trend" style="width:100%;height:auto;max-height:210px"></svg>');
+            [0,.5,1].forEach(function(v){var y=p+v*(h-2*p);svg.append($('<line x1="16" x2="704">').attr({y1:y,y2:y,stroke:'var(--theme-border-color,#dbe3ed)','stroke-dasharray':'4 5'}));});
+            svg.append($('<path>').attr({d:path+' L '+pts[pts.length-1].x+' '+(h-p)+' L '+pts[0].x+' '+(h-p)+' Z',fill:'rgba(37,99,235,.12)'}));
+            svg.append($('<path>').attr({d:path,fill:'none',stroke:'#2563eb','stroke-width':3,'stroke-linecap':'round','stroke-linejoin':'round'}));
+            pts.forEach(function(q,i){if(i===0||i===pts.length-1||i%Math.max(1,Math.floor(pts.length/6))===0)svg.append($('<circle>').attr({cx:q.x,cy:q.y,r:3.5,fill:'#2563eb'}));});
+            host.append(svg);
+            host.append($('<div class="d-flex justify-content-between text-muted small">').append($('<span>').text(days[0]||''),$('<span>').text(days[Math.floor(days.length/2)]||''),$('<span>').text(days[days.length-1]||'')));
+        }
+        var mix=Array.isArray(data.paymentMix)?data.paymentMix:[],donut=$('#dashboard-payment-donut').empty(),sum=mix.reduce(function(s,x){return s+(Number(x.pct)||0);},0);
+        if(!mix.length||sum<=0){donut.text('No payment data for this period.');return;}
+        var colors=['#2563eb','#16a34a','#d97706','#8b5cf6','#0891b2','#dc2626'],r=43,circ=2*Math.PI*r,offset=0;
+        var ring=$('<svg viewBox="0 0 120 120" style="width:124px;height:124px;flex:0 0 124px" role="img" aria-label="Payment distribution"></svg>');
+        mix.forEach(function(x,i){var len=circ*(Number(x.pct)||0)/sum;ring.append($('<circle cx="60" cy="60" r="43" fill="none" stroke-width="13">').attr({stroke:colors[i%colors.length],'stroke-dasharray':len+' '+(circ-len),'stroke-dashoffset':-offset,transform:'rotate(-90 60 60)'}));offset+=len;});
+        ring.append($('<text x="60" y="57" text-anchor="middle" font-size="15" font-weight="700" fill="currentColor">').text(Math.round(sum)+'%'));
+        ring.append($('<text x="60" y="70" text-anchor="middle" font-size="7" fill="currentColor">').text('PAYMENTS'));
+        var legend=$('<div style="flex:1;min-width:145px">');mix.forEach(function(x,i){var line=$('<div class="d-flex justify-content-between small mb-2">').append($('<span>').text(x.mode),$('<strong>').text((Number(x.pct)||0).toFixed(1)+'%'));line.prepend($('<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px">').css('background',colors[i%colors.length]));legend.append(line);});
+        donut.append($('<div class="d-flex flex-wrap align-items-center" style="gap:16px">').append(ring,legend));
     },
 
     renderBestSellers: function (items) {

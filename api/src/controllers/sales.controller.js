@@ -1891,19 +1891,21 @@ class SalesController extends BaseController {
         branch_id: branchObjectId, status: 'settled',
         settled_at: { $gte: new Date(filteredDateRange.start_date), $lte: new Date(filteredDateRange.end_date) },
       }).toArray();
-      const tenderLabels = { cash: 'Cash', tpe: 'TPE', baridimob: 'BaridiMob' };
-      const addPaymentMovement = (mode, amount, flags) => {
-        const key = String(mode || 'Cash').toLowerCase();
-        const existing = paymentDetails.find((row) => String(row.payment_mode || 'Cash').toLowerCase() === key);
-        if (existing) existing.sale_payment = roundToTwo(Number(existing.sale_payment || 0) + Number(amount || 0));
-        else paymentDetails.push({ payment_mode: mode || 'Cash', sale_payment: roundToTwo(amount || 0), ...(flags || {}) });
+      const tenderLabels = { cash: 'Espèces', tpe: 'TPE', baridimob: 'BaridiMob' };
+      const versementPaymentMap = new Map();
+      const addVersementPayment = (method, amount) => {
+        const key = String(method || 'cash').toLowerCase();
+        const row = versementPaymentMap.get(key) || { payment_mode: tenderLabels[key] || key, amount: 0, count: 0 };
+        row.amount = roundToTwo(row.amount + Number(amount || 0));
+        if (Number(amount || 0) > 0) row.count += 1;
+        versementPaymentMap.set(key, row);
       };
       settledVersements.forEach((v) => {
-        const initial = roundToTwo(v.initial_amount || 0);
-        if (initial > 0) addPaymentMovement(tenderLabels[String(v.initial_method || 'cash').toLowerCase()] || 'Cash', initial, { is_versement: true });
-        const finalAmount = roundToTwo(v.settlement && v.settlement.amount || 0);
-        if (finalAmount > 0) addPaymentMovement(tenderLabels[String(v.settlement.method || 'cash').toLowerCase()] || 'Cash', finalAmount, { is_versement: true });
+        addVersementPayment(v.initial_method, v.initial_amount || v.initial_recorded_amount || 0);
+        addVersementPayment(v.settlement && v.settlement.method, v.settlement && v.settlement.amount || 0);
       });
+      const versementPaymentDetails = Array.from(versementPaymentMap.values()).filter((row) => row.amount > 0);
+      const versementPaymentTotal = roundToTwo(versementPaymentDetails.reduce((sum, row) => sum + row.amount, 0));
       const refundRows = await db.collection('sales').aggregate([
         { $match: { branch_id: branchObjectId, ...(BaseModel.license ? { license: BaseModel.license } : {}) } },
         { $unwind: '$return_refund_transactions' },
@@ -2046,6 +2048,8 @@ class SalesController extends BaseController {
         payment_details: paymentDetails,
         debt_payment_details: debtPaymentDetails,
         debt_payment_total: debtPaymentTotal,
+        versement_payment_details: versementPaymentDetails,
+        versement_payment_total: versementPaymentTotal,
         sales_count: salesCount,
         cost_of_goods_total: costOfGoodsTotal,
         gross_profit_total: grossProfitTotal,
