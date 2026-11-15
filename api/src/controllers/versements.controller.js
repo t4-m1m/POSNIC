@@ -55,7 +55,15 @@ exports.list = async (req,res) => {
     const status = String(req.query.status || 'all');
     if (status !== 'all') filter.status = status;
     const q = String(req.query.q || '').trim().slice(0,120);
-    if (q) filter.$or = [{ customer_name: { $regex: q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), $options:'i' } },{ phone: { $regex: q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), $options:'i' } },{ versement_number: { $regex: q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), $options:'i' } }];
+    if (q) {
+      const escaped = q.replace(/[.*+?^$()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { customer_name: { $regex: escaped, $options: 'i' } },
+        { phone: { $regex: escaped, $options: 'i' } },
+        { versement_number: { $regex: escaped, $options: 'i' } },
+        { sale_key: { $regex: escaped, $options: 'i' } },
+      ];
+    }
     const saleFilter = { versement_checkout: { $exists: true } };
     if (filter.branch_id) saleFilter.branch_id = filter.branch_id;
     const orphanSales = await req.db.collection('sales').find(saleFilter).limit(2000).toArray();
