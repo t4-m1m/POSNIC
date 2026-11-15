@@ -5863,8 +5863,10 @@ class SalesRepository {
             },
             {
               $set: {
+                // Keep the original sale-day register amount immutable.
+                // The refund is posted as a separate negative cash movement
+                // on return_refund_transactions.created_at (the return day).
                 'register_sales.$.sale_process': updatedSaleProcess,
-                'register_sales.$.register_amount': sale_total_amount,
                 'register_sales.$.registerItems_return_total': return_sale_amount,
               },
             }
