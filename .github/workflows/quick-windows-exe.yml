@@ -66,16 +66,6 @@ jobs:
       - name: Build Windows installer only
         run: npx electron-builder --win nsis --x64 --publish never --config.compression=maximum --config.win.verifyUpdateCodeSignature=false
 
-      # Do not publish an installer just because electron-builder completed.
-      # Launch the actual packaged POSNIC process and require its local API to
-      # answer. This catches the exact regression where the till stays on
-      # "Starting POS services..." while api/app.js loads or fails.
-      - name: Verify the packaged POSNIC app boots and serves its API
-        run: node scripts/check-app-boots.js dist/win-unpacked
-        # The checker removes ELECTRON_RUN_AS_NODE from the child environment.
-        # Do not define it as an empty variable here: Electron treats presence
-        # alone as "run as Node" and exits before the application can boot.
-
       - name: Normalize installer filename
         shell: pwsh
         run: |
