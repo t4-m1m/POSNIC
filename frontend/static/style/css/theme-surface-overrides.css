@@ -510,3 +510,66 @@ body[data-theme="warmnight"] {
   background-color: var(--theme-table-row-hover) !important;
   color: var(--theme-text-primary) !important;
 }
+
+
+/* Bootstrap X-Editable price popup (sales cart inline price picker).
+   The popup is appended to body, outside #sales_new, so page-scoped theme
+   selectors cannot reach it. Resolve its surfaces directly from the active
+   POSNIC theme instead. */
+html[data-theme="dark"] .editable-container .popover,
+html[data-theme="terminal"] .editable-container .popover,
+html[data-theme="dosblue"] .editable-container .popover,
+html[data-theme="softdark"] .editable-container .popover,
+html[data-theme="warmnight"] .editable-container .popover {
+  background: var(--theme-card-bg) !important;
+  border-color: var(--theme-border-color) !important;
+  color: var(--theme-text-primary) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,.38) !important;
+}
+html[data-theme="dark"] .editable-container .popover-title,
+html[data-theme="terminal"] .editable-container .popover-title,
+html[data-theme="dosblue"] .editable-container .popover-title,
+html[data-theme="softdark"] .editable-container .popover-title,
+html[data-theme="warmnight"] .editable-container .popover-title,
+html[data-theme="dark"] .editable-container .popover-content,
+html[data-theme="terminal"] .editable-container .popover-content,
+html[data-theme="dosblue"] .editable-container .popover-content,
+html[data-theme="softdark"] .editable-container .popover-content,
+html[data-theme="warmnight"] .editable-container .popover-content,
+html[data-theme="dark"] .editable-container .editableform,
+html[data-theme="terminal"] .editable-container .editableform,
+html[data-theme="dosblue"] .editable-container .editableform,
+html[data-theme="softdark"] .editable-container .editableform,
+html[data-theme="warmnight"] .editable-container .editableform {
+  background: var(--theme-card-bg) !important;
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
+html[data-theme="dark"] .editable-container input,
+html[data-theme="terminal"] .editable-container input,
+html[data-theme="dosblue"] .editable-container input,
+html[data-theme="softdark"] .editable-container input,
+html[data-theme="warmnight"] .editable-container input,
+html[data-theme="dark"] .editable-container select,
+html[data-theme="terminal"] .editable-container select,
+html[data-theme="dosblue"] .editable-container select,
+html[data-theme="softdark"] .editable-container select,
+html[data-theme="warmnight"] .editable-container select {
+  background: var(--theme-input-bg, var(--theme-body-bg)) !important;
+  color: var(--theme-text-primary) !important;
+  border: 1px solid var(--theme-border-color) !important;
+}
+html[data-theme="dark"] .editable-container .editable-error-block,
+html[data-theme="terminal"] .editable-container .editable-error-block,
+html[data-theme="dosblue"] .editable-container .editable-error-block,
+html[data-theme="softdark"] .editable-container .editable-error-block,
+html[data-theme="warmnight"] .editable-container .editable-error-block {
+  color: var(--theme-danger-color, #f04438) !important;
+}
+html[data-theme="dark"] .editable-container .arrow:after,
+html[data-theme="terminal"] .editable-container .arrow:after,
+html[data-theme="dosblue"] .editable-container .arrow:after,
+html[data-theme="softdark"] .editable-container .arrow:after,
+html[data-theme="warmnight"] .editable-container .arrow:after {
+  border-bottom-color: var(--theme-card-bg) !important;
+}

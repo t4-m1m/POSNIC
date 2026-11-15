@@ -56,10 +56,17 @@
             '.sl-label .sl-element{position:absolute;margin:0;padding:0;overflow:hidden;box-sizing:border-box;display:flex;align-items:center;justify-content:' + (s.align === 'left' ? 'flex-start' : s.align === 'right' ? 'flex-end' : 'center') + ';line-height:1.15;overflow-wrap:anywhere}' +
             '.sl-name{font-weight:600;white-space:pre-line}.sl-custom-text{white-space:pre-wrap}.sl-logo{object-fit:contain}.sl-price{font-weight:700}.sl-variant-values{display:block!important;white-space:pre-line}.sl-variant-line{display:block;width:100%;line-height:1.15}.sl-label svg.sl-element{display:block;width:100%;height:100%;max-width:none;max-height:none;overflow:visible;}' +
             '.sl-foot{font-size:75%;white-space:pre-line}.sl-barcode-visual{display:flex!important;align-items:center;justify-content:center;overflow:hidden}.sl-barcode-visual svg.sl-barcode{display:block;width:auto!important;max-width:100%;height:100%;max-height:100%;overflow:hidden}.sl-design-editable .sl-element{outline:1px dashed #2563eb;cursor:move;touch-action:none}' +
-            '.sl-design-editable .sl-element.sl-selected{outline:2px solid #ef4444;z-index:20;overflow:visible}' +
-            '.sl-resize-handle{position:absolute;width:12px;height:12px;border:2px solid white;border-radius:2px;background:#2563eb;cursor:nwse-resize;z-index:21;transform:translate(-50%,-50%);touch-action:none}' +
-            '.sl-rotate-handle{position:absolute;width:13px;height:13px;border:2px solid white;border-radius:50%;background:#f97316;cursor:grab;z-index:22;transform:translate(-50%,-50%);touch-action:none;box-shadow:0 0 0 1px #c2410c}' +
-            '.sl-rotate-handle:after{content:"";position:absolute;width:2px;height:7px;background:#f97316;left:4px;top:-7px}';
+            '.sl-design-editable .sl-element{outline:1px dashed rgba(37,99,235,.32);cursor:grab;touch-action:none;user-select:none}' +
+            '.sl-design-editable .sl-element:active{cursor:grabbing}' +
+            '.sl-design-editable .sl-element.sl-selected{outline:2px solid #2563eb;outline-offset:2px;z-index:20;overflow:visible;box-shadow:0 0 0 4px rgba(37,99,235,.12)}' +
+            '.sl-resize-handle,.sl-rotate-handle{display:none;position:absolute;z-index:30;touch-action:none;user-select:none;box-sizing:border-box}' +
+            '.sl-resize-handle.is-active,.sl-rotate-handle.is-active{display:flex;align-items:center;justify-content:center}' +
+            '.sl-resize-handle{width:22px;height:22px;border:2px solid #fff;border-radius:7px;background:#2563eb;color:#fff;cursor:nwse-resize;transform:translate(-50%,-50%);box-shadow:0 2px 7px rgba(15,23,42,.3)}' +
+            '.sl-resize-handle:before{content:"↘";font:700 13px/1 Arial,sans-serif;color:#fff}' +
+            '.sl-rotate-handle{width:26px;height:26px;border:2px solid #2563eb;border-radius:50%;background:#fff;color:#2563eb;cursor:grab;transform:translate(-50%,-50%);box-shadow:0 2px 8px rgba(15,23,42,.22)}' +
+            '.sl-rotate-handle:before{content:"↻";font:700 18px/1 Arial,sans-serif;color:#2563eb}' +
+            '.sl-rotate-handle:after{content:"";position:absolute;width:2px;height:10px;background:#2563eb;left:50%;top:100%;transform:translateX(-50%)}' +
+            '.sl-resize-handle:focus-visible,.sl-rotate-handle:focus-visible{outline:3px solid rgba(37,99,235,.35);outline-offset:3px}';
     }
     function validateDesign(s) {
         if (!/^[a-zA-Z ,\-]+$/.test(s.font) || !['left', 'center', 'right'].includes(s.align) || !/^#[a-f\d]{6}$/i.test(s.background) || !/^#[a-f\d]{6}$/i.test(s.ink)) throw Error('Invalid label design.');
@@ -817,6 +824,13 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
                 if (selected.length) { selected.addClass('sl-selected'); state.selectedElementKey = selected.attr('data-sl-element'); }
             }
             var key = selected.attr('data-sl-element');
+            // Only the active element exposes move/resize/rotate affordances.
+            $('#sl-sample .sl-resize-handle').each(function () {
+                this.classList.toggle('is-active', this.getAttribute('data-sl-resize-for') === key);
+            });
+            $('#sl-sample .sl-rotate-handle').each(function () {
+                this.classList.toggle('is-active', this.getAttribute('data-sl-rotate-for') === key);
+            });
             var layout = key ? (state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key]) : null;
             var baseSize = Math.max(3, Number($('#bar-fontSize').val()) || 12);
             $('#sl-rotation').val(layout ? (Number(layout.rotation) || 0) : 0).prop('disabled', false);
