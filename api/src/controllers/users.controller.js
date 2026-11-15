@@ -291,19 +291,24 @@ class UsersController extends BaseController {
       const loginId = String(username).trim();
 
       // Find user by email or username, including all fields needed for the legacy response
-      // Legacy Super Admin records exist in several generations of the
-      // database: some store the login in username, others in user_name or
-      // the legacy name field. Match identifiers case-insensitively while
-      // keeping the lookup exact (never a partial username match).
-      const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\      const user = await this.userModel
+      // Support both current and legacy Super Admin identifier fields.
+      // The comparison is exact and case-insensitive; passwords are still
+      // verified by the existing bcrypt compatibility path below.
+      const escapedIdentifier = loginId.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&');
+      const exactIdentifier = new RegExp('^' + escapedIdentifier + '$', 'i');
+      const user = await this.userModel
         .findOne({
-          $or: [{ email: loginId }, { username: loginId }],
+          $or: [
+            { email: loginId.toLowerCase() },
+            { username: exactIdentifier },
+            { user_name: exactIdentifier },
+            { name: exactIdentifier },
+          ],
         })
         .select(
-          '+password +license +branch_access +printing_design +access +plan +plan_access +activate +firstname +lastname +username +email +image +register_status +usertype +role_id'
+          '+password +license +branch_access +printing_design +access +plan +plan_access +activate +firstname +lastname +username +user_name +name +email +image +register_status +usertype +role +role_id'
         )
-        .lean();');
-      const exactIdentifier = new RegExp('^' + escapeRegex(loginId) + '
+        .lean();
 
       /*
        * ONE MESSAGE FOR BOTH FAILURES, DELIBERATELY.
