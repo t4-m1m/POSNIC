@@ -446,7 +446,9 @@ PosnicPro = {
             stack: 1
         });
     },
-    defaultcustomerSet: function () {
+    defaultcustomerSet: function (options) {
+        options = options || {};
+        var forceDefault = options.forceDefault === true;
         /*
          * A branch without a configured default customer sells to Walk-In -
          * fetching with an empty id is what threw "customer required" 400s
@@ -459,6 +461,7 @@ PosnicPro = {
         // Even with no stored id the server now answers: it finds or
         // creates this branch's Walk-in and heals the branch pointer.
         var defId = (customerDefaultData && customerDefaultData.customer_id) || '';
+        var defName = (customerDefaultData && customerDefaultData.customer_name) || '';
         var params = {
             url: 'setting/getDefaultCustomer',
             data: { data: { customer: defId } }
@@ -469,8 +472,18 @@ PosnicPro = {
                 PosnicPro.local.set('defaultcustomer', JSON.stringify(response.data['customer']));
                 $('.default-customer-id').val(responseData['customer_id']);
                 $('.default-customer-name').val(responseData['customer_name']);
-                // Do not replace a customer typed or selected while this lookup was pending.
-                if ($.trim($('#sales_new_customer_name').val() || '')) return;
+                // A normal lookup never replaces a customer typed/selected while pending.
+                // A post-sale forced refresh may replace only the old cached Walk-in
+                // (or still-empty fields), never a different customer chosen for the next sale.
+                var currentId = $.trim($('#sales_new_customer_id').val() || '');
+                var currentName = $.trim($('#sales_new_customer_name').val() || '');
+                if (forceDefault) {
+                    var stillShowingCachedDefault = (!currentId && !currentName) ||
+                        (currentId === String(defId) && currentName === String(defName));
+                    if (!stillShowingCachedDefault) return;
+                } else if (currentName) {
+                    return;
+                }
                 $('#sales_new_customer_id').val(responseData['customer_id']);
                 $('#sales_new_customer_name').val(responseData['customer_name']);
                 $('#sales_new_customer_address').val(responseData['customer_address']);
