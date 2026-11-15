@@ -18,9 +18,12 @@ function reportableSales(processes = GRAPH_ALLOWED_SALE_PROCESSES) {
         ],
       },
       { payment_status: { $ne: 'Cancelled' } },
-      // F6 Versement remains an operational stock transaction, not a retail
-      // sale. Recognize its full value in the dedicated register on settled_at.
-      { versement_checkout: { $exists: false } },
+      // Pending F6 records stay excluded; settled F6 records become normal,
+      // editable sales dated on their settlement day.
+      { $or: [
+        { versement_checkout: { $exists: false } },
+        { versement_checkout: { $exists: true }, versement_settled: true },
+      ] },
     ],
   };
 }
