@@ -1,0 +1,11 @@
+/* Dashboard visualizations: keep the real SVG charts legible in both themes. */
+#dashboard-sales-trend{display:block;width:100%;min-height:190px;overflow:visible}
+#dashboard-sales-trend svg{display:block;width:100%;height:auto;min-height:170px;overflow:visible}
+#dashboard-payment-donut{display:block;width:100%;min-height:150px}
+#dashboard-payment-donut svg{display:block;overflow:visible}
+#dashboard .dashboard-stat-circle{width:88px;height:88px;max-width:100%;margin:7px auto 10px;border:4px solid var(--theme-primary-color,#2563eb);border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--theme-card-bg,#fff);box-shadow:0 2px 9px rgba(37,99,235,.12)}
+#dashboard .dashboard-stat-circle h4{font-size:clamp(12px,1.15vw,17px);font-weight:750;line-height:1.15;overflow-wrap:anywhere;padding:3px;margin:0;color:var(--theme-text-primary,#243247)}
+#dashboard .dashboard-stat-circle #kpi_sales{color:var(--theme-primary-color,#2563eb)}
+#dashboard .dashboard-stat-circle #kpi_cash{color:#16a34a}
+#dashboard .dashboard-stat-circle #kpi_expenses{color:#dc2626}
+@media(max-width:575px){#dashboard .dashboard-stat-circle{width:76px;height:76px;border-width:3px}}
