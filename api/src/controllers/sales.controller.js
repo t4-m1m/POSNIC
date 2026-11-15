@@ -1889,11 +1889,17 @@ class SalesController extends BaseController {
         settled_at: { $gte: new Date(filteredDateRange.start_date), $lte: new Date(filteredDateRange.end_date) },
       }).toArray();
       const tenderLabels = { cash: 'Cash', tpe: 'TPE', baridimob: 'BaridiMob' };
+      const addPaymentMovement = (mode, amount, flags) => {
+        const key = String(mode || 'Cash').toLowerCase();
+        const existing = paymentDetails.find((row) => String(row.payment_mode || 'Cash').toLowerCase() === key);
+        if (existing) existing.sale_payment = roundToTwo(Number(existing.sale_payment || 0) + Number(amount || 0));
+        else paymentDetails.push({ payment_mode: mode || 'Cash', sale_payment: roundToTwo(amount || 0), ...(flags || {}) });
+      };
       settledVersements.forEach((v) => {
         const initial = roundToTwo(v.initial_amount || 0);
-        if (initial > 0) paymentDetails.push({ payment_mode: tenderLabels[String(v.initial_method || 'cash').toLowerCase()] || 'Cash', sale_payment: initial, is_versement: true });
+        if (initial > 0) addPaymentMovement(tenderLabels[String(v.initial_method || 'cash').toLowerCase()] || 'Cash', initial, { is_versement: true });
         const finalAmount = roundToTwo(v.settlement && v.settlement.amount || 0);
-        if (finalAmount > 0) paymentDetails.push({ payment_mode: tenderLabels[String(v.settlement.method || 'cash').toLowerCase()] || 'Cash', sale_payment: finalAmount, is_versement: true });
+        if (finalAmount > 0) addPaymentMovement(tenderLabels[String(v.settlement.method || 'cash').toLowerCase()] || 'Cash', finalAmount, { is_versement: true });
       });
       const refundRows = await db.collection('sales').aggregate([
         { $match: { branch_id: branchObjectId, ...(BaseModel.license ? { license: BaseModel.license } : {}) } },
@@ -1912,7 +1918,7 @@ class SalesController extends BaseController {
       const refundLabels = { cash: 'Cash', tpe: 'TPE', baridimob: 'BaridiMob', card: 'Card' };
       refundRows.forEach((row) => {
         const amount = roundToTwo(row.amount || 0);
-        if (amount > 0) paymentDetails.push({ payment_mode: refundLabels[String(row._id || 'cash').toLowerCase()] || String(row._id || 'Cash'), sale_payment: -amount, is_refund: true });
+        if (amount > 0) addPaymentMovement(refundLabels[String(row._id || 'cash').toLowerCase()] || String(row._id || 'Cash'), -amount, { is_refund: true });
       });
 
       const debtPaymentRows = await db.collection('credit_payments').aggregate([

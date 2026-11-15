@@ -76,6 +76,11 @@ exports.create = async (req,res) => {
     if (!ObjectId.isValid(branch)) return fail(res,400,'A valid branch is required.');
     const sale = await req.db.collection('sales').findOne({ $or:[{ sales_id:saleRef },{ sale_id:saleRef }, ...(ObjectId.isValid(saleRef)?[{_id:new ObjectId(saleRef)}]:[])], branch_id:new ObjectId(branch) });
     if (!sale) return fail(res,404,'The validated sale could not be found in this branch.');
+    if (!sale.versement_checkout || String(sale.payment_mode || '').toLowerCase() !== 'versement') {
+      return fail(res,409,'Créez les versements depuis Nouvelle vente avec F6. Une vente ordinaire ne peut pas être convertie après coup.');
+    }
+    const recovered = await exports.ensureForSale(req, sale);
+    if (recovered) return res.json({ type:'success', message:'Versement déjà enregistré ou récupéré.', data:recovered });
     const total = saleTotal(sale);
     if (total <= 0 || initial > total) return fail(res,400,'Initial versement must be greater than zero and no more than the sale total.');
     const collection = req.db.collection(COLLECTION);
