@@ -784,6 +784,7 @@ PosnicPro.quickreport = {
           response.type || "error",
           response.message || "Request failed"
         );
+        $(document).trigger('dayCloseReportFailed', [response.message || 'Erreur serveur lors du chargement de la journée.']);
       }
     );
   },
@@ -1327,11 +1328,20 @@ function renderAgenda(){
  for(var d=1;d<=days;d++){var date=new Date(y,mo,d),keyDate=iso(date),$btn=$('<button type="button" class="dc-agenda-day">').text(d).attr('data-date',keyDate);if(keyDate===today)$btn.addClass('is-today');if(keyDate===chosen)$btn.addClass('is-selected');$a.append($btn);}
 }
 function loadDay(date){
- selectedDate=new Date(date+'T12:00:00');renderAgenda();$('#dc-agenda-status').text('Chargement du rapport réel pour '+date+'…');loadingDay=true;
- var start=moment(selectedDate).startOf('day').format('YYYY/MM/DD h:mm A'),end=moment(selectedDate).endOf('day').format('YYYY/MM/DD h:mm A');
- var $range=$('#view_dailysale_report_daterange');$range.val(start+' - '+end);$range.find('span').first().text(start+' - '+end);
+ var parsed=moment(date,'YYYY-MM-DD',true);
+ if(!parsed.isValid()){loadingDay=false;$('#dc-agenda-status').text('Date invalide. Sélectionnez une autre journée.');return;}
+ selectedDate=parsed.clone().hour(12).minute(0).second(0).millisecond(0).toDate();
+ renderAgenda();$('#dc-agenda-status').text('Chargement du rapport réel pour '+date+'…');loadingDay=true;
+ var start=parsed.clone().startOf('day'),end=parsed.clone().endOf('day');
+ var startText=start.format('YYYY/MM/DD h:mm A'),endText=end.format('YYYY/MM/DD h:mm A');
+ var $range=$('#view_dailysale_report_daterange'),picker=$range.data('daterangepicker');
+ if(picker&&typeof picker.setStartDate==='function'&&typeof picker.setEndDate==='function'){picker.setStartDate(start);picker.setEndDate(end);}
+ $range.val(startText+' - '+endText);$range.find('span').first().text(startText+' - '+endText);
+ // The agenda always represents the complete selected calendar day, never a
+ // previously selected custom meal window.
+ PosnicPro.quickreport.meal='full';$('#daily-serving-period').val('');$('#daily-meal-custom').hide();
  if(typeof PosnicPro.quickreport.salereportTable==='function')PosnicPro.quickreport.salereportTable('VIEW');
- else $('#dc-agenda-status').text('Le rapport des ventes est indisponible.');
+ else{loadingDay=false;$('#dc-agenda-status').text('Le rapport des ventes est indisponible.');}
 }
 $(function(){
  if(!$('#day-close-ticket-tools').length)return;load();render();renderAgenda();
@@ -1348,6 +1358,7 @@ $(function(){
  $('#dc-agenda-next').on('click',function(){agendaDate=new Date(agendaDate.getFullYear(),agendaDate.getMonth()+1,1);renderAgenda();});
  $('#dc-studio-agenda').on('click','.dc-agenda-day[data-date]',function(){loadDay($(this).data('date'));});
  $(document).on('dayCloseReportUpdated',function(e,report){if(!report)return;reportCache=report;render();historySave();$('#dc-agenda-status').text('Rapport chargé pour '+iso(selectedDate)+'. Aperçu actualisé avec les données disponibles.');loadingDay=false;});
+ $(document).on('dayCloseReportFailed',function(e,message){loadingDay=false;renderAgenda();$('#dc-agenda-status').text('Impossible de charger le rapport du '+iso(selectedDate)+'. '+String(message||'Vérifiez la connexion et réessayez.'));});
  var original=PosnicPro.quickreport.salereportTable;
  PosnicPro.quickreport.salereportTable=function(){var ret=original.apply(this,arguments);return ret;};
 });
