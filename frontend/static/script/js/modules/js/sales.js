@@ -4818,7 +4818,7 @@ PosnicPro.sales.addSale = {
                         window.__posnicVersementDraft = null;
                         if (response.data && response.data.versement && PosnicPro.versementsRegister &&
                             typeof PosnicPro.versementsRegister.printReceipt === 'function') {
-                            PosnicPro.versementsRegister.printReceipt(response.data.versement, 2);
+                            PosnicPro.versementsRegister.printReceipt(response.data.versement);
                         } else {
                             PosnicPro.alert('warning', 'Vente enregistrée. Actualisez la section Versements pour récupérer le reçu.');
                         }
