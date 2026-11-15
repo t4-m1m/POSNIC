@@ -344,7 +344,7 @@
                     var versementFinal = data.versement_settled === true ? (Number(data.versement_settlement_amount) || 0) : 0;
                     var versementPaid = Math.min(versementTotal, versementInitial + versementFinal);
                     var versementRemaining = Math.max(0, versementTotal - versementPaid);
-                    content += pair('Versement (montant payé)', money(versementPaid));
+                    content += pair('Versement', money(versementPaid));
                     content += pair('Reste à payer', money(versementRemaining));
                     if (!hasField('customer_name') && present(values.customer_name)) content += pair('Client', esc(String(values.customer_name)));
                     if (!hasField('customer_phone') && present(values.customer_phone)) content += pair('Téléphone', esc(String(values.customer_phone)));
