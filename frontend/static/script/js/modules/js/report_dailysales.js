@@ -414,12 +414,19 @@ PosnicPro.quickreport = {
           products: productAllDataRow.map(function (row) {
             return { name: row[0], qty: safeNum(row[2]), total: safeNum(row[6]) };
           }),
-          profit: safeNum(profit),
-          cost_of_goods: Math.max(0, safeNum(total) - safeNum(profit)),
-          gross_profit: safeNum(profit),
+          profit: response.data && response.data.gross_profit_total != null ? safeNum(response.data.gross_profit_total) : safeNum(profit),
+          cost_of_goods: response.data && response.data.cost_of_goods_total != null
+            ? safeNum(response.data.cost_of_goods_total)
+            : productData.reduce(function (sum, item) { return sum + safeNum(item.product_cost); }, 0),
+          gross_profit: response.data && response.data.gross_profit_total != null ? safeNum(response.data.gross_profit_total) : safeNum(profit),
           sales_count: response.data && (response.data.sales_count != null ? response.data.sales_count : response.data.number_of_sales != null ? response.data.number_of_sales : response.data.total_sales_count != null ? response.data.total_sales_count : response.data.salesCount),
           expenses: response.data && (response.data.expenses_total != null ? response.data.expenses_total : response.data.total_expenses != null ? response.data.total_expenses : response.data.expenses != null ? response.data.expenses : response.data.expense_total),
           expenses_count: safeNum(response.data && response.data.expenses_count),
+          salary_payments_total: safeNum(response.data && response.data.salary_payments_total),
+          salary_payment_details: response.data && Array.isArray(response.data.salary_payment_details)
+            ? response.data.salary_payment_details.map(function (row) {
+                return { worker_name: row.worker_name, method: row.method, amount: safeNum(row.amount), count: safeNum(row.count) };
+              }) : [],
           debt_payment_total: debtPaymentTotal,
           debt_payments: debtPaymentData.map(function (row) { return { method: row.payment_mode, amount: safeNum(row.amount), count: safeNum(row.count) }; }),
         };
@@ -1255,27 +1262,28 @@ $(document).on('change', '#dailysale_branch_value', function () {
 'use strict';
 var key='posnic_day_close_studio_v2', historyKey='posnic_day_close_history', selected=null, blocks=[], reportCache=null;
 var agendaDate=new Date(), selectedDate=new Date(), loadingDay=false;
-var defaults=[['title','CLÔTURE DE CAISSE'],['date','Date de clôture'],['sales','Ventes'],['cost','Coût des marchandises'],['gross','Bénéfice brut'],['expenses','Dépenses'],['net','Bénéfice net'],['payments','Détail des paiements'],['debt','Encaissements de dettes'],['count','Nombre de ventes'],['footer','Clôture effectuée. Merci.']];
-var labels={title:'CLÔTURE DE CAISSE',date:'Date de clôture',sales:'Ventes',cost:'Coût des marchandises',gross:'Bénéfice brut',expenses:'Dépenses',net:'Bénéfice net',payments:'Détail des paiements',debt:'Encaissements de dettes',count:'Nombre de ventes',text:'Texte libre',divider:'',footer:'Clôture effectuée. Merci.'};
+var defaults=[['title','CLÔTURE DE CAISSE'],['date','Date de clôture'],['sales','Ventes'],['cost','Coût des marchandises'],['gross','Bénéfice brut'],['expenses','Dépenses'],['salary','Paiements salaires'],['net','Bénéfice net'],['payments','Détail des paiements'],['debt','Encaissements de dettes'],['count','Nombre de ventes'],['footer','Clôture effectuée. Merci.']];
+var labels={title:'CLÔTURE DE CAISSE',date:'Date de clôture',sales:'Ventes',cost:'Coût des marchandises',gross:'Bénéfice brut',expenses:'Dépenses',salary:'Paiements salaires',net:'Bénéfice net',payments:'Détail des paiements',debt:'Encaissements de dettes',count:'Nombre de ventes',text:'Texte libre',divider:'',footer:'Clôture effectuée. Merci.'};
 function id(){return 'dc-'+Math.random().toString(36).slice(2,10);}
 function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-function load(){try{var d=JSON.parse(localStorage.getItem(key)||'null');if(d&&Array.isArray(d.blocks)){blocks=d.blocks;['expenses','count','debt'].forEach(function(type){if(!blocks.some(function(b){return b.type===type;})){var at=type==='debt'?blocks.findIndex(function(b){return b.type==='payments';}):-1;blocks.splice(at>=0?at+1:blocks.length,0,{id:id(),type:type,label:labels[type],size:12,align:'left'});}});$('#dc-studio-width').val(d.width||'80');return;}}catch(e){}blocks=defaults.map(function(x){return {id:id(),type:x[0],label:x[1],size:x[0]==='title'?16:12,align:x[0]==='title'?'center':'left'};});}
+function load(){try{var d=JSON.parse(localStorage.getItem(key)||'null');if(d&&Array.isArray(d.blocks)){blocks=d.blocks;['expenses','salary','count','debt'].forEach(function(type){if(!blocks.some(function(b){return b.type===type;})){var at=type==='salary'?blocks.findIndex(function(b){return b.type==='expenses';}):type==='debt'?blocks.findIndex(function(b){return b.type==='payments';}):-1;blocks.splice(at>=0?at+1:blocks.length,0,{id:id(),type:type,label:labels[type],size:12,align:'left'});}});$('#dc-studio-width').val(d.width||'80');return;}}catch(e){}blocks=defaults.map(function(x){return {id:id(),type:x[0],label:x[1],size:x[0]==='title'?16:12,align:x[0]==='title'?'center':'left'};});}
 function save(){try{localStorage.setItem(key,JSON.stringify({blocks:blocks,width:$('#dc-studio-width').val()||'80'}));$('#day-close-save-status').text('Modèle enregistré sur cet appareil.');}catch(e){$('#day-close-save-status').text('Impossible d’enregistrer le modèle.');}}
 function esc(v){return $('<div>').text(v==null?'':String(v)).html();}
 function num(v){var n=Number(v);return isFinite(n)?n:0;}
 function metrics(){
  var r=PosnicPro.quickreport&&PosnicPro.quickreport.lastReport||reportCache||{}, payments=Array.isArray(r.payments)?r.payments:[], total=num(r.total!=null?r.total:r.sales_total), gross=num(r.gross_profit!=null?r.gross_profit:r.profit), cost=num(r.cost_of_goods!=null?r.cost_of_goods:(total-gross));
  var expenseRaw=r.expenses!=null?r.expenses:(r.expenses_total!=null?r.expenses_total:r.total_expenses), expensesAvailable=expenseRaw!=null&&typeof expenseRaw!=='object', expenses=num(expensesAvailable?expenseRaw:0);
+ var salaryPayments=Array.isArray(r.salary_payment_details)?r.salary_payment_details:[], salaryPaymentsTotal=num(r.salary_payments_total);
  var pay={cash:0,credit:0,tpe:0,baridimob:0,other:0};
  payments.forEach(function(p){var l=String(p.label||p.name||'').trim().toLowerCase(),a=num(p.amount!=null?p.amount:p.total);if(/cash|esp[eè]ce/.test(l))pay.cash+=a;else if(/credit|cr[eé]dit|debt|dette/.test(l))pay.credit+=a;else if(/baridi/.test(l))pay.baridimob+=a;else if(/tpe|card|carte/.test(l))pay.tpe+=a;else pay.other+=a;});
  /* Some older API responses expose only the aggregate debt collection total. In that case, include it as cash, without double-counting when method-level debt details have already been merged into payments. */
  var debtDetails=Array.isArray(r.debt_payments)?r.debt_payments:[], debtTotal=num(r.debt_payment_total);
  if(!debtDetails.length&&debtTotal>0&&!payments.some(function(p){return p.is_debt_collection;})){pay.cash+=debtTotal;}
  var date=r.from||r.starting_date||iso(selectedDate), rawCount=r.sales_count!=null?r.sales_count:(r.number_of_sales!=null?r.number_of_sales:(r.total_sales_count!=null?r.total_sales_count:(Array.isArray(r.sales)?r.sales.length:null))), count=rawCount==null?null:num(rawCount);
- return {date:date,sales:total,cost:cost,gross:gross,expenses:expenses,expensesAvailable:expensesAvailable,net:gross-expenses,count:count,pay:pay,payments:payments,report:r};
+ return {date:date,sales:total,cost:cost,gross:gross,expenses:expenses,expensesAvailable:expensesAvailable,salaryPayments:salaryPayments,salaryPaymentsTotal:salaryPaymentsTotal,net:gross-expenses-salaryPaymentsTotal,count:count,pay:pay,payments:payments,report:r};
 }
 function money(v){return num(v).toLocaleString('fr-DZ',{minimumFractionDigits:2,maximumFractionDigits:2})+' DA';}
-function value(b,m){switch(b.type){case'date':return m.date;case'sales':return money(m.sales);case'cost':return m.report.cost_of_goods!=null||m.report.total_cost!=null?money(m.cost):'Non disponible dans le rapport';case'gross':return m.report.gross_profit!=null||m.report.profit!=null?money(m.gross):'Non disponible dans le rapport';case'expenses':return m.expensesAvailable?money(m.expenses):'Non disponible dans le rapport';case'net':return (m.report.gross_profit!=null||m.report.profit!=null)?money(m.net):'Non disponible dans le rapport';case'count':return m.count==null?'Non disponible dans le rapport':String(m.count);case'payments':var rows=m.payments.map(function(p){return String(p.label||p.name||'Autre')+': '+money(p.amount!=null?p.amount:p.total);});if(!m.payments.length){rows=['Cash: '+money(m.pay.cash),'Crédit: '+money(m.pay.credit),'TPE: '+money(m.pay.tpe),'BaridiMob: '+money(m.pay.baridimob)];if(m.pay.other)rows.push('Autres: '+money(m.pay.other));}else if(!m.report.debt_payments||!m.report.debt_payments.length){var debt=num(m.report.debt_payment_total);if(debt>0&&!m.payments.some(function(p){return p.is_debt_collection;})){rows.push('Cash (encaissements de dettes): '+money(debt));}}return rows.join('\n');case'debt':return money(m.report.debt_payment_total||0);default:return '';}}
+function value(b,m){switch(b.type){case'date':return m.date;case'sales':return money(m.sales);case'cost':return m.report.cost_of_goods!=null||m.report.cost_of_goods_total!=null||m.report.total_cost!=null?money(m.cost):'Non disponible dans le rapport';case'gross':return m.report.gross_profit!=null||m.report.gross_profit_total!=null||m.report.profit!=null?money(m.gross):'Non disponible dans le rapport';case'expenses':return m.expensesAvailable?money(m.expenses):'Non disponible dans le rapport';case'salary':var salaryRows=m.salaryPayments.map(function(row){return String(row.worker_name||'Employé')+': '+money(row.amount);});return salaryRows.length?money(m.salaryPaymentsTotal)+'\\n'+salaryRows.join('\\n'):money(m.salaryPaymentsTotal);case'net':return (m.report.gross_profit!=null||m.report.gross_profit_total!=null||m.report.profit!=null)?money(m.net):'Non disponible dans le rapport';case'count':return m.count==null?'Non disponible dans le rapport':String(m.count);case'payments':var rows=m.payments.map(function(p){return String(p.label||p.name||'Autre')+': '+money(p.amount!=null?p.amount:p.total);});if(!m.payments.length){rows=['Cash: '+money(m.pay.cash),'Crédit: '+money(m.pay.credit),'TPE: '+money(m.pay.tpe),'BaridiMob: '+money(m.pay.baridimob)];if(m.pay.other)rows.push('Autres: '+money(m.pay.other));}else if(!m.report.debt_payments||!m.report.debt_payments.length){var debt=num(m.report.debt_payment_total);if(debt>0&&!m.payments.some(function(p){return p.is_debt_collection;})){rows.push('Cash (encaissements de dettes): '+money(debt));}}return rows.join('\n');case'debt':return money(m.report.debt_payment_total||0);default:return '';}}
 function render(){
  var m=metrics(),$p=$('#day-close-ticket-preview').empty().css('width',($('#dc-studio-width').val()||80)+'mm');
  if(!blocks.length)$p.append('<div class="dc-studio-drop-hint">Glissez des éléments ici</div>');

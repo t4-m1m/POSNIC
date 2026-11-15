@@ -7804,3 +7804,166 @@ tr.s-doc-purchase-row:hover td { background: rgba(9, 105, 218, 0.05); }
 #posnic-vendeur-modal #posnic-vendeur-confirm:disabled { opacity:.48; cursor:not-allowed; }
 #posnic-vendeur-modal .modal-footer .btn:focus-visible { outline:2px solid var(--pv-primary); outline-offset:2px; }
 @media(max-width:480px) { #posnic-vendeur-modal .modal-dialog { width:calc(100% - 20px); margin:10px auto; } #posnic-vendeur-modal .posnic-vendeur-header,#posnic-vendeur-modal .modal-body { padding-left:16px; padding-right:16px; } #posnic-vendeur-modal .modal-footer { padding:12px 16px 16px; } }
+
+
+/* POSNIC Touch Mode: opt-in, persistent, and layered over the existing desktop
+   layout. Keyboard shortcuts and mouse workflows remain unchanged. */
+.posnic-touch-mode {
+    --posnic-touch-target: 50px;
+}
+.posnic-touch-mode button,
+.posnic-touch-mode .btn,
+.posnic-touch-mode a.btn,
+.posnic-touch-mode .dropdown-item,
+.posnic-touch-mode .nav-link,
+.posnic-touch-mode .page-link,
+.posnic-touch-mode .select2-selection,
+.posnic-touch-mode .custom-select,
+.posnic-touch-mode input.form-control,
+.posnic-touch-mode select.form-control,
+.posnic-touch-mode textarea.form-control,
+.posnic-touch-mode .form-control {
+    min-height: var(--posnic-touch-target);
+    touch-action: manipulation;
+}
+.posnic-touch-mode .btn-sm,
+.posnic-touch-mode .btn-group-sm > .btn {
+    min-height: 44px;
+    padding-left: 12px;
+    padding-right: 12px;
+}
+.posnic-touch-mode .dropdown-menu .dropdown-item {
+    display: flex;
+    align-items: center;
+    padding-top: 9px;
+    padding-bottom: 9px;
+}
+.posnic-touch-mode input[type="checkbox"],
+.posnic-touch-mode input[type="radio"] {
+    width: 22px;
+    height: 22px;
+    min-height: 22px;
+    accent-color: var(--theme-primary-color, #506fe4);
+}
+.posnic-touch-mode .product,
+.posnic-touch-mode .product-category {
+    min-height: 148px;
+    min-width: 118px;
+    touch-action: manipulation;
+}
+.posnic-touch-mode .sales-function-key {
+    min-height: 54px;
+    padding: 10px 12px;
+}
+.posnic-touch-mode .quantity,
+.posnic-touch-mode .amount-input {
+    min-height: 48px;
+    font-size: 17px;
+}
+.posnic-touch-mode .rs-act {
+    min-width: 46px;
+    min-height: 46px;
+}
+.posnic-touch-mode .modal-footer .btn,
+.posnic-touch-mode .infobar-settings-sidebar .btn {
+    min-height: 50px;
+}
+.posnic-touch-mode .dc-studio-palette button,
+.posnic-touch-mode .dc-agenda-day {
+    min-height: 52px;
+    font-size: 14px;
+    touch-action: manipulation;
+}
+.posnic-touch-mode #day-close-ticket-tools .dc-studio-sidebar label input,
+.posnic-touch-mode #day-close-ticket-tools .dc-studio-sidebar label select {
+    min-height: 48px;
+    font-size: 15px;
+}
+.posnic-touch-mode .touch-sales-hover-effect:hover,
+.posnic-touch-mode .product:hover,
+.posnic-touch-mode .product-category:hover {
+    transform: none !important;
+    box-shadow: none;
+}
+.posnic-touch-mode button:focus-visible,
+.posnic-touch-mode a:focus-visible,
+.posnic-touch-mode input:focus-visible,
+.posnic-touch-mode select:focus-visible {
+    outline: 2px solid var(--theme-primary-color, #506fe4);
+    outline-offset: 2px;
+}
+#posnic-touch-mode-toggle.posnic-touch-mode-active {
+    color: var(--theme-primary-color, #506fe4) !important;
+    background: color-mix(in srgb, var(--theme-primary-color, #506fe4) 14%, transparent);
+    border-radius: 8px;
+}
+
+/* Ticket Studio's editor chrome follows the selected theme. The receipt sheet
+   itself deliberately stays white with black text because that is the paper
+   the thermal printer will produce. */
+#dailyreport_new .day-close-tools {
+    color: var(--theme-text-primary, #243247);
+    border-color: var(--theme-border-color, #dce4ef);
+}
+#dailyreport_new .day-close-tools-head {
+    border-bottom-color: var(--theme-border-color, #e8edf4);
+}
+#dailyreport_new .day-close-tools-head p,
+#dailyreport_new .dc-studio-preview-label,
+#dailyreport_new .dc-agenda-weekday {
+    color: var(--theme-text-secondary, #64748b);
+}
+#day-close-ticket-tools .dc-studio-sidebar {
+    background: var(--theme-card-bg, #fff);
+    color: var(--theme-text-primary, #243247);
+    border-color: var(--theme-border-color, #e5e7eb);
+}
+#day-close-ticket-tools .dc-studio-sidebar h5,
+#day-close-ticket-tools .dc-studio-sidebar label,
+#day-close-ticket-tools .dc-studio-sidebar p,
+#day-close-ticket-tools .dc-studio-sidebar small {
+    color: var(--theme-text-primary, #243247);
+}
+#day-close-ticket-tools .dc-studio-sidebar .text-muted,
+#day-close-ticket-tools .dc-studio-sidebar .small {
+    color: var(--theme-text-secondary, #64748b) !important;
+}
+#day-close-ticket-tools .dc-studio-sidebar input,
+#day-close-ticket-tools .dc-studio-sidebar select {
+    background: var(--theme-body-bg, #f8fafc);
+    color: var(--theme-text-primary, #243247);
+    border-color: var(--theme-border-color, #d1d5db);
+}
+#day-close-ticket-tools .dc-studio-palette button {
+    background: var(--theme-body-bg, #f8fafc);
+    color: var(--theme-text-primary, #243247);
+    border-color: var(--theme-border-color, #d1d5db);
+    cursor: pointer;
+}
+#day-close-ticket-tools .dc-studio-palette button:hover,
+#day-close-ticket-tools .dc-studio-palette button:focus-visible {
+    background: color-mix(in srgb, var(--theme-primary-color, #506fe4) 14%, var(--theme-card-bg, #fff));
+    border-color: var(--theme-primary-color, #506fe4);
+    color: var(--theme-text-primary, #243247);
+}
+#day-close-ticket-tools .dc-agenda-day {
+    background: var(--theme-card-bg, #fff);
+    color: var(--theme-text-primary, #243247);
+    border-color: var(--theme-border-color, #dbe3ef);
+}
+#day-close-ticket-tools .dc-agenda-day:hover {
+    background: color-mix(in srgb, var(--theme-primary-color, #506fe4) 12%, var(--theme-card-bg, #fff));
+    color: var(--theme-text-primary, #243247);
+}
+#day-close-ticket-tools .dc-agenda-day.is-selected {
+    background: var(--theme-primary-color, #1d5fbf);
+    color: var(--theme-btn-primary-text, #fff);
+    border-color: var(--theme-primary-color, #1d5fbf);
+}
+#day-close-ticket-tools .dc-agenda-day.is-empty {
+    background: transparent;
+    border-color: transparent;
+}
+#day-close-ticket-tools #day-close-save-status {
+    color: var(--theme-success-color, #247044);
+}

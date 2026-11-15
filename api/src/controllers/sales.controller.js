@@ -1663,6 +1663,7 @@ class SalesController extends BaseController {
           product_total: roundToTwo(totalAmount),
           product_subtotal: roundToTwo(subtotal),
           product_profit: roundToTwo(subtotal - totalCompanyPrice),
+          product_cost: roundToTwo(totalCompanyPrice),
           product_discount: roundToTwo(item.totalDiscount ?? 0),
           product_tax: roundToTwo(item.totalTax ?? 0),
           product_avg: roundToTwo(totalQty ? subtotal / totalQty : 0),
@@ -1670,6 +1671,13 @@ class SalesController extends BaseController {
           tax_rate: taxRate,
         };
       });
+
+      const costOfGoodsTotal = roundToTwo(
+        productDetails.reduce((sum, item) => sum + Number(item.product_cost || 0), 0)
+      );
+      const grossProfitTotal = roundToTwo(
+        productDetails.reduce((sum, item) => sum + Number(item.product_profit || 0), 0)
+      );
 
       const paymentDetails = paymentAgg.map((item) => ({
         payment_mode: item._id || 'Cash',
@@ -1869,17 +1877,94 @@ class SalesController extends BaseController {
         0
       );
 
-      // Include day-end expenses and sale count in the same payload used by both A4 and thermal previews.
+      // The cash book stores money-in as type=credit and money-out as
+      // type=debit. Only money-out is an operating expense. Normalize legacy
+      // date strings and older created_date records before applying the day.
+      const reportStart = new Date(filteredDateRange.start_date);
+      const reportEnd = new Date(filteredDateRange.end_date);
       const expenseRows = await db.collection('expenses').aggregate([
         { $match: {
           license: BaseModel.license || req.user.license || req.user.license_id,
           branch_id: branchObjectId,
-          date: { $gte: new Date(filteredDateRange.start_date), $lte: new Date(filteredDateRange.end_date) },
         } },
-        { $group: { _id: null, total: { $sum: { $ifNull: ['$amount', 0] } }, count: { $sum: 1 } } },
+        {
+          $addFields: {
+            reportExpenseDate: {
+              $convert: {
+                input: { $ifNull: ['$date', { $ifNull: ['$created_date', '$updated_date'] }] },
+                to: 'date', onError: null, onNull: null,
+              },
+            },
+            reportExpenseAmount: {
+              $convert: { input: '$amount', to: 'double', onError: 0, onNull: 0 },
+            },
+            reportExpenseType: { $toLower: { $ifNull: ['$type', 'debit'] } },
+          },
+        },
+        {
+          $match: {
+            $expr: {
+              $and: [
+                { $gte: ['$reportExpenseDate', reportStart] },
+                { $lte: ['$reportExpenseDate', reportEnd] },
+                { $nin: ['$reportExpenseType', ['credit', 'income', 'money in']] },
+              ],
+            },
+          },
+        },
+        { $group: { _id: null, total: { $sum: '$reportExpenseAmount' }, count: { $sum: 1 } } },
       ]).toArray();
       const expensesTotal = roundToTwo(expenseRows.length ? expenseRows[0].total || 0 : 0);
       const expensesCount = expenseRows.length ? Number(expenseRows[0].count) || 0 : 0;
+
+      // RH salary payments live in their own ledger, not in expenses. Pull
+      // actual salary_payment transactions for this day so the ticket can
+      // disclose them by employee without silently counting advances twice.
+      const salaryPaymentRows = await db.collection('hr_transactions').aggregate([
+        {
+          $match: {
+            license: BaseModel.license || req.user.license || req.user.license_id,
+            type: 'salary_payment',
+          },
+        },
+        {
+          $addFields: {
+            reportSalaryDate: {
+              $convert: { input: '$date', to: 'date', onError: null, onNull: null },
+            },
+            reportSalaryAmount: {
+              $convert: { input: '$amount', to: 'double', onError: 0, onNull: 0 },
+            },
+          },
+        },
+        {
+          $match: {
+            $expr: {
+              $and: [
+                { $gte: ['$reportSalaryDate', reportStart] },
+                { $lte: ['$reportSalaryDate', reportEnd] },
+              ],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: { worker_name: '$worker_name', method: '$method' },
+            amount: { $sum: '$reportSalaryAmount' },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { '_id.worker_name': 1 } },
+      ]).toArray();
+      const salaryPaymentDetails = salaryPaymentRows.map((row) => ({
+        worker_name: String(row._id?.worker_name || 'Employé'),
+        method: String(row._id?.method || 'cash'),
+        amount: roundToTwo(row.amount || 0),
+        count: Number(row.count) || 0,
+      }));
+      const salaryPaymentsTotal = roundToTwo(
+        salaryPaymentDetails.reduce((sum, row) => sum + row.amount, 0)
+      );
       const salesCount = salesPayments.length;
 
       // ---- Build response data ----
@@ -1890,8 +1975,12 @@ class SalesController extends BaseController {
         debt_payment_details: debtPaymentDetails,
         debt_payment_total: debtPaymentTotal,
         sales_count: salesCount,
+        cost_of_goods_total: costOfGoodsTotal,
+        gross_profit_total: grossProfitTotal,
         expenses_total: expensesTotal,
         expenses_count: expensesCount,
+        salary_payments_total: salaryPaymentsTotal,
+        salary_payment_details: salaryPaymentDetails,
         outstanding_amount: roundToTwo(outstandingAmount),
         dine_details: dineDetails,
         tax_details: taxDetails,

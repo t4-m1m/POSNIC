@@ -196,6 +196,35 @@
                             </a>
                         </div>
                     </li>
+                    <li class="list-inline-item posnic-touch-mode-entry" id="posnic-touch-mode-entry" data-toggle="tooltip" title="Touch mode">
+                        <a href="javascript:void(0)" id="posnic-touch-mode-toggle" class="infobar-icon" role="button"
+                           aria-label="Enable touch mode" aria-pressed="false" title="Enable touch mode">
+                            <i class="feather icon-smartphone" aria-hidden="true" style="font-size:19px"></i>
+                        </a>
+                    </li>
+                    <script>
+                        (function () {
+                            var key = 'posnic_touch_mode';
+                            var button = document.getElementById('posnic-touch-mode-toggle');
+                            function apply(enabled) {
+                                enabled = !!enabled;
+                                if (document.body) document.body.classList.toggle('posnic-touch-mode', enabled);
+                                document.documentElement.classList.toggle('posnic-touch-mode', enabled);
+                                if (button) {
+                                    button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+                                    button.setAttribute('aria-label', enabled ? 'Disable touch mode' : 'Enable touch mode');
+                                    button.setAttribute('title', enabled ? 'Touch mode enabled' : 'Enable touch mode');
+                                    button.classList.toggle('posnic-touch-mode-active', enabled);
+                                }
+                            }
+                            try { apply(localStorage.getItem(key) === 'true'); } catch (e) { apply(false); }
+                            if (button) button.addEventListener('click', function () {
+                                var enabled = button.getAttribute('aria-pressed') !== 'true';
+                                try { localStorage.setItem(key, enabled ? 'true' : 'false'); } catch (e) {}
+                                apply(enabled);
+                            });
+                        })();
+                    </script>
                     <li class="list-inline-item" data-toggle="tooltip" title="Theme" data-t-title="lang_theme">
                         <div class="themebar">
                             <div class="dropdown" id="dropdown-theme">

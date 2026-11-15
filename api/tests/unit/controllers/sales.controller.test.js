@@ -1015,6 +1015,40 @@ describe('SalesController', () => {
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
     });
 
+    test('includes item cost, cash-book outflows and RH salary payments in the closing report payload', async () => {
+      const dbCollections = {
+        credit_payments: { aggregate: jest.fn(() => ({ toArray: async () => [] })) },
+        expenses: { aggregate: jest.fn(() => ({ toArray: async () => [{ total: 1250, count: 2 }] })) },
+        hr_transactions: { aggregate: jest.fn(() => ({ toArray: async () => [
+          { _id: { worker_name: 'Samir', method: 'cash' }, amount: 4000, count: 1 },
+          { _id: { worker_name: 'Nadia', method: 'bank' }, amount: 2500, count: 1 },
+        ] })) },
+      };
+      const db = { collection: jest.fn((name) => dbCollections[name]) };
+      const dbSpy = jest.spyOn(BaseModel, 'getDb').mockResolvedValue(db);
+      salesService.getDailySalesReportAggregates.mockResolvedValue({
+        productAgg: [{ subtotal: 1000, totalAmount: 1000, totalQty: 2, totalCompanyPrice: 400 }],
+        paymentAgg: [], salesPayments: [], taxAgg: [], cancellationAgg: [],
+      });
+      try {
+        const res = mockRes();
+        await ctrl.dailySalesReports(mockReq({ query: q }), res);
+        const data = res.json.mock.calls[0][0].data;
+        expect(data.cost_of_goods_total).toBe(400);
+        expect(data.gross_profit_total).toBe(600);
+        expect(data.product_details[0].product_cost).toBe(400);
+        expect(data.expenses_total).toBe(1250);
+        expect(data.salary_payments_total).toBe(6500);
+        expect(data.salary_payment_details).toEqual([
+          { worker_name: 'Samir', method: 'cash', amount: 4000, count: 1 },
+          { worker_name: 'Nadia', method: 'bank', amount: 2500, count: 1 },
+        ]);
+        expect(dbCollections.hr_transactions.aggregate).toHaveBeenCalled();
+      } finally {
+        dbSpy.mockRestore();
+      }
+    });
+
     test('403 no report permission', async () => {
       const res = mockRes();
       await ctrl.dailySalesReports(mockReq({ query: q, user: restrictedUser() }), res);

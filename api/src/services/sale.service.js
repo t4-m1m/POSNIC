@@ -2727,17 +2727,107 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
   const productPipeline = [
     { $match: match },
     { $unwind: '$items' },
+    // Older sale snapshots do not always contain company_price. Resolve the
+    // original inventory item as a fallback, but prefer the immutable cost
+    // snapshot saved on the sale so later catalogue edits cannot rewrite history.
     {
       $addFields: {
-        // Support both field name formats
+        reportItemId: {
+          $convert: {
+            input: { $ifNull: ['$items.item', '$items.item_id'] },
+            to: 'objectId',
+            onError: null,
+            onNull: null,
+          },
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: 'items',
+        localField: 'reportItemId',
+        foreignField: '_id',
+        as: 'reportItem',
+      },
+    },
+    { $unwind: { path: '$reportItem', preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
         'items.name': { $ifNull: ['$items.name', '$items.item_name'] },
         'items.sku': { $ifNull: ['$items.sku', '$items.item_sku'] },
-        'items.quantity': { $ifNull: ['$items.quantity', '$items.item_quantity'] },
-        'items.unit_price': { $ifNull: ['$items.unit_price', '$items.item_price'] },
-        'items.total': { $ifNull: ['$items.total', '$items.total_amount'] },
+        reportQuantity: {
+          $convert: {
+            input: { $ifNull: ['$items.quantity', '$items.item_quantity'] },
+            to: 'double', onError: 0, onNull: 0,
+          },
+        },
+        reportTotal: {
+          $convert: {
+            input: { $ifNull: ['$items.total', '$items.total_amount'] },
+            to: 'double', onError: 0, onNull: 0,
+          },
+        },
+        reportTax: {
+          $convert: {
+            input: { $ifNull: ['$items.tax_amount', 0] },
+            to: 'double', onError: 0, onNull: 0,
+          },
+        },
+        reportDiscount: {
+          $convert: {
+            input: { $ifNull: ['$items.discount', '$items.item_discount'] },
+            to: 'double', onError: 0, onNull: 0,
+          },
+        },
+        reportUnitCost: {
+          $convert: {
+            input: {
+              $ifNull: [
+                '$items.company_price',
+                { $ifNull: ['$items.item_company_price', { $ifNull: ['$reportItem.company_price', '$reportItem.item_company_price'] }] },
+              ],
+            },
+            to: 'double', onError: 0, onNull: 0,
+          },
+        },
+        reportLineCost: {
+          $cond: [
+            {
+              $and: [
+                { $ne: ['$items.company_price_total', null] },
+                { $ne: ['$items.company_price_total', ''] },
+              ],
+            },
+            {
+              $convert: {
+                input: '$items.company_price_total',
+                to: 'double', onError: 0, onNull: 0,
+              },
+            },
+            {
+              $multiply: [
+                {
+                  $convert: {
+                    input: { $ifNull: ['$items.quantity', '$items.item_quantity'] },
+                    to: 'double', onError: 0, onNull: 0,
+                  },
+                },
+                {
+                  $convert: {
+                    input: {
+                      $ifNull: [
+                        '$items.company_price',
+                        { $ifNull: ['$items.item_company_price', { $ifNull: ['$reportItem.company_price', '$reportItem.item_company_price'] }] },
+                      ],
+                    },
+                    to: 'double', onError: 0, onNull: 0,
+                  },
+                },
+              ],
+            },
+          ],
+        },
         'items.tax_rate': { $ifNull: ['$items.tax_rate', '$items.tax'] },
-        'items.discount': { $ifNull: ['$items.discount', '$items.item_discount'] },
-        'items.company_price': { $ifNull: ['$items.company_price', 0] },
         'items.tax_amount': { $ifNull: ['$items.tax_amount', 0] },
       },
     },
@@ -2748,42 +2838,12 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
           sku: '$items.sku',
           tax_rate: '$items.tax_rate',
         },
-        totalQty: {
-          $sum: {
-            $toDouble: { $ifNull: ['$items.quantity', 0] },
-          },
-        },
-        totalAmount: {
-          $sum: {
-            $toDouble: { $ifNull: ['$items.total', 0] },
-          },
-        },
-        subtotal: {
-          $sum: {
-            $subtract: [
-              { $toDouble: { $ifNull: ['$items.total', 0] } },
-              { $toDouble: { $ifNull: ['$items.tax_amount', 0] } },
-            ],
-          },
-        },
-        totalCompanyPrice: {
-          $sum: {
-            $multiply: [
-              { $toDouble: { $ifNull: ['$items.quantity', 0] } },
-              { $toDouble: { $ifNull: ['$items.company_price', 0] } },
-            ],
-          },
-        },
-        totalTax: {
-          $sum: {
-            $toDouble: { $ifNull: ['$items.tax_amount', 0] },
-          },
-        },
-        totalDiscount: {
-          $sum: {
-            $toDouble: { $ifNull: ['$items.discount', 0] },
-          },
-        },
+        totalQty: { $sum: '$reportQuantity' },
+        totalAmount: { $sum: '$reportTotal' },
+        subtotal: { $sum: { $subtract: ['$reportTotal', '$reportTax'] } },
+        totalCompanyPrice: { $sum: '$reportLineCost' },
+        totalTax: { $sum: '$reportTax' },
+        totalDiscount: { $sum: '$reportDiscount' },
       },
     },
     { $sort: { totalQty: -1, totalAmount: -1 } },
