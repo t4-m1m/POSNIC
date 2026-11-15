@@ -11,6 +11,11 @@ PosnicPro.itemreport = {
         $('.page-title-box,#itemreport_new,.item-report-item').show();
         $('#v-pills-report-tab,#viewitemreport_page').addClass('active');
         $('#v-pills-report').addClass('show active');
+        if (window.__posnicOpenStockHealth) {
+            window.__posnicOpenStockHealth = false;
+            $('#stock-health-panel').show();
+            if (PosnicPro.stockHealthReport) PosnicPro.stockHealthReport.load();
+        }
         if ($('a#item-tab-line').hasClass('active')) {
             PosnicPro.itemreport.itemTableTabClick();
         } else if ($('a#item-expiry-line').hasClass('active')) {
