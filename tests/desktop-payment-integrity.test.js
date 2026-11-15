@@ -449,3 +449,15 @@ test('disabled Cash and UPI are absent from single and split tender choices', ()
   assert.equal($('#card_input').length,1);
   dom.window.close();
 });
+
+test('TPE and BaridiMob collection retries reuse a durable request id', () => {
+  const controller = fs.readFileSync(path.join(__dirname, '../api/src/controllers/payment-settlements.controller.js'), 'utf8');
+  const client = fs.readFileSync(path.join(__dirname, '../frontend/static/script/js/modules/js/report_payment.js'), 'utf8');
+  assert.match(controller, /createIndex\\(\\{ request_id: 1 \\}, \\{ unique: true, sparse: true \\}\\)/);
+  assert.match(controller, /previous\\.request_hash === requestHash/);
+  assert.match(controller, /request_id: requestId/);
+  assert.match(client, /posnic\\.payment-settlement\\.pending\\.v1/);
+  assert.match(client, /localStorage\\.setItem/);
+  assert.match(client, /request_id: requestId/);
+  assert.match(client, /submission_outcome === 'not_saved'/);
+});
