@@ -36,10 +36,10 @@ exports.read = async (req, res) => {
     }
     const dormantDays = Math.max(1, Math.min(3650, Number(settings.dormant_days) || 90));
     const itemFilter = { branch_id: branchObjectId, is_active: { $ne: false } };
-    if (license) itemFilter.license = new ObjectId(String(license));
+    if (license && ObjectId.isValid(String(license))) itemFilter.license = new ObjectId(String(license));
     const items = await req.db.collection('items').find(itemFilter).project({ name: 1, sku: 1, itemid: 1, barcode_id: 1, category_id: 1, category_name: 1, brand: 1, marque: 1, quantity: 1, available_quantity: 1, cost_price: 1, company_price: 1, selling_price: 1, variants: 1, is_active: 1 }).limit(20000).toArray();
     const salesFilter = { branch_id: branchObjectId };
-    if (license) salesFilter.license = new ObjectId(String(license));
+    if (license && ObjectId.isValid(String(license))) salesFilter.license = new ObjectId(String(license));
     const sales = await req.db.collection('sales').find(salesFilter).project({ items: 1, sale_items: 1, products: 1, order_items: 1, status: 1, sale_status: 1, sale_process: 1, date: 1, order_date: 1, updated_date: 1, created_date: 1 }).limit(50000).toArray();
     const lastSold = new Map(), soldQty = new Map(), soldRevenue = new Map();
     for (const sale of sales) {
