@@ -1915,7 +1915,7 @@ class SalesController extends BaseController {
         if (amount > 0) paymentDetails.push({ payment_mode: refundLabels[String(row._id || 'cash').toLowerCase()] || String(row._id || 'Cash'), sale_payment: -amount, is_refund: true });
       });
 
-      const debtPaymentRows = await db.collection('credit_payments').aggregate([      const debtPaymentRows = await db.collection('credit_payments').aggregate([
+      const debtPaymentRows = await db.collection('credit_payments').aggregate([
         { $match: {
           license: BaseModel.license || req.user.license || req.user.license_id,
           branch_id: branchObjectId,
