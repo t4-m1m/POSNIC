@@ -133,18 +133,72 @@ exports.settle = async (req,res) => {
 exports.cancel = async (req,res) => {
   try {
     if (!req.db) return fail(res,500,'Shop database is unavailable.');
-    const user = req.user || {};
-    const admin = ['super_admin','admin'].includes(String(user.usertype || user.role || '').toLowerCase()) || user.is_super_admin === true;
-    if (!admin) return fail(res,403,'Administrator permission is required to cancel a versement.');
-    const reason = String(req.body?.reason || '').trim().slice(0,500);
-    if (reason.length < 5) return fail(res,400,'A cancellation reason is required.');
     if (!ObjectId.isValid(String(req.params.id))) return fail(res,400,'Invalid versement reference.');
     const id = new ObjectId(req.params.id), collection = req.db.collection(COLLECTION);
     const current = await collection.findOne({_id:id});
     if (!current) return fail(res,404,'Versement not found.');
-    if (current.status !== 'pending') return fail(res,409,'Only a pending versement can be cancelled.');
-    const result = await collection.updateOne({_id:id,status:'pending'},{$set:{status:'cancelled',cancelled_at:new Date(),cancelled_by:actor(req),cancellation_reason:reason},$push:{history:{type:'cancellation',reason,at:new Date(),by:actor(req)}}});
-    if (!result.modifiedCount) return fail(res,409,'Versement status changed. Refresh and retry.');
-    return res.json({type:'success',message:'Versement cancelled and retained in history.',data:{id:String(id)}});
-  } catch(e) { console.error('[versements] cancel',e); return fail(res,500,'Unable to cancel versement.'); }
+    if (current.status === 'cancelled') return res.json({type:'success',message:'Versement already cancelled.',data:{id:String(id)}});
+    if (current.status === 'settled') return fail(res,409,'A settled versement cannot be cancelled.');
+    if (!['pending','cancelling'].includes(current.status)) return fail(res,409,'This versement cannot be cancelled.');
+    const reason = String(req.body?.reason || 'Cancelled from Versements register').trim().slice(0,500);
+    const now = new Date();
+    // Claim the cancellation, but keep it resumable: if the app stops halfway
+    // through stock restoration, the next request safely continues it.
+    if (current.status === 'pending') {
+      const claimed = await collection.updateOne(
+        {_id:id,status:'pending'},
+        {$set:{status:'cancelling',cancellation_reason:reason,cancellation_started_at:now,cancellation_started_by:actor(req)}}
+      );
+      if (!claimed.modifiedCount) {
+        const latest = await collection.findOne({_id:id});
+        if (!latest || !['cancelling','cancelled'].includes(latest.status))
+          return fail(res,409,'Versement status changed. Refresh and retry.');
+        if (latest.status === 'cancelled') return res.json({type:'success',message:'Versement already cancelled.',data:{id:String(id)}});
+      }
+    }
+
+    // The F6 checkout already deducted these quantities through the ordinary
+    // sale pipeline. Return only tracked stock, exactly once per sale/item.
+    const sale = current.sale_object_id
+      ? await req.db.collection('sales').findOne({_id: current.sale_object_id})
+      : await req.db.collection('sales').findOne({$or:[{sales_id:current.sale_key},{sale_id:current.sale_key}]});
+    if (!sale) throw new Error('The linked sale is missing; stock was not changed.');
+    const lines = Array.isArray(sale.items) ? sale.items : (Array.isArray(sale.itemsale) ? sale.itemsale : []);
+    const quantities = new Map();
+    for (const line of lines) {
+      const rawId = line.item_id || line.item || line.product_id || line.view_item_id;
+      const itemId = rawId && typeof rawId === 'object' ? String(rawId._id || rawId.id || '') : String(rawId || '');
+      const qty = Number(line.item_quantity ?? line.quantity ?? line.qty ?? 0);
+      if (ObjectId.isValid(itemId) && Number.isFinite(qty) && qty > 0)
+        quantities.set(itemId,(quantities.get(itemId)||0)+qty);
+    }
+    const ItemRepository = require('../repositories/item.repository');
+    const itemRepository = new ItemRepository();
+    const items = await itemRepository.getCollection();
+    for (const [itemId, qty] of quantities) {
+      const item = await itemRepository.findItemById(itemId);
+      if (!item || !(item.track_inventory === true || item.track_inventory === 'true')) continue;
+      const restoreKey = String(current.sale_key || saleKey(sale)) + ':versement-cancel';
+      const restored = await items.updateOne(
+        {_id:new ObjectId(itemId),versement_stock_restore_keys:{$ne:restoreKey}},
+        {$inc:{available_quantity:qty},$addToSet:{versement_stock_restore_keys:restoreKey}}
+      );
+      if (restored.modifiedCount) {
+        try { await require('../sync/outbox').enqueueInventory(new ObjectId(itemId),'versement_cancel_restore'); } catch (_) {}
+      }
+    }
+    const finished = await collection.updateOne(
+      {_id:id,status:'cancelling'},
+      {$set:{status:'cancelled',cancelled_at:new Date(),cancelled_by:actor(req),cancellation_reason:reason},
+       $push:{history:{type:'cancellation',reason,at:new Date(),by:actor(req)}}}
+    );
+    if (!finished.modifiedCount) {
+      const latest = await collection.findOne({_id:id});
+      if (latest?.status !== 'cancelled') return fail(res,409,'Cancellation is being completed. Refresh the register.');
+    }
+    return res.json({type:'success',message:'Versement cancelled and reserved stock restored.',data:{id:String(id)}});
+  } catch(e) {
+    console.error('[versements] cancel',e);
+    return fail(res,500,'Unable to complete cancellation. Retry from the Versements register; stock restoration is safe to resume.');
+  }
 };

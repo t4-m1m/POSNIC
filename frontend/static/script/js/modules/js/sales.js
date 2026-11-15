@@ -4818,11 +4818,23 @@ PosnicPro.sales.addSale = {
                 if (response.type === 'success') {
                     if (versementDraft) {
                         window.__posnicVersementDraft = null;
-                        if (response.data && response.data.versement && PosnicPro.versementsRegister &&
-                            typeof PosnicPro.versementsRegister.printReceipt === 'function') {
-                            PosnicPro.versementsRegister.printReceipt(response.data.versement);
+                        // F6 uses the exact same direct thermal sale-print pipeline
+                        // as F1/F2. Print two independent copies (client + vendeur)
+                        // without opening the print-choice screen or navigating away.
+                        var versementSaleId = response.data && response.data.sales_id;
+                        var directVersementPrint = PosnicPro.sales && PosnicPro.sales.view &&
+                            typeof PosnicPro.sales.view.printSale === 'function';
+                        if (versementSaleId && directVersementPrint) {
+                            try {
+                                PosnicPro.sales.view.printSale(versementSaleId, 'sale');
+                                window.setTimeout(function () {
+                                    PosnicPro.sales.view.printSale(versementSaleId, 'sale');
+                                }, 650);
+                            } catch (printError) {
+                                PosnicPro.alert('warning', 'Versement enregistré. Impression directe impossible ; réimprimez le ticket depuis l’historique des ventes.');
+                            }
                         } else {
-                            PosnicPro.alert('warning', 'Vente enregistrée. Actualisez la section Versements pour récupérer le reçu.');
+                            PosnicPro.alert('warning', 'Versement enregistré. Le moteur d’impression directe est indisponible.');
                         }
                     }
                     try {
