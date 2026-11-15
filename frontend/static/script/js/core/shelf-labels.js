@@ -53,7 +53,7 @@
             'display:block;border:' + (s.guides ? '.15mm dashed #aaa' : 'none') + ';font-family:' + s.font + ';font-size:' + s.fontSize + 'px;text-align:' + s.align +
             ';font-weight:' + (s.fontOptions?.includes('bold') ? '700' : '400') + ';font-style:' + (s.fontOptions?.includes('italic') ? 'italic' : 'normal') +
             ';color:' + s.ink + ';background:' + s.background + ';print-color-adjust:exact;-webkit-print-color-adjust:exact}' +
-            '.sl-label .sl-element{position:absolute;margin:0;padding:0;overflow:visible;display:flex;align-items:center;justify-content:' + (s.align === 'left' ? 'flex-start' : s.align === 'right' ? 'flex-end' : 'center') + ';line-height:1.15;overflow-wrap:anywhere}' +
+            '.sl-label .sl-element{position:absolute;margin:0;padding:0;overflow:hidden;box-sizing:border-box;display:flex;align-items:center;justify-content:' + (s.align === 'left' ? 'flex-start' : s.align === 'right' ? 'flex-end' : 'center') + ';line-height:1.15;overflow-wrap:anywhere}' +
             '.sl-name{font-weight:600;white-space:pre-line}.sl-custom-text{white-space:pre-wrap}.sl-logo{object-fit:contain}.sl-price{font-weight:700}.sl-variant-values{display:block!important;white-space:pre-line}.sl-variant-line{display:block;width:100%;line-height:1.15}.sl-label svg.sl-element{display:block;width:100%;height:100%;max-width:none;max-height:none;overflow:visible;}' +
             '.sl-foot{font-size:75%;white-space:pre-line}.sl-barcode-visual{display:flex!important;align-items:center;justify-content:center;overflow:hidden}.sl-barcode-visual svg.sl-barcode{display:block;width:auto!important;max-width:100%;height:100%;max-height:100%;overflow:hidden}.sl-design-editable .sl-element{outline:1px dashed #2563eb;cursor:move;touch-action:none}' +
             '.sl-design-editable .sl-element.sl-selected{outline:2px solid #ef4444;z-index:20;overflow:visible}' +
@@ -120,12 +120,37 @@
         node.style.transformOrigin = 'center center';
         node.style.justifyContent = layout.text_align === 'left' ? 'flex-start' : layout.text_align === 'right' ? 'flex-end' : 'center';
     }
+    // Fit long product/variant text inside its configured label box. The
+    // calculation is deterministic and printer-independent; barcode geometry
+    // is deliberately untouched so bars remain crisp and scannable.
+    function fitLabelText(node, key, s) {
+        var layout = (s.elementLayout || DEFAULT_ELEMENT_LAYOUT)[key] || DEFAULT_ELEMENT_LAYOUT[key];
+        if (!layout || !node) return;
+        var widthPx = Math.max(1, Number(s.width) * 3.7795 * Number(layout.w) / 100);
+        var heightPx = Math.max(1, Number(s.height) * 3.7795 * Number(layout.h) / 100);
+        var font = Math.max(4.5, Number.parseFloat(node.style.fontSize) || Number(s.fontSize) || 12);
+        var value = String(node.textContent || '').trim();
+        if (!value) return;
+        function lineCount(size) {
+            var charsPerLine = Math.max(1, Math.floor(widthPx / Math.max(1, size * 0.54)));
+            return value.split(/\\r?\\n/).reduce(function (total, line) {
+                return total + Math.max(1, Math.ceil(Array.from(line).length / charsPerLine));
+            }, 0);
+        }
+        while (font > 4.5 && lineCount(font) * font * 1.18 > heightPx) font = Math.max(4.5, font - 0.5);
+        node.style.fontSize = font.toFixed(1) + 'px';
+        node.style.boxSizing = 'border-box';
+        node.style.overflow = 'hidden';
+        node.style.overflowWrap = 'anywhere';
+        node.style.wordBreak = 'normal';
+        node.style.maxWidth = '100%';
+    }
     function label(doc, item, s, barcode) {
         if (s.barcode !== false && !item.barcode_id) throw Error(item.name + ': ' + t('lang_sl_barcode_missing', 'No barcode is stored for this item.'));
         var div = doc.createElement('div'); div.className = 'sl-label';
         function text(value, cls, key) {
             var p = doc.createElement('p'); p.className = (cls || '') + ' sl-element'; p.textContent = value;
-            applyElementLayout(p, key, s); div.appendChild(p); return p;
+            applyElementLayout(p, key, s); if (key === 'name') fitLabelText(p, key, s); div.appendChild(p); return p;
         }
         var rawName = String(item.name || '').trim();
         var nameParts = rawName.match(/^(.*?)-([0-9]{2}-[0-9]{2}\/[^/]+?)(?:\s+\/\s+(.+))?$/);
@@ -193,6 +218,7 @@
                     variantNode.appendChild(fallback);
                 }
                 applyElementLayout(variantNode, 'variant_values', s);
+                fitLabelText(variantNode, 'variant_values', s);
                 div.appendChild(variantNode);
             }
             var reference = String(item.reference_date || item.mm_yy || '').trim();
