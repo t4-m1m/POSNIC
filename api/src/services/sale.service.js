@@ -109,8 +109,8 @@ const buildDailyPaymentAggregationPipeline = (match) => [
       split_payments: [
         { $match: { has_split: true, collected_total: { $gt: 0 } } },
         { $unwind: '$payment_entries' },
-        // Credit is an accounts-receivable entry, not money collected.
-        { $match: { $expr: { $ne: [{ $toLower: '$payment_entries.k' }, 'credit'] } } },
+        // Credit and Versement are not ordinary drawer collections.
+        { $match: { $expr: { $not: [{ $in: [{ $toLower: '$payment_entries.k' }, ['credit', 'versement']] }] } } },
         {
           $group: {
             _id: '$payment_entries.k',
@@ -124,7 +124,7 @@ const buildDailyPaymentAggregationPipeline = (match) => [
       ],
       // Sales without multi_payment: fall back to single payment_mode
       single_payments: [
-        { $match: { has_split: false } },
+        { $match: { has_split: false, $expr: { $ne: [{ $toLower: { $ifNull: ['$payment_mode', 'Cash'] } }, 'versement'] } } },
         {
           $group: {
             _id: { $ifNull: ['$payment_mode', 'Cash'] },
@@ -1391,6 +1391,15 @@ const processSale = async (
       payment_status: paymentStatus,
       payment_pending: paymentPending,
       payment_mode: (data.payment_mode || '').trim(),
+      versement_checkout:
+        data.versement_checkout && typeof data.versement_checkout === 'object'
+          ? {
+              customer_name: String(data.versement_checkout.customer_name || '').trim().slice(0, 200),
+              phone: String(data.versement_checkout.phone || '').trim().slice(0, 40),
+              initial_amount: round2(Number(data.versement_checkout.initial_amount) || 0, 2),
+              initial_method: String(data.versement_checkout.initial_method || 'cash').toLowerCase(),
+            }
+          : existingSale?.versement_checkout,
       // Explicit cashier attribution is separate from created_by/user_name,
       // which continues to represent the authenticated account.
       cashier_name:

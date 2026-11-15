@@ -296,6 +296,11 @@ const findSaleByBillingTransaction = async (license, transactionId) => {
   return query && typeof query.lean === 'function' ? query.lean() : query;
 };
 
+const ensureVersementForSavedSale = async (req, sale) => {
+  if (!sale || !sale.versement_checkout) return null;
+  return require('./versements.controller').ensureForSale(req, sale);
+};
+
 const dejavuSansCondensedPath = path.join(
   __dirname,
   '../../../Api/src/vendor/mpdf/mpdf/ttfonts/DejaVuSansCondensed.ttf'
@@ -823,6 +828,19 @@ class SalesController extends BaseController {
 
       await this.ensureContext(req); // Ensure BaseModel globals are set
       const user = req.user || {};
+      if (payload.versement_checkout) {
+        const meta = payload.versement_checkout, total = Number(payload.sales_total || payload.total || 0);
+        const initial = Number(meta.initial_amount), method = String(meta.initial_method || 'cash').toLowerCase();
+        if (!String(meta.customer_name || '').trim() || !(initial > 0) || !(total > 0) ||
+            initial > total || !['cash','tpe','baridimob'].includes(method)) {
+          return this.error(res, 'Versement client name, amount and payment method are required.', 400);
+        }
+        payload.payment_mode = 'Versement';
+        payload.multi_payment = { Versement: roundToTwo(total) };
+        payload.partial_check = 'false';
+        payload.partial_balance = String(roundToTwo(total));
+        payload.unpaid = 'false';
+      }
       const billingTransactionId = String(payload.billing_transaction_id || '').trim();
       if (billingTransactionId) {
         payload.billing_transaction_id = billingTransactionId.slice(0, 128);
@@ -831,6 +849,7 @@ class SalesController extends BaseController {
           payload.billing_transaction_id
         );
         if (existingSale) {
+          if (existingSale.versement_checkout) await ensureVersementForSavedSale(req, existingSale);
           return this.success(
             res,
             duplicateSaleData(existingSale),
@@ -918,6 +937,17 @@ class SalesController extends BaseController {
         // Mirror PHP controller behaviour: bubble up model message and data
         // when salesInsertUpdate fails.
         return this.error(res, result.message || ERROR_MESSAGES.SALES_NOT_ADDED, 400, result.data);
+      }
+
+      if (processValue === 'Add' && payload.versement_checkout) {
+        const id = result.data?._id || result.data?.sales_id, number = result.data?.sale_number || '';
+        const saleQuery = { $or: [
+          ...(id && mongoose.Types.ObjectId.isValid(String(id)) ? [{ _id: new mongoose.Types.ObjectId(String(id)) }] : []),
+          ...(number ? [{ sales_id: String(number) }] : []),
+        ] };
+        const savedSale = await req.db.collection('sales').findOne(saleQuery);
+        if (!savedSale) throw new Error('Sale saved but Versement metadata needs reconciliation; retry the same checkout.');
+        result.data.versement = await ensureVersementForSavedSale(req, savedSale);
       }
 
       const message =

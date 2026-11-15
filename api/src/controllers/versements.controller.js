@@ -7,6 +7,45 @@ const saleKey = (s) => String(s.sales_id || s.sale_id || s.invoice_number || s._
 const saleTotal = (s) => money(s.sales_total ?? s.grand_total ?? s.total_amount ?? s.total ?? s.items_total ?? 0);
 const branchOf = (req) => String(req.query.branch || req.body?.branch_id || req.session?.selectedBranchId || req.session?.branch_id || req.user?.branch_id || req.user?.branchId || req.user?.branch?._id || '');
 
+exports.ensureForSale = async (req, sale) => {
+  if (!req.db || !sale || !sale.versement_checkout) return null;
+  const meta = sale.versement_checkout, key = saleKey(sale);
+  const customer = String(meta.customer_name || '').trim().slice(0, 200);
+  const phone = String(meta.phone || '').trim().slice(0, 40);
+  const initial = money(meta.initial_amount), method = String(meta.initial_method || 'cash').toLowerCase();
+  const total = saleTotal(sale), branchRaw = sale.branch_id || branchOf(req);
+  if (!key || !customer || !ObjectId.isValid(String(branchRaw)) || !(initial > 0) ||
+      total <= 0 || initial > total || !['cash','tpe','baridimob'].includes(method)) {
+    throw new Error('Invalid Versement metadata on the validated sale.');
+  }
+  const collection = req.db.collection(COLLECTION);
+  await collection.createIndex({ sale_key: 1 }, { unique: true });
+  await collection.createIndex({ versement_number: 1 }, { unique: true });
+  const existing = await collection.findOne({ sale_key: key });
+  if (existing) return { ...existing, _id: String(existing._id) };
+  const now = new Date(), settled = initial >= total - 0.009;
+  const doc = {
+    versement_number: 'V-' + now.toISOString().slice(0,10).replace(/-/g,'') + '-' + require('crypto').randomBytes(3).toString('hex').toUpperCase(),
+    sale_key: key, sale_object_id: sale._id, branch_id: new ObjectId(String(branchRaw)),
+    customer_name: customer, phone, sale_total: total, initial_amount: initial, initial_method: method,
+    remaining: money(total - initial), status: settled ? 'settled' : 'pending',
+    created_at: now, created_by: actor(req), initial_collected_at: now, initial_recorded_amount: initial,
+    ...(settled ? { settled_at: now } : {}),
+    settlement: settled ? { amount: 0, method: 'none', settled_at: now, recorded_by: actor(req) } : null,
+    history: [{ type: 'initial', amount: initial, method, at: now, by: actor(req) }],
+  };
+  try {
+    const inserted = await collection.insertOne(doc);
+    return { ...doc, _id: String(inserted.insertedId) };
+  } catch (error) {
+    if (error && error.code === 11000) {
+      const winner = await collection.findOne({ sale_key: key });
+      if (winner) return { ...winner, _id: String(winner._id) };
+    }
+    throw error;
+  }
+};
+
 exports.list = async (req,res) => {
   try {
     if (!req.db) return fail(res,500,'Shop database is unavailable.');
@@ -16,6 +55,10 @@ exports.list = async (req,res) => {
     if (status !== 'all') filter.status = status;
     const q = String(req.query.q || '').trim().slice(0,120);
     if (q) filter.$or = [{ customer_name: { $regex: q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), $options:'i' } },{ phone: { $regex: q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), $options:'i' } },{ versement_number: { $regex: q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), $options:'i' } }];
+    const saleFilter = { versement_checkout: { $exists: true } };
+    if (filter.branch_id) saleFilter.branch_id = filter.branch_id;
+    const orphanSales = await req.db.collection('sales').find(saleFilter).limit(2000).toArray();
+    for (const sale of orphanSales) await exports.ensureForSale(req, sale);
     const rows = await req.db.collection(COLLECTION).find(filter).sort({ created_at:-1 }).limit(2000).toArray();
     return res.json({ type:'success', data: rows.map(r => ({ ...r, _id:String(r._id) })) });
   } catch(e) { console.error('[versements] list',e); return fail(res,500,'Unable to load versements.'); }
@@ -41,7 +84,10 @@ exports.create = async (req,res) => {
     const existing = await collection.findOne({ sale_key:saleKey(sale) });
     if (existing) return fail(res,409,'A versement already exists for this sale.');
     const number = 'V-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + require('crypto').randomBytes(3).toString('hex').toUpperCase();
-    const doc = { versement_number:number, sale_key:saleKey(sale), sale_object_id:sale._id, branch_id:new ObjectId(branch), customer_name:customer, phone, sale_total:total, initial_amount:initial, remaining:money(total-initial), status:initial===total?'settled':'pending', created_at:new Date(), created_by:actor(req), initial_collected_at:new Date(), initial_recorded_amount:initial, settlement:initial===total?{ amount:0, method:'none', settled_at:new Date(), recorded_by:actor(req) }:null, history:[{type:'initial',amount:initial,at:new Date(),by:actor(req)}] };
+    const now = new Date(), initialMethod = String(req.body?.initial_method || 'cash').toLowerCase();
+    if (!['cash','tpe','baridimob'].includes(initialMethod)) return fail(res,400,'Choose Espèces, TPE or BaridiMob.');
+    const settled = initial >= total - 0.009;
+    const doc = { versement_number:number, sale_key:saleKey(sale), sale_object_id:sale._id, branch_id:new ObjectId(branch), customer_name:customer, phone, sale_total:total, initial_amount:initial, initial_method:initialMethod, remaining:money(total-initial), status:settled?'settled':'pending', created_at:now, created_by:actor(req), initial_collected_at:now, initial_recorded_amount:initial, ...(settled?{settled_at:now}:{}), settlement:settled?{ amount:0, method:'none', settled_at:now, recorded_by:actor(req) }:null, history:[{type:'initial',amount:initial,method:initialMethod,at:now,by:actor(req)}] };
     const inserted = await collection.insertOne(doc);
     return res.status(201).json({ type:'success', message:'Versement recorded.', data:{...doc,_id:String(inserted.insertedId)} });
   } catch(e) {
@@ -61,7 +107,8 @@ exports.settle = async (req,res) => {
     if (!current) return fail(res,404,'Versement not found.');
     if (current.status !== 'pending') return fail(res,409,'This versement is already settled or cancelled.');
     const amount = money(current.remaining);
-    const result = await collection.updateOne({_id:id,status:'pending',remaining:current.remaining},{$set:{status:'settled',remaining:0,settlement:{amount,method,settled_at:new Date(),recorded_by:actor(req)}},$push:{history:{type:'settlement',amount,method,at:new Date(),by:actor(req)}}});
+    const settledAt = new Date();
+    const result = await collection.updateOne({_id:id,status:'pending',remaining:current.remaining},{$set:{status:'settled',remaining:0,settled_at:settledAt,settlement:{amount,method,settled_at:settledAt,recorded_by:actor(req)}},$push:{history:{type:'settlement',amount,method,at:settledAt,by:actor(req)}}});
     if (!result.modifiedCount) return fail(res,409,'This versement was already updated. Refresh the register.');
     return res.json({type:'success',message:'Final settlement recorded.',data:{id:String(id),amount,method}});
   } catch(e) { console.error('[versements] settle',e); return fail(res,500,'Unable to settle versement.'); }

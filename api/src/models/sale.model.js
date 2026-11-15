@@ -491,6 +491,7 @@ const saleSchema = new mongoose.Schema(
       default: 'Cash',
       trim: true,
     },
+    versement_checkout: { type: mongoose.Schema.Types.Mixed, default: undefined },
 
     // PHP-style payment/sales descriptions
     payment_description: {
