@@ -3591,7 +3591,16 @@ PosnicPro.sales = {
      * contradict each other again.
      */
     payableCap: function () {
-        var typed = parseFloat($('#Partial_amount').val());
+        var typedValue = String($('#Partial_amount').val() == null ? '' : $('#Partial_amount').val()).trim();
+        var typed = parseFloat(typedValue);
+        // Full-credit checkout deliberately receives zero. Do not replace that
+        // explicit zero with the cart total: Credit is the entire receivable.
+        var creditInput = $('.payment-method-card').filter(function () {
+            return String($(this).find('.payment_mode').attr('id') || '').trim().toLowerCase() === 'credit';
+        }).find('.payment-amount-input');
+        if (typedValue !== '' && Number.isFinite(typed) && typed === 0 &&
+            $('#unpaid_payment_toggle').is(':checked') && creditInput.length &&
+            (parseFloat(creditInput.val()) || 0) > 0) return 0;
         if (!isNaN(typed) && typed > 0) { return parseFloat(typed.toFixed(2)); }
         var cart = parseFloat(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot);
         if (!isNaN(cart) && cart > 0) { return parseFloat(cart.toFixed(2)); }
