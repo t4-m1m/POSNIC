@@ -405,6 +405,28 @@
                     </div>
                 </div>
             </div>
+            <section id="stock-health-panel" class="card m-b-30" style="display:none;margin:18px 0;">
+                <div class="card-header d-flex align-items-center justify-content-between flex-wrap">
+                    <div><h4 class="mb-1">État de stock</h4><small class="text-muted">Analyse du stock disponible, des produits dormants et des articles jamais vendus</small></div>
+                    <div class="d-flex align-items-center" style="gap:8px"><label for="stock-health-dormant-days" class="mb-0">Dormant après</label><input id="stock-health-dormant-days" type="number" min="1" max="3650" value="90" class="form-control" style="width:90px"><span>jours</span><button class="btn btn-primary" id="stock-health-refresh">Actualiser</button><button class="btn btn-outline-secondary" id="stock-health-export">CSV</button></div>
+                </div>
+                <div class="card-body">
+                    <div id="stock-health-error" class="alert alert-danger" style="display:none"></div>
+                    <div id="stock-health-kpis" class="row"></div>
+                    <ul class="nav nav-tabs mt-3" role="tablist">
+                        <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#stock-health-critical">Stock critique</a></li>
+                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#stock-health-dormant">Produits dormants</a></li>
+                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#stock-health-never">Jamais vendus</a></li>
+                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#stock-health-all">Tous les produits</a></li>
+                    </ul>
+                    <div class="tab-content pt-3">
+                        <div class="tab-pane fade show active" id="stock-health-critical"><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Produit</th><th>Réf.</th><th>Stock</th><th>Coût unitaire</th><th>Valeur stock</th></tr></thead><tbody id="stock-health-critical-rows"></tbody></table></div></div>
+                        <div class="tab-pane fade" id="stock-health-dormant"><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Produit</th><th>Réf.</th><th>Stock</th><th>Dernière vente</th><th>Jours sans vente</th><th>Valeur stock</th></tr></thead><tbody id="stock-health-dormant-rows"></tbody></table></div></div>
+                        <div class="tab-pane fade" id="stock-health-never"><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Produit</th><th>Réf.</th><th>Stock</th><th>Valeur stock</th></tr></thead><tbody id="stock-health-never-rows"></tbody></table></div></div>
+                        <div class="tab-pane fade" id="stock-health-all"><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Produit</th><th>Réf.</th><th>Catégorie</th><th>Marque</th><th>Stock</th><th>Qté vendue</th><th>Valeur stock</th></tr></thead><tbody id="stock-health-all-rows"></tbody></table></div></div>
+                    </div>
+                </div>
+            </section>
             <!-- End col -->
         </div>
     </div>    
