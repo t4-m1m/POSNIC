@@ -11,11 +11,22 @@ PosnicPro.itemreport = {
         $('.page-title-box,#itemreport_new,.item-report-item').show();
         $('#v-pills-report-tab,#viewitemreport_page').addClass('active');
         $('#v-pills-report').addClass('show active');
-        var openVersements=window.__posnicOpenVersements===true;
-        window.__posnicOpenVersements=false;window.__posnicOpenStockHealth=false;
+        // The router may enter this page more than once for one menu click.
+        // Keep the chosen sub-report until another explicit menu item replaces it.
+        var requestedPanel = window.__posnicOpenVersements===true ? 'versements'
+            : (window.__posnicOpenStockHealth===true ? 'stock' : '');
+        window.__posnicOpenVersements=false;
+        window.__posnicOpenStockHealth=false;
+        var activePanel = requestedPanel || window.__posnicActiveItemReportPanel || 'stock';
+        window.__posnicActiveItemReportPanel = activePanel;
         $('#stock-health-panel,#versements-panel').hide();
-        if(openVersements){$('#versements-panel').show();if(PosnicPro.versementsRegister)PosnicPro.versementsRegister.load();}
-        else{$('#stock-health-panel').show();if(PosnicPro.stockHealthReport)PosnicPro.stockHealthReport.load();}
+        if(activePanel==='versements'){
+            $('#versements-panel').show();
+            if(PosnicPro.versementsRegister)PosnicPro.versementsRegister.load();
+        } else {
+            $('#stock-health-panel').show();
+            if(PosnicPro.stockHealthReport)PosnicPro.stockHealthReport.load();
+        }
         if (false && $('a#item-tab-line').hasClass('active')) {
             PosnicPro.itemreport.itemTableTabClick();
         } else if ($('a#item-expiry-line').hasClass('active')) {
@@ -480,11 +491,40 @@ PosnicPro.versementsRegister = (function () {
             records = Array.isArray(r.data) ? r.data : []; render();
         },function(){ message('Erreur réseau lors du chargement des versements.','danger'); });
     }
+    function renderSettlementSummary() {
+        var groups = {};
+        records.forEach(function (r) {
+            if (r.status !== 'settled' || !r.settled_at) return;
+            var date = new Date(r.settled_at);
+            if (Number.isNaN(date.getTime())) return;
+            var key = [date.getFullYear(), String(date.getMonth()+1).padStart(2,'0'), String(date.getDate()).padStart(2,'0')].join('-');
+            if (!groups[key]) groups[key] = { date: date, amount: 0, count: 0 };
+            // Recognize the complete bill on final settlement, not just the
+            // last installment collected on that day.
+            groups[key].amount += Number(r.sale_total) || 0;
+            groups[key].count += 1;
+        });
+        var host = $('#versements-settlement-summary').empty();
+        var keys = Object.keys(groups).sort().reverse();
+        if (!keys.length) {
+            host.append($('<div class="text-muted small">').text('Aucun versement entièrement réglé.'));
+            return;
+        }
+        keys.forEach(function (key) {
+            var group = groups[key], card = $('<div class="card p-3 mb-2">').css({minWidth:'190px',flex:'1 1 190px'});
+            card.append($('<div class="small text-muted">').text('Ventes réglées le ' + group.date.toLocaleDateString()));
+            card.append($('<strong class="h5 mb-0">').text((PosnicPro.local.get('currencySign') || 'DA') + ' ' + group.amount.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})));
+            card.append($('<div class="small text-muted">').text(group.count + ' versement(s) · montant total comptabilisé'));
+            host.append(card);
+        });
+    }
     function render() {
+        renderSettlementSummary();
         var q = String($('#versements-search').val() || '').toLowerCase(), body=$('#versements-rows').empty();
         records.filter(function(r){return !q || [r.customer_name,r.phone,r.versement_number,r.sale_key].join(' ').toLowerCase().indexOf(q)>=0;}).forEach(function(r){
             var tr=$('<tr>'), add=function(v){tr.append($('<td>').text(v==null?'':String(v)));};
-            add(r.versement_number); add(new Date(r.created_at||Date.now()).toLocaleString()); add(r.customer_name); add(r.sale_key);
+            add(r.versement_number); add(new Date(r.created_at||Date.now()).toLocaleString());
+            add(r.settled_at ? new Date(r.settled_at).toLocaleString() : '—'); add(r.customer_name); add(r.sale_key);
             add(Number(r.sale_total||0).toFixed(2)); add(Number(r.initial_amount||0).toFixed(2)); add(Number(r.remaining||0).toFixed(2));
             add(r.status==='pending'?'En attente':r.status==='settled'?'Réglé':'Annulé');
             var cell=$('<td>');
@@ -496,42 +536,57 @@ PosnicPro.versementsRegister = (function () {
             } else $('<span class="text-muted">Réglé</span>').appendTo(cell);
             tr.append(cell); body.append(tr);
         });
-        if(!body.children().length) body.append($('<tr>').append($('<td colspan="9" class="text-center text-muted">Aucun versement.</td>')));
+        if(!body.children().length) body.append($('<tr>').append($('<td colspan="10" class="text-center text-muted">Aucun versement.</td>')));
     }
-    function printReceipt(record) {
-        if(!record)return;
-        var esc=function(v){return $('<span>').text(v==null?'':String(v)).html();};
-        var cur=String(PosnicPro.local.get('currencySign')||'DA'),total=Number(record.sale_total)||0,initial=Number(record.initial_amount)||0,remaining=Math.max(0,total-initial);
-        var meta=[
-            {label:'N° Versement',value:String(record.versement_number||'')},
-            {label:'Référence vente',value:String(record.sale_key||'')},
-            {label:'Client',value:String(record.customer_name||'')},
-            {label:'Date',value:new Date(record.created_at||Date.now()).toLocaleString()}
-        ];
-        var rows=[
-            {label:'Total de la vente',value:total.toFixed(2)+' '+cur},
-            {label:'Montant versé',value:initial.toFixed(2)+' '+cur},
-            {label:'Reste à payer',value:remaining.toFixed(2)+' '+cur}
-        ];
-        var width=PosnicPro.resolvePaperWidth();
-        if(window.electronAPI&&window.electronAPI.printer&&window.electronAPI.printer.printReport&&width!=='a4'){
-            Promise.resolve(PosnicPro.resolveReceiptPrinter()).then(function(chosen){
-                return chosen||window.electronAPI.printer.getDefault();
-            }).then(function(printerName){
-                if(printerName&&typeof printerName==='object')printerName=printerName.name||null;
-                if(!printerName)throw new Error('Aucune imprimante de ticket configurée.');
-                function printCopy(label){
-                    var doc={shop:'POSNIC',title:'VERSEMENT',meta:meta.concat([{label:'Copie',value:label}]),sections:[{name:'Confirmation de versement',type:'pairs',rows:rows}]};
-                    return window.electronAPI.printer.printReport(doc,{printerName:printerName,paperWidth:width,docName:'Versement '+label});
-                }
-                return printCopy('CLIENT').then(function(a){if(!a||!a.success)throw new Error(a&&a.error||'Échec impression copie client');return printCopy('CAISSIER');})
-                  .then(function(b){if(!b||!b.success)throw new Error(b&&b.error||'Échec impression copie caissier');});
-            }).catch(function(error){PosnicPro.alert('error',error&&error.message||'Échec impression du versement.');});
-            return;
+    function printReceipt(record, copies) {
+        if(!record)return Promise.resolve(false);
+        var printer = window.electronAPI && window.electronAPI.printer;
+        if (!printer || typeof printer.printReceipt !== 'function') {
+            PosnicPro.alert('error', 'Impression thermique indisponible sur cet appareil. Aucun navigateur ne sera ouvert.');
+            return Promise.resolve(false);
         }
-        var copy=function(label){return '<section class="copy"><div class="center bold">POSNIC</div><div class="center bold">VERSEMENT</div><hr><div class="row"><span>N°</span><b>'+esc(record.versement_number)+'</b></div><div class="row"><span>Vente</span><b>'+esc(record.sale_key)+'</b></div><div class="row"><span>Client</span><b>'+esc(record.customer_name)+'</b></div><div class="row"><span>Date</span><b>'+esc(new Date(record.created_at||Date.now()).toLocaleString())+'</b></div><hr><div class="row"><span>Total vente</span><b>'+total.toFixed(2)+' '+esc(cur)+'</b></div><div class="row"><span>Versé</span><b>'+initial.toFixed(2)+' '+esc(cur)+'</b></div><div class="row"><span>Reste</span><b>'+remaining.toFixed(2)+' '+esc(cur)+'</b></div><div class="center bold">'+label+'</div></section>';};
-        var w=window.open('','_blank');if(!w){message('Autorisez les fenêtres contextuelles pour imprimer le reçu.','warning');return;}
-        w.document.write('<html><head><title>Versement</title><style>@page{margin:4mm}body{font:12px Consolas,monospace;color:#000;margin:0}.copy{width:72mm;padding:2mm 0 4mm;page-break-after:always}.center{text-align:center}.bold{font-weight:700}.row{display:flex;justify-content:space-between;gap:5px;margin:3px 0}hr{border:0;border-top:1px dashed #000;margin:6px 0}</style></head><body>'+copy('COPIE CLIENT')+copy('COPIE CAISSIER')+'<script>setTimeout(function(){window.focus();window.print();},80);<'+'/script></body></html>');w.document.close();
+        var currency = String(PosnicPro.local.get('currencySign') || 'DA');
+        var total = Number(record.sale_total) || 0;
+        var initial = Number(record.initial_amount) || 0;
+        var remaining = Math.max(0, total - initial);
+        var methods = {cash:'Espèces',tpe:'TPE',baridimob:'BaridiMob'};
+        var sale = {
+            billNo: String(record.versement_number || ''),
+            title: 'VERSEMENT',
+            date: new Date(record.created_at || Date.now()).toLocaleString(),
+            customer: record.customer_name ? [String(record.customer_name)] : [],
+            total: total,
+            subTotal: total,
+            items: [],
+            payments: [{
+                label: 'Acompte initial - ' + (methods[String(record.initial_method || 'cash').toLowerCase()] || String(record.initial_method || 'Espèces')),
+                amount: initial
+            }],
+            extras: [
+                {label:'Référence vente',value:String(record.sale_key || '')},
+                {label:'Reste à payer',value:remaining.toFixed(2)+' '+currency},
+                {label:'Statut',value:record.status==='settled'?'Réglé':'En attente'}
+            ],
+            design: {
+                showTicket:true, showDate:true, showCustomer:true, showSubtotal:false,
+                showTaxes:false, showDiscount:false, showPayments:true, showChange:false,
+                showCashier:false, showBranch:false
+            }
+        };
+        return Promise.resolve(printer.printReceipt(sale, {
+            copies: Math.max(1, Math.min(2, Number(copies) || 1)),
+            kind: 'versement',
+            docName: 'Versement ' + String(record.versement_number || ''),
+            source: 'F6 Versement',
+            openDrawer: false,
+            jobId: 'versement:' + String(record._id || record.versement_number || 'receipt') + ':' + Date.now()
+        })).then(function (result) {
+            if (!result || !result.success) throw new Error(result && result.error || 'Échec de l’impression thermique du versement.');
+            return result;
+        }).catch(function (error) {
+            PosnicPro.alert('error', error && error.message || 'Échec de l’impression du versement.');
+            return false;
+        });
     }
     $('#versement-settle-confirm').off('click').on('click',function(){var id=$('#versement-settle-modal').data('id'),method=String($('#versement-settle-method').val()||'cash');if(!id)return;var registerId=PosnicPro.sales&&typeof PosnicPro.sales.saleRegisterId==='function'?PosnicPro.sales.saleRegisterId():'';$(this).prop('disabled',true);PosnicPro.post({url:'versements/'+encodeURIComponent(id)+'/settle',data:JSON.stringify({method:method,register_id:registerId})},function(x){$('#versement-settle-confirm').prop('disabled',false);$('#versement-settle-modal').modal('hide');message(x.message||'Règlement enregistré.',x.type==='success'?'success':'danger');load();},function(){$('#versement-settle-confirm').prop('disabled',false);message('Échec du règlement.','danger');});});
     $(document).on('click','#versements-refresh',load).on('input','#versements-search',render);

@@ -464,8 +464,10 @@
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap"><div><h4 class="mb-1">Versements</h4><small class="text-muted">Acompte initial et règlement final unique</small></div><div><button class="btn btn-primary" id="versements-refresh">Actualiser</button></div></div>
                 <div class="card-body">
                     <div class="alert alert-info mb-3" style="border-radius:12px">Les nouveaux versements sont créés depuis <strong>Nouvelle vente → F6 Versement</strong>. Ils apparaissent automatiquement dans ce registre, sans créer de compte client ni convertir une vente ordinaire en crédit.</div>
+                    <div class="small text-muted mb-2">Le montant total de la vente est comptabilisé à la date du règlement final, jamais comme une vente ordinaire à la date de l’acompte.</div>
+                    <div id="versements-settlement-summary" class="d-flex flex-wrap mb-3" style="gap:10px"></div>
                     <div class="form-group"><input id="versements-search" class="form-control" placeholder="Rechercher client, téléphone ou référence"></div>
-                    <div class="table-responsive"><table class="table table-striped"><thead><tr><th>N° Versement</th><th>Date</th><th>Client</th><th>Réf. vente</th><th>Total</th><th>Versé</th><th>Reste</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="versements-rows"></tbody></table></div>
+                    <div class="table-responsive"><table class="table table-striped"><thead><tr><th>N° Versement</th><th>Date création</th><th>Date règlement</th><th>Client</th><th>Réf. vente</th><th>Total</th><th>Versé</th><th>Reste</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="versements-rows"></tbody></table></div>
                     <small class="text-muted">Le règlement final est limité au solde exact. Les opérations sont conservées dans l'historique.</small>
                     <div id="versements-message" class="mt-2"></div>
                 </div>

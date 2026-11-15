@@ -330,7 +330,10 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
         const columns = columnsFor(target.pageSize);
         const paperWidth = columns <= 32 ? '58' : columns === 69 ? '112' : '80';
         const bytes = render(sale, { paperWidth, cut: true, openDrawer: false });
-        const copies = Math.max(1, Math.min(20, parseInt(target.copies, 10) || 1));
+        const requestedCopies = Number.parseInt(options.copies, 10);
+        const copies = Number.isFinite(requestedCopies) && requestedCopies > 0
+          ? Math.max(1, Math.min(20, requestedCopies))
+          : Math.max(1, Math.min(20, parseInt(target.copies, 10) || 1));
         for (let copy = 0; copy < copies; copy++) {
           const result = await hardwareManager.sendRawToPrinter(target.name, bytes, 'POSNIC Receipt Test', { jobId: 'receipt-test:' + Date.now() + ':' + results.length });
           results.push({ printer: target.name || '(default)', ...result });

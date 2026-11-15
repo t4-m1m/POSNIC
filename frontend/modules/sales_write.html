@@ -1684,6 +1684,9 @@ body[data-theme="warmnight"]{color-scheme:dark}
     var $card=$('#payment_id .payment-method-card').filter(function(){var $c=$(this),m=String($c.find('.payment_mode').attr('id')||'').toLowerCase();return m!=='credit'&&($c.find('.btn-payment-method').hasClass('active')||$c.hasClass('payment-active'));}).first();
     if(!$card.length)$card=$('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').attr('id')||'').toLowerCase()!=='credit';}).first();
     if(!$card.length)return;
+    // The selected tender owns this amount. Clear prior allocations first:
+    // changing Cash to TPE / BaridiMob must never count the bill twice.
+    $('#payment_id .payment-method-card .payment-amount-input').val('0.00');
     $('#Partial_amount').val(paid.toFixed(2));
     $card.find('.payment-amount-input').first().val(paid.toFixed(2));
     var due=Math.max(0,total-paid);
