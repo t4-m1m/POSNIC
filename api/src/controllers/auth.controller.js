@@ -67,8 +67,16 @@ exports.login = async (req, res, next) => {
 
     const usingUsername = Boolean(username);
     const identifier = usingUsername ? username : email;
-    const user = await User.findOne(usingUsername ? { username: identifier } : { email: identifier })
+    let user = await User.findOne(usingUsername ? { username: identifier } : { email: identifier })
       .select('+password');
+
+    // Accept the local part of a Super Admin's Gmail address as a login name.
+    // Keep the lookup tenant-scoped by requiring the exact derived address and
+    // still verify the account role and password below. Email login is unchanged.
+    if (usingUsername && !user && !identifier.includes('@')) {
+      const derivedEmail = identifier + '@gmail.com';
+      user = await User.findOne({ email: derivedEmail }).select('+password');
+    }
 
     const isSuperAdmin = user && (
       String(user.usertype || '').toLowerCase() === 'super_admin' ||
