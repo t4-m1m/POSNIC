@@ -393,3 +393,86 @@ $(document).ready(function () {
     }
 });
 
+
+
+/* Stock health dashboard: a read-only view over the existing items and completed sales records. */
+PosnicPro.stockHealthReport = (function () {
+    var snapshot = null;
+    function currency(value) { return (PosnicPro.local.get('currencySign') || '') + ' ' + (Number(value || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function safeCell(value) { return $('<td>').text(value == null ? '' : String(value)); }
+    function drawRows(selector, rows, mode) {
+        var body = $(selector).empty();
+        if (!rows || !rows.length) { body.append($('<tr>').append($('<td colspan="7" class="text-center text-muted">').text('Aucun produit dans cette liste.'))); return; }
+        rows.forEach(function (r) {
+            var tr = $('<tr>');
+            tr.append(safeCell(r.name), safeCell(r.sku));
+            if (mode === 'all') tr.append(safeCell(r.category), safeCell(r.brand));
+            tr.append(safeCell(r.stock));
+            if (mode === 'all') tr.append(safeCell(r.sold_quantity));
+            if (mode === 'dormant') tr.append(safeCell(r.last_sale ? moment(r.last_sale).format('DD/MM/YYYY') : '—'), safeCell(r.days_since_sale));
+            tr.append(safeCell(currency(r.stock_value)));
+            body.append(tr);
+        });
+    }
+    function render(data) {
+        snapshot = data;
+        var t = data.totals || {}, kpis = [
+            ['Valeur du stock', currency(t.stock_value)],
+            ['Produits en stock', t.products || 0],
+            ['Unités disponibles', t.stock_units || 0],
+            ['Stock critique', t.critical || 0],
+            ['Produits dormants', t.dormant || 0],
+            ['Jamais vendus', t.never_sold || 0]
+        ];
+        var holder = $('#stock-health-kpis').empty();
+        kpis.forEach(function (k) {
+            holder.append($('<div class="col-6 col-md-4 col-xl-2 mb-3">').append(
+                $('<div class="card h-100">').append($('<div class="card-body">').append(
+                    $('<div class="text-muted small">').text(k[0]),
+                    $('<div class="h4 mb-0">').text(k[1])
+                ))
+            ));
+        });
+        drawRows('#stock-health-critical-rows', data.critical, 'critical');
+        drawRows('#stock-health-dormant-rows', data.dormant, 'dormant');
+        drawRows('#stock-health-never-rows', data.never_sold, 'never');
+        drawRows('#stock-health-all-rows', data.rows, 'all');
+        $('#stock-health-dormant-days').val(data.dormant_days || 90);
+        $('#stock-health-error').hide().text('');
+    }
+    function load() {
+        var branch = $('.item_branch_value').val();
+        if (Array.isArray(branch)) branch = branch[0];
+        if (!branch) branch = PosnicPro.local.get('branch_id') || PosnicPro.local.get('branch');
+        if (!branch) { $('#stock-health-error').text('Sélectionnez une agence pour consulter le stock.').show(); return; }
+        $('#stock-health-refresh').prop('disabled', true);
+        PosnicPro.get({ url: 'stock-report', data: { branch: branch } }, function (response) {
+            $('#stock-health-refresh').prop('disabled', false);
+            if (response && response.type === 'success') render(response.data || {});
+            else $('#stock-health-error').text(response && response.message || 'Impossible de charger le rapport.').show();
+        }, function () {
+            $('#stock-health-refresh').prop('disabled', false);
+            $('#stock-health-error').text('Erreur réseau lors du chargement du rapport.').show();
+        });
+    }
+    function saveThreshold() {
+        var branch = $('.item_branch_value').val();
+        if (Array.isArray(branch)) branch = branch[0];
+        if (!branch) branch = PosnicPro.local.get('branch_id') || PosnicPro.local.get('branch');
+        var days = Math.max(1, Math.min(3650, parseInt($('#stock-health-dormant-days').val(), 10) || 90));
+        PosnicPro.post({ url: 'stock-report/settings?branch=' + encodeURIComponent(branch || ''), data: { dormant_days: days, branch: branch } }, function () { load(); }, function () { load(); });
+    }
+    function exportCsv() {
+        if (!snapshot || !Array.isArray(snapshot.rows)) return;
+        var rows = [['Produit','Référence','Catégorie','Marque','Stock','Qté vendue','Dernière vente','Jours sans vente','Coût unitaire','Valeur stock']];
+        snapshot.rows.forEach(function (r) { rows.push([r.name,r.sku,r.category,r.brand,r.stock,r.sold_quantity,r.last_sale || 'Never sold',r.days_since_sale == null ? '' : r.days_since_sale,r.unit_cost,r.stock_value]); });
+        var csv = rows.map(function (row) { return row.map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(';'); }).join('\r\n');
+        var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+        var url = URL.createObjectURL(blob), a = document.createElement('a');
+        a.href = url; a.download = 'etat-de-stock.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+    $(document).on('click', '#stock-health-refresh', load);
+    $(document).on('change', '#stock-health-dormant-days', saveThreshold);
+    $(document).on('click', '#stock-health-export', exportCsv);
+    return { load: load, render: render };
+}());
