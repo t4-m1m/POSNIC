@@ -11,6 +11,11 @@ PosnicPro.itemreport = {
         $('.page-title-box,#itemreport_new,.item-report-item').show();
         $('#v-pills-report-tab,#viewitemreport_page').addClass('active');
         $('#v-pills-report').addClass('show active');
+        if (window.__posnicOpenVersements) {
+            window.__posnicOpenVersements = false;
+            $('#versements-panel').show();
+            if (PosnicPro.versementsRegister) PosnicPro.versementsRegister.load();
+        }
         if (window.__posnicOpenStockHealth) {
             window.__posnicOpenStockHealth = false;
             $('#stock-health-panel').show();
@@ -480,4 +485,48 @@ PosnicPro.stockHealthReport = (function () {
     $(document).on('change', '#stock-health-dormant-days', saveThreshold);
     $(document).on('click', '#stock-health-export', exportCsv);
     return { load: load, render: render };
+}());
+
+
+/* Standalone two-stage versement register. It links to an already validated sale. */
+PosnicPro.versementsRegister = (function () {
+    var records = [];
+    function branch() { var b = PosnicPro.local.get('branch_id_set') || PosnicPro.local.get('branch_id') || PosnicPro.local.get('branch'); return Array.isArray(b) ? b[0] : b; }
+    function message(text, type) { $('#versements-message').attr('class','mt-2 alert alert-' + (type || 'info')).text(text || '').toggle(!!text); }
+    function load() {
+        PosnicPro.get({url:'versements',data:{branch:branch()}},function(r){
+            if (!r || r.type!=='success') { message(r && r.message || 'Impossible de charger les versements.','danger'); return; }
+            records = Array.isArray(r.data) ? r.data : []; render();
+        },function(){ message('Erreur réseau lors du chargement des versements.','danger'); });
+    }
+    function render() {
+        var q = String($('#versements-search').val() || '').toLowerCase(), body=$('#versements-rows').empty();
+        records.filter(function(r){return !q || [r.customer_name,r.phone,r.versement_number,r.sale_key].join(' ').toLowerCase().indexOf(q)>=0;}).forEach(function(r){
+            var tr=$('<tr>'), add=function(v){tr.append($('<td>').text(v==null?'':String(v)));};
+            add(r.versement_number); add(r.customer_name); add(r.sale_key);
+            add(Number(r.sale_total||0).toFixed(2)); add(Number(r.initial_amount||0).toFixed(2)); add(Number(r.remaining||0).toFixed(2)); add(r.status);
+            var cell=$('<td>');
+            if(r.status==='pending') {
+                $('<button class="btn btn-sm btn-success mr-1">Régler</button>').on('click',function(){
+                    var method=window.prompt('Mode de règlement final : cash, tpe ou baridimob','cash');
+                    if(!method)return;
+                    PosnicPro.post({url:'versements/'+encodeURIComponent(r._id)+'/settle',data:JSON.stringify({method:method})},function(x){message(x.message||'Règlement enregistré.',x.type==='success'?'success':'danger');load();},function(){message('Échec du règlement.','danger');});
+                }).appendTo(cell);
+                $('<button class="btn btn-sm btn-outline-danger">Annuler</button>').on('click',function(){
+                    var reason=window.prompt('Motif obligatoire de l’annulation'); if(!reason)return;
+                    PosnicPro.post({url:'versements/'+encodeURIComponent(r._id)+'/cancel',data:JSON.stringify({reason:reason})},function(x){message(x.message||'Mise à jour.',x.type==='success'?'success':'danger');load();},function(){message('Annulation refusée.','danger');});
+                }).appendTo(cell);
+            } else $('<span class="text-muted">—</span>').appendTo(cell);
+            tr.append(cell); body.append(tr);
+        });
+        if(!body.children().length) body.append($('<tr>').append($('<td colspan="8" class="text-center text-muted">Aucun versement.</td>')));
+    }
+    function create() {
+        var payload={sale_id:String($('#versement-sale-id').val()||'').trim(),customer_name:String($('#versement-customer').val()||'').trim(),phone:String($('#versement-phone').val()||'').trim(),initial_amount:Number($('#versement-initial').val()),branch_id:branch()};
+        if(!payload.sale_id||!payload.customer_name||!(payload.initial_amount>0)){message('Référence, nom du client et acompte positif obligatoires.','warning');return;}
+        $('#versement-create').prop('disabled',true);
+        PosnicPro.post({url:'versements',data:JSON.stringify(payload)},function(r){$('#versement-create').prop('disabled',false);message(r.message||'Versement enregistré.',r.type==='success'?'success':'danger');if(r.type==='success'){$('#versement-sale-id,#versement-customer,#versement-phone,#versement-initial').val('');load();}},function(){$('#versement-create').prop('disabled',false);message('Impossible d’enregistrer le versement.','danger');});
+    }
+    $(document).on('click','#versements-refresh',load).on('click','#versement-create',create).on('input','#versements-search',render);
+    return {load:load};
 }());
