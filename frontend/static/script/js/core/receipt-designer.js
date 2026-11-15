@@ -641,7 +641,7 @@
                     });
                     if (!nativeResult || !nativeResult.success) throw new Error(nativeResult && nativeResult.error || label('Print failed'));
                 } else {
-                    await print(render(data, chosen, kitchenBill), chosen, { target: target, batch: true, sample: false, showDialog: pdfTarget, receiptLog: { saleId: data.sales_id, total: data.items_total, title: kitchenBill ? label('Bill') : label('Receipt'), source: 'Till' } });
+                    await print(render(data, chosen, kitchenBill), chosen, { target: target, batch: true, sample: false, showDialog: false, receiptLog: { saleId: data.sales_id, total: data.items_total, title: kitchenBill ? label('Bill') : label('Receipt'), source: 'Till' } });
                 }
             }
             if (!options.preserveWorkspace) PosnicPro.afterPrint();
