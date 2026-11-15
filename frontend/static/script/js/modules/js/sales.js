@@ -165,8 +165,14 @@ PosnicPro.sales = {
         $('.return_sale_only_show').hide();
         $('.RoundOff-hide-show').hide();
         $("#viewtest,#payment_id").show();
-        $('#customer_current_balance').val();
-        $('#Partial_amount').val();
+        // A new sale starts with no carried-over customer debt or tender amount.
+        // The empty .val() getter used here previously left the prior customer's
+        // balance in the hidden field and in the inline credit indicator.
+        $('#customer_current_balance').val('0');
+        $('#Partial_amount').val('');
+        $('#wallet_balance').prop('checked', false);
+        $('#sales-customer-credit-inline-amount').text('0,00');
+        $('#sales-customer-credit-inline').prop('hidden', true);
         $('#table_return_page,#table_sale_page').find('table').removeAttr('id');
         PosnicPro.sales.EditRecentSaleParams = [];
         var myobj = document.getElementById("table_return_page");
