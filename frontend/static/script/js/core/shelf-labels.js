@@ -61,10 +61,10 @@
             '.sl-design-editable .sl-element.sl-selected{outline:2px solid #2563eb;outline-offset:2px;z-index:20;overflow:visible;box-shadow:0 0 0 4px rgba(37,99,235,.12)}' +
             '.sl-resize-handle,.sl-rotate-handle{display:none;position:absolute;z-index:30;touch-action:none;user-select:none;box-sizing:border-box}' +
             '.sl-resize-handle.is-active,.sl-rotate-handle.is-active{display:flex;align-items:center;justify-content:center}' +
-            '.sl-resize-handle{width:22px;height:22px;border:2px solid #fff;border-radius:7px;background:#2563eb;color:#fff;cursor:nwse-resize;transform:translate(-50%,-50%);box-shadow:0 2px 7px rgba(15,23,42,.3)}' +
+            '.sl-resize-handle{width:18px;height:18px;border:2px solid var(--theme-card-bg,#fff);border-radius:6px;background:var(--theme-primary-color,#3978d6);color:#fff;cursor:nwse-resize;transform:translate(-50%,-50%);box-shadow:0 2px 6px rgba(15,23,42,.22);transition:transform .12s ease,box-shadow .12s ease}' +
             '.sl-resize-handle:before{content:"↘";font:700 13px/1 Arial,sans-serif;color:#fff}' +
-            '.sl-rotate-handle{width:26px;height:26px;border:2px solid #2563eb;border-radius:50%;background:#fff;color:#2563eb;cursor:grab;transform:translate(-50%,-50%);box-shadow:0 2px 8px rgba(15,23,42,.22)}' +
-            '.sl-rotate-handle:before{content:"↻";font:700 18px/1 Arial,sans-serif;color:#2563eb}' +
+            '.sl-rotate-handle{width:24px;height:24px;border:2px solid var(--theme-card-bg,#fff);border-radius:50%;background:var(--theme-primary-color,#3978d6);color:#fff;cursor:grab;transform:translate(-50%,-50%);box-shadow:0 2px 7px rgba(15,23,42,.2);transition:transform .12s ease,box-shadow .12s ease}' +
+            '.sl-rotate-handle:before{content:"↻";font:700 16px/1 Arial,sans-serif;color:#fff}' +
             '.sl-rotate-handle:after{content:"";position:absolute;width:2px;height:10px;background:#2563eb;left:50%;top:100%;transform:translateX(-50%)}' +
             '.sl-resize-handle:focus-visible,.sl-rotate-handle:focus-visible{outline:3px solid rgba(37,99,235,.35);outline-offset:3px}';
     }
