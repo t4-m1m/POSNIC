@@ -201,6 +201,46 @@
 #view_print_lable .sl-footer{padding:16px 26px;background:rgba(255,255,255,.96);box-shadow:0 -8px 20px rgba(15,23,42,.035)}
 #view_print_lable .sl-footer-actions{gap:9px}
 #view_print_lable .sl-status:not(:empty){background:#fff7ed;border-top:1px solid #fed7aa;padding-top:10px;color:#9a3412}
+/* Keep every editor surface bound to the live application theme. These selectors
+   intentionally follow html/body data-theme so switching themes needs no reload. */
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable{
+ color-scheme:dark;
+}
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-wizard,
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-body,
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-panel,
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-footer{
+ background:var(--theme-card-bg,#182230)!important;color:var(--theme-text-primary,#e5edf7)!important;border-color:var(--theme-border-color,#344256)!important;
+}
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-header{
+ background:var(--theme-sidebar-bg,var(--theme-card-bg,#182230))!important;color:var(--theme-text-primary,#e5edf7)!important;border-color:var(--theme-border-color,#344256)!important;
+}
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-muted,
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-field{
+ color:var(--theme-text-secondary,#aab8ca)!important;
+}
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-input,
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-button,
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-step,
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-element-toggle{
+ background:var(--theme-input-bg,var(--theme-body-bg,#111b29))!important;color:var(--theme-text-primary,#e5edf7)!important;border-color:var(--theme-border-color,#40516a)!important;
+}
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-step[aria-current=step],
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-element-toggle.is-active{
+ background:color-mix(in srgb,var(--theme-primary-color,#3b82f6) 24%,var(--theme-card-bg,#182230))!important;color:var(--theme-text-primary,#fff)!important;border-color:var(--theme-primary-color,#3b82f6)!important;
+}
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-product-list,
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-product-row{
+ background:var(--theme-card-bg,#182230)!important;color:var(--theme-text-primary,#e5edf7)!important;border-color:var(--theme-border-color,#344256)!important;
+}
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-sample-area,
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-page-area{
+ background-color:var(--theme-body-bg,#101923)!important;background-image:radial-gradient(var(--theme-border-color,#40516a) .8px,transparent .8px)!important;
+}
+:is(html[data-theme="dark"],html[data-theme="terminal"],html[data-theme="dosblue"],html[data-theme="softdark"],html[data-theme="warmnight"],body[data-theme="dark"],body[data-theme="terminal"],body[data-theme="dosblue"],body[data-theme="softdark"],body[data-theme="warmnight"]) #view_print_lable .sl-status:not(:empty){
+ background:var(--theme-body-bg,#101923)!important;color:var(--theme-text-primary,#e5edf7)!important;border-color:var(--theme-border-color,#344256)!important;
+}
+
 @media(max-width:700px){#view_print_lable .sl-header{padding:17px}#view_print_lable .sl-body{padding:14px}#view_print_lable .sl-panel{padding:15px}#view_print_lable .sl-footer{padding:13px;gap:10px}}
 </style>
 <div class="modal fade close_on_esc" id="view_print_lable" tabindex="-1" role="dialog" aria-labelledby="sl-title" aria-hidden="true">
