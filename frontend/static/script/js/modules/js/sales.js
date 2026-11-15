@@ -4855,6 +4855,13 @@ PosnicPro.sales.addSale = {
                     loader.find(".loadingSpinner:first").remove();
 
                         PosnicPro.sales.setDefaults();
+                    // A completed sale keeps its saved customer on the sale record,
+                    // but the next blank basket always starts at the branch walk-in client.
+                    if (PosnicPro.sales.SaleAction === 'add' && !PosnicPro.sales.editSaleId &&
+                        typeof PosnicPro.defaultcustomerSet === 'function') {
+                        $('#sales_new_customer_id,#sales_new_customer_name,#sales_new_customer_address,#sales_new_customer_phone,#sales_new_customer_email,#sales_new_customer_state,#sales_new_customer_gst_type,#sales_new_customer_gst_number').val('');
+                        PosnicPro.defaultcustomerSet();
+                    }
                     PosnicPro.sales.customerViewDisplay();
                     PosnicPro.stocklogs.viewLowStockDashboard();
                     PosnicPro.sales.recentMenu.recentSalesTabDetails();
