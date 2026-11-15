@@ -1907,7 +1907,7 @@ class SalesController extends BaseController {
               $and: [
                 { $gte: ['$reportExpenseDate', reportStart] },
                 { $lte: ['$reportExpenseDate', reportEnd] },
-                { $nin: ['$reportExpenseType', ['credit', 'income', 'money in']] },
+                { $not: [{ $in: ['$reportExpenseType', ['credit', 'income', 'money in']] }] },
               ],
             },
           },
