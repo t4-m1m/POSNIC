@@ -1,4 +1,3 @@
-const { redact } = require('../utils/redact');
 const crypto = require('crypto');
 const { promisify } = require('util');
 const jwt = require('jsonwebtoken');
