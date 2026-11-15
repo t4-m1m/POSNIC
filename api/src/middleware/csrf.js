@@ -97,6 +97,15 @@ const protect = (req, res, next) => {
   const credential = credentialFor(req);
   if (!credential) return next();
 
+  // The crash reporter is intentionally public and stores only bounded,
+  // truncated diagnostics. Do not make it depend on a CSRF token that may be
+  // unavailable precisely when the renderer is failing to initialize.
+  const requestPath = String(req.path || req.originalUrl || '').split('?')[0];
+  if (req.method === 'POST' &&
+      (requestPath === '/public/api/client-errors' || requestPath === '/public/client-errors')) {
+    return next();
+  }
+
   const expected = tokenFor(credential);
   res.set(RESPONSE_HEADER, expected);
 
