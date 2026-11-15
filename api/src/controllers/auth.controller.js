@@ -65,23 +65,26 @@ exports.login = async (req, res, next) => {
       return next(new AppError('Please provide a username (or email) and password!', 400));
     }
 
-    const usingUsername = Boolean(username);
-    const identifier = usingUsername ? username : email;
-    let user = await User.findOne(usingUsername ? { username: identifier } : { email: identifier })
-      .select('+password');
+    const usingUsername = Boolean(username) && !username.includes('@');
+    const identifier = usingUsername ? username : (email || username);
+    let user = await User.findOne(
+      usingUsername
+        ? { $or: [{ username: identifier }, { user_name: identifier }] }
+        : { email: String(identifier).toLowerCase() }
+    ).select('+password');
 
-    // Accept the local part of a Super Admin's Gmail address as a login name.
-    // Keep the lookup tenant-scoped by requiring the exact derived address and
-    // still verify the account role and password below. Email login is unchanged.
-    if (usingUsername && !user && !identifier.includes('@')) {
-      const derivedEmail = identifier + '@gmail.com';
-      user = await User.findOne({ email: derivedEmail }).select('+password');
+    // A Gmail local-part is a Super Admin alias. Prefer the matching Super Admin
+    // account even if another staff record happens to use the same short username.
+    if (usingUsername && !identifier.includes('@')) {
+      const alias = await User.findOne({ email: identifier.toLowerCase() + '@gmail.com' }).select('+password');
+      const aliasRoles = [alias && alias.usertype, alias && alias.role]
+        .map((value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+      if (alias && aliasRoles.includes('superadmin')) user = alias;
     }
 
-    const isSuperAdmin = user && (
-      String(user.usertype || '').toLowerCase() === 'super_admin' ||
-      String(user.role || '').toLowerCase() === 'super_admin'
-    );
+    const userRoles = [user && user.usertype, user && user.role]
+      .map((value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+    const isSuperAdmin = Boolean(user && userRoles.includes('superadmin'));
     if (
       !user ||
       (usingUsername && !isSuperAdmin) ||

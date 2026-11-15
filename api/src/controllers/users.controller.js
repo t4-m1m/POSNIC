@@ -305,13 +305,14 @@ class UsersController extends BaseController {
         )
         .lean();
 
-      if (!user && !loginId.includes('@')) {
+      if (!loginId.includes('@')) {
         const candidate = await this.userModel
           .findOne({ email: loginId.toLowerCase() + '@gmail.com' })
-          .select('+password +license +branch_access +printing_design +access +plan +plan_access +activate +firstname +lastname +username +user_name +email +image +register_status +usertype +role_id')
+          .select('+password +license +branch_access +printing_design +access +plan +plan_access +activate +firstname +lastname +username +user_name +email +image +register_status +usertype +role +role_id')
           .lean();
-        const role = String(candidate && (candidate.usertype || candidate.role) || '').toLowerCase();
-        if (candidate && (role === 'super_admin' || candidate.is_super_admin === true)) user = candidate;
+        const candidateRoles = [candidate && candidate.usertype, candidate && candidate.role]
+          .map((value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+        if (candidate && (candidateRoles.includes('superadmin') || candidate.is_super_admin === true)) user = candidate;
       }
 
       /*

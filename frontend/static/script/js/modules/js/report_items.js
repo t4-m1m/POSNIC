@@ -484,23 +484,24 @@ PosnicPro.versementsRegister = (function () {
         var q = String($('#versements-search').val() || '').toLowerCase(), body=$('#versements-rows').empty();
         records.filter(function(r){return !q || [r.customer_name,r.phone,r.versement_number,r.sale_key].join(' ').toLowerCase().indexOf(q)>=0;}).forEach(function(r){
             var tr=$('<tr>'), add=function(v){tr.append($('<td>').text(v==null?'':String(v)));};
-            add(r.versement_number); add(r.customer_name); add(r.sale_key);
-            add(Number(r.sale_total||0).toFixed(2)); add(Number(r.initial_amount||0).toFixed(2)); add(Number(r.remaining||0).toFixed(2)); add(r.status);
+            add(r.versement_number); add(new Date(r.created_at||Date.now()).toLocaleString()); add(r.customer_name); add(r.sale_key);
+            add(Number(r.sale_total||0).toFixed(2)); add(Number(r.initial_amount||0).toFixed(2)); add(Number(r.remaining||0).toFixed(2));
+            add(r.status==='pending'?'En attente':r.status==='settled'?'Réglé':'Annulé');
             var cell=$('<td>');
             $('<button class="btn btn-sm btn-outline-primary mr-1">Reçu</button>').on('click',function(){printReceipt(r);}).appendTo(cell);
-            $('<button class="btn btn-sm btn-outline-secondary mr-1">Historique</button>').on('click',function(){var lines=(r.history||[]).map(function(h){return (h.type||'Opération')+' · '+Number(h.amount||0).toFixed(2)+' · '+new Date(h.at||r.created_at).toLocaleString()+' · '+(h.method||'');});message(lines.join(' | ')||'Aucun historique disponible.','info');}).appendTo(cell);
+            $('<button class="btn btn-sm btn-outline-secondary mr-1">Détails / Historique</button>').on('click',function(){var lines=(r.history||[]).map(function(h){return (h.type||'Opération')+' · '+Number(h.amount||0).toFixed(2)+' · '+new Date(h.at||r.created_at).toLocaleString()+' · '+(h.method||'');});message(lines.join(' | ')||'Aucun historique disponible.','info');}).appendTo(cell);
             if(r.status==='pending') {
                 $('<button class="btn btn-sm btn-success mr-1">Régler</button>').on('click',function(){$('#versement-settle-amount').text(Number(r.remaining||0).toFixed(2));$('#versement-settle-modal').data('id',r._id).modal('show');}).appendTo(cell);
                 $('<button class="btn btn-sm btn-outline-danger">Annuler</button>').on('click',function(){var reason=window.prompt('Motif obligatoire de l’annulation');if(!reason)return;PosnicPro.post({url:'versements/'+encodeURIComponent(r._id)+'/cancel',data:JSON.stringify({reason:reason})},function(x){message(x.message||'Mise à jour.',x.type==='success'?'success':'danger');load();},function(){message('Annulation refusée.','danger');});}).appendTo(cell);
             } else $('<span class="text-muted">Réglé</span>').appendTo(cell);
             tr.append(cell); body.append(tr);
         });
-        if(!body.children().length) body.append($('<tr>').append($('<td colspan="8" class="text-center text-muted">Aucun versement.</td>')));
+        if(!body.children().length) body.append($('<tr>').append($('<td colspan="9" class="text-center text-muted">Aucun versement.</td>')));
     }
     function printReceipt(record) {
         if(!record)return;
         var esc=function(v){return $('<span>').text(v==null?'':String(v)).html();};
-        var cur=String(PosnicPro.local.get('currencySign')||'DA'),total=Number(record.sale_total)||0,initial=Number(record.initial_amount)||0,remaining=Number(record.remaining)||0;
+        var cur=String(PosnicPro.local.get('currencySign')||'DA'),total=Number(record.sale_total)||0,initial=Number(record.initial_amount)||0,remaining=Math.max(0,total-initial);
         var meta=[
             {label:'N° Versement',value:String(record.versement_number||'')},
             {label:'Référence vente',value:String(record.sale_key||'')},
@@ -533,12 +534,7 @@ PosnicPro.versementsRegister = (function () {
         w.document.write('<html><head><title>Versement</title><style>@page{margin:4mm}body{font:12px Consolas,monospace;color:#000;margin:0}.copy{width:72mm;padding:2mm 0 4mm;page-break-after:always}.center{text-align:center}.bold{font-weight:700}.row{display:flex;justify-content:space-between;gap:5px;margin:3px 0}hr{border:0;border-top:1px dashed #000;margin:6px 0}</style></head><body>'+copy('COPIE CLIENT')+copy('COPIE CAISSIER')+'<script>setTimeout(function(){window.focus();window.print();},80);<'+'/script></body></html>');w.document.close();
     }
     $('#versement-settle-confirm').off('click').on('click',function(){var id=$('#versement-settle-modal').data('id'),method=String($('#versement-settle-method').val()||'cash');if(!id)return;var registerId=PosnicPro.sales&&typeof PosnicPro.sales.saleRegisterId==='function'?PosnicPro.sales.saleRegisterId():'';$(this).prop('disabled',true);PosnicPro.post({url:'versements/'+encodeURIComponent(id)+'/settle',data:JSON.stringify({method:method,register_id:registerId})},function(x){$('#versement-settle-confirm').prop('disabled',false);$('#versement-settle-modal').modal('hide');message(x.message||'Règlement enregistré.',x.type==='success'?'success':'danger');load();},function(){$('#versement-settle-confirm').prop('disabled',false);message('Échec du règlement.','danger');});});
-    function create() {
-        var payload={sale_id:String($('#versement-sale-id').val()||'').trim(),customer_name:String($('#versement-customer').val()||'').trim(),phone:String($('#versement-phone').val()||'').trim(),initial_amount:Number($('#versement-initial').val()),initial_method:String($('#versement-initial-method').val()||'cash'),branch_id:branch()};
-        if(!payload.sale_id||!payload.customer_name||!(payload.initial_amount>0)){message('Référence, nom du client et acompte positif obligatoires.','warning');return;}
-        $('#versement-create').prop('disabled',true);
-        PosnicPro.post({url:'versements',data:JSON.stringify(payload)},function(r){$('#versement-create').prop('disabled',false);message(r.message||'Versement enregistré.',r.type==='success'?'success':'danger');if(r.type==='success'){$('#versement-sale-id,#versement-customer,#versement-phone,#versement-initial').val('');load();}},function(){$('#versement-create').prop('disabled',false);message('Impossible d’enregistrer le versement.','danger');});
-    }
-    $(document).on('click','#versements-refresh',load).on('click','#versement-create',create).on('input','#versements-search',render);
+    $(document).on('click','#versements-refresh',load).on('input','#versements-search',render);
+
     return {load:load,printReceipt:printReceipt};
 }());

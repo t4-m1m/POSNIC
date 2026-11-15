@@ -1138,6 +1138,43 @@ class RegisterRepository {
         }
       }
 
+      if (document.register_id && document.branch_id && document.register_opendate) {
+        const periodStart = new Date(document.register_opendate);
+        const periodEnd = new Date();
+        const versementCollection = await this.model.getCollection('sale_versements');
+        const settledRows = await versementCollection.find({
+          branch_id: document.branch_id,
+          status: 'settled',
+          settled_at: { $gte: periodStart, $lte: periodEnd },
+          $or: [
+            { settlement_register_id: document.register_id },
+            { settlement_register_id: { $exists: false }, register_id: document.register_id },
+          ],
+        }).toArray();
+        cashInAmount += settledRows.reduce((sum, row) => {
+          const initialCash = String(row.initial_method || 'cash').toLowerCase() === 'cash' ? Number(row.initial_amount) || 0 : 0;
+          const finalCash = String(row.settlement && row.settlement.method || '').toLowerCase() === 'cash' ? Number(row.settlement && row.settlement.amount) || 0 : 0;
+          return sum + initialCash + finalCash;
+        }, 0);
+        const salesCollection = await this.model.getCollection('sales');
+        const refundRows = await salesCollection.aggregate([
+          { $match: { branch_id: document.branch_id, 'return_refund_transactions.cashregister_id': { $in: [document.register_id, null] } } },
+          { $unwind: '$return_refund_transactions' },
+          { $addFields: {
+            refundDate: { $convert: { input: { $ifNull: ['$return_refund_transactions.created_at', '$return_refund_transactions.return_date'] }, to: 'date', onError: null, onNull: null } },
+            refundAmount: { $convert: { input: '$return_refund_transactions.amount', to: 'double', onError: 0, onNull: 0 } },
+            refundMethod: { $toLower: { $ifNull: ['$return_refund_transactions.refund_method', 'cash'] } },
+          } },
+          { $match: { $expr: { $and: [
+            { $in: ['$return_refund_transactions.cashregister_id', [document.register_id, null]] },
+            { $gte: ['$refundDate', periodStart] }, { $lte: ['$refundDate', periodEnd] },
+            { $in: ['$refundMethod', ['cash', 'espèces', 'especes']] },
+          ] } } },
+          { $group: { _id: null, total: { $sum: '$refundAmount' } } },
+        ]).toArray();
+        cashOutAmount += refundRows.length ? Number(refundRows[0].total) || 0 : 0;
+      }
+
       const openingFloat = parseFloat(document.opening_float) || 0;
       if (paymentTally['Cash']) {
         paymentTally['Cash'] = openingFloat + paymentTally['Cash'] + cashInAmount - cashOutAmount;

@@ -1675,18 +1675,24 @@ body[data-theme="warmnight"]{color-scheme:dark}
     $host.find('.posnic-payment-split-lines').html(html);var $f=$host.find('.posnic-payment-split-footer');if(!$f.length)$f=$('<div class="posnic-payment-split-footer"></div>').appendTo($host);$f.html('<span>Total réparti</span><strong>'+s+' '+fmt(total)+'</strong>');
   }
   function allocatePartial(){
-    if(!$('#sales_new').is(':visible'))return;var raw=String($('#Partial_amount').val()||'').replace(/,/g,''),paid=Number(raw);if(!Number.isFinite(paid)||paid<0)return;
-    var $card=$('#payment_id .payment-method-card').filter(function(){var $c=$(this),m=String($c.find('.payment_mode').attr('id')||'').toLowerCase();return m!=='credit'&&($c.find('.btn-payment-method').hasClass('active')||$c.hasClass('payment-active'));}).first();
-    if(!$card.length)$card=$('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').attr('id')||'').toLowerCase()!=='credit';}).first();if(!$card.length)return;
-    $card.find('.payment-amount-input').first().val(paid.toFixed(2));
+    if(!$('#sales_new').is(':visible'))return;
     var total=Number(PosnicPro.sales&&PosnicPro.sales.extraDiscount&&PosnicPro.sales.extraDiscount.sale_new_tot)||0;
+    var raw=String($('#Partial_amount').val()||'').replace(/,/g,''),paid=Number(raw);
+    if(!Number.isFinite(paid)||paid<=0)paid=total;
+    paid=Math.min(Math.max(0,paid),Math.max(0,total));
+    if(!(paid>0))return;
+    var $card=$('#payment_id .payment-method-card').filter(function(){var $c=$(this),m=String($c.find('.payment_mode').attr('id')||'').toLowerCase();return m!=='credit'&&($c.find('.btn-payment-method').hasClass('active')||$c.hasClass('payment-active'));}).first();
+    if(!$card.length)$card=$('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').attr('id')||'').toLowerCase()!=='credit';}).first();
+    if(!$card.length)return;
+    $('#Partial_amount').val(paid.toFixed(2));
+    $card.find('.payment-amount-input').first().val(paid.toFixed(2));
     var due=Math.max(0,total-paid);
-    // Keep the customer partial-credit flag in sync immediately; the legacy
-    // delayed keyup validator must not be the only writer before checkout.
     $('#sales_new_customer_partial_balance').val(due>0.01?'true':'false');
     $('#unpaid_payment_toggle').prop('checked',paid>0.01).trigger('change');
-    var $credit=$('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').attr('id')||'').toLowerCase()==='credit';}).find('.payment-amount-input').first();if($credit.length)$credit.val(due.toFixed(2));
-    if(PosnicPro.sales&&typeof PosnicPro.sales.initPaymentValidation==='function')PosnicPro.sales.initPaymentValidation();renderSplit();
+    var $credit=$('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').attr('id')||'').toLowerCase()==='credit';}).find('.payment-amount-input').first();
+    if($credit.length)$credit.val(due.toFixed(2));
+    if(PosnicPro.sales&&typeof PosnicPro.sales.initPaymentValidation==='function')PosnicPro.sales.initPaymentValidation();
+    renderSplit();
   }
   function allocateCredit(){
     if(!$('#sales_new').is(':visible'))return;
