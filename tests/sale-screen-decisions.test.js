@@ -97,3 +97,17 @@ test('the settings save PATCHES - it does not repaint the world', () => {
     const gateAt = handler.indexOf('notificationNow !== was.notification');
     assert.ok(gateAt > -1 && fetchAt > gateAt, 'the low-stock fetch escaped its gate');
 });
+
+test('a completed sale immediately resets the next basket to the cached branch Walk-in', () => {
+    const success = sales.indexOf("if (response.type === 'success') {", sales.indexOf('PosnicPro.sales.addSale ='));
+    const start = sales.indexOf('PosnicPro.sales.setDefaults();', success);
+    const end = sales.indexOf('PosnicPro.stocklogs.viewLowStockDashboard();', start);
+    const reset = sales.slice(start, end);
+    assert.ok(start > -1 && end > start, 'sale success reset block was not found');
+    assert.match(reset, /sales_new_customer_id[^\n]+sales_new_customer_partial_balance/);
+    assert.match(reset, /PosnicPro\.sales\.ensureCustomer\(\)/,
+        'the next sale must be populated synchronously from the cached Walk-in record');
+    assert.match(reset, /PosnicPro\.defaultcustomerSet\(\{ forceDefault: true \}\)/,
+        'the cached Walk-in must be refreshed from the branch setting without overwriting a newly chosen customer');
+    assert.ok(reset.indexOf('PosnicPro.sales.ensureCustomer()') < reset.indexOf('PosnicPro.defaultcustomerSet({ forceDefault: true })'));
+});
