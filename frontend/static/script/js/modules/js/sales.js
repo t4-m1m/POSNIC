@@ -4925,6 +4925,12 @@ PosnicPro.sales.addSale = {
                         if (typeof PosnicPro.sales.updateCustomerChip === 'function') {
                             PosnicPro.sales.updateCustomerChip();
                         }
+                        // .val() does not emit input/change events. Refresh the
+                        // visible customer header explicitly so the next sale
+                        // cannot keep displaying the previous buyer's name/debt.
+                        if (typeof PosnicPro.sales.syncCustomerHeader === 'function') {
+                            PosnicPro.sales.syncCustomerHeader();
+                        }
                     }
                     PosnicPro.sales.customerViewDisplay();
                     PosnicPro.stocklogs.viewLowStockDashboard();
