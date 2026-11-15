@@ -868,7 +868,7 @@ class RegisterRepository {
    * cash slice of multi-payments) + Σ cash-in − Σ cash-out. Mirrors the tally
    * cashRegisterOpenManualModel shows live.
    */
-  _expectedCashAtClose(document) {
+  _expectedCashAtClose(document, settledVersementCash = 0) {
     let cashSales = 0;
     for (const regSale of document.register_sales || []) {
       let multiPayment = regSale.multi_payment;
@@ -898,7 +898,7 @@ class RegisterRepository {
       cashOut += parseFloat(entry.cashout_amount) || 0;
     }
     const openingFloat = parseFloat(document.opening_float) || 0;
-    return Math.round((openingFloat + cashSales + cashIn - cashOut) * 100) / 100;
+    return Math.round((openingFloat + cashSales + cashIn + (parseFloat(settledVersementCash) || 0) - cashOut) * 100) / 100;
   }
 
   async registercloseUpdate(data) {
@@ -944,7 +944,22 @@ class RegisterRepository {
               message: 'Finish the pending payment correction before closing this register.',
             };
           correctionRevision = session.payment_correction_revision;
-          const expected = this._expectedCashAtClose(session);
+          let settledVersementCash = 0;
+          if (session.register_id && session.branch_id && session.register_opendate) {
+            const versements = await this.model.getCollection('sale_versements');
+            const settledRows = await versements.find({
+              branch_id: session.branch_id,
+              register_id: session.register_id,
+              status: 'settled',
+              settled_at: { $gte: new Date(session.register_opendate), $lte: mongoDate },
+            }).toArray();
+            settledVersementCash = settledRows.reduce((sum, row) => {
+              const initialCash = String(row.initial_method || 'cash').toLowerCase() === 'cash' ? Number(row.initial_amount) || 0 : 0;
+              const finalCash = String(row.settlement && row.settlement.method || '').toLowerCase() === 'cash' ? Number(row.settlement && row.settlement.amount) || 0 : 0;
+              return sum + initialCash + finalCash;
+            }, 0);
+          }
+          const expected = this._expectedCashAtClose(session, settledVersementCash);
           const countedEntry = (session.countedAmount || []).find(
             (c) => String(c.paymenttype || '').toLowerCase() === 'cash'
           );
