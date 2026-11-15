@@ -54,26 +54,35 @@ exports.register = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
-    // 🔍 DEBUG - Check if login method is called
-    console.log('🔥 LOGIN METHOD CALLED!');
-    console.log('🔥 Email:', req.body?.email);
-    console.log('🔥 Request body:', redact(req.body));
+    // Email remains the normal account identifier. A Super Admin may instead
+    // sign in with the username stored on that account; username-only access
+    // is deliberately not extended to staff accounts.
+    const body = req.body || {};
+    const username = typeof body.username === 'string' ? body.username.trim() : '';
+    const email = typeof body.email === 'string' ? body.email.trim() : '';
+    const password = body.password;
 
-    const { email, password } = req.body;
-
-    // 1) Check if email and password exist
-    if (!email || !password) {
-      return next(new AppError('Please provide email and password!', 400));
+    if ((!username && !email) || !password) {
+      return next(new AppError('Please provide a username (or email) and password!', 400));
     }
 
-    // 2) Check if user exists && password is correct
-    const user = await User.findOne({ email }).select('+password');
+    const usingUsername = Boolean(username);
+    const identifier = usingUsername ? username : email;
+    const user = await User.findOne(usingUsername ? { username: identifier } : { email: identifier })
+      .select('+password');
 
-    if (!user || !(await user.correctPassword(password, user.password))) {
-      return next(new AppError('Incorrect email or password', 401));
+    const isSuperAdmin = user && (
+      String(user.usertype || '').toLowerCase() === 'super_admin' ||
+      String(user.role || '').toLowerCase() === 'super_admin'
+    );
+    if (
+      !user ||
+      (usingUsername && !isSuperAdmin) ||
+      !(await user.correctPassword(password, user.password))
+    ) {
+      return next(new AppError('Incorrect username/email or password', 401));
     }
 
-    // 3) If everything ok, send token to client
     createAndSendToken(user, 200, res, req);
   } catch (err) {
     next(err);

@@ -222,6 +222,33 @@ describe('login', () => {
     expect(createAndSendToken).toHaveBeenCalledWith(user, 200, res, req);
   });
 
+  test('allows a Super Admin to sign in with username and password without an email', async () => {
+    const user = makeUser({ username: 'posnic-owner', usertype: 'super_admin', role: 'super_admin', email: undefined });
+    User.findOne.mockReturnValue({ select: jest.fn().mockResolvedValue(user) });
+    const res = mockRes();
+    const req = mockReq({ body: { username: 'posnic-owner', password: 'correctPass' } });
+
+    await authController.login(req, res, mockNext());
+
+    expect(User.findOne).toHaveBeenCalledWith({ username: 'posnic-owner' });
+    expect(createAndSendToken).toHaveBeenCalledWith(user, 200, res, req);
+  });
+
+  test('does not allow ordinary users to use username-only auth on the Super Admin login path', async () => {
+    const user = makeUser({ username: 'cashier', usertype: 'staff', role: 'staff' });
+    User.findOne.mockReturnValue({ select: jest.fn().mockResolvedValue(user) });
+    const next = mockNext();
+
+    await authController.login(
+      mockReq({ body: { username: 'cashier', password: 'correctPass' } }),
+      mockRes(),
+      next
+    );
+
+    expect(next.mock.calls[0][0].statusCode).toBe(401);
+    expect(createAndSendToken).not.toHaveBeenCalled();
+  });
+
   test('calls next(err) when User.findOne throws', async () => {
     const dbErr = new Error('DB failure');
     User.findOne.mockReturnValue({ select: jest.fn().mockRejectedValue(dbErr) });
