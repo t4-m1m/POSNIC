@@ -3258,22 +3258,24 @@ PosnicPro.sales = {
                 PosnicPro.sales.initPaymentValidation();
                 return;
             }
-            var otherTotal = 0;
-            $('.payment-amount-input').not($input).each(function () {
-                otherTotal += Math.max(0, Number($(this).val()) || 0);
-            });
+            // Selecting a tender is a transfer of the complete bill amount,
+            // not an additional split alongside the previous Cash allocation.
+            // Clear every other method first so 5,200 DA moves from Cash to
+            // TPE/BaridiMob instead of being counted twice.
+            $('.payment-amount-input').val('0.00').prop('disabled', false);
+            $('.payment_mode').prop('checked', false);
+            $input.val(Math.max(0, billTotal).toFixed(2));
+            $button.closest('.payment-method-card').find('.payment_mode').prop('checked', true);
             $('.btn-payment-method').removeClass('active').css({
                 'background': 'transparent', 'color': '#495057', 'border': '2px solid #dee2e6'
             });
             $('.payment-method-card').removeClass('payment-active').css('border', '2px solid #e9ecef');
-            $('.payment-amount-input').prop('disabled', false);
             $button.addClass('active').css({
                 'background': '#5f63f2', 'color': '#fff', 'border': '2px solid #5f63f2'
             });
             $button.closest('.payment-method-card').addClass('payment-active').css('border', '2px solid #5f63f2');
-            if (String($input.val() || '').trim() === '' || (Number($input.val()) || 0) <= 0) {
-                $input.val(Math.max(0, billTotal - otherTotal).toFixed(2));
-            }
+            // The shared input handler updates Partial_amount, the due amount,
+            // payment status and validation from this one full-tender value.
             $input.trigger('input').focus().select();
             PosnicPro.sales.initPaymentValidation();
         });
