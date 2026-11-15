@@ -376,3 +376,137 @@ body[data-theme="warmnight"] {
   color: var(--theme-text-primary) !important;
   border-color: var(--theme-border-color) !important;
 }
+
+
+/* Shared dark-palette coverage for lazy-loaded screens, tables, pickers and
+   overlays. Keep semantic status colours and the physical receipt/label paper
+   previews intact; only neutral application surfaces inherit theme tokens. */
+[data-theme="dark"] .card,
+[data-theme="terminal"] .card,
+[data-theme="dosblue"] .card,
+[data-theme="softdark"] .card,
+[data-theme="warmnight"] .card,
+[data-theme="dark"] .dropdown-menu,
+[data-theme="terminal"] .dropdown-menu,
+[data-theme="dosblue"] .dropdown-menu,
+[data-theme="softdark"] .dropdown-menu,
+[data-theme="warmnight"] .dropdown-menu,
+[data-theme="dark"] .popover,
+[data-theme="terminal"] .popover,
+[data-theme="dosblue"] .popover,
+[data-theme="softdark"] .popover,
+[data-theme="warmnight"] .popover,
+[data-theme="dark"] .daterangepicker,
+[data-theme="terminal"] .daterangepicker,
+[data-theme="dosblue"] .daterangepicker,
+[data-theme="softdark"] .daterangepicker,
+[data-theme="warmnight"] .daterangepicker,
+[data-theme="dark"] .select2-dropdown,
+[data-theme="terminal"] .select2-dropdown,
+[data-theme="dosblue"] .select2-dropdown,
+[data-theme="softdark"] .select2-dropdown,
+[data-theme="warmnight"] .select2-dropdown,
+[data-theme="dark"] .swal2-popup,
+[data-theme="terminal"] .swal2-popup,
+[data-theme="dosblue"] .swal2-popup,
+[data-theme="softdark"] .swal2-popup,
+[data-theme="warmnight"] .swal2-popup,
+[data-theme="dark"] .toast,
+[data-theme="terminal"] .toast,
+[data-theme="dosblue"] .toast,
+[data-theme="softdark"] .toast,
+[data-theme="warmnight"] .toast,
+[data-theme="dark"] .accordion-item,
+[data-theme="terminal"] .accordion-item,
+[data-theme="dosblue"] .accordion-item,
+[data-theme="softdark"] .accordion-item,
+[data-theme="warmnight"] .accordion-item {
+  background-color: var(--theme-card-bg) !important;
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] .card-header,
+[data-theme="terminal"] .card-header,
+[data-theme="dosblue"] .card-header,
+[data-theme="softdark"] .card-header,
+[data-theme="warmnight"] .card-header,
+[data-theme="dark"] .card-footer,
+[data-theme="terminal"] .card-footer,
+[data-theme="dosblue"] .card-footer,
+[data-theme="softdark"] .card-footer,
+[data-theme="warmnight"] .card-footer,
+[data-theme="dark"] .dropdown-item,
+[data-theme="terminal"] .dropdown-item,
+[data-theme="dosblue"] .dropdown-item,
+[data-theme="softdark"] .dropdown-item,
+[data-theme="warmnight"] .dropdown-item,
+[data-theme="dark"] .daterangepicker td,
+[data-theme="terminal"] .daterangepicker td,
+[data-theme="dosblue"] .daterangepicker td,
+[data-theme="softdark"] .daterangepicker td,
+[data-theme="warmnight"] .daterangepicker td,
+[data-theme="dark"] .daterangepicker th,
+[data-theme="terminal"] .daterangepicker th,
+[data-theme="dosblue"] .daterangepicker th,
+[data-theme="softdark"] .daterangepicker th,
+[data-theme="warmnight"] .daterangepicker th {
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] .form-control,
+[data-theme="terminal"] .form-control,
+[data-theme="dosblue"] .form-control,
+[data-theme="softdark"] .form-control,
+[data-theme="warmnight"] .form-control,
+[data-theme="dark"] .custom-select,
+[data-theme="terminal"] .custom-select,
+[data-theme="dosblue"] .custom-select,
+[data-theme="softdark"] .custom-select,
+[data-theme="warmnight"] .custom-select,
+[data-theme="dark"] .select2-selection,
+[data-theme="terminal"] .select2-selection,
+[data-theme="dosblue"] .select2-selection,
+[data-theme="softdark"] .select2-selection,
+[data-theme="warmnight"] .select2-selection {
+  background-color: var(--theme-input-bg, var(--theme-card-bg)) !important;
+  color: var(--theme-text-primary) !important;
+  border-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] .table,
+[data-theme="terminal"] .table,
+[data-theme="dosblue"] .table,
+[data-theme="softdark"] .table,
+[data-theme="warmnight"] .table,
+[data-theme="dark"] .table td,
+[data-theme="terminal"] .table td,
+[data-theme="dosblue"] .table td,
+[data-theme="softdark"] .table td,
+[data-theme="warmnight"] .table td,
+[data-theme="dark"] .table th,
+[data-theme="terminal"] .table th,
+[data-theme="dosblue"] .table th,
+[data-theme="softdark"] .table th,
+[data-theme="warmnight"] .table th {
+  color: var(--theme-text-primary);
+  border-color: var(--theme-border-color) !important;
+}
+[data-theme="dark"] .table thead th,
+[data-theme="terminal"] .table thead th,
+[data-theme="dosblue"] .table thead th,
+[data-theme="softdark"] .table thead th,
+[data-theme="warmnight"] .table thead th {
+  background-color: var(--theme-table-header-bg, var(--theme-card-bg)) !important;
+}
+[data-theme="dark"] .dropdown-item:hover,
+[data-theme="terminal"] .dropdown-item:hover,
+[data-theme="dosblue"] .dropdown-item:hover,
+[data-theme="softdark"] .dropdown-item:hover,
+[data-theme="warmnight"] .dropdown-item:hover,
+[data-theme="dark"] .dropdown-item:focus,
+[data-theme="terminal"] .dropdown-item:focus,
+[data-theme="dosblue"] .dropdown-item:focus,
+[data-theme="softdark"] .dropdown-item:focus,
+[data-theme="warmnight"] .dropdown-item:focus {
+  background-color: var(--theme-table-row-hover) !important;
+  color: var(--theme-text-primary) !important;
+}
