@@ -573,3 +573,39 @@ html[data-theme="softdark"] .editable-container .arrow:after,
 html[data-theme="warmnight"] .editable-container .arrow:after {
   border-bottom-color: var(--theme-card-bg) !important;
 }
+
+
+/* F3 selling-price picker: inherit the active POSNIC palette instead of the
+   browser's default white dialog. Keep the surface and text contrast balanced. */
+:root[data-theme="dark"] #posnic-price-tier-dialog,
+:root[data-theme="terminal"] #posnic-price-tier-dialog,
+:root[data-theme="dosblue"] #posnic-price-tier-dialog,
+:root[data-theme="softdark"] #posnic-price-tier-dialog,
+:root[data-theme="warmnight"] #posnic-price-tier-dialog,
+body[data-theme="dark"] #posnic-price-tier-dialog,
+body[data-theme="terminal"] #posnic-price-tier-dialog,
+body[data-theme="dosblue"] #posnic-price-tier-dialog,
+body[data-theme="softdark"] #posnic-price-tier-dialog,
+body[data-theme="warmnight"] #posnic-price-tier-dialog {
+  color-scheme: dark;
+  background: var(--theme-card-bg, #252a33) !important;
+  color: var(--theme-text-primary, #d7dce4) !important;
+  border: 1px solid var(--theme-border-color, #454c58) !important;
+  border-radius: 14px;
+  box-shadow: 0 18px 55px rgba(0,0,0,.38);
+}
+#posnic-price-tier-dialog::backdrop { background: rgba(8,12,20,.58); backdrop-filter: blur(2px); }
+#posnic-price-tier-dialog form { color: inherit; }
+#posnic-price-tier-dialog h3 { color: var(--theme-text-primary, #d7dce4); }
+#posnic-price-tier-dialog .posnic-price-tier-item { color: var(--theme-text-secondary, #aeb7c4); }
+#posnic-price-tier-dialog .posnic-price-tier-option {
+  background: var(--theme-soft-bg, #303744) !important;
+  color: var(--theme-text-primary, #d7dce4) !important;
+  border: 1px solid var(--theme-border-color, #454c58) !important;
+  border-radius: 10px;
+}
+#posnic-price-tier-dialog .posnic-price-tier-option strong,
+#posnic-price-tier-dialog .posnic-price-tier-option span { color: inherit !important; }
+#posnic-price-tier-dialog .posnic-price-tier-option small { color: var(--theme-text-secondary, #aeb7c4) !important; }
+#posnic-price-tier-dialog .posnic-price-tier-option.is-current { border-color: var(--theme-primary-color, #548de8) !important; background: var(--theme-table-header-bg, #364252) !important; }
+#posnic-price-tier-dialog button[value="cancel"] { background: var(--theme-input-bg, #303744) !important; color: var(--theme-text-primary, #d7dce4) !important; border-color: var(--theme-border-color, #454c58) !important; }
