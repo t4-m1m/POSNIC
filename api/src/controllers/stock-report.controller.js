@@ -66,8 +66,34 @@ exports.read = async (req, res) => {
     const neverSold = rows.filter((r) => r.never_sold).sort((a,b) => b.stock_value-a.stock_value);
     const dormant = rows.filter((r) => !r.never_sold && new Date(r.last_sale) < dormantBefore).sort((a,b) => b.days_since_sale-a.days_since_sale);
     const critical = rows.filter((r) => r.stock <= 5).sort((a,b) => a.stock-b.stock);
-    const totals = { products: rows.length, stock_units: money(rows.reduce((s,r)=>s+r.stock,0)), stock_value: money(rows.reduce((s,r)=>s+r.stock_value,0)), critical: critical.length, dormant: dormant.length, never_sold: neverSold.length, sold_quantity: money(rows.reduce((s,r)=>s+r.sold_quantity,0)) };
-    return res.json({ type: 'success', data: { totals, dormant_days: dormantDays, rows, critical, dormant, never_sold: neverSold } });
+    // Build a bounded 30-day sales trend from the same completed-sale snapshot.
+    // Keep sale date (not payment date) as the source for inventory velocity.
+    const trendMap = new Map();
+    const cutoff = new Date(now.getTime() - 29 * 86400000);
+    for (let i = 0; i < 30; i++) {
+      const day = new Date(cutoff); day.setHours(0,0,0,0); day.setDate(day.getDate()+i);
+      trendMap.set(day.toISOString().slice(0,10), { date: day.toISOString().slice(0,10), quantity: 0, revenue: 0 });
+    }
+    for (const sale of sales) {
+      if (!isCompleted(sale)) continue;
+      const date = saleDate(sale);
+      if (!date || date < cutoff) continue;
+      const key = date.toISOString().slice(0,10), point = trendMap.get(key);
+      if (!point) continue;
+      for (const line of itemLines(sale)) {
+        const q = qtyOf(line);
+        if (q <= 0) continue;
+        point.quantity = money(point.quantity + q);
+        point.revenue = money(point.revenue + q * Number(line.price || line.selling_price || line.unit_price || 0));
+      }
+    }
+    const trend = Array.from(trendMap.values());
+    const bestByQuantity = rows.slice().sort((a,b)=>b.sold_quantity-a.sold_quantity).filter(r=>r.sold_quantity>0).slice(0,10);
+    const bestByRevenue = rows.slice().sort((a,b)=>b.sold_revenue-a.sold_revenue).filter(r=>r.sold_revenue>0).slice(0,10);
+    const categories = Array.from(new Set(rows.map(r=>r.category).filter(Boolean))).sort();
+    const brands = Array.from(new Set(rows.map(r=>r.brand).filter(Boolean))).sort();
+    const totals = { products: rows.length, stock_units: money(rows.reduce((s,r)=>s+r.stock,0)), stock_value: money(rows.reduce((s,r)=>s+r.stock_value,0)), critical: critical.length, dormant: dormant.length, never_sold: neverSold.length, sold_quantity: money(rows.reduce((s,r)=>s+r.sold_quantity,0)), sold_revenue: money(rows.reduce((s,r)=>s+r.sold_revenue,0)) };
+    return res.json({ type: 'success', data: { totals, dormant_days: dormantDays, rows, critical, dormant, never_sold: neverSold, trend, best_by_quantity: bestByQuantity, best_by_revenue: bestByRevenue, categories, brands } });
   } catch (error) {
     console.error('[stock-report] read failed', error);
     return res.status(500).json({ type: 'error', message: 'Unable to load stock report.' });
