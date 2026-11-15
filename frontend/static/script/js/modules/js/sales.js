@@ -14899,6 +14899,19 @@ $(document).ready(function () {
             if (PosnicPro.sales.clear && PosnicPro.sales.clear.cartItems) {
                 PosnicPro.sales.clear.cartItems(false);
             }
+            // Each simultaneous basket owns its own customer context. The legacy
+            // cart reset intentionally keeps customer details in some workflows,
+            // so explicitly start a new tab as walk-in and let snapshot/restore
+            // preserve the previous tab's customer when switching back.
+            $('#sales_new_customer_id,#sales_new_customer_name,#sales_new_customer_address,#sales_new_customer_phone,#sales_new_customer_email,#sales_new_customer_state,#sales_new_customer_country,#sales_new_customer_gst_type,#sales_new_customer_gst_number,#sales_new_customer_partial_balance').val('');
+            $('#customer_current_balance').val('0');
+            $('#sales-customer-credit-inline-amount').text('0,00');
+            $('#sales-customer-credit-inline').prop('hidden', true);
+            PosnicPro.sales.defaultCustomer = true;
+            if (PosnicPro.sales.ensureCustomer) PosnicPro.sales.ensureCustomer();
+            if (PosnicPro.defaultcustomerSet) PosnicPro.defaultcustomerSet({ forceDefault: true });
+            if (PosnicPro.sales.updateCustomerChip) PosnicPro.sales.updateCustomerChip();
+            if (PosnicPro.sales.syncCustomerHeader) PosnicPro.sales.syncCustomerHeader();
             session.snapshot = this.snapshot();
             this.activeId = id;
             this.render();
