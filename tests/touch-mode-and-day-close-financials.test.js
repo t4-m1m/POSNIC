@@ -20,7 +20,7 @@ test('closing Ticket Studio uses theme surfaces while keeping the receipt paper 
   const css = read('frontend/static/style/css/custom.css');
   assert.match(daily, /dc-studio-sidebar\{background:var\(--theme-card-bg/);
   assert.match(css, /#day-close-ticket-tools \.dc-studio-sidebar\s*\{[\s\S]*?background: var\(--theme-card-bg/);
-  assert.match(css, /#day-close-ticket-preview\{[^}]*background:#fff/);
+  assert.match(daily, /#day-close-ticket-preview\{[^}]*background:#fff/);
 });
 
 test('Ticket Studio includes a salary-payment block and subtracts actual RH payments from net', () => {
