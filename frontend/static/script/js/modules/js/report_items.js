@@ -405,86 +405,64 @@ $(document).ready(function () {
 
 
 
-/* Stock health dashboard: a read-only view over the existing items and completed sales records. */
+/* Stock health dashboard: theme-aware analytics over completed sales and live inventory. */
 PosnicPro.stockHealthReport = (function () {
-    var snapshot = null;
-    function currency(value) { return (PosnicPro.local.get('currencySign') || '') + ' ' + (Number(value || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    var snapshot = null, filtered = null;
+    function currency(value) { return (PosnicPro.local.get('currencySign') || '') + ' ' + (Number(value || 0)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
     function safeCell(value) { return $('<td>').text(value == null ? '' : String(value)); }
+    function filterRows(rows) {
+        var q=String($('#stock-health-search').val()||'').trim().toLowerCase(), category=$('#stock-health-category').val(), brand=$('#stock-health-brand').val(), status=$('#stock-health-status').val();
+        return (rows||[]).filter(function(r){
+            if(q && (String(r.name||'')+' '+String(r.sku||'')).toLowerCase().indexOf(q)<0)return false;
+            if(category && r.category!==category)return false; if(brand && r.brand!==brand)return false;
+            if(status==='critical' && Number(r.stock)>5)return false;
+            if(status==='dormant' && (r.never_sold || Number(r.days_since_sale)<Number(snapshot.dormant_days||90)))return false;
+            if(status==='never' && !r.never_sold)return false;
+            if(status==='active' && (r.never_sold || Number(r.days_since_sale)>=Number(snapshot.dormant_days||90)))return false;
+            return true;
+        });
+    }
     function drawRows(selector, rows, mode) {
-        var body = $(selector).empty();
-        if (!rows || !rows.length) { body.append($('<tr>').append($('<td colspan="7" class="text-center text-muted">').text('Aucun produit dans cette liste.'))); return; }
-        rows.forEach(function (r) {
-            var tr = $('<tr>');
-            tr.append(safeCell(r.name), safeCell(r.sku));
-            if (mode === 'all') tr.append(safeCell(r.category), safeCell(r.brand));
-            tr.append(safeCell(r.stock));
-            if (mode === 'all') tr.append(safeCell(r.sold_quantity));
-            if (mode === 'dormant') tr.append(safeCell(r.last_sale ? moment(r.last_sale).format('DD/MM/YYYY') : '—'), safeCell(r.days_since_sale));
-            tr.append(safeCell(currency(r.stock_value)));
-            body.append(tr);
-        });
+        var body=$(selector).empty();
+        if(!rows||!rows.length){body.append($('<tr>').append($('<td colspan="8" class="text-center py-4 sh-muted">').text('Aucun produit ne correspond à ces critères.')));return;}
+        rows.forEach(function(r){var tr=$('<tr>');tr.append(safeCell(r.name),safeCell(r.sku));if(mode==='all')tr.append(safeCell(r.category),safeCell(r.brand));tr.append(safeCell(r.stock));if(mode==='all')tr.append(safeCell(r.sold_quantity));if(mode==='dormant')tr.append(safeCell(r.last_sale?moment(r.last_sale).format('DD/MM/YYYY'):'—'),safeCell(r.days_since_sale));tr.append(safeCell(currency(r.stock_value)));body.append(tr);});
     }
+    function renderTrend(points) {
+        var holder=$('#stock-health-trend-chart').empty(), data=points||[];
+        if(!data.length){holder.text('Aucune vente enregistrée sur cette période.').addClass('sh-muted');return;}
+        var max=Math.max(1,...data.map(p=>Number(p.quantity)||0)), width=720, height=160, pad=12;
+        var coords=data.map((p,i)=>({x:pad+i*(width-2*pad)/Math.max(1,data.length-1),y:height-pad-(Number(p.quantity)||0)/max*(height-2*pad)}));
+        var line=coords.map((p,i)=>(i?'L':'M')+p.x.toFixed(1)+' '+p.y.toFixed(1)).join(' ');
+        var area=line+' L '+coords[coords.length-1].x+' '+(height-pad)+' L '+coords[0].x+' '+(height-pad)+' Z';
+        var svg=$('<svg viewBox="0 0 720 180" role="img" aria-label="Sales quantity trend"></svg>');
+        [0,.5,1].forEach(function(v){var y=pad+v*(height-2*pad);svg.append($('<line x1="12" x2="708">').attr('y1',y).attr('y2',y).attr('stroke','var(--sh-border)').attr('stroke-dasharray','4 5'));});
+        svg.append($('<path>').attr('d',area).attr('fill','var(--posnic-accent-soft,rgba(37,99,235,.12))'));
+        svg.append($('<path>').attr('d',line).attr('fill','none').attr('stroke','var(--sh-accent)').attr('stroke-width','3').attr('stroke-linecap','round').attr('stroke-linejoin','round'));
+        coords.forEach(function(p,i){if(i%5===0||i===coords.length-1)svg.append($('<circle>').attr('cx',p.x).attr('cy',p.y).attr('r',3.5).attr('fill','var(--sh-accent)'));});
+        holder.append(svg);
+        var labels=$('<div class="d-flex justify-content-between sh-muted small">').append($('<span>').text(data[0].date),$('<span>').text(data[Math.floor(data.length/2)].date),$('<span>').text(data[data.length-1].date));holder.append(labels);
+        var total=data.reduce((s,p)=>s+(Number(p.quantity)||0),0);holder.append($('<div class="mt-2 small sh-muted">').text('Total vendu sur 30 jours : '+total.toLocaleString()));
+    }
+    function renderTop(rows) {
+        var holder=$('#stock-health-top-products').empty(), max=Math.max(1,...(rows||[]).map(r=>Number(r.sold_quantity)||0));
+        if(!rows||!rows.length){holder.text('Pas encore de ventes à classer.').addClass('sh-muted');return;}
+        rows.slice(0,7).forEach(function(r,i){var line=$('<div class="mb-3">'), head=$('<div class="d-flex justify-content-between small mb-1">').append($('<strong>').text((i+1)+'. '+r.name),$('<span class="sh-muted">').text(Number(r.sold_quantity).toLocaleString()));var bar=$('<div style="height:6px;border-radius:8px;background:var(--sh-border);overflow:hidden">').append($('<div style="height:100%;border-radius:8px;background:var(--sh-accent)">').css('width',(Number(r.sold_quantity)/max*100)+'%'));line.append(head,bar);holder.append(line);});
+    }
+    function fillSelect(selector, values, label) { var el=$(selector), prior=el.val();el.empty().append($('<option>').val('').text(label));(values||[]).forEach(v=>el.append($('<option>').val(v).text(v)));if(prior)el.val(prior); }
     function render(data) {
-        snapshot = data;
-        var t = data.totals || {}, kpis = [
-            ['Valeur du stock', currency(t.stock_value)],
-            ['Produits en stock', t.products || 0],
-            ['Unités disponibles', t.stock_units || 0],
-            ['Stock critique', t.critical || 0],
-            ['Produits dormants', t.dormant || 0],
-            ['Jamais vendus', t.never_sold || 0]
-        ];
-        var holder = $('#stock-health-kpis').empty();
-        kpis.forEach(function (k) {
-            holder.append($('<div class="col-6 col-md-4 col-xl-2 mb-3">').append(
-                $('<div class="card h-100">').append($('<div class="card-body">').append(
-                    $('<div class="text-muted small">').text(k[0]),
-                    $('<div class="h4 mb-0">').text(k[1])
-                ))
-            ));
-        });
-        drawRows('#stock-health-critical-rows', data.critical, 'critical');
-        drawRows('#stock-health-dormant-rows', data.dormant, 'dormant');
-        drawRows('#stock-health-never-rows', data.never_sold, 'never');
-        drawRows('#stock-health-all-rows', data.rows, 'all');
-        $('#stock-health-dormant-days').val(data.dormant_days || 90);
-        $('#stock-health-error').hide().text('');
+        snapshot=data; var t=data.totals||{}, kpis=[['Valeur du stock',currency(t.stock_value),'Capital immobilisé'],['Produits disponibles',t.products||0,'Références actives'],['Unités en stock',Number(t.stock_units||0).toLocaleString(),'Quantité physique'],['Stock critique',t.critical||0,'À réapprovisionner'],['Produits dormants',t.dormant||0,'Sans rotation récente'],['Jamais vendus',t.never_sold||0,'À examiner en priorité']];
+        var holder=$('#stock-health-kpis').empty();kpis.forEach(function(k,i){holder.append($('<div class="col-6 col-md-4 col-xl-2 mb-3">').append($('<div class="sh-kpi">').append($('<small>').text(k[2]),$('<strong>').text(k[1]),$('<div class="sh-muted small mt-1">').text(k[0]))));});
+        fillSelect('#stock-health-category',data.categories,'Toutes les catégories');fillSelect('#stock-health-brand',data.brands,'Toutes les marques');
+        renderTrend(data.trend);renderTop(data.best_by_quantity);
+        filtered=filterRows(data.rows);drawRows('#stock-health-critical-rows',filterRows(data.critical),'critical');drawRows('#stock-health-dormant-rows',filterRows(data.dormant),'dormant');drawRows('#stock-health-never-rows',filterRows(data.never_sold),'never');drawRows('#stock-health-all-rows',filtered,'all');
+        $('#stock-health-dormant-days').val(data.dormant_days||90);$('#stock-health-error').hide().text('');
     }
-    function load() {
-        var branch = $('.item_branch_value').val();
-        if (Array.isArray(branch)) branch = branch[0];
-        if (!branch) branch = PosnicPro.local.get('branch_id') || PosnicPro.local.get('branch');
-        if (!branch) { $('#stock-health-error').text('Sélectionnez une agence pour consulter le stock.').show(); return; }
-        $('#stock-health-refresh').prop('disabled', true);
-        PosnicPro.get({ url: 'stock-report', data: { branch: branch } }, function (response) {
-            $('#stock-health-refresh').prop('disabled', false);
-            if (response && response.type === 'success') render(response.data || {});
-            else $('#stock-health-error').text(response && response.message || 'Impossible de charger le rapport.').show();
-        }, function () {
-            $('#stock-health-refresh').prop('disabled', false);
-            $('#stock-health-error').text('Erreur réseau lors du chargement du rapport.').show();
-        });
-    }
-    function saveThreshold() {
-        var branch = $('.item_branch_value').val();
-        if (Array.isArray(branch)) branch = branch[0];
-        if (!branch) branch = PosnicPro.local.get('branch_id') || PosnicPro.local.get('branch');
-        var days = Math.max(1, Math.min(3650, parseInt($('#stock-health-dormant-days').val(), 10) || 90));
-        PosnicPro.post({ url: 'stock-report/settings?branch=' + encodeURIComponent(branch || ''), data: { dormant_days: days, branch: branch } }, function () { load(); }, function () { load(); });
-    }
-    function exportCsv() {
-        if (!snapshot || !Array.isArray(snapshot.rows)) return;
-        var rows = [['Produit','Référence','Catégorie','Marque','Stock','Qté vendue','Dernière vente','Jours sans vente','Coût unitaire','Valeur stock']];
-        snapshot.rows.forEach(function (r) { rows.push([r.name,r.sku,r.category,r.brand,r.stock,r.sold_quantity,r.last_sale || 'Never sold',r.days_since_sale == null ? '' : r.days_since_sale,r.unit_cost,r.stock_value]); });
-        var csv = rows.map(function (row) { return row.map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(';'); }).join('\r\n');
-        var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-        var url = URL.createObjectURL(blob), a = document.createElement('a');
-        a.href = url; a.download = 'etat-de-stock.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-    }
-    $(document).on('click', '#stock-health-refresh', load);
-    $(document).on('change', '#stock-health-dormant-days', saveThreshold);
-    $(document).on('click', '#stock-health-export', exportCsv);
-    return { load: load, render: render };
+    function load(){var branch=$('.item_branch_value').val();if(Array.isArray(branch))branch=branch[0];if(!branch)branch=PosnicPro.local.get('branch_id')||PosnicPro.local.get('branch');if(!branch){$('#stock-health-error').text('Sélectionnez une agence pour consulter le stock.').show();return;}$('#stock-health-refresh').prop('disabled',true);PosnicPro.get({url:'stock-report',data:{branch:branch}},function(r){$('#stock-health-refresh').prop('disabled',false);if(r&&r.type==='success')render(r.data||{});else $('#stock-health-error').text(r&&r.message||'Impossible de charger le rapport.').show();},function(){$('#stock-health-refresh').prop('disabled',false);$('#stock-health-error').text('Erreur réseau lors du chargement du rapport.').show();});}
+    function saveThreshold(){var branch=$('.item_branch_value').val();if(Array.isArray(branch))branch=branch[0];if(!branch)branch=PosnicPro.local.get('branch_id')||PosnicPro.local.get('branch');var days=Math.max(1,Math.min(3650,parseInt($('#stock-health-dormant-days').val(),10)||90));PosnicPro.post({url:'stock-report/settings?branch='+encodeURIComponent(branch||''),data:{dormant_days:days,branch:branch}},function(){load();},function(){load();});}
+    function exportCsv(){if(!snapshot||!Array.isArray(snapshot.rows))return;var rows=[['Produit','Référence','Catégorie','Marque','Stock','Qté vendue','Dernière vente','Jours sans vente','Coût unitaire','Valeur stock']];(filtered||snapshot.rows).forEach(r=>rows.push([r.name,r.sku,r.category,r.brand,r.stock,r.sold_quantity,r.last_sale||'Jamais vendu',r.days_since_sale==null?'':r.days_since_sale,r.unit_cost,r.stock_value]));var csv=rows.map(row=>row.map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(';')).join('\r\n');var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='etat-de-stock.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}
+    function applyFilters(){if(!snapshot)return;filtered=filterRows(snapshot.rows);drawRows('#stock-health-critical-rows',filterRows(snapshot.critical),'critical');drawRows('#stock-health-dormant-rows',filterRows(snapshot.dormant),'dormant');drawRows('#stock-health-never-rows',filterRows(snapshot.never_sold),'never');drawRows('#stock-health-all-rows',filtered,'all');}
+    $(document).on('click','#stock-health-refresh',load).on('change','#stock-health-dormant-days',saveThreshold).on('click','#stock-health-export',exportCsv).on('input change','#stock-health-search,#stock-health-category,#stock-health-brand,#stock-health-status',applyFilters);
+    return {load:load,render:render};
 }());
 
 
