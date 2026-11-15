@@ -436,6 +436,42 @@ describe('legacyVerifyLogin', () => {
     expect(res.status).toHaveBeenCalledWith(404);
   });
 
+  test('allows a first-run Super Admin with no username to sign in using the email local part', async () => {
+    const emailOnlySuperAdmin = {
+      ...fakeUser,
+      email: 'owner@example.com',
+      username: undefined,
+      user_name: undefined,
+      usertype: 'super_admin',
+      role: 'super_admin',
+    };
+    mockUserModel.findOne.mockReturnValue(buildUserChain(emailOnlySuperAdmin));
+    mockBcrypt.compare.mockResolvedValue(true);
+    const branchChain = { lean: jest.fn().mockResolvedValue(fakeBranch) };
+    mockBranchModel.findOne.mockReturnValue(branchChain);
+
+    const req = mockReq({
+      body: { username: 'owner', password: 'pass' },
+      session: { destroy: jest.fn() },
+    });
+    const res = mockRes();
+    await ctrl.legacyVerifyLogin(req, res);
+
+    expect(mockUserModel.findOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        $or: expect.arrayContaining([
+          expect.objectContaining({
+            $and: expect.arrayContaining([
+              { email: expect.any(RegExp) },
+              { $or: [{ usertype: 'super_admin' }, { role: 'super_admin' }] },
+            ]),
+          }),
+        ]),
+      })
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
   test('404 when password invalid', async () => {
     const chain = buildUserChain(fakeUser);
     mockUserModel.findOne.mockReturnValue(chain);
