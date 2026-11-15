@@ -5479,7 +5479,7 @@ class SalesRepository {
                 return_obj_id: returnObjId,
                 return_id: itemsReturnData.returnArray.returnId,
                 amount: round(returnItemsTotalAmount, 2),
-                refund_method: String(payload.refund_method || payload.payment_mode || 'cash').toLowerCase(),
+                refund_method: (function () { const method = String(payload.refund_method || payload.payment_mode || 'cash').toLowerCase(); return ['cash','espèces','especes'].includes(method) ? 'cash' : method; })(),
                 item_count: itemsReturn.length,
                 created_at: now,
                 ...(returnRegisterId ? { cashregister_id: returnRegisterId } : {}),

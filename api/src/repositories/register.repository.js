@@ -961,6 +961,27 @@ class RegisterRepository {
               const finalCash = String(row.settlement && row.settlement.method || '').toLowerCase() === 'cash' ? Number(row.settlement && row.settlement.amount) || 0 : 0;
               return sum + initialCash + finalCash;
             }, 0);
+            // Cash refunds are money-out on the actual return day. Do not
+            // rewrite the original sale's register amount or original date.
+            const salesCollection = await this.model.getCollection('sales');
+            const refundRows = await salesCollection.aggregate([
+              { $match: { branch_id: session.branch_id, 'return_refund_transactions.cashregister_id': { $in: [session.register_id, null] } } },
+              { $unwind: '$return_refund_transactions' },
+              { $addFields: {
+                refundDate: { $convert: { input: { $ifNull: ['$return_refund_transactions.created_at', '$return_refund_transactions.return_date'] }, to: 'date', onError: null, onNull: null } },
+                refundAmount: { $convert: { input: '$return_refund_transactions.amount', to: 'double', onError: 0, onNull: 0 } },
+                refundMethod: { $toLower: { $ifNull: ['$return_refund_transactions.refund_method', 'cash'] } },
+              } },
+              { $match: { $expr: { $and: [
+                { $in: ['$return_refund_transactions.cashregister_id', [session.register_id, null]] },
+                { $gte: ['$refundDate', new Date(session.register_opendate)] },
+                { $lte: ['$refundDate', mongoDate] },
+                { $in: ['$refundMethod', ['cash', 'espèces', 'especes']] },
+              ] } } },
+              { $group: { _id: null, total: { $sum: '$refundAmount' } } },
+            ]).toArray();
+            const cashRefunds = refundRows.length ? Number(refundRows[0].total) || 0 : 0;
+            settledVersementCash -= cashRefunds;
           }
           const expected = this._expectedCashAtClose(session, settledVersementCash);
           const countedEntry = (session.countedAmount || []).find(
