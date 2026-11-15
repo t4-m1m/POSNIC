@@ -61,12 +61,16 @@
             '.sl-design-editable .sl-element.sl-selected{outline:2px solid #2563eb;outline-offset:2px;z-index:20;overflow:visible;box-shadow:0 0 0 4px rgba(37,99,235,.12)}' +
             '.sl-resize-handle,.sl-rotate-handle{display:none;position:absolute;z-index:30;touch-action:none;user-select:none;box-sizing:border-box}' +
             '.sl-resize-handle.is-active,.sl-rotate-handle.is-active{display:flex;align-items:center;justify-content:center}' +
-            '.sl-resize-handle{width:18px;height:18px;border:2px solid var(--theme-card-bg,#fff);border-radius:6px;background:var(--theme-primary-color,#3978d6);color:#fff;cursor:nwse-resize;transform:translate(-50%,-50%);box-shadow:0 2px 6px rgba(15,23,42,.22);transition:transform .12s ease,box-shadow .12s ease}' +
-            '.sl-resize-handle:before{content:"↘";font:700 13px/1 Arial,sans-serif;color:#fff}' +
-            '.sl-rotate-handle{width:24px;height:24px;border:2px solid var(--theme-card-bg,#fff);border-radius:50%;background:var(--theme-primary-color,#3978d6);color:#fff;cursor:grab;transform:translate(-50%,-50%);box-shadow:0 2px 7px rgba(15,23,42,.2);transition:transform .12s ease,box-shadow .12s ease}' +
-            '.sl-rotate-handle:before{content:"↻";font:700 16px/1 Arial,sans-serif;color:#fff}' +
-            '.sl-rotate-handle:after{content:"";position:absolute;width:2px;height:10px;background:#2563eb;left:50%;top:100%;transform:translateX(-50%)}' +
-            '.sl-resize-handle:focus-visible,.sl-rotate-handle:focus-visible{outline:3px solid rgba(37,99,235,.35);outline-offset:3px}';
+            '.sl-resize-handle{width:9px;height:9px;border:1.5px solid #2563eb;border-radius:1px;background:#fff;cursor:crosshair;transform:translate(-50%,-50%);box-shadow:0 1px 3px rgba(15,23,42,.28);transition:background .1s ease,transform .1s ease}' +
+            '.sl-resize-handle:hover{background:#dbeafe;transform:translate(-50%,-50%) scale(1.18)}' +
+            '.sl-resize-handle[data-sl-resize-dir="n"],.sl-resize-handle[data-sl-resize-dir="s"]{cursor:ns-resize}' +
+            '.sl-resize-handle[data-sl-resize-dir="e"],.sl-resize-handle[data-sl-resize-dir="w"]{cursor:ew-resize}' +
+            '.sl-resize-handle[data-sl-resize-dir="nw"],.sl-resize-handle[data-sl-resize-dir="se"]{cursor:nwse-resize}' +
+            '.sl-resize-handle[data-sl-resize-dir="ne"],.sl-resize-handle[data-sl-resize-dir="sw"]{cursor:nesw-resize}' +
+            '.sl-rotate-handle{width:17px;height:17px;border:1.5px solid #2563eb;border-radius:50%;background:#fff;color:#1d4ed8;cursor:grab;transform:translate(-50%,-50%);box-shadow:0 1px 4px rgba(15,23,42,.24)}' +
+            '.sl-rotate-handle:before{content:"↻";font:700 13px/1 Arial,sans-serif;color:#1d4ed8}' +
+            '.sl-rotate-handle:after{content:"";position:absolute;width:1px;height:8px;background:#2563eb;left:50%;top:100%;transform:translateX(-50%)}' +
+            '.sl-resize-handle:focus-visible,.sl-rotate-handle:focus-visible{outline:2px solid rgba(37,99,235,.35);outline-offset:3px}';
     }
     function validateDesign(s) {
         if (!/^[a-zA-Z ,\-]+$/.test(s.font) || !['left', 'center', 'right'].includes(s.align) || !/^#[a-f\d]{6}$/i.test(s.background) || !/^#[a-f\d]{6}$/i.test(s.ink)) throw Error('Invalid label design.');
@@ -341,19 +345,26 @@
                 label.classList.add('sl-design-editable');
                 label.querySelectorAll('[data-sl-element]').forEach(function (element) {
                     var key = element.dataset.slElement, layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key] || { x: 5, y: 5, w: 90, h: 12, rotation: 0 };
-                    var handle = doc.createElement('span');
-                    handle.className = 'sl-resize-handle';
-                    handle.dataset.slResizeFor = key;
-                    handle.setAttribute('aria-hidden', 'true');
-                    handle.style.left = (layout.x + layout.w) + '%';
-                    handle.style.top = (layout.y + layout.h) + '%';
-                    label.appendChild(handle);
+                    [
+                        ['nw',layout.x,layout.y],['n',layout.x+layout.w/2,layout.y],['ne',layout.x+layout.w,layout.y],
+                        ['e',layout.x+layout.w,layout.y+layout.h/2],['se',layout.x+layout.w,layout.y+layout.h],
+                        ['s',layout.x+layout.w/2,layout.y+layout.h],['sw',layout.x,layout.y+layout.h],['w',layout.x,layout.y+layout.h/2]
+                    ].forEach(function (point) {
+                        var handle = doc.createElement('span');
+                        handle.className = 'sl-resize-handle';
+                        handle.dataset.slResizeFor = key;
+                        handle.dataset.slResizeDir = point[0];
+                        handle.setAttribute('aria-hidden', 'true');
+                        handle.style.left = point[1] + '%';
+                        handle.style.top = point[2] + '%';
+                        label.appendChild(handle);
+                    });
                     var rotateHandle = doc.createElement('span');
                     rotateHandle.className = 'sl-rotate-handle';
                     rotateHandle.dataset.slRotateFor = key;
                     rotateHandle.setAttribute('aria-label', 'Rotate element');
                     rotateHandle.style.left = (layout.x + layout.w / 2) + '%';
-                    rotateHandle.style.top = Math.max(1, layout.y - 4) + '%';
+                    rotateHandle.style.top = Math.max(1, layout.y - 5) + '%';
                     label.appendChild(rotateHandle);
                 });
             });
@@ -814,7 +825,7 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
             state.selectedElementKey = key;
             syncSelectionControls();
             var layout = state.elementLayout[key] || DEFAULT_ELEMENT_LAYOUT[key];
-            editorDrag = { key: key, mode: 'resize', startX: e.clientX, startY: e.clientY, rect: label.getBoundingClientRect(), initial: Object.assign({}, layout), moved: false };
+            editorDrag = { key: key, mode: 'resize', direction: this.dataset.slResizeDir || 'se', startX: e.clientX, startY: e.clientY, rect: label.getBoundingClientRect(), initial: Object.assign({}, layout), moved: false };
         });
         function syncSelectionControls() {
             var selected = $('#sl-sample .sl-element.sl-selected').first();
@@ -947,18 +958,33 @@ persistEnabledFields();        $(root.document).on('pointerdown', '#sl-sample .s
                     next.x = Math.max(-300, Math.min(300, initial.x + dx));
                     next.y = Math.max(-300, Math.min(300, initial.y + dy));
                 } else {
-                    next.w = Math.max(5, Math.min(500, initial.w + dx));
-                    next.h = Math.max(5, Math.min(500, initial.h + dy));
+                    var direction = drag.direction || 'se';
+                    if (direction.indexOf('e') !== -1) next.w = Math.max(5, Math.min(500, initial.w + dx));
+                    if (direction.indexOf('s') !== -1) next.h = Math.max(5, Math.min(500, initial.h + dy));
+                    if (direction.indexOf('w') !== -1) {
+                        next.w = Math.max(5, Math.min(500, initial.w - dx));
+                        next.x = initial.x + initial.w - next.w;
+                    }
+                    if (direction.indexOf('n') !== -1) {
+                        next.h = Math.max(5, Math.min(500, initial.h - dy));
+                        next.y = initial.y + initial.h - next.h;
+                    }
                 }
                 state.elementLayout[key] = next;
                 var element = document.querySelector('#sl-sample [data-sl-element="' + key + '"]');
                 if (element) {
                     element.style.left = next.x + '%'; element.style.top = next.y + '%';
                     element.style.width = next.w + '%'; element.style.height = next.h + '%';
-                    var handle = document.querySelector('#sl-sample .sl-resize-handle[data-sl-resize-for="' + key + '"]');
-                    if (handle) { handle.style.left = (next.x + next.w) + '%'; handle.style.top = (next.y + next.h) + '%'; }
+                    var labelNode = document.querySelector('#sl-sample .sl-label');
+                    if (labelNode) {
+                        var points = {nw:[next.x,next.y],n:[next.x+next.w/2,next.y],ne:[next.x+next.w,next.y],e:[next.x+next.w,next.y+next.h/2],se:[next.x+next.w,next.y+next.h],s:[next.x+next.w/2,next.y+next.h],sw:[next.x,next.y+next.h],w:[next.x,next.y+next.h/2]};
+                        Object.keys(points).forEach(function (dir) {
+                            var h = labelNode.querySelector('.sl-resize-handle[data-sl-resize-for="' + key + '"][data-sl-resize-dir="' + dir + '"]');
+                            if (h) { h.style.left = points[dir][0] + '%'; h.style.top = points[dir][1] + '%'; }
+                        });
+                    }
                     var rotateHandle = document.querySelector('#sl-sample .sl-rotate-handle[data-sl-rotate-for="' + key + '"]');
-                    if (rotateHandle) { rotateHandle.style.left = (next.x + next.w / 2) + '%'; rotateHandle.style.top = Math.max(1, next.y - 4) + '%'; }
+                    if (rotateHandle) { rotateHandle.style.left = (next.x + next.w / 2) + '%'; rotateHandle.style.top = Math.max(1, next.y - 5) + '%'; }
                 }
             });
         });

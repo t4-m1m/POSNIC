@@ -534,9 +534,9 @@
         var useFastReceipt = false;
         var useRawThermal = false;
         if (printer && printer.print && options.showDialog !== true) {
-            return Promise.resolve(PosnicPro.syncPrinterPreferences ? PosnicPro.syncPrinterPreferences() : null)
-                .catch(function () {})
-                .then(function () {
+            return Promise.resolve().then(function () {
+                    // Preferences are synchronized when Hardware Manager loads or changes them.
+                    // Avoid a settings round-trip on every checkout print.
                     var chosen = options.target ? options.target.name : PosnicPro.resolveReceiptPrinter();
                     if (chosen === 'default') chosen = '';
                     if (chosen) return chosen;

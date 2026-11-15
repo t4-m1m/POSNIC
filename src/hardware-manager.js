@@ -22,6 +22,9 @@ class HardwareManager {
     this.lastData = '';
     this.lastWeight = 0;
     this.mainWindow = null;
+    this._htmlPrintWindow = null;
+    this._htmlPrintWindowSecure = null;
+    this._htmlPrintQueue = Promise.resolve();
     // Cash drawer
     this.cashDrawerPort = null;
     this.cashDrawerConfigPath = null;
@@ -30,6 +33,14 @@ class HardwareManager {
 
   setMainWindow(window) {
     this.mainWindow = window;
+    if (window && typeof window.once === 'function') {
+      window.once('closed', () => {
+        const printWindow = this._htmlPrintWindow;
+        this._htmlPrintWindow = null;
+        this._htmlPrintWindowSecure = null;
+        if (printWindow && !printWindow.isDestroyed()) printWindow.destroy();
+      });
+    }
   }
 
   broadcastLastWeight() {
@@ -547,7 +558,14 @@ class HardwareManager {
     }
   }
 
-  async printHTML(htmlContent, options = {}) {
+  printHTML(htmlContent, options = {}) {
+    const run = () => this._printHTMLNow(htmlContent, options);
+    const job = this._htmlPrintQueue.then(run, run);
+    this._htmlPrintQueue = job.catch(() => undefined);
+    return job;
+  }
+
+  async _printHTMLNow(htmlContent, options = {}) {
     let printWindow;
     const receiptAttempts = [];
     let receiptPrinter = options.printerName;
@@ -625,20 +643,30 @@ class HardwareManager {
        */
       const route = this._resolvePrintRoute(htmlContent);
 
-      printWindow = new BrowserWindow({
-        show: options.showPrintDialog === true,
-        width: pageSize.windowWidth,
-        height: 600,
-        webPreferences: {
-          nodeIntegration: false,
-          contextIsolation: true,
-          /* True whenever the document is served from the local origin. Only
-             the data: fallback needs the exception. */
-          webSecurity: route.secure
-        }
-      });
-
-      hardenPrintWindow(printWindow);
+      // Reuse Chromium between sales: a new hidden BrowserWindow for every
+      // receipt adds startup latency on slower tills.
+      if (this._htmlPrintWindow &&
+          (this._htmlPrintWindow.isDestroyed() || this._htmlPrintWindowSecure !== route.secure)) {
+        if (!this._htmlPrintWindow.isDestroyed()) this._htmlPrintWindow.destroy();
+        this._htmlPrintWindow = null;
+        this._htmlPrintWindowSecure = null;
+      }
+      if (!this._htmlPrintWindow) {
+        this._htmlPrintWindow = new BrowserWindow({
+          show: options.showPrintDialog === true,
+          width: pageSize.windowWidth,
+          height: 600,
+          webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+            webSecurity: route.secure
+          }
+        });
+        this._htmlPrintWindowSecure = route.secure;
+        hardenPrintWindow(this._htmlPrintWindow);
+      }
+      printWindow = this._htmlPrintWindow;
+      if (options.showPrintDialog === true && !printWindow.isVisible()) printWindow.show();
 
       const deviceName = options.showPrintDialog === true ? null : await this._resolvePrinterName(options.printerName);
       receiptPrinter = deviceName;
@@ -743,7 +771,9 @@ class HardwareManager {
           });
         } catch (_) { /* A log failure must never change the printing outcome. */ }
       }
-      if (printWindow && !printWindow.isDestroyed()) printWindow.destroy();
+      // Keep the warmed print surface for the next sale. It is destroyed when
+      // the main POS window closes (see setMainWindow above).
+      if (printWindow && !printWindow.isDestroyed() && options.showPrintDialog !== true) printWindow.hide();
     }
   }
 

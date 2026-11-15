@@ -155,6 +155,14 @@ PosnicPro.sales = {
         $('#extraDisc').removeClass('extraDisc');
         $('#percentIcon, #rupeeIcon').css('pointer-events', 'auto').css('opacity', '1');
         PosnicPro.sales.defaultCustomer = true;
+        // New Sale is a fresh customer context, even after navigating away.
+        $('#sales_new_customer_id,#sales_new_customer_name,#sales_new_customer_address,#sales_new_customer_phone,#sales_new_customer_email,#sales_new_customer_state,#sales_new_customer_country,#sales_new_customer_gst_type,#sales_new_customer_gst_number,#sales_new_customer_partial_balance').val('');
+        $('#customer_current_balance').val('0');
+        $('#sales-customer-credit-inline-amount').text('0,00');
+        $('#sales-customer-credit-inline').prop('hidden', true);
+        if (PosnicPro.sales.ensureCustomer) PosnicPro.sales.ensureCustomer();
+        if (PosnicPro.defaultcustomerSet) PosnicPro.defaultcustomerSet({ forceDefault: true });
+        if (PosnicPro.sales.updateCustomerChip) PosnicPro.sales.updateCustomerChip();
         PosnicPro.sales.dineType = 'Dine-in';
         $('#sale_dine_type').val('Dine-in');
         $('#dine_type_dinein').prop('checked', true);
@@ -3229,6 +3237,27 @@ PosnicPro.sales = {
             var $button = $(this);
             var $input = $button.closest('.payment-method-card').find('.payment-amount-input');
             var billTotal = Number(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot) || 0;
+            var selectedMethod = String($button.closest('.payment-method-card').find('.payment_mode').attr('id') || '').trim().toLowerCase();
+            if (selectedMethod === 'credit') {
+                $('.payment-amount-input').not($input).val('0.00');
+                $input.val(billTotal.toFixed(2));
+                $('#Partial_amount').val('0.00');
+                $('#unpaid_payment_toggle').prop('checked', true);
+                $('#sales_new_customer_partial_balance').val('true');
+                $('.balanceDue').text(billTotal.toFixed(2));
+                $('.btn-payment-method').removeClass('active').css({
+                    'background': 'transparent', 'color': '#495057', 'border': '2px solid #dee2e6'
+                });
+                $('.payment-method-card').removeClass('payment-active').css('border', '2px solid #e9ecef');
+                $('.payment-amount-input').prop('disabled', false);
+                $button.addClass('active').css({
+                    'background': '#5f63f2', 'color': '#fff', 'border': '2px solid #5f63f2'
+                });
+                $button.closest('.payment-method-card').addClass('payment-active').css('border', '2px solid #5f63f2');
+                $input.trigger('input').focus().select();
+                PosnicPro.sales.initPaymentValidation();
+                return;
+            }
             var otherTotal = 0;
             $('.payment-amount-input').not($input).each(function () {
                 otherTotal += Math.max(0, Number($(this).val()) || 0);
@@ -3596,7 +3625,20 @@ PosnicPro.sales = {
         creditSum = parseFloat(creditSum.toFixed(2));
         receivedSum = parseFloat(receivedSum.toFixed(2));
 
-        if (payAmountRounded <= 0) return;
+        if (payAmountRounded <= 0) {
+            const fullCreditOnly = isPaid && creditInput.length > 0 &&
+                Math.abs(creditSum - totalAmount) <= 0.01 &&
+                receivedSum <= 0.01 && Math.abs(sum - totalAmount) <= 0.01;
+            if (fullCreditOnly) {
+                $('#sales_new_customer_partial_balance').val('true');
+                $('#return_balance_amount').text('0.00');
+                if (typeof updatePaymentStatusLabel === 'function') updatePaymentStatusLabel();
+                $('#save_btn').prop('disabled', false);
+            } else {
+                $('#save_btn').prop('disabled', true);
+            }
+            return;
+        }
         if (!isPaid) {
             $('#save_btn').prop('disabled', false);
             return;
@@ -4878,7 +4920,11 @@ PosnicPro.sales.addSale = {
                     PosnicPro.sales.customerViewDisplay();
                     PosnicPro.stocklogs.viewLowStockDashboard();
                     PosnicPro.sales.recentMenu.recentSalesTabDetails();
-                    $('#customer_current_balance').val(response.data.customer_balance);
+                    if (PosnicPro.sales.SaleAction === 'add' && !PosnicPro.sales.editSaleId) {
+                        $('#customer_current_balance').val('0');
+                    } else {
+                        $('#customer_current_balance').val(response.data.customer_balance);
+                    }
                     PosnicPro.alert(response.type, response.message);
                     if (PosnicPro.sales.saleProcess === 'KOT' &&
                         !(PosnicPro.kotorder && PosnicPro.kotorder.editSaleId)) {
@@ -13491,8 +13537,11 @@ PosnicPro.sales.ensureCustomer = function () {
     $('#sales_new_customer_phone').val(def.customer_phone || '');
     $('#sales_new_customer_email').val(def.customer_email || '');
     $('#sales_new_customer_state').val(def.customer_state || '');
+    $('#sales_new_customer_country').val(def.customer_country || '');
     $('#sales_new_customer_gst_type').val(def.customer_gst_type || '');
     $('#sales_new_customer_gst_number').val(def.customer_gst_number || '');
+    $('#sales_new_customer_partial_balance').val(def.customer_partial || 'false');
+    $('#customer_current_balance').val(Number(def.customer_balance) || 0);
     if (PosnicPro.sales.updateCustomerChip) { PosnicPro.sales.updateCustomerChip(); }
 };
 PosnicPro.sales.updateCustomerChip = function () {
