@@ -53,6 +53,14 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: [30, 'Username cannot be more than 30 characters'],
     },
+    // Legacy Super Admin accounts may persist the login identifier under user_name.
+    // Keep it in the schema so Mongoose strict-query mode does not discard that lookup.
+    user_name: {
+      type: String,
+      trim: true,
+      maxlength: [30, 'Username cannot be more than 30 characters'],
+      select: true,
+    },
     // Legacy name field for compatibility
     name: {
       type: String,
