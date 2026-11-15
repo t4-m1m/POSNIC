@@ -11,17 +11,12 @@ PosnicPro.itemreport = {
         $('.page-title-box,#itemreport_new,.item-report-item').show();
         $('#v-pills-report-tab,#viewitemreport_page').addClass('active');
         $('#v-pills-report').addClass('show active');
-        if (window.__posnicOpenVersements) {
-            window.__posnicOpenVersements = false;
-            $('#versements-panel').show();
-            if (PosnicPro.versementsRegister) PosnicPro.versementsRegister.load();
-        }
-        if (window.__posnicOpenStockHealth) {
-            window.__posnicOpenStockHealth = false;
-            $('#stock-health-panel').show();
-            if (PosnicPro.stockHealthReport) PosnicPro.stockHealthReport.load();
-        }
-        if ($('a#item-tab-line').hasClass('active')) {
+        var openVersements=window.__posnicOpenVersements===true;
+        window.__posnicOpenVersements=false;window.__posnicOpenStockHealth=false;
+        $('#stock-health-panel,#versements-panel').hide();
+        if(openVersements){$('#versements-panel').show();if(PosnicPro.versementsRegister)PosnicPro.versementsRegister.load();}
+        else{$('#stock-health-panel').show();if(PosnicPro.stockHealthReport)PosnicPro.stockHealthReport.load();}
+        if (false && $('a#item-tab-line').hasClass('active')) {
             PosnicPro.itemreport.itemTableTabClick();
         } else if ($('a#item-expiry-line').hasClass('active')) {
             PosnicPro.itemexpiry.itemExpiryTabClick();
@@ -443,6 +438,14 @@ PosnicPro.stockHealthReport = (function () {
         var labels=$('<div class="d-flex justify-content-between sh-muted small">').append($('<span>').text(data[0].date),$('<span>').text(data[Math.floor(data.length/2)].date),$('<span>').text(data[data.length-1].date));holder.append(labels);
         var total=data.reduce((s,p)=>s+(Number(p.quantity)||0),0);holder.append($('<div class="mt-2 small sh-muted">').text('Total vendu sur 30 jours : '+total.toLocaleString()));
     }
+    function renderBreakdowns(data) {
+        var rows=Array.isArray(data.rows)?data.rows:[],groups={};rows.forEach(function(r){var k=String(r.category||'Sans catégorie');groups[k]=(groups[k]||0)+(Number(r.stock_value)||0);});
+        var cats=Object.keys(groups).map(function(k){return{name:k,value:groups[k]};}).sort(function(a,b){return b.value-a.value;}).slice(0,7),host=$('#stock-health-category-chart').empty(),max=Math.max(1,...cats.map(function(x){return x.value;}));
+        if(!cats.length)host.text('Aucune donnée disponible.').addClass('sh-muted');
+        cats.forEach(function(x){var line=$('<div class="mb-3">'),head=$('<div class="d-flex justify-content-between small mb-1">').append($('<strong>').text(x.name),$('<span class="sh-muted">').text(currency(x.value))),bar=$('<div style="height:9px;border-radius:9px;background:var(--sh-border);overflow:hidden">').append($('<div>').css({height:'100%',width:(x.value/max*100)+'%',background:'var(--sh-accent)',borderRadius:'9px'}));line.append(head,bar);host.append(line);});
+        var critical=(data.critical||[]).length,dormant=(data.dormant||[]).length,never=(data.never_sold||[]).length,active=Math.max(0,rows.length-critical-dormant-never),vals=[['En rotation',active],['Stock critique',critical],['Dormants',dormant],['Jamais vendus',never]],total=Math.max(1,vals.reduce(function(s,x){return s+x[1];},0)),status=$('#stock-health-status-chart').empty();
+        vals.forEach(function(x){var row=$('<div class="d-flex align-items-center justify-content-between mb-3">'),bar=$('<div style="height:8px;margin-top:5px;border-radius:8px;background:var(--sh-border);overflow:hidden">').append($('<div>').css({height:'100%',width:(x[1]/total*100)+'%',background:'var(--sh-accent)',borderRadius:'8px'}));row.append($('<div style="flex:1">').append($('<span class="small">').text(x[0]),bar),$('<strong class="small">').text(x[1]));status.append(row);});
+    }
     function renderTop(rows) {
         var holder=$('#stock-health-top-products').empty(), max=Math.max(1,...(rows||[]).map(r=>Number(r.sold_quantity)||0));
         if(!rows||!rows.length){holder.text('Pas encore de ventes à classer.').addClass('sh-muted');return;}
@@ -453,7 +456,7 @@ PosnicPro.stockHealthReport = (function () {
         snapshot=data; var t=data.totals||{}, kpis=[['Valeur du stock',currency(t.stock_value),'Capital immobilisé'],['Produits disponibles',t.products||0,'Références actives'],['Unités en stock',Number(t.stock_units||0).toLocaleString(),'Quantité physique'],['Stock critique',t.critical||0,'À réapprovisionner'],['Produits dormants',t.dormant||0,'Sans rotation récente'],['Jamais vendus',t.never_sold||0,'À examiner en priorité']];
         var holder=$('#stock-health-kpis').empty();kpis.forEach(function(k,i){holder.append($('<div class="col-6 col-md-4 col-xl-2 mb-3">').append($('<div class="sh-kpi">').append($('<small>').text(k[2]),$('<strong>').text(k[1]),$('<div class="sh-muted small mt-1">').text(k[0]))));});
         fillSelect('#stock-health-category',data.categories,'Toutes les catégories');fillSelect('#stock-health-brand',data.brands,'Toutes les marques');
-        renderTrend(data.trend);renderTop(data.best_by_quantity);
+        renderTrend(data.trend);renderTop(data.best_by_quantity);renderBreakdowns(data);
         filtered=filterRows(data.rows);drawRows('#stock-health-critical-rows',filterRows(data.critical),'critical');drawRows('#stock-health-dormant-rows',filterRows(data.dormant),'dormant');drawRows('#stock-health-never-rows',filterRows(data.never_sold),'never');drawRows('#stock-health-all-rows',filtered,'all');
         $('#stock-health-dormant-days').val(data.dormant_days||90);$('#stock-health-error').hide().text('');
     }
@@ -484,27 +487,29 @@ PosnicPro.versementsRegister = (function () {
             add(r.versement_number); add(r.customer_name); add(r.sale_key);
             add(Number(r.sale_total||0).toFixed(2)); add(Number(r.initial_amount||0).toFixed(2)); add(Number(r.remaining||0).toFixed(2)); add(r.status);
             var cell=$('<td>');
+            $('<button class="btn btn-sm btn-outline-primary mr-1">Reçu</button>').on('click',function(){printReceipt(r);}).appendTo(cell);
+            $('<button class="btn btn-sm btn-outline-secondary mr-1">Historique</button>').on('click',function(){var lines=(r.history||[]).map(function(h){return (h.type||'Opération')+' · '+Number(h.amount||0).toFixed(2)+' · '+new Date(h.at||r.created_at).toLocaleString()+' · '+(h.method||'');});message(lines.join(' | ')||'Aucun historique disponible.','info');}).appendTo(cell);
             if(r.status==='pending') {
-                $('<button class="btn btn-sm btn-success mr-1">Régler</button>').on('click',function(){
-                    var method=window.prompt('Mode de règlement final : cash, tpe ou baridimob','cash');
-                    if(!method)return;
-                    PosnicPro.post({url:'versements/'+encodeURIComponent(r._id)+'/settle',data:JSON.stringify({method:method})},function(x){message(x.message||'Règlement enregistré.',x.type==='success'?'success':'danger');load();},function(){message('Échec du règlement.','danger');});
-                }).appendTo(cell);
-                $('<button class="btn btn-sm btn-outline-danger">Annuler</button>').on('click',function(){
-                    var reason=window.prompt('Motif obligatoire de l’annulation'); if(!reason)return;
-                    PosnicPro.post({url:'versements/'+encodeURIComponent(r._id)+'/cancel',data:JSON.stringify({reason:reason})},function(x){message(x.message||'Mise à jour.',x.type==='success'?'success':'danger');load();},function(){message('Annulation refusée.','danger');});
-                }).appendTo(cell);
-            } else $('<span class="text-muted">—</span>').appendTo(cell);
+                $('<button class="btn btn-sm btn-success mr-1">Régler</button>').on('click',function(){$('#versement-settle-amount').text(Number(r.remaining||0).toFixed(2));$('#versement-settle-modal').data('id',r._id).modal('show');}).appendTo(cell);
+                $('<button class="btn btn-sm btn-outline-danger">Annuler</button>').on('click',function(){var reason=window.prompt('Motif obligatoire de l’annulation');if(!reason)return;PosnicPro.post({url:'versements/'+encodeURIComponent(r._id)+'/cancel',data:JSON.stringify({reason:reason})},function(x){message(x.message||'Mise à jour.',x.type==='success'?'success':'danger');load();},function(){message('Annulation refusée.','danger');});}).appendTo(cell);
+            } else $('<span class="text-muted">Réglé</span>').appendTo(cell);
             tr.append(cell); body.append(tr);
         });
         if(!body.children().length) body.append($('<tr>').append($('<td colspan="8" class="text-center text-muted">Aucun versement.</td>')));
     }
-    function create() {
+    function printReceipt(record) {
+        if(!record)return;var esc=function(v){return $('<span>').text(v==null?'':String(v)).html();},cur=esc(PosnicPro.local.get('currencySign')||'DA'),total=Number(record.sale_total)||0,initial=Number(record.initial_amount)||0,remaining=Number(record.remaining)||0;
+        var copy=function(label){return '<section class="copy"><div class="center bold">POSNIC</div><div class="center bold">VERSEMENT</div><hr><div class="row"><span>N°</span><b>'+esc(record.versement_number)+'</b></div><div class="row"><span>Vente</span><b>'+esc(record.sale_key)+'</b></div><div class="row"><span>Client</span><b>'+esc(record.customer_name)+'</b></div><div class="row"><span>Date</span><b>'+esc(new Date(record.created_at||Date.now()).toLocaleString())+'</b></div><hr><div class="row"><span>Total vente</span><b>'+total.toFixed(2)+' '+cur+'</b></div><div class="row"><span>Versé</span><b>'+initial.toFixed(2)+' '+cur+'</b></div><div class="row"><span>Reste</span><b>'+remaining.toFixed(2)+' '+cur+'</b></div><div class="center bold">'+label+'</div></section>';};
+        var w=window.open('','_blank');if(!w){message('Autorisez les fenêtres contextuelles pour imprimer le reçu.','warning');return;}
+        w.document.write('<html><head><title>Versement</title><style>@page{margin:4mm}body{font:12px Consolas,monospace;color:#000;margin:0}.copy{width:72mm;padding:2mm 0 4mm;page-break-after:always}.center{text-align:center}.bold{font-weight:700}.row{display:flex;justify-content:space-between;gap:5px;margin:3px 0}hr{border:0;border-top:1px dashed #000;margin:6px 0}</style></head><body>'+copy('COPIE CLIENT')+copy('COPIE CAISSIER')+'<script>setTimeout(function(){window.focus();window.print();},80);<'+'/script></body></html>');w.document.close();
+    }
+    $('#versement-settle-confirm').off('click').on('click',function(){var id=$('#versement-settle-modal').data('id'),method=String($('#versement-settle-method').val()||'cash');if(!id)return;$(this).prop('disabled',true);PosnicPro.post({url:'versements/'+encodeURIComponent(id)+'/settle',data:JSON.stringify({method:method})},function(x){$('#versement-settle-confirm').prop('disabled',false);$('#versement-settle-modal').modal('hide');message(x.message||'Règlement enregistré.',x.type==='success'?'success':'danger');load();},function(){$('#versement-settle-confirm').prop('disabled',false);message('Échec du règlement.','danger');});});
+    function create() {    function create() {
         var payload={sale_id:String($('#versement-sale-id').val()||'').trim(),customer_name:String($('#versement-customer').val()||'').trim(),phone:String($('#versement-phone').val()||'').trim(),initial_amount:Number($('#versement-initial').val()),branch_id:branch()};
         if(!payload.sale_id||!payload.customer_name||!(payload.initial_amount>0)){message('Référence, nom du client et acompte positif obligatoires.','warning');return;}
         $('#versement-create').prop('disabled',true);
         PosnicPro.post({url:'versements',data:JSON.stringify(payload)},function(r){$('#versement-create').prop('disabled',false);message(r.message||'Versement enregistré.',r.type==='success'?'success':'danger');if(r.type==='success'){$('#versement-sale-id,#versement-customer,#versement-phone,#versement-initial').val('');load();}},function(){$('#versement-create').prop('disabled',false);message('Impossible d’enregistrer le versement.','danger');});
     }
     $(document).on('click','#versements-refresh',load).on('click','#versement-create',create).on('input','#versements-search',render);
-    return {load:load};
+    return {load:load,printReceipt:printReceipt};
 }());

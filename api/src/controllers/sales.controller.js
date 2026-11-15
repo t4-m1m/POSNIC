@@ -1884,7 +1884,38 @@ class SalesController extends BaseController {
       // Debt collections are cash flow received during this report period.
       // Keep them separate from sales revenue so the original sale is never counted twice.
       const db = await BaseModel.getDb();
-      const debtPaymentRows = await db.collection('credit_payments').aggregate([
+      const settledVersements = await db.collection('sale_versements').find({
+        branch_id: branchObjectId, status: 'settled',
+        settled_at: { $gte: new Date(filteredDateRange.start_date), $lte: new Date(filteredDateRange.end_date) },
+      }).toArray();
+      const tenderLabels = { cash: 'Cash', tpe: 'TPE', baridimob: 'BaridiMob' };
+      settledVersements.forEach((v) => {
+        const initial = roundToTwo(v.initial_amount || 0);
+        if (initial > 0) paymentDetails.push({ payment_mode: tenderLabels[String(v.initial_method || 'cash').toLowerCase()] || 'Cash', sale_payment: initial, is_versement: true });
+        const finalAmount = roundToTwo(v.settlement && v.settlement.amount || 0);
+        if (finalAmount > 0) paymentDetails.push({ payment_mode: tenderLabels[String(v.settlement.method || 'cash').toLowerCase()] || 'Cash', sale_payment: finalAmount, is_versement: true });
+      });
+      const refundRows = await db.collection('sales').aggregate([
+        { $match: { branch_id: branchObjectId, ...(BaseModel.license ? { license: BaseModel.license } : {}) } },
+        { $unwind: '$return_refund_transactions' },
+        { $addFields: {
+          reportRefundDate: { $convert: { input: { $ifNull: ['$return_refund_transactions.created_at', '$return_refund_transactions.return_date'] }, to: 'date', onError: null, onNull: null } },
+          reportRefundAmount: { $convert: { input: '$return_refund_transactions.amount', to: 'double', onError: 0, onNull: 0 } },
+          reportRefundMethod: { $toLower: { $ifNull: ['$return_refund_transactions.refund_method', 'cash'] } },
+        } },
+        { $match: { $expr: { $and: [
+          { $gte: ['$reportRefundDate', new Date(filteredDateRange.start_date)] },
+          { $lte: ['$reportRefundDate', new Date(filteredDateRange.end_date)] },
+        ] } } },
+        { $group: { _id: '$reportRefundMethod', amount: { $sum: '$reportRefundAmount' } } },
+      ]).toArray();
+      const refundLabels = { cash: 'Cash', tpe: 'TPE', baridimob: 'BaridiMob', card: 'Card' };
+      refundRows.forEach((row) => {
+        const amount = roundToTwo(row.amount || 0);
+        if (amount > 0) paymentDetails.push({ payment_mode: refundLabels[String(row._id || 'cash').toLowerCase()] || String(row._id || 'Cash'), sale_payment: -amount, is_refund: true });
+      });
+
+      const debtPaymentRows = await db.collection('credit_payments').aggregate([      const debtPaymentRows = await db.collection('credit_payments').aggregate([
         { $match: {
           license: BaseModel.license || req.user.license || req.user.license_id,
           branch_id: branchObjectId,

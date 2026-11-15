@@ -4480,6 +4480,13 @@ PosnicPro.sales.addSale = {
         var partial_check = (partial_check_value === 'true' || partial_check_value === 'Partial') ? 'true' : 'false';
         var partial = $('#Partial_amount').val();
         let payments = PosnicPro.sales.getPaymentObject();
+        var versementDraft = window.__posnicVersementDraft || null;
+        if (versementDraft) {
+            var versementTotal = Math.max(0, Number(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot) || 0);
+            payments = { Versement: Math.round(versementTotal * 100) / 100 };
+            partial = versementTotal.toFixed(2);
+            partial_check = 'false';
+        }
 
         // A fully unpaid NEW sale is a receivable, not a zero-value payment.
         // Record the whole bill under Credit, while the amount actually received
@@ -4698,6 +4705,7 @@ PosnicPro.sales.addSale = {
                 payment_mode_val = $('.payment_mode').val();
             }
             if (fullyUnpaidNewSale) payment_mode_val = 'Credit';
+            if (versementDraft) payment_mode_val = 'Versement';
             let register_id = PosnicPro.sales.saleRegisterId();
             var isKotNewSale = (PosnicPro.sales.saleProcess === 'KOT');
             var newSaleTableNumber = '';
@@ -4772,6 +4780,12 @@ PosnicPro.sales.addSale = {
                     quote_price_honoured: PosnicPro.sales._sourceQuoteId
                         ? (PosnicPro.sales._quoteHonoured ? 'true' : 'false') : undefined,
                     multi_payment: payments,
+                    versement_checkout: versementDraft ? {
+                        customer_name: versementDraft.customer_name,
+                        phone: versementDraft.phone,
+                        initial_amount: versementDraft.initial_amount,
+                        initial_method: versementDraft.initial_method
+                    } : undefined,
                     enable_multi_payment: PosnicPro.local.get('enable_multi_payment'),
                     table_number: newSaleTableNumber,
                     person_count: newSalePersonCount,
@@ -4800,6 +4814,15 @@ PosnicPro.sales.addSale = {
                 // ✅ Clear submission flag
     PosnicPro.sales.submissionInProgress = false;
                 if (response.type === 'success') {
+                    if (versementDraft) {
+                        window.__posnicVersementDraft = null;
+                        if (response.data && response.data.versement && PosnicPro.versementsRegister &&
+                            typeof PosnicPro.versementsRegister.printReceipt === 'function') {
+                            PosnicPro.versementsRegister.printReceipt(response.data.versement, 2);
+                        } else {
+                            PosnicPro.alert('warning', 'Vente enregistrée. Actualisez la section Versements pour récupérer le reçu.');
+                        }
+                    }
                     try {
                         PosnicPro.sales.submissionJournal().confirm(savedSubmission, response);
                         if (PosnicPro.orderRecovery) PosnicPro.orderRecovery.refresh();
@@ -11926,10 +11949,36 @@ $(document).on('click.posnicCreditRules', '#save_btn', function (event) {
 
 /* The on-screen function keys deliberately invoke the exact same handlers as the physical keys. */
 PosnicPro.sales.runFunctionShortcut = function (key) {
-    if (!['F1', 'F2', 'F3', 'F4', 'F5', 'F8'].includes(key)) return;
+    if (!['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F8'].includes(key)) return;
     var event = new KeyboardEvent('keydown', { key: key, bubbles: true, cancelable: true });
     document.dispatchEvent(event);
 };
+
+/* F6 — advance payment, separate from customer credit. */
+PosnicPro.sales.openVersementCheckout = function () {
+    if (!$('#sales_new').is(':visible') || PosnicPro.sales.SaleAction !== 'add' || PosnicPro.sales.paymentOnlyMode === true || PosnicPro.sales.saleProcess === 'KOT') return;
+    if (!$('#sales_new_items_table tbody tr').filter(function(){return $(this).find('input[name="addSalesLineItemQty"]').length>0;}).length) { PosnicPro.alert('warning','Ajoutez au moins un article avant de créer un versement.'); return; }
+    var total=Math.round((Number(PosnicPro.sales.extraDiscount&&PosnicPro.sales.extraDiscount.sale_new_tot)||Number(String($('#grand_total').val()||'0').replace(/,/g,''))||0)*100)/100;
+    if(!(total>0)){PosnicPro.alert('warning','Le total de la vente est invalide.');return;}
+    if(!$('#posnic-versement-checkout').length){
+        $('body').append('<div class="modal fade" id="posnic-versement-checkout" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content" style="background:var(--theme-card-bg,#fff);color:var(--theme-text-primary,#1e293b);border:1px solid var(--theme-border-color,#e2e8f0);border-radius:16px"><div class="modal-header"><div><small class="text-primary font-weight-bold">POSNIC · NOUVEAU VERSEMENT</small><h5 class="modal-title mb-0">VERSEMENT</h5></div><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div><div class="modal-body"><div class="p-3 mb-3 rounded" style="background:var(--theme-body-bg,#f8fafc);border:1px solid var(--theme-border-color,#e2e8f0)"><small class="text-muted">Total de la vente</small><div class="h3 mb-0" id="posnic-versement-total">0.00 DA</div></div><div class="form-group"><label>Nom du client</label><input id="posnic-versement-customer" class="form-control" maxlength="200" placeholder="Client enregistré ou non"></div><div class="form-group"><label>Téléphone (facultatif)</label><input id="posnic-versement-phone" class="form-control" maxlength="40"></div><div class="form-group"><label>Montant versé</label><input id="posnic-versement-amount" class="form-control form-control-lg" type="number" min="0.01" step="0.01"></div><div class="form-group mb-0"><label>Mode de paiement de l’avance</label><select id="posnic-versement-method" class="form-control"><option value="cash">Espèces</option><option value="tpe">TPE</option><option value="baridimob">BaridiMob</option></select></div><small class="text-muted d-block mt-3">Le solde sera suivi dans Versements, sans créer de crédit client.</small></div><div class="modal-footer"><button type="button" class="btn btn-light" data-dismiss="modal">Annuler</button><button type="button" class="btn btn-primary" id="posnic-versement-confirm">Valider le versement</button></div></div></div></div>');
+        $('#posnic-versement-confirm').on('click',function(){
+            var customer=String($('#posnic-versement-customer').val()||'').trim(),phone=String($('#posnic-versement-phone').val()||'').trim(),amount=Number($('#posnic-versement-amount').val()),method=String($('#posnic-versement-method').val()||'cash'),saleTotal=Number($('#posnic-versement-checkout').data('total'))||0;
+            if(!customer||!(amount>0)||amount>saleTotal+0.009||!['cash','tpe','baridimob'].includes(method)){PosnicPro.alert('warning','Vérifiez le nom du client et un montant compris entre 0 et le total de la vente.');return;}
+            window.__posnicVersementDraft={customer_name:customer,phone:phone,initial_amount:Math.round(amount*100)/100,initial_method:method};
+            $('#Partial_amount').val(saleTotal.toFixed(2));$('#sales_new_customer_partial_balance').val('false');$('#unpaid_payment_toggle').prop('checked',true).trigger('change');
+            var matched=false;$('#payment_id .payment-method-card').each(function(){var card=$(this),mode=String(card.find('.payment_mode').first().attr('id')||'').toLowerCase();card.find('.payment-amount-input').val('0.00');if(mode===method){card.find('.payment-amount-input').val(saleTotal.toFixed(2));matched=true;}});
+            if(!matched){var first=$('#payment_id .payment-method-card').filter(function(){return String($(this).find('.payment_mode').first().attr('id')||'').toLowerCase()!=='credit';}).first();first.find('.payment-amount-input').val(saleTotal.toFixed(2));}
+            if(typeof PosnicPro.sales.initPaymentValidation==='function')PosnicPro.sales.initPaymentValidation();
+            $('#posnic-versement-checkout').modal('hide');window.setTimeout(function(){var save=document.getElementById('save_btn');if(save&&!save.disabled)save.click();else{window.__posnicVersementDraft=null;PosnicPro.alert('warning','Le paiement n’est pas prêt. Vérifiez le mode de paiement puis réessayez.');}},80);
+        });
+    }
+    $('#posnic-versement-checkout').data('total',total);$('#posnic-versement-total').text(total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+' '+(PosnicPro.local.get('currencySign')||'DA'));
+    $('#posnic-versement-customer,#posnic-versement-phone,#posnic-versement-amount').val('');
+    if(!$('#infobar-settings-sidebar-tender-details').hasClass('sidebarview'))PosnicPro.sales.openTenderModel(false,false);
+    $('#posnic-versement-checkout').modal('show');
+};
+document.addEventListener('keydown',function(event){if(event.key!=='F6'||event.repeat||event.altKey||event.ctrlKey||event.metaKey||!$('#sales_new').is(':visible'))return;event.preventDefault();event.stopImmediatePropagation();PosnicPro.sales.openVersementCheckout();},true);
 
 /* Cashier attribution: every F1/F2 checkout confirms who is serving this sale.
  * The authenticated account remains in created_by/user_name; cashier_name is
