@@ -339,9 +339,6 @@
                 if (Number(data.round_off)) content += pair('Round Off', money(data.round_off));
                 content += pair('Total', money(data.sales_total != null ? data.sales_total : data.items_total), true);
                 if (data.versement_checkout && data.sales_id) {
-                    if (!hasField('customer_name') && present(values.customer_name)) content += pair('Client', esc(String(values.customer_name)));
-                    if (!hasField('customer_phone') && present(values.customer_phone)) content += pair('Téléphone', esc(String(values.customer_phone)));
-                    if (!hasField('seller_name') && present(values.seller_name)) content += pair('Vendeur', esc(String(values.seller_name)));
                     var versementTotal = Number(data.sales_total != null ? data.sales_total : data.items_total) || 0;
                     var versementInitial = Number(data.versement_checkout.initial_amount) || 0;
                     var versementFinal = data.versement_settled === true ? (Number(data.versement_settlement_amount) || 0) : 0;
@@ -349,6 +346,9 @@
                     var versementRemaining = Math.max(0, versementTotal - versementPaid);
                     content += pair('Versement (montant payé)', money(versementPaid));
                     content += pair('Reste à payer', money(versementRemaining));
+                    if (!hasField('customer_name') && present(values.customer_name)) content += pair('Client', esc(String(values.customer_name)));
+                    if (!hasField('customer_phone') && present(values.customer_phone)) content += pair('Téléphone', esc(String(values.customer_phone)));
+                    if (!hasField('seller_name') && present(values.seller_name)) content += pair('Vendeur', esc(String(values.seller_name)));
                 } else if (!beforePayment && data.sales_id) {
                     var paymentRows = PosnicSalePayments.rows(data);
                     var hasCreditAllocation = paymentRows.some(function (row) { return String(row.method || '').trim().toLowerCase() === 'credit'; });
