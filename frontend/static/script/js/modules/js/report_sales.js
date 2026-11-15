@@ -511,12 +511,14 @@ $(document).ready(function () {
     if (hash === "quickreport") {
       var loader = $(".loader-dailysale-report");
       loader.find(".loadingSpinner:first").remove();
-      $("#view_sale_report_daterange")
-        .data("daterangepicker")
-        .setStartDate(moment().startOf("day"));
-      $("#view_sale_report_daterange")
-        .data("daterangepicker")
-        .setEndDate(moment().endOf("day"));
+      var dateField = $("#view_sale_report_daterange");
+      var datePicker = dateField.data("daterangepicker");
+      var todayStart = moment().startOf("day");
+      var todayEnd = moment().endOf("day");
+      if (datePicker && typeof datePicker.setStartDate === "function" && typeof datePicker.setEndDate === "function") {
+        datePicker.setStartDate(todayStart);
+        datePicker.setEndDate(todayEnd);
+      }
       $("#view_sale_report_daterange span").html(
         '<span><lang class="lang_this_day">Today</lang></span>&nbsp;&nbsp;<span data-toggle="tooltip" data-placement="bottom" data-original-title="' +
           moment().startOf("day").format("YYYY/MM/DD h:mm A") +
