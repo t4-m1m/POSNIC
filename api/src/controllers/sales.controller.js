@@ -5995,29 +5995,40 @@ class SalesController extends BaseController {
       doc.text('Total', 450, y);
       doc.moveDown();
 
-      // Items
-      sale.items.forEach((item) => {
+      // Older sales and partially populated legacy item records can omit
+      // quantity/price fields. An emailed invoice must not crash while
+      // formatting a missing value; normalize display numbers without
+      // changing the stored sale or its payment calculations.
+      const invoiceNumber = (value) => {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+      };
+      const invoiceItems = Array.isArray(sale.items) ? sale.items : [];
+      let calculatedSubtotal = 0;
+      invoiceItems.forEach((item) => {
+        const quantity = invoiceNumber(item && (item.quantity ?? item.item_quantity));
+        const price = invoiceNumber(item && (item.price ?? item.item_price));
+        const lineTotal = invoiceNumber(item && item.total_amount) || quantity * price;
+        calculatedSubtotal += lineTotal;
         y = doc.y;
-        doc.text(item.item_name || 'Item', 50, y);
-        doc.text(item.quantity.toString(), 250, y);
-        doc.text(item.price.toFixed(2), 350, y);
-        doc.text((item.quantity * item.price).toFixed(2), 450, y);
+        doc.text(String((item && item.item_name) || 'Item'), 50, y);
+        doc.text(String(quantity), 250, y);
+        doc.text(price.toFixed(2), 350, y);
+        doc.text(lineTotal.toFixed(2), 450, y);
         doc.moveDown();
       });
 
-      // Totals
+      // Totals: use available saved totals, falling back to the item sum.
       doc.moveDown();
       doc.fontSize(12);
-      if (sale.subtotal) {
-        doc.text(`Subtotal: ${sale.subtotal.toFixed(2)}`, { align: 'right' });
-      }
-      if (sale.discount) {
-        doc.text(`Discount: ${sale.discount.toFixed(2)}`, { align: 'right' });
-      }
-      if (sale.tax) {
-        doc.text(`Tax: ${sale.tax.toFixed(2)}`, { align: 'right' });
-      }
-      doc.text(`Total: ${sale.items_total.toFixed(2)}`, { align: 'right' });
+      const subtotal = invoiceNumber(sale.subtotal) || calculatedSubtotal;
+      const discount = invoiceNumber(sale.discount);
+      const tax = invoiceNumber(sale.tax);
+      const total = invoiceNumber(sale.items_total) || Math.max(0, subtotal - discount + tax);
+      if (subtotal) doc.text(`Subtotal: ${subtotal.toFixed(2)}`, { align: 'right' });
+      if (discount) doc.text(`Discount: ${discount.toFixed(2)}`, { align: 'right' });
+      if (tax) doc.text(`Tax: ${tax.toFixed(2)}`, { align: 'right' });
+      doc.text(`Total: ${total.toFixed(2)}`, { align: 'right' });
 
       // Footer
       doc.moveDown(2);
