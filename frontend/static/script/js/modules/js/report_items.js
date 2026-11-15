@@ -546,7 +546,7 @@ PosnicPro.versementsRegister = (function () {
         });
         if(!body.children().length) body.append($('<tr>').append($('<td colspan="10" class="text-center text-muted">Aucun versement.</td>')));
     }
-    function printReceipt(record, copies) {
+    function printReceipt(record) {
         if(!record)return Promise.resolve(false);
         var printer = window.electronAPI && window.electronAPI.printer;
         if (!printer || typeof printer.printReceipt !== 'function') {
@@ -558,7 +558,7 @@ PosnicPro.versementsRegister = (function () {
         var initial = Number(record.initial_amount) || 0;
         var remaining = Math.max(0, total - initial);
         var methods = {cash:'Espèces',tpe:'TPE',baridimob:'BaridiMob'};
-        var sale = {
+        var baseSale = {
             billNo: String(record.versement_number || ''),
             title: 'VERSEMENT',
             date: new Date(record.created_at || Date.now()).toLocaleString(),
@@ -576,21 +576,37 @@ PosnicPro.versementsRegister = (function () {
                 {label:'Statut',value:record.status==='settled'?'Réglé':'En attente'}
             ],
             design: {
+                showTitle:true, titleAlignment:'center', titleSize:'extra', titleBold:true,
                 showTicket:true, showDate:true, showCustomer:true, itemsHeader:false, showSubtotal:false,
                 showTaxes:false, showDiscount:false, showPayments:true, showChange:false,
                 showCashier:false, showBranch:false
             }
         };
-        return Promise.resolve(printer.printReceipt(sale, {
-            copies: Math.max(1, Math.min(2, Number(copies) || 1)),
-            kind: 'versement',
-            docName: 'Versement ' + String(record.versement_number || ''),
-            source: 'F6 Versement',
-            openDrawer: false,
-            jobId: 'versement:' + String(record._id || record.versement_number || 'receipt') + ':' + Date.now()
-        })).then(function (result) {
-            if (!result || !result.success) throw new Error(result && result.error || 'Échec de l’impression thermique du versement.');
-            return result;
+        var receiptId = String(record._id || record.versement_number || 'receipt');
+        function printCopy(copyLabel, copyIndex) {
+            var sale = Object.assign({}, baseSale, {
+                extras: baseSale.extras.concat([{label:'COPIE',value:copyLabel}])
+            });
+            return Promise.resolve(printer.printReceipt(sale, {
+                copies: 1,
+                kind: 'versement',
+                docName: 'Versement ' + copyLabel + ' ' + String(record.versement_number || ''),
+                source: 'F6 Versement',
+                openDrawer: false,
+                jobId: 'versement:' + receiptId + ':' + copyIndex + ':' + Date.now()
+            })).then(function (result) {
+                if (!result || !result.success) throw new Error(result && result.error || 'Échec de l’impression thermique du versement (' + copyLabel + ').');
+                return result;
+            });
+        }
+        // Two separate jobs, sent sequentially through the exact same
+        // electronAPI.printer.printReceipt route used by designed sale receipts.
+        // This keeps the saved receipt design and guarantees client first,
+        // seller second, without invoking a browser or a second print engine.
+        return printCopy('CLIENT', 1).then(function (clientResult) {
+            return printCopy('VENDEUR', 2).then(function (sellerResult) {
+                return {success:true, client:clientResult, seller:sellerResult};
+            });
         }).catch(function (error) {
             PosnicPro.alert('error', error && error.message || 'Échec de l’impression du versement.');
             return false;
