@@ -382,7 +382,9 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
           ? (sale.title || 'VERSEMENT')
           : (config.receiptTitle || sale.title || 'SALE RECEIPT'),
         footer: config.footer || sale.footer || '',
-        design: { ...(config.design || {}), ...(sale.design || {}) },
+        design: options.kind === 'versement'
+          ? { ...(config.design || {}), ...(sale.design || {}) }
+          : (config.design || sale.design || {}),
         cashier: config.showCashier ? (sale.cashier || '') : '',
         customer: options.kind === 'versement'
           ? (sale.customer || [])
