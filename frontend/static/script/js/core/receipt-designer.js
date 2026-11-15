@@ -525,13 +525,14 @@
         };
         var thermalFormat = ['58', '80', '112'].indexOf(String(format)) !== -1;
         var printMode = options.target && options.target.printMode;
-        var fastReceiptLines = printMode === 'fast' && thermalFormat ? fastLines(html) : null;
-        var useFastReceipt = !!fastReceiptLines;
-        // Exact Studio mode is the default and must preserve the complete saved
-        // layout (logo, barcode, images and Unicode). Rasterise that document once
-        // and submit ESC/POS RAW instead of starting a Chromium/GDI print window.
-        // The Windows-driver route remains available only when explicitly chosen.
-        var useRawThermal = thermalFormat && printMode !== 'driver';
+        // Receipt Studio is a visual document, not an ESC/POS text template.
+        // Always send its rendered HTML through Chromium/Windows printer driver:
+        // raw thermal jobs were arriving as printer-command garbage on tills
+        // whose Windows queue expects rendered graphics rather than ESC/POS bytes.
+        // Keep the complete saved layout (logo, barcode, images, fonts and Unicode).
+        var fastReceiptLines = null;
+        var useFastReceipt = false;
+        var useRawThermal = false;
         if (printer && printer.print && options.showDialog !== true) {
             return Promise.resolve(PosnicPro.syncPrinterPreferences ? PosnicPro.syncPrinterPreferences() : null)
                 .catch(function () {})
@@ -551,11 +552,10 @@
                 copies: options.target ? options.target.copies : 1,
                 receiptLog: options.receiptLog || null,
                 fitReceipt: ['58', '80', '112'].indexOf(format) !== -1,
-                // Exact Studio layouts are rasterised to ESC/POS RAW so the
-                // saved graphics and typography are preserved without the slow
-                // Chromium/GDI printer-driver submission path. Driver mode is opt-in.
-                thermalRaster: useRawThermal,
-                fastReceiptLines: useFastReceipt ? fastReceiptLines : null,
+                // Saved Receipt Studio HTML is printed by the Windows driver.
+                // Never pass this document to the ESC/POS raw-byte encoder.
+                thermalRaster: false,
+                fastReceiptLines: null,
                 silent: true, strictPrinter: true, forceHtml: true, printBackground: true, margins: { marginType: 'none' } }); })
                 .then(function (result) {
                     if (!result || !result.success) throw new Error(result && result.error || label('Print failed'));
