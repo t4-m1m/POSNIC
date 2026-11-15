@@ -1,4 +1,5 @@
 const { ObjectId } = require('mongodb');
+const crypto = require('crypto');
 
 const COLLECTION = 'payment_settlements';
 const SUPPORTED = ['tpe', 'baridimob'];
@@ -41,6 +42,10 @@ const actor = (req) => {
   return String(u.username || u.name || u.email || u._id || u.id || 'unknown');
 };
 const sendError = (res, status, message) => res.status(status).json({ type: 'error', message });
+const sendNotSaved = (res, status, message, requestId) => res.status(status).json({
+  type: 'error', message,
+  data: { submission_outcome: 'not_saved', request_id: requestId },
+});
 
 exports.list = async (req, res) => {
   try {
@@ -57,7 +62,7 @@ exports.list = async (req, res) => {
       for (const line of (batch.lines || [])) {
         const key = line.sale_key + '|' + line.method;
         collectedByKey.set(key, money((collectedByKey.get(key) || 0) + Number(line.amount || 0)));
-        history.push({ ...line, batch_id: String(batch._id), collected_at: batch.collected_at, reference: batch.reference || '', note: batch.note || '', recorded_by: batch.recorded_by || '', sale_key: line.sale_key });
+        history.push({ ...line, request_id: batch.request_id || '', batch_id: String(batch._id), collected_at: batch.collected_at, reference: batch.reference || '', note: batch.note || '', recorded_by: batch.recorded_by || '', sale_key: line.sale_key });
       }
     }
     const rows = [];
@@ -88,46 +93,111 @@ exports.list = async (req, res) => {
 };
 
 exports.collect = async (req, res) => {
+  let requestId = String(req.body && req.body.request_id || '').trim();
+  let requestHash = '';
   try {
     if (!req.db) return sendError(res, 500, 'Shop database is unavailable.');
+    if (!/^[A-Za-z0-9._:-]{8,128}$/.test(requestId)) {
+      return sendError(res, 400, 'A valid collection request id is required.');
+    }
+
+    const collection = req.db.collection(COLLECTION);
+    // A retry after a lost response must resolve to the original batch, not
+    // create another payment. Sparse keeps legacy batches without request_id.
+    await collection.createIndex({ request_id: 1 }, { unique: true, sparse: true });
+
     const linesIn = Array.isArray(req.body.lines) ? req.body.lines : [];
-    if (!linesIn.length) return sendError(res, 400, 'Select at least one transaction.');
+    if (!linesIn.length) return sendNotSaved(res, 400, 'Select at least one transaction.', requestId);
     const collectedAt = req.body.collected_at ? new Date(req.body.collected_at) : new Date();
-    if (Number.isNaN(collectedAt.getTime())) return sendError(res, 400, 'Collection date is invalid.');
-    const sales = await req.db.collection('sales').find({}).toArray();
-    const saleMap = new Map(sales.map(s => [saleId(s), s]));
-    const existing = await req.db.collection(COLLECTION).find({}).toArray();
-    const already = new Map();
-    existing.forEach(b => (b.lines || []).forEach(l => {
-      const k = l.sale_key + '|' + l.method;
-      already.set(k, money((already.get(k) || 0) + Number(l.amount || 0)));
-    }));
+    if (Number.isNaN(collectedAt.getTime())) return sendNotSaved(res, 400, 'Collection date is invalid.', requestId);
+    const reference = String(req.body.reference || '').trim().slice(0, 160);
+    const note = String(req.body.note || '').trim().slice(0, 1000);
+
+    // Normalize before checking the request journal. An already-committed
+    // request can then be acknowledged even when its remaining balance is 0.
     const lines = [];
     for (const input of linesIn) {
       const key = String(input.sale_key || '');
       const method = normMethod(input.method);
       const amount = money(input.amount);
-      if (!key || !SUPPORTED.includes(method) || amount <= 0) return sendError(res, 400, 'Each collection needs a valid sale, method, and positive amount.');
-      const sale = saleMap.get(key);
-      if (!sale) return sendError(res, 404, 'A selected sale could not be found. Refresh and try again.');
-      const total = saleAmountForMethod(sale, method);
-      const paid = money(already.get(key + '|' + method) || 0);
-      const remaining = money(total - paid);
-      if (total <= 0 || amount > remaining + 0.001) return sendError(res, 409, 'Collection amount exceeds the remaining balance for sale ' + key + '. Refresh before recording.');
-      already.set(key + '|' + method, money(paid + amount));
-      lines.push({ sale_key: key, method, amount, sale_amount: total });
+      if (!key || !SUPPORTED.includes(method) || amount <= 0) {
+        return sendNotSaved(res, 400, 'Each collection needs a valid sale, method, and positive amount.', requestId);
+      }
+      lines.push({ sale_key: key, method, amount });
     }
+    const hashPayload = {
+      lines: lines.slice().sort((x, y) => (x.sale_key + '|' + x.method).localeCompare(y.sale_key + '|' + y.method)),
+      reference,
+      note,
+      collected_at: collectedAt.toISOString(),
+    };
+    requestHash = crypto.createHash('sha256').update(JSON.stringify(hashPayload)).digest('hex');
+
+    const previous = await collection.findOne({ request_id: requestId });
+    if (previous) {
+      if (previous.request_hash === requestHash) {
+        return res.status(200).json({
+          type: 'success',
+          message: 'Collection already recorded. Duplicate payment prevented.',
+          data: { id: String(previous._id), duplicate: true },
+        });
+      }
+      return sendError(res, 409, 'This collection request id was already used for different payment details.');
+    }
+
+    const sales = await req.db.collection('sales').find({}).toArray();
+    const saleMap = new Map(sales.map(s => [saleId(s), s]));
+    const existing = await collection.find({}).toArray();
+    const already = new Map();
+    existing.forEach(b => (b.lines || []).forEach(l => {
+      const k = l.sale_key + '|' + l.method;
+      already.set(k, money((already.get(k) || 0) + Number(l.amount || 0)));
+    }));
+
+    const validatedLines = [];
+    for (const line of lines) {
+      const sale = saleMap.get(line.sale_key);
+      if (!sale) return sendNotSaved(res, 404, 'A selected sale could not be found. Refresh and try again.', requestId);
+      const total = saleAmountForMethod(sale, line.method);
+      const paid = money(already.get(line.sale_key + '|' + line.method) || 0);
+      const remaining = money(total - paid);
+      if (total <= 0 || line.amount > remaining + 0.001) {
+        return sendNotSaved(res, 409, 'Collection amount exceeds the remaining balance for sale ' + line.sale_key + '. Refresh before recording.', requestId);
+      }
+      already.set(line.sale_key + '|' + line.method, money(paid + line.amount));
+      validatedLines.push({ ...line, sale_amount: total });
+    }
+
     const doc = {
+      request_id: requestId,
+      request_hash: requestHash,
       collected_at: collectedAt,
       recorded_at: new Date(),
       recorded_by: actor(req),
-      reference: String(req.body.reference || '').trim().slice(0, 160),
-      note: String(req.body.note || '').trim().slice(0, 1000),
-      lines
+      reference,
+      note,
+      lines: validatedLines,
     };
-    const result = await req.db.collection(COLLECTION).insertOne(doc);
+    const result = await collection.insertOne(doc);
     return res.status(201).json({ type: 'success', message: 'Collection recorded.', data: { id: String(result.insertedId) } });
   } catch (error) {
+    // Two concurrent retries can both pass the initial lookup; the unique
+    // index elects one winner and the loser reads back that exact result.
+    if (error && error.code === 11000 && requestId && req.db) {
+      try {
+        const previous = await req.db.collection(COLLECTION).findOne({ request_id: requestId });
+        if (previous && previous.request_hash === requestHash) {
+          return res.status(200).json({
+            type: 'success',
+            message: 'Collection already recorded. Duplicate payment prevented.',
+            data: { id: String(previous._id), duplicate: true },
+          });
+        }
+        if (previous) return sendError(res, 409, 'This collection request id was already used for different payment details.');
+      } catch (lookupError) {
+        console.error('[payment-settlements] duplicate lookup failed', lookupError);
+      }
+    }
     console.error('[payment-settlements] collect failed', error);
     return sendError(res, 500, 'Unable to record collection.');
   }

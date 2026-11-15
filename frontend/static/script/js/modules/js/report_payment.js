@@ -506,6 +506,27 @@ PosnicPro.commissionreport = {
  * separately from the original sale payment. Partial collections remain open. */
 PosnicPro.paymentsettlements = {
     rows: [],
+    _pendingLines: [],
+    pendingKey: function () {
+        var scope = [typeof API_URL === 'string' ? API_URL : '', PosnicPro.local.get('branch_id_set') || '', PosnicPro.local.get('userid') || ''].join('|');
+        return 'posnic.payment-settlement.pending.v1:' + encodeURIComponent(scope);
+    },
+    readPending: function () {
+        try { return JSON.parse(localStorage.getItem(this.pendingKey()) || 'null'); } catch (e) { return null; }
+    },
+    writePending: function (value) {
+        try { localStorage.setItem(this.pendingKey(), JSON.stringify(value)); return true; } catch (e) { return false; }
+    },
+    clearPending: function (requestId) {
+        try {
+            var pending = this.readPending();
+            if (!requestId || (pending && pending.request_id === requestId)) localStorage.removeItem(this.pendingKey());
+        } catch (e) {}
+    },
+    newRequestId: function () {
+        try { if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID(); } catch (e) {}
+        return 'settlement-' + Date.now() + '-' + Math.random().toString(36).slice(2, 14);
+    },
     money: function (v) { return (PosnicPro.local.get('currencySign') || '') + ' ' + (Number(v) || 0).toFixed(2); },
     safe: function (v) { return $('<div>').text(v == null ? '' : String(v)).html(); },
     load: function () {
@@ -523,6 +544,10 @@ PosnicPro.paymentsettlements = {
             }
             var data = response.data || {};
             self.rows = data.rows || [];
+            var pending = self.readPending();
+            if (pending && pending.request_id && (data.history || []).some(function (entry) { return entry.request_id === pending.request_id; })) {
+                self.clearPending(pending.request_id);
+            }
             var totals = data.totals || {};
             [['tpe','tpe'],['baridimob','bm']].forEach(function (pair) {
                 var t = totals[pair[0]] || {};
@@ -564,8 +589,14 @@ PosnicPro.paymentsettlements = {
     collectSelected: function () {
         var self = this;
         var selected = [];
+        var pending = this.readPending();
         var invalid = false;
-        $('.settlement_pick:checked').each(function () {
+        if (pending && pending.payload && Array.isArray(pending.payload.lines)) {
+            // Re-open the exact unresolved batch after reload; never reconstruct
+            // it from a partially refreshed table or altered form fields.
+            selected = pending.payload.lines.slice();
+        }
+        if (!pending) $('.settlement_pick:checked').each(function () {
             var index = Number($(this).data('index'));
             var row = self.rows[index];
             var field = $('.settlement_amount[data-index="' + index + '"]');
@@ -603,9 +634,10 @@ PosnicPro.paymentsettlements = {
             $('body').append(modal);
         }
         modal.find('#settlement_collect_total').text(this.money(total));
-        modal.find('#settlement_collect_date').val(moment().format('YYYY-MM-DD'));
-        modal.find('#settlement_collect_reference').val('');
-        modal.find('#settlement_collect_note').val('');
+        modal.find('#settlement_collect_date').val(pending ? pending.payload.collected_at : moment().format('YYYY-MM-DD'));
+        modal.find('#settlement_collect_reference').val(pending ? pending.payload.reference : '');
+        modal.find('#settlement_collect_note').val(pending ? pending.payload.note : '');
+        if (pending) PosnicPro.alert('warning', 'Une demande d’encaissement précédente est en attente de confirmation. POSNIC va réutiliser exactement la même demande pour éviter un double encaissement.');
         modal.modal('show');
     },
     saveSelected: function () {
@@ -622,26 +654,35 @@ PosnicPro.paymentsettlements = {
         }
         var button = $('#settlement_collect_confirm');
         if (button.prop('disabled')) return;
+        var pending = self.readPending();
+        var payload = pending && pending.payload ? pending.payload : {
+            lines: selected,
+            reference: String($('#settlement_collect_reference').val() || '').trim(),
+            note: String($('#settlement_collect_note').val() || '').trim(),
+            collected_at: collectedAt
+        };
+        var requestId = pending && pending.request_id ? pending.request_id : self.newRequestId();
+        if (!pending && !self.writePending({ request_id: requestId, payload: payload })) {
+            PosnicPro.alert('error', 'Impossible de sauvegarder la demande sur cet appareil. Aucun encaissement n’a été envoyé.');
+            return;
+        }
         button.prop('disabled', true).text('Enregistrement…');
         PosnicPro.request({
             url: 'payment-settlements',
             method: 'POST',
             contentType: 'application/json; charset=UTF-8',
             processData: false,
-            data: JSON.stringify({
-                lines: selected,
-                reference: String($('#settlement_collect_reference').val() || '').trim(),
-                note: String($('#settlement_collect_note').val() || '').trim(),
-                collected_at: collectedAt
-            })
+            data: JSON.stringify({ request_id: requestId, lines: payload.lines, reference: payload.reference, note: payload.note, collected_at: payload.collected_at })
         }, function (response) {
             button.prop('disabled', false).text('Confirmer l’encaissement');
             if (response && response.type === 'success') {
+                self.clearPending(requestId);
                 $('#settlement_collect_modal').modal('hide');
                 self._pendingLines = [];
                 PosnicPro.alert('success', response.message || 'Encaissement enregistré.');
                 self.load();
             } else {
+                if (response && response.data && response.data.submission_outcome === 'not_saved' && response.data.request_id === requestId) self.clearPending(requestId);
                 PosnicPro.alert('error', (response && response.message) || 'Le serveur n’a pas confirmé l’enregistrement.');
             }
         }, function (xhr) {
@@ -650,8 +691,9 @@ PosnicPro.paymentsettlements = {
             try {
                 var body = xhr.responseJSON || JSON.parse(xhr.responseText || '{}');
                 message = body.message || message;
+                if (body.data && body.data.submission_outcome === 'not_saved' && body.data.request_id === requestId) self.clearPending(requestId);
             } catch (e) {}
-            PosnicPro.alert('error', message);
+            PosnicPro.alert('error', message + ' Si la réponse a été interrompue, réessayez sans modifier les détails.');
         });
     }
 
