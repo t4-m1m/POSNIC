@@ -571,6 +571,9 @@ PosnicPro.versementsRegister = (function () {
             billNo: String(record.versement_number || ''),
             title: 'VERSEMENT',
             date: new Date(record.created_at || Date.now()).toLocaleString(),
+            customer_name: String(record.customer_name || ''),
+            customer_phone: String(record.phone || ''),
+            cashier_name: String(record.vendor_name || ''),
             customer: record.customer_name
                 ? [String(record.customer_name)].concat(record.phone ? ['Téléphone: ' + String(record.phone)] : [])
                 : (record.phone ? ['Téléphone: ' + String(record.phone)] : []),
@@ -581,8 +584,9 @@ PosnicPro.versementsRegister = (function () {
             extras: [
                 {label:'Référence vente',value:String(record.sale_key || '')},
                 {label:'Total',value:total.toFixed(2)+' '+currency},
-                {label:'Versement',value:paid.toFixed(2)+' '+currency},
-                {label:'Reste',value:remaining.toFixed(2)+' '+currency},
+                {label:'Versement (montant payé)',value:paid.toFixed(2)+' '+currency},
+                {label:'Reste à payer',value:remaining.toFixed(2)+' '+currency},
+                {label:'Vendeur',value:String(record.vendor_name || '')},
                 {label:'Statut',value:record.status==='settled'?'Réglé':'En attente'}
             ],
             design: {

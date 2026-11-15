@@ -28,7 +28,7 @@ exports.ensureForSale = async (req, sale) => {
     versement_number: 'V-' + now.toISOString().slice(0,10).replace(/-/g,'') + '-' + require('crypto').randomBytes(3).toString('hex').toUpperCase(),
     sale_key: key, sale_object_id: sale._id, branch_id: new ObjectId(String(branchRaw)),
     ...(sale.cashregister_id && ObjectId.isValid(String(sale.cashregister_id)) ? { register_id: new ObjectId(String(sale.cashregister_id)) } : {}),
-    customer_name: customer, phone, sale_total: total, initial_amount: initial, initial_method: method,
+    customer_name: customer, phone, vendor_name: String(meta.vendor_name || sale.cashier_name || '').trim().slice(0, 80), sale_total: total, initial_amount: initial, initial_method: method,
     remaining: money(total - initial), status: settled ? 'settled' : 'pending',
     created_at: now, created_by: actor(req), initial_collected_at: now, initial_recorded_amount: initial,
     ...(settled ? { settled_at: now } : {}),

@@ -237,8 +237,8 @@
         var documentTitle = pendingGoods ? label('Bill') : beforePayment ? (present(data.branch_gstin_number) || on(data.gst) ? label('Tax invoice') : label('Bill')) : label('Receipt');
         var hasField = function (field) { return layout.blocks.some(function (b) { return b.type === 'field' && b.field === field; }); };
         var values = {
-            receipt_number: data.sales_id || data.sale_number || '', receipt_date: data.receipt_date || data.created_date || data.date || '', seller_name: data.cashier_name || data.seller_name || data.steward_name || data.steward || data.created_by || data.user_name,
-            customer_name: data.customer_name, customer_phone: data.customer_phone, customer_email: data.customer_email,
+            receipt_number: data.sales_id || data.sale_number || '', receipt_date: data.receipt_date || data.created_date || data.date || '', seller_name: data.cashier_name || (data.versement_checkout && data.versement_checkout.vendor_name) || data.seller_name || data.steward_name || data.steward || data.created_by || data.user_name,
+            customer_name: data.customer_name || (data.versement_checkout && data.versement_checkout.customer_name), customer_phone: data.customer_phone || (data.versement_checkout && data.versement_checkout.phone), customer_email: data.customer_email,
             customer_tax_number: taxNumber,
             customer_address: data.customer_address, sale_note: data.sales_description, brand_url: data.website || PosnicPro.BRAND_URL,
             total_quantity: receiptItems.reduce(function (n, i) { return n + Number(i.item_quantity || 0); }, 0),
@@ -337,8 +337,19 @@
                 else if (Number(data.tax)) content += pair('Tax', money(data.tax));
                 (data.charges || []).forEach(function (c) { content += pair(c.name || 'Charge', money(Number(c.amount || 0) + Number(c.tax_amount || 0))); });
                 if (Number(data.round_off)) content += pair('Round Off', money(data.round_off));
-                content += pair('Total', money(data.items_total), true);
-                if (!beforePayment && data.sales_id) {
+                content += pair('Total', money(data.sales_total != null ? data.sales_total : data.items_total), true);
+                if (data.versement_checkout && data.sales_id) {
+                    if (!hasField('customer_name') && present(values.customer_name)) content += pair('Client', esc(String(values.customer_name)));
+                    if (!hasField('customer_phone') && present(values.customer_phone)) content += pair('Téléphone', esc(String(values.customer_phone)));
+                    if (!hasField('seller_name') && present(values.seller_name)) content += pair('Vendeur', esc(String(values.seller_name)));
+                    var versementTotal = Number(data.sales_total != null ? data.sales_total : data.items_total) || 0;
+                    var versementInitial = Number(data.versement_checkout.initial_amount) || 0;
+                    var versementFinal = data.versement_settled === true ? (Number(data.versement_settlement_amount) || 0) : 0;
+                    var versementPaid = Math.min(versementTotal, versementInitial + versementFinal);
+                    var versementRemaining = Math.max(0, versementTotal - versementPaid);
+                    content += pair('Versement (montant payé)', money(versementPaid));
+                    content += pair('Reste à payer', money(versementRemaining));
+                } else if (!beforePayment && data.sales_id) {
                     var paymentRows = PosnicSalePayments.rows(data);
                     var hasCreditAllocation = paymentRows.some(function (row) { return String(row.method || '').trim().toLowerCase() === 'credit'; });
                     if (b.showPaymentMethod !== false && paymentRows.length) {
