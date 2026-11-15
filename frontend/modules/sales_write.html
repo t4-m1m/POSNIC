@@ -1523,6 +1523,139 @@
         display: block;
     }
 }
+
+/* Theme-native checkout surfaces. The payment redesign is embedded in this
+   lazily-loaded module, so its rules must read the same live tokens as the
+   rest of POSNIC rather than keeping the light-only --posnic-* fallbacks. */
+:root{
+  --posnic-surface:var(--theme-card-bg,#fff);
+  --posnic-text:var(--theme-text-primary,#1e293b);
+  --posnic-muted:var(--theme-text-secondary,#64748b);
+  --posnic-border:var(--theme-border-color,#e2e8f0);
+  --posnic-accent:var(--theme-primary-color,#2563eb);
+  --posnic-accent-soft:color-mix(in srgb,var(--theme-primary-color,#2563eb) 18%,var(--theme-card-bg,#fff));
+}
+html[data-theme="dark"],
+html[data-theme="terminal"],
+html[data-theme="dosblue"],
+html[data-theme="softdark"],
+html[data-theme="warmnight"],
+body[data-theme="dark"],
+body[data-theme="terminal"],
+body[data-theme="dosblue"],
+body[data-theme="softdark"],
+body[data-theme="warmnight"]{color-scheme:dark}
+
+/* Both the full payment page and the slide-in tender panel. */
+#tenderpage,
+#tenderpage>.card-header,
+#tenderpage>.card-body,
+#infobar-settings-sidebar-tender-details #tenderpage,
+#infobar-settings-sidebar-tender-details #tenderpage>.card-header,
+#infobar-settings-sidebar-tender-details #tenderpage>.card-body,
+#infobar-settings-sidebar-tender-details .cancel-save-hide-show{
+  background-color:var(--theme-card-bg,#fff)!important;
+  color:var(--theme-text-primary,#1e293b)!important;
+  border-color:var(--theme-border-color,#e2e8f0)!important;
+}
+#infobar-settings-sidebar-tender-details .contentbar-new.loader-qrimg,
+#infobar-settings-sidebar-tender-details .infobar-settings-sidebar-body,
+#infobar-settings-sidebar-tender-details .custom-mode-setting{
+  background-color:var(--theme-body-bg,#f8fafc)!important;
+  color:var(--theme-text-primary,#1e293b)!important;
+}
+#tenderpage .posnic-pay-total,
+#tenderpage .posnic-pay-entered,
+#tenderpage .posnic-payment-split-summary,
+#tenderpage .posnic-pay-due,
+#infobar-settings-sidebar-tender-details .posnic-pay-total,
+#infobar-settings-sidebar-tender-details .posnic-pay-entered,
+#infobar-settings-sidebar-tender-details .posnic-payment-split-summary,
+#infobar-settings-sidebar-tender-details .posnic-pay-due{
+  background-color:var(--theme-body-bg,#f8fafc)!important;
+  color:var(--theme-text-primary,#1e293b)!important;
+  border-color:var(--theme-border-color,#e2e8f0)!important;
+}
+#tenderpage .posnic-pay-total>span,
+#tenderpage .posnic-pay-entered label,
+#tenderpage .posnic-pay-methods>strong,
+#tenderpage .posnic-payment-split-heading,
+#tenderpage .posnic-payment-split-heading small,
+#tenderpage .posnic-payment-split-row,
+#tenderpage .posnic-payment-split-footer,
+#tenderpage .posnic-pay-due,
+#tenderpage .text-muted,
+#infobar-settings-sidebar-tender-details #tenderpage .posnic-pay-total>span,
+#infobar-settings-sidebar-tender-details #tenderpage .posnic-pay-entered label,
+#infobar-settings-sidebar-tender-details #tenderpage .posnic-pay-methods>strong,
+#infobar-settings-sidebar-tender-details #tenderpage .posnic-payment-split-heading,
+#infobar-settings-sidebar-tender-details #tenderpage .posnic-payment-split-heading small,
+#infobar-settings-sidebar-tender-details #tenderpage .posnic-payment-split-row,
+#infobar-settings-sidebar-tender-details #tenderpage .posnic-payment-split-footer,
+#infobar-settings-sidebar-tender-details #tenderpage .posnic-pay-due,
+#infobar-settings-sidebar-tender-details #tenderpage .text-muted{
+  color:var(--theme-text-secondary,#64748b)!important;
+}
+#tenderpage .posnic-pay-total strong,
+#tenderpage .posnic-pay-due strong,
+#tenderpage .posnic-payment-split-row strong,
+#tenderpage .posnic-payment-split-footer strong,
+#tenderpage .tendered_total,
+#tenderpage .balanceDue,
+#tenderpage .display-currency,
+#infobar-settings-sidebar-tender-details #tenderpage .posnic-pay-total strong,
+#infobar-settings-sidebar-tender-details #tenderpage .posnic-pay-due strong,
+#infobar-settings-sidebar-tender-details #tenderpage .posnic-payment-split-row strong,
+#infobar-settings-sidebar-tender-details #tenderpage .posnic-payment-split-footer strong{
+  color:var(--theme-text-primary,#1e293b)!important;
+}
+#tenderpage input#Partial_amount,
+#tenderpage input#tendered_amount,
+#tenderpage .payment-amount-input,
+#infobar-settings-sidebar-tender-details #tenderpage input,
+#infobar-settings-sidebar-tender-details #tenderpage select,
+#infobar-settings-sidebar-tender-details #tenderpage textarea{
+  background-color:var(--theme-body-bg,#f8fafc)!important;
+  color:var(--theme-text-primary,#1e293b)!important;
+  border-color:var(--theme-border-color,#cbd5e1)!important;
+  caret-color:var(--theme-primary-color,#2563eb);
+}
+#tenderpage input::placeholder,
+#infobar-settings-sidebar-tender-details #tenderpage input::placeholder{
+  color:var(--theme-text-secondary,#64748b)!important;
+  opacity:1;
+}
+#tenderpage #payment_id .btn,
+#tenderpage #payment_id label,
+#infobar-settings-sidebar-tender-details #payment_id .btn,
+#infobar-settings-sidebar-tender-details #payment_id label{
+  background-color:var(--theme-card-bg,#fff)!important;
+  color:var(--theme-text-primary,#1e293b)!important;
+  border-color:var(--theme-border-color,#cbd5e1)!important;
+}
+#tenderpage #payment_id .btn.active,
+#tenderpage #payment_id label.active,
+#infobar-settings-sidebar-tender-details #payment_id .btn.active,
+#infobar-settings-sidebar-tender-details #payment_id label.active{
+  background-color:var(--posnic-accent-soft)!important;
+  color:var(--theme-text-primary,#1e293b)!important;
+  border-color:var(--theme-primary-color,#2563eb)!important;
+  box-shadow:inset 0 0 0 1px var(--theme-primary-color,#2563eb)!important;
+}
+#tenderpage .text-dark,
+#infobar-settings-sidebar-tender-details #tenderpage .text-dark{
+  color:var(--theme-text-primary,#1e293b)!important;
+}
+#infobar-settings-sidebar-tender-details .cancel-save-hide-show{
+  border-top-color:var(--theme-border-color,#e2e8f0)!important;
+}
+#infobar-settings-sidebar-tender-details .cancel-save-hide-show .infobar-tender-close{
+  background-color:var(--theme-card-bg,#fff)!important;
+  color:var(--theme-text-primary,#1e293b)!important;
+  border-color:var(--theme-border-color,#cbd5e1)!important;
+}
+#tenderpage .posnic-payment-split-dot{background:var(--theme-primary-color,#2563eb)}
+
 </style>
 
 <script id="posnic-payment-split-runtime">

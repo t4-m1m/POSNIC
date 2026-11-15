@@ -468,8 +468,9 @@
         if (!document.getElementById('receipt-print-progress')) {
             var status = $('<div id="receipt-print-progress" role="status" aria-live="polite" aria-busy="true">').css({
                 position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
-                zIndex: 11000, padding: '16px 24px', borderRadius: '10px', background: '#fff',
-                color: '#172b4d', boxShadow: '0 4px 24px #0003', border: '1px solid #d9e2ef',
+                zIndex: 11000, padding: '16px 24px', borderRadius: '10px',
+                background: 'var(--theme-card-bg, #fff)', color: 'var(--theme-text-primary, #172b4d)',
+                boxShadow: '0 4px 24px #0003', border: '1px solid var(--theme-border-color, #d9e2ef)',
                 display: 'flex', alignItems: 'center', gap: '12px', maxWidth: '90vw'
             });
             $('<span class="spinner-border spinner-border-sm" aria-hidden="true">').appendTo(status);
@@ -522,9 +523,15 @@
             if (options.sample) throw error;
             PosnicPro.alert('error', error.message || label('Print failed'));
         };
-        var fastReceiptLines = options.target && options.target.printMode === 'fast' &&
-            ['58', '80', '112'].indexOf(String(format)) !== -1 ? fastLines(html) : null;
+        var thermalFormat = ['58', '80', '112'].indexOf(String(format)) !== -1;
+        var printMode = options.target && options.target.printMode;
+        var fastReceiptLines = printMode === 'fast' && thermalFormat ? fastLines(html) : null;
         var useFastReceipt = !!fastReceiptLines;
+        // Exact Studio mode is the default and must preserve the complete saved
+        // layout (logo, barcode, images and Unicode). Rasterise that document once
+        // and submit ESC/POS RAW instead of starting a Chromium/GDI print window.
+        // The Windows-driver route remains available only when explicitly chosen.
+        var useRawThermal = thermalFormat && printMode !== 'driver';
         if (printer && printer.print && options.showDialog !== true) {
             return Promise.resolve(PosnicPro.syncPrinterPreferences ? PosnicPro.syncPrinterPreferences() : null)
                 .catch(function () {})
@@ -544,10 +551,10 @@
                 copies: options.target ? options.target.copies : 1,
                 receiptLog: options.receiptLog || null,
                 fitReceipt: ['58', '80', '112'].indexOf(format) !== -1,
-                // Exact Studio layouts use Chromium + the installed printer driver,
-                // matching the working sample output. Raw fast mode is used only when
-                // the entire design safely reduces to printable ASCII text.
-                thermalRaster: useFastReceipt,
+                // Exact Studio layouts are rasterised to ESC/POS RAW so the
+                // saved graphics and typography are preserved without the slow
+                // Chromium/GDI printer-driver submission path. Driver mode is opt-in.
+                thermalRaster: useRawThermal,
                 fastReceiptLines: useFastReceipt ? fastReceiptLines : null,
                 silent: true, strictPrinter: true, forceHtml: true, printBackground: true, margins: { marginType: 'none' } }); })
                 .then(function (result) {
@@ -578,6 +585,7 @@
         if (activeSale) return;
         activeSale = true;
         var finish = printProgress();
+        var salePrintStartedAt = Date.now();
         diagnostic({ stage: 'sale-print-start', format: requested || 'configured' });
         try {
             if (PosnicPro.printSettings) await PosnicPro.printSettings.ready();
@@ -628,7 +636,10 @@
             if (!options.preserveWorkspace) PosnicPro.afterPrint();
             return { success: true };
         } catch (error) { diagnostic({ stage: 'sale-print-failed', success: false, message: error.message }); if (options.propagateFailure) throw error; PosnicPro.alert('error', error.message || label('Print failed')); }
-        finally { activeSale = false; finish(); }
+        finally {
+            diagnostic({ stage: 'sale-print-finish', durationMs: Date.now() - salePrintStartedAt, format: requested || 'configured' });
+            activeSale = false; finish();
+        }
     }
     PosnicPro.receiptDesigner = { contract: contract, defaults: defaults, standardLayout: standardLayout, render: render, css: css, print: print, printSale: printSale, block: block, fastLines: fastLines, label: label, copy: copy, formatFor: formatFor };
 }());

@@ -8,7 +8,7 @@ const { JSDOM } = require('jsdom');
 const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
 const pixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6Z1AAAAAASUVORK5CYII=';
 
-test('saved Receipt Studio sale uses the Chromium printer-driver path and preserves sale data', async t => {
+test('saved Receipt Studio sale uses the graphics-preserving RAW thermal path and preserves sale data', async t => {
   const dom = new JSDOM('<!doctype html><html><body></body></html>', {
     url: 'http://localhost/', runScripts: 'outside-only'
   });
@@ -52,8 +52,10 @@ test('saved Receipt Studio sale uses the Chromium printer-driver path and preser
     preserveWorkspace: true, propagateFailure: true
   });
   assert.equal(result.success, true);
-  assert.equal(printOptions.thermalRaster, false,
-    'saved Studio layouts must use the same Chromium/driver rendering path as the working sample');
+  assert.equal(printOptions.thermalRaster, true,
+    'saved Studio layouts must use the raw thermal raster path by default, not Chromium/GDI');
+  assert.equal(printOptions.fastReceiptLines, null,
+    'a logo-bearing Studio layout must use the graphics-preserving raster renderer, not text-only fast mode');
   assert.equal(printOptions.pageSize, '80mm');
   assert.equal(printOptions.silent, true);
   assert.match(printedHtml, /Test item/);
