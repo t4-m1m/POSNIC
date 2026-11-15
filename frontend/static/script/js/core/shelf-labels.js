@@ -133,7 +133,7 @@
         if (!value) return;
         function lineCount(size) {
             var charsPerLine = Math.max(1, Math.floor(widthPx / Math.max(1, size * 0.54)));
-            return value.split(/\\r?\\n/).reduce(function (total, line) {
+            return value.split(/\r?\n/).reduce(function (total, line) {
                 return total + Math.max(1, Math.ceil(Array.from(line).length / charsPerLine));
             }, 0);
         }
