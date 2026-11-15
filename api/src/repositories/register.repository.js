@@ -949,9 +949,12 @@ class RegisterRepository {
             const versements = await this.model.getCollection('sale_versements');
             const settledRows = await versements.find({
               branch_id: session.branch_id,
-              register_id: session.register_id,
               status: 'settled',
               settled_at: { $gte: new Date(session.register_opendate), $lte: mongoDate },
+              $or: [
+                { settlement_register_id: session.register_id },
+                { settlement_register_id: { $exists: false }, register_id: session.register_id },
+              ],
             }).toArray();
             settledVersementCash = settledRows.reduce((sum, row) => {
               const initialCash = String(row.initial_method || 'cash').toLowerCase() === 'cash' ? Number(row.initial_amount) || 0 : 0;

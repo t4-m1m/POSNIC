@@ -4904,10 +4904,13 @@ PosnicPro.sales.addSale = {
                     // Cashier checkout always prints immediately after a successful save.
                     // Do not route through the post-sale print-choice screen.
                     if (PosnicPro.sales.saleProcess !== 'KOT') {
-                        try {
-                            PosnicPro.sales.view.printSale(response.data.sales_id, 'sale');
-                        } catch (printError) {
-                            PosnicPro.alert('warning', PosnicPro.i18n.t('lang_sale_saved_print_failed', 'Sale saved, but automatic receipt printing failed. You can reprint it from sales history.'));
+                        // F6 already prints its dedicated client/cashier copies.
+                        if (!versementDraft) {
+                            try {
+                                PosnicPro.sales.view.printSale(response.data.sales_id, 'sale');
+                            } catch (printError) {
+                                PosnicPro.alert('warning', PosnicPro.i18n.t('lang_sale_saved_print_failed', 'Sale saved, but automatic receipt printing failed. You can reprint it from sales history.'));
+                            }
                         }
                         $('#infobar-settings-sidebar-tender-details').removeClass('sidebarview').hide();
                         $('.infobar-settings-sidebar-overlay').css({ background: 'none', position: 'relative' });

@@ -114,7 +114,9 @@ exports.settle = async (req,res) => {
     if (current.status !== 'pending') return fail(res,409,'This versement is already settled or cancelled.');
     const amount = money(current.remaining);
     const settledAt = new Date();
-    const result = await collection.updateOne({_id:id,status:'pending',remaining:current.remaining},{$set:{status:'settled',remaining:0,settled_at:settledAt,settlement:{amount,method,settled_at:settledAt,recorded_by:actor(req)}},$push:{history:{type:'settlement',amount,method,at:settledAt,by:actor(req)}}});
+    const settlementRegisterId = String(req.body?.register_id || req.session?.cashregister_id || req.session?.register_id || req.user?.cashregister_id || '').trim();
+    const settlementRegister = ObjectId.isValid(settlementRegisterId) ? { settlement_register_id: new ObjectId(settlementRegisterId) } : {};
+    const result = await collection.updateOne({_id:id,status:'pending',remaining:current.remaining},{$set:{status:'settled',remaining:0,settled_at:settledAt,...settlementRegister,settlement:{amount,method,settled_at:settledAt,recorded_by:actor(req),...(settlementRegister.settlement_register_id?{register_id:settlementRegister.settlement_register_id}:{})}},$push:{history:{type:'settlement',amount,method,at:settledAt,by:actor(req)}}});
     if (!result.modifiedCount) return fail(res,409,'This versement was already updated. Refresh the register.');
     return res.json({type:'success',message:'Final settlement recorded.',data:{id:String(id),amount,method}});
   } catch(e) { console.error('[versements] settle',e); return fail(res,500,'Unable to settle versement.'); }
