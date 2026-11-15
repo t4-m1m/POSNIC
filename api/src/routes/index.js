@@ -44,6 +44,7 @@ const settingsRoutes = require('./settings.routes'); // Note: File not renamed, 
 const settingsGroupsRoutes = require('./settings-groups.routes');
 const clientErrorsRoutes = require('./client-errors.routes');
 const stockLogsRoutes = require('./stock-logs.routes');
+const stockReportRoutes = require('./stock-report.routes');
 const suppliersRoutes = require('./suppliers.routes');
 const usersRoutes = require('./users.routes'); // Updated from userRoutes
 const recoveryRoutes = require('./recovery.routes');
@@ -117,6 +118,7 @@ router.use('/client-errors', clientErrorsRoutes);
 router.use('/settings/group', settingsGroupsRoutes);
 router.use('/settings', settingsRoutes); // Primary path
 router.use('/setting', settingsRoutes); // Legacy PHP path support
+router.use('/stock-report', stockReportRoutes);
 router.use('/stock-logs', stockLogsRoutes); // Changed from stocklogs to stock-logs
 router.use('/stocklogs', stockLogsRoutes); // Legacy path support
 router.use('/suppliers', suppliersRoutes);
