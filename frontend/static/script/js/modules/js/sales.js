@@ -4855,12 +4855,25 @@ PosnicPro.sales.addSale = {
                     loader.find(".loadingSpinner:first").remove();
 
                         PosnicPro.sales.setDefaults();
-                    // A completed sale keeps its saved customer on the sale record,
-                    // but the next blank basket always starts at the branch walk-in client.
-                    if (PosnicPro.sales.SaleAction === 'add' && !PosnicPro.sales.editSaleId &&
-                        typeof PosnicPro.defaultcustomerSet === 'function') {
-                        $('#sales_new_customer_id,#sales_new_customer_name,#sales_new_customer_address,#sales_new_customer_phone,#sales_new_customer_email,#sales_new_customer_state,#sales_new_customer_gst_type,#sales_new_customer_gst_number').val('');
-                        PosnicPro.defaultcustomerSet();
+                    // Keep the completed sale's customer on its saved record, but
+                    // synchronously prepare the next blank basket for the branch Walk-in.
+                    if (PosnicPro.sales.SaleAction === 'add' && !PosnicPro.sales.editSaleId) {
+                        $('#sales_new_customer_id,#sales_new_customer_name,#sales_new_customer_address,#sales_new_customer_phone,#sales_new_customer_email,#sales_new_customer_state,#sales_new_customer_gst_type,#sales_new_customer_gst_number,#sales_new_customer_partial_balance').val('');
+                        $('#customer_current_balance').val('0');
+                        $('#sales-customer-credit-inline-amount').text('0,00');
+                        $('#sales-customer-credit-inline').prop('hidden', true);
+                        PosnicPro.sales.defaultCustomer = true;
+                        // Fill immediately from the branch's cached Walk-in record;
+                        // the async refresh below corrects it from the server.
+                        if (typeof PosnicPro.sales.ensureCustomer === 'function') {
+                            PosnicPro.sales.ensureCustomer();
+                        }
+                        if (typeof PosnicPro.defaultcustomerSet === 'function') {
+                            PosnicPro.defaultcustomerSet({ forceDefault: true });
+                        }
+                        if (typeof PosnicPro.sales.updateCustomerChip === 'function') {
+                            PosnicPro.sales.updateCustomerChip();
+                        }
                     }
                     PosnicPro.sales.customerViewDisplay();
                     PosnicPro.stocklogs.viewLowStockDashboard();
