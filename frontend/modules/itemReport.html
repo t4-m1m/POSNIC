@@ -405,25 +405,54 @@
                     </div>
                 </div>
             </div>
-            <section id="stock-health-panel" class="card m-b-30" style="display:none;margin:18px 0;">
-                <div class="card-header d-flex align-items-center justify-content-between flex-wrap">
-                    <div><h4 class="mb-1">État de stock</h4><small class="text-muted">Analyse du stock disponible, des produits dormants et des articles jamais vendus</small></div>
-                    <div class="d-flex align-items-center" style="gap:8px"><label for="stock-health-dormant-days" class="mb-0">Dormant après</label><input id="stock-health-dormant-days" type="number" min="1" max="3650" value="90" class="form-control" style="width:90px"><span>jours</span><button class="btn btn-primary" id="stock-health-refresh">Actualiser</button><button class="btn btn-outline-secondary" id="stock-health-export">CSV</button></div>
+            <section id="stock-health-panel" class="posnic-stock-dashboard card m-b-30" style="display:none;margin:18px 0;">
+                <style>
+                    #stock-health-panel{--sh-surface:var(--posnic-surface,var(--theme-card-bg,#fff));--sh-border:var(--posnic-border,var(--theme-border-color,#e5e7eb));--sh-text:var(--posnic-text,var(--theme-text-color,#182230));--sh-muted:var(--posnic-muted,var(--theme-text-muted,#64748b));--sh-accent:var(--posnic-accent,var(--theme-primary-color,#2563eb));color:var(--sh-text);background:var(--sh-surface);border:1px solid var(--sh-border);border-radius:16px;overflow:hidden}
+                    #stock-health-panel .sh-hero{padding:22px 24px;background:linear-gradient(125deg,var(--posnic-accent-soft,rgba(37,99,235,.10)),transparent 72%);border-bottom:1px solid var(--sh-border)}
+                    #stock-health-panel .sh-kpi{height:100%;padding:17px;border:1px solid var(--sh-border);border-radius:13px;background:var(--sh-surface);box-shadow:0 4px 18px rgba(0,0,0,.045)}
+                    #stock-health-panel .sh-kpi strong{display:block;font-size:clamp(19px,2vw,27px);line-height:1.2;letter-spacing:-.04em;color:var(--sh-text);margin-top:8px}
+                    #stock-health-panel .sh-kpi small,#stock-health-panel .sh-muted{color:var(--sh-muted)}
+                    #stock-health-panel .sh-chart{background:var(--sh-surface);border:1px solid var(--sh-border);border-radius:14px;padding:16px;min-height:220px}
+                    #stock-health-panel .sh-chart svg{width:100%;height:170px;display:block;overflow:visible}
+                    #stock-health-panel .sh-filter{background:var(--sh-surface);border:1px solid var(--sh-border);color:var(--sh-text);border-radius:9px;min-height:39px}
+                    #stock-health-panel .table{color:var(--sh-text)} #stock-health-panel .table thead th{color:var(--sh-muted);border-color:var(--sh-border);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+                    #stock-health-panel .table td{border-color:var(--sh-border);vertical-align:middle}
+                    #stock-health-panel .sh-pill{display:inline-flex;padding:5px 9px;border-radius:20px;font-size:11px;font-weight:700;background:var(--posnic-accent-soft,rgba(37,99,235,.12));color:var(--sh-accent)}
+                    #stock-health-panel .sh-section-title{font-weight:750;letter-spacing:-.02em;color:var(--sh-text)}
+                    @media(prefers-reduced-motion:no-preference){#stock-health-panel .sh-kpi{transition:transform .18s ease,box-shadow .18s ease}#stock-health-panel .sh-kpi:hover{transform:translateY(-2px);box-shadow:0 9px 24px rgba(0,0,0,.08)}}
+                </style>
+                <div class="sh-hero d-flex align-items-center justify-content-between flex-wrap">
+                    <div><span class="sh-pill mb-2">INVENTAIRE · ANALYSE</span><h3 class="mb-1">État de stock</h3><div class="sh-muted">Comprendre la valeur immobilisée, la rotation et les produits à réapprovisionner</div></div>
+                    <div class="d-flex align-items-center flex-wrap mt-3 mt-lg-0" style="gap:8px">
+                        <label for="stock-health-dormant-days" class="mb-0 sh-muted small">Dormant après</label><input id="stock-health-dormant-days" type="number" min="1" max="3650" value="90" class="form-control sh-filter" style="width:78px"><span class="sh-muted small">jours</span>
+                        <button class="btn btn-primary" id="stock-health-refresh"><i class="feather icon-refresh-cw mr-1"></i>Actualiser</button><button class="btn btn-outline-secondary" id="stock-health-export">Exporter CSV</button>
+                    </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-3 p-lg-4">
                     <div id="stock-health-error" class="alert alert-danger" style="display:none"></div>
-                    <div id="stock-health-kpis" class="row"></div>
-                    <ul class="nav nav-tabs mt-3" role="tablist">
+                    <div id="stock-health-kpis" class="row mb-3"></div>
+                    <div class="row mb-3">
+                        <div class="col-lg-8 mb-3"><div class="sh-chart h-100"><div class="d-flex justify-content-between align-items-center mb-2"><div><div class="sh-section-title">Vitesse de vente</div><small class="sh-muted">Quantités vendues · 30 derniers jours</small></div><span class="sh-pill">30 JOURS</span></div><div id="stock-health-trend-chart"></div></div></div>
+                        <div class="col-lg-4 mb-3"><div class="sh-chart h-100"><div class="sh-section-title mb-1">Meilleures rotations</div><small class="sh-muted">Top produits par quantité vendue</small><div id="stock-health-top-products" class="mt-3"></div></div></div>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between flex-wrap mb-2"><h5 class="sh-section-title mb-2">Explorer l'inventaire</h5><span class="sh-muted small">Filtres instantanés · export complet</span></div>
+                    <div class="row mb-3">
+                        <div class="col-md-4 mb-2"><input id="stock-health-search" class="form-control sh-filter" placeholder="Rechercher un produit ou une référence"></div>
+                        <div class="col-md-3 mb-2"><select id="stock-health-category" class="form-control sh-filter"><option value="">Toutes les catégories</option></select></div>
+                        <div class="col-md-3 mb-2"><select id="stock-health-brand" class="form-control sh-filter"><option value="">Toutes les marques</option></select></div>
+                        <div class="col-md-2 mb-2"><select id="stock-health-status" class="form-control sh-filter"><option value="all">Tous les statuts</option><option value="critical">Stock critique</option><option value="dormant">Dormants</option><option value="never">Jamais vendus</option><option value="active">En rotation</option></select></div>
+                    </div>
+                    <ul class="nav nav-tabs mt-2" role="tablist">
                         <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#stock-health-critical">Stock critique</a></li>
-                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#stock-health-dormant">Produits dormants</a></li>
+                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#stock-health-dormant">Dormants</a></li>
                         <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#stock-health-never">Jamais vendus</a></li>
-                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#stock-health-all">Tous les produits</a></li>
+                        <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#stock-health-all">Inventaire complet</a></li>
                     </ul>
                     <div class="tab-content pt-3">
-                        <div class="tab-pane fade show active" id="stock-health-critical"><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Produit</th><th>Réf.</th><th>Stock</th><th>Coût unitaire</th><th>Valeur stock</th></tr></thead><tbody id="stock-health-critical-rows"></tbody></table></div></div>
-                        <div class="tab-pane fade" id="stock-health-dormant"><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Produit</th><th>Réf.</th><th>Stock</th><th>Dernière vente</th><th>Jours sans vente</th><th>Valeur stock</th></tr></thead><tbody id="stock-health-dormant-rows"></tbody></table></div></div>
-                        <div class="tab-pane fade" id="stock-health-never"><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Produit</th><th>Réf.</th><th>Stock</th><th>Valeur stock</th></tr></thead><tbody id="stock-health-never-rows"></tbody></table></div></div>
-                        <div class="tab-pane fade" id="stock-health-all"><div class="table-responsive"><table class="table table-striped"><thead><tr><th>Produit</th><th>Réf.</th><th>Catégorie</th><th>Marque</th><th>Stock</th><th>Qté vendue</th><th>Valeur stock</th></tr></thead><tbody id="stock-health-all-rows"></tbody></table></div></div>
+                        <div class="tab-pane fade show active" id="stock-health-critical"><div class="table-responsive"><table class="table"><thead><tr><th>Produit</th><th>Réf.</th><th>Stock</th><th>Valeur stock</th></tr></thead><tbody id="stock-health-critical-rows"></tbody></table></div></div>
+                        <div class="tab-pane fade" id="stock-health-dormant"><div class="table-responsive"><table class="table"><thead><tr><th>Produit</th><th>Réf.</th><th>Stock</th><th>Dernière vente</th><th>Jours sans vente</th><th>Valeur stock</th></tr></thead><tbody id="stock-health-dormant-rows"></tbody></table></div></div>
+                        <div class="tab-pane fade" id="stock-health-never"><div class="table-responsive"><table class="table"><thead><tr><th>Produit</th><th>Réf.</th><th>Stock</th><th>Valeur stock</th></tr></thead><tbody id="stock-health-never-rows"></tbody></table></div></div>
+                        <div class="tab-pane fade" id="stock-health-all"><div class="table-responsive"><table class="table"><thead><tr><th>Produit</th><th>Réf.</th><th>Catégorie</th><th>Marque</th><th>Stock</th><th>Qté vendue</th><th>Valeur stock</th></tr></thead><tbody id="stock-health-all-rows"></tbody></table></div></div>
                     </div>
                 </div>
             </section>
