@@ -568,7 +568,7 @@ PosnicPro.versementsRegister = (function () {
                 {label:'Statut',value:record.status==='settled'?'Réglé':'En attente'}
             ],
             design: {
-                showTicket:true, showDate:true, showCustomer:true, showSubtotal:false,
+                showTicket:true, showDate:true, showCustomer:true, itemsHeader:false, showSubtotal:false,
                 showTaxes:false, showDiscount:false, showPayments:true, showChange:false,
                 showCashier:false, showBranch:false
             }
