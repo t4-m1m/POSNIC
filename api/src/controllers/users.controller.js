@@ -291,10 +291,12 @@ class UsersController extends BaseController {
       const loginId = String(username).trim();
 
       // Find user by email or username, including all fields needed for the legacy response
-      // Support both current and legacy Super Admin identifier fields.
-      // The comparison is exact and case-insensitive; passwords are still
-      // verified by the existing bcrypt compatibility path below.
-      const escapedIdentifier = loginId.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&');
+      // Support current and legacy Super Admin identifier fields.
+      // Match exact usernames without relying on database collation.
+      const slash = String.fromCharCode(92);
+      const escapedIdentifier = loginId.split('').map((ch) =>
+        '.^$*+?()[]{}|'.includes(ch) || ch === slash ? slash + ch : ch
+      ).join('');
       const exactIdentifier = new RegExp('^' + escapedIdentifier + '$', 'i');
       const user = await this.userModel
         .findOne({
