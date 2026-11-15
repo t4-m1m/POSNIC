@@ -1950,7 +1950,7 @@ class SalesController extends BaseController {
         },
         {
           $group: {
-            _id: { worker_name: '$worker_name', method: '$method' },
+            _id: { worker_name: '$worker_name', method: '$method', notes: { $ifNull: ['$notes', ''] } },
             amount: { $sum: '$reportSalaryAmount' },
             count: { $sum: 1 },
           },
@@ -1960,6 +1960,7 @@ class SalesController extends BaseController {
       const salaryPaymentDetails = salaryPaymentRows.map((row) => ({
         worker_name: String(row._id?.worker_name || 'Employé'),
         method: String(row._id?.method || 'cash'),
+        notes: String(row._id?.notes || ''),
         amount: roundToTwo(row.amount || 0),
         count: Number(row.count) || 0,
       }));

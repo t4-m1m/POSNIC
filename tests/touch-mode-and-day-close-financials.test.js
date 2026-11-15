@@ -29,6 +29,8 @@ test('Ticket Studio includes a salary-payment block and subtracts actual RH paym
   assert.match(report, /salary_payments_total/);
   assert.match(report, /net:gross-expenses-salaryPaymentsTotal/);
   assert.match(report, /worker_name/);
+  assert.match(controller, /notes: \{ \$ifNull: \['\$notes', ''\] \}/);
+  assert.match(report, /row\.notes\?' — '\+String\(row\.notes\)/);
 });
 
 test('Price Changing editor uses selected POSNIC theme surfaces instead of light-only fills', () => {
