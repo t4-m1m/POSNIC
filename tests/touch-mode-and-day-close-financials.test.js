@@ -29,6 +29,7 @@ test('Ticket Studio includes a salary-payment block and subtracts actual RH paym
   assert.match(report, /salary_payments_total/);
   assert.match(report, /net:gross-expenses-salaryPaymentsTotal/);
   assert.match(report, /worker_name/);
+  // The closing ticket must preserve the cashier-entered RH payment note.
   assert.match(controller, /notes: \{ \$ifNull: \['\$notes', ''\] \}/);
   assert.match(report, /row\.notes\?' — '\+String\(row\.notes\)/);
 });
