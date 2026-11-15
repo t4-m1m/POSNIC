@@ -160,7 +160,7 @@ class CategoryRepository extends BaseModel {
           updated_date: new Date(),
         },
       },
-      { new: true, lean: true }
+      { returnDocument: 'after', lean: true }
     );
 
     return category;
@@ -180,7 +180,7 @@ class CategoryRepository extends BaseModel {
           deleted_date: new Date(),
         },
       },
-      { new: true, lean: true }
+      { returnDocument: 'after', lean: true }
     );
 
     return category;
@@ -458,7 +458,7 @@ class CategoryRepository extends BaseModel {
     return await this.model.findOneAndUpdate(
       { _id: new Types.ObjectId(id) },
       { $set: { sort_order: sortOrder, updated_date: new Date() } },
-      { new: true, lean: true }
+      { returnDocument: 'after', lean: true }
     );
   }
 
@@ -472,7 +472,7 @@ class CategoryRepository extends BaseModel {
     return await this.model.findOneAndUpdate(
       { _id: new Types.ObjectId(id) },
       { $set: { is_active: !category.is_active, updated_date: new Date() } },
-      { new: true, lean: true }
+      { returnDocument: 'after', lean: true }
     );
   }
 }
