@@ -571,7 +571,9 @@ PosnicPro.versementsRegister = (function () {
             billNo: String(record.versement_number || ''),
             title: 'VERSEMENT',
             date: new Date(record.created_at || Date.now()).toLocaleString(),
-            customer: record.customer_name ? [String(record.customer_name)] : [],
+            customer: record.customer_name
+                ? [String(record.customer_name)].concat(record.phone ? ['Téléphone: ' + String(record.phone)] : [])
+                : (record.phone ? ['Téléphone: ' + String(record.phone)] : []),
             total: total,
             subTotal: total,
             items: [],
