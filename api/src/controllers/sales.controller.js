@@ -1156,6 +1156,9 @@ class SalesController extends BaseController {
       // Apply branch scoping similar to PHP behaviour
       const { validBranchIds } = parseBranchIdsFromRequest(req);
       const filter = { ...filteredSalesFilters };
+      // F6 Versement has its own register and must not appear in ordinary
+      // Sales History or its summary totals.
+      filter.versement_checkout = { $exists: false };
       if (validBranchIds.length) {
         // PHP sales list historically filters on branch_id; mirror that
         // here so we correctly match both legacy PHP documents (which

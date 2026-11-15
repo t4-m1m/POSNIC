@@ -2678,6 +2678,8 @@ const getLatestSales = async ({ branchId, licenseId, holdOnly }, { SaleModel } =
     // for one-click retrieval, without leaving the billing screen.
     // The Parked tab asks for holds alone and gets a longer list.
     sale_process: holdOnly ? { $in: ['Hold'] } : { $in: ['Add', 'Edit', 'Hold'] },
+    // F6 Versement is tracked only in the dedicated Versements register.
+    versement_checkout: { $exists: false },
   };
 
   if (branchMatch.length) {
