@@ -1,6 +1,6 @@
 <style>
-#ps-grid .ps-schedule-confirmation { padding:20px;margin:0 0 24px;border:1px solid #65b992;border-left:5px solid #29965d;border-radius:10px;background:var(--ps-surface);color:var(--ps-ink); }
-#ps-grid .ps-schedule-confirmation h4 { color:#29965d;margin-bottom:12px; }
+#ps-grid .ps-schedule-confirmation { padding:20px;margin:0 0 24px;border:1px solid var(--theme-success-color,#29965d);border-left:5px solid var(--theme-success-color,#29965d);border-radius:10px;background:var(--ps-success-surface);color:var(--ps-ink); }
+#ps-grid .ps-schedule-confirmation h4 { color:var(--theme-success-color,#29965d);margin-bottom:12px; }
 #ps-grid .ps-schedule-note { font-weight:600; }
 #ps-grid .ps-file-workflow { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:16px; }
 #ps-grid .ps-file-workflow > section:nth-child(2) { grid-column:2;grid-row:1;padding:12px 16px;background:var(--ps-surface); }
@@ -12,7 +12,7 @@
 #ps-grid .ps-file-workflow .ps-download-options { display:flex;flex-direction:column;align-items:stretch; }
 #ps-sheet.ps-review-screen { position:static;width:100%;max-height:none;box-shadow:none;margin:0; }
 @media(max-width:1000px) { #ps-grid .ps-file-workflow { grid-template-columns:1fr; } #ps-grid .ps-file-workflow > section { grid-column:auto !important;grid-row:auto !important; } }
-#ps-grid { --ps-surface: var(--theme-card-bg, #fff); --ps-ink: var(--theme-text-primary, #24364b); --ps-line: var(--theme-border-color, #dce3ec); }
+#ps-grid { --ps-surface: var(--theme-card-bg, #fff); --ps-ink: var(--theme-text-primary, #24364b); --ps-line: var(--theme-border-color, #dce3ec); --ps-muted: var(--theme-text-secondary, #64748b); --ps-accent: var(--theme-primary-color, #506fe4); --ps-accent-surface: var(--theme-table-row-hover, #eef2fd); --ps-success-surface: color-mix(in srgb, var(--theme-success-color, #16b364) 13%, var(--ps-surface)); --ps-warning-surface: color-mix(in srgb, var(--theme-warning-color, #f79009) 14%, var(--ps-surface)); }
 #ps-grid .ps-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
 #ps-grid .ps-toolbar > input { flex:1 1 220px; }
 #ps-grid details { position:relative; }
@@ -25,7 +25,7 @@
 #ps-grid .btn-light { color:var(--ps-ink); }
 #ps-grid .ps-grid-scroll td:first-child { width:40%; }
 #ps-grid .ps-grid-scroll td.table-info { background:transparent; }
-#ps-grid .ps-grid-scroll td.table-info input { border:2px solid #258460 !important; background:#e8f5ee !important; color:#164d36 !important; }
+#ps-grid .ps-grid-scroll td.table-info input { border:2px solid var(--theme-success-color,#258460) !important; background:var(--theme-input-bg,var(--ps-surface)) !important; color:var(--ps-ink) !important; box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--theme-success-color,#258460) 22%,transparent); }
 #ps-grid .ps-grid-scroll small { color:var(--theme-text-secondary,#258460); margin-top:3px; }
 #ps-grid .ps-actionbar { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 0; }
 #ps-grid .ps-actionbar strong { margin-right:auto; }
@@ -36,10 +36,10 @@
 #ps-sheet { width:min(860px,calc(100vw - 32px)); max-height:85vh; margin:auto; padding:24px; border:1px solid #dce3ec; border-radius:12px; background:var(--ps-surface); color:var(--ps-ink); box-shadow:0 24px 80px #0005; overflow:auto; }
 #ps-sheet h5 { color:var(--ps-ink); margin:0; }
 #ps-update-result { padding:14px 16px; margin-bottom:16px; border:1px solid; border-radius:8px; }
-#ps-update-result.ps-update-success { background:#e4f5e9 !important; border-color:#76b78a; }
-#ps-update-result.ps-update-success, #ps-update-result.ps-update-success * { color:#145b2b !important; }
-#ps-update-result.ps-update-warning { background:#fff4dc !important; border-color:#d6ad52; }
-#ps-update-result.ps-update-warning, #ps-update-result.ps-update-warning * { color:#6b4600 !important; }
+#ps-update-result.ps-update-success { background:var(--ps-success-surface) !important; border-color:var(--theme-success-color,#76b78a); }
+#ps-update-result.ps-update-success, #ps-update-result.ps-update-success * { color:var(--ps-ink) !important; }
+#ps-update-result.ps-update-warning { background:var(--ps-warning-surface) !important; border-color:var(--theme-warning-color,#d6ad52); }
+#ps-update-result.ps-update-warning, #ps-update-result.ps-update-warning * { color:var(--ps-ink) !important; }
 #ps-update-result.ps-update-neutral { background:var(--ps-surface); border-color:var(--ps-line); color:var(--ps-ink); }
 #ps-sheet::backdrop { background:#101b2db3; }
 #ps-sheet .ps-dialog-header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:18px; }
@@ -47,14 +47,14 @@
 #ps-sheet .ps-download-options label { flex:1 1 180px; }
 #ps-sheet .ps-download-options input, #ps-sheet .ps-download-options select { width:100%; }
 #ps-sheet [hidden] { display:none !important; }
-#ps-sheet .ps-help { padding:12px; background:#eef4fb; color:#34465b !important; border-radius:6px; margin:14px 0; }
+#ps-sheet .ps-help { padding:12px; background:var(--theme-table-header-bg,var(--ps-surface)); color:var(--ps-ink) !important; border:1px solid var(--ps-line); border-radius:6px; margin:14px 0; }
 @media(max-width:600px) { #ps-sheet { padding:16px; } #ps-grid .ps-toolbar > * { max-width:100% !important; } #ps-grid .ps-grid-scroll td:first-child { min-width:150px; } }
 #ps-grid [hidden] { display:none !important; }
 #ps-grid .ps-mode-tab { padding:9px 16px; border:1px solid; border-radius:5px; cursor:pointer; }
 #ps-grid .ps-edit-tabs [aria-selected="false"] * { color:var(--ps-ink) !important; }
 .ps-edit-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
 #ps-grid .ps-edit-tabs [aria-selected="false"] { background:transparent !important; color:var(--ps-ink) !important; border-color:var(--ps-line); }
-#ps-grid .ps-edit-tabs [aria-selected="true"] { background:#e9f4ff !important; color:#154c7b !important; border-color:#73aadc; font-weight:600; }
+#ps-grid .ps-edit-tabs [aria-selected="true"] { background:var(--ps-accent-surface) !important; color:var(--ps-ink) !important; border-color:var(--ps-accent); font-weight:600; }
 #ps-grid .ps-edit-tabs [aria-selected="true"] * { color:var(--ps-ink) !important; }
 #ps-grid .ps-category-picker { min-width:200px; position:relative; }
 #ps-sheet-count { flex:1 0 100%; margin:12px 0; padding:12px 14px; border-left:4px solid #438bd4; border-radius:6px; background:var(--ps-surface); color:var(--ps-ink); box-shadow:inset 0 0 0 1px var(--ps-line); font-weight:600; }
@@ -72,17 +72,41 @@
 #ps-grid .ps-file-steps li { padding:6px 0; }
 #ps-grid .ps-edit-tabs { border-bottom:1px solid var(--ps-line);gap:0; }
 #ps-grid .ps-mode-tab { border:0;border-bottom:3px solid transparent;border-radius:0;padding:14px 20px; }
-#ps-grid .ps-edit-tabs [aria-selected="true"] { border-bottom-color:#4b9bd3;background:transparent !important;color:var(--ps-ink) !important; }
+#ps-grid .ps-edit-tabs [aria-selected="true"] { border-bottom-color:var(--ps-accent);background:transparent !important;color:var(--ps-ink) !important; }
 #ps-grid .ps-schedule-filters { display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:20px 0; }
 #ps-grid .ps-schedule-filters label { margin:0 0 0 auto;display:flex;align-items:center;gap:8px; }
 #ps-jobs-size { width:auto; }
-#ps-grid [data-job-status][aria-pressed="true"] { background:#e9f4ff !important;color:#154c7b !important;border-color:#73aadc; }
+#ps-grid [data-job-status][aria-pressed="true"] { background:var(--ps-accent-surface) !important;color:var(--ps-ink) !important;border-color:var(--ps-accent); }
 #ps-grid .ps-jobs-table { width:100%; }
 #ps-grid .ps-jobs-table th,#ps-grid .ps-jobs-table td { padding:14px 12px;border-bottom:1px solid var(--ps-line);vertical-align:top; }
 #ps-grid .ps-job-actions { display:flex;gap:8px;flex-wrap:wrap; }
 #ps-grid .ps-job-status { display:inline-block;border-radius:12px;padding:3px 10px;background:var(--ps-surface); }
 #ps-grid .ps-branch-options { padding:12px;border:1px solid var(--ps-line);border-radius:8px;max-height:250px;overflow:auto; }
 #ps-grid .ps-branch-row { display:flex;align-items:center;justify-content:space-between;gap:8px; }
+
+/* Price Changing follows the active POSNIC theme; only the thermal paper
+   preview remains white. */
+#pricesettings_new { color:var(--theme-text-primary); }
+#pricesettings_new .card,#pricesettings_new .card-body,#pricesettings_new .tab-content,
+#pricesettings_new .ps-file-workflow > section,#pricesettings_new #ps-columns,
+#pricesettings_new .ps-branch-options,#pricesettings_new .ps-category-options,
+#pricesettings_new #ps-sheet,#pricesettings_new #ps-sheet-history,#pricesettings_new #ps-grid-preview {
+ background:var(--theme-card-bg);color:var(--theme-text-primary);border-color:var(--theme-border-color);
+}
+#pricesettings_new h4,#pricesettings_new h5,#pricesettings_new h6,#pricesettings_new label,
+#pricesettings_new .nav-link,#pricesettings_new .ps-jobs-table td,#pricesettings_new .ps-jobs-table th,
+#pricesettings_new .ps-grid-scroll td,#pricesettings_new .ps-grid-scroll th { color:var(--theme-text-primary); }
+#pricesettings_new .form-control,#pricesettings_new input:not([type=checkbox]):not([type=radio]):not([type=file]),
+#pricesettings_new select,#pricesettings_new textarea {
+ background:var(--theme-input-bg,var(--theme-card-bg)) !important;color:var(--theme-text-primary) !important;border-color:var(--theme-border-color) !important;
+}
+#pricesettings_new .form-control::placeholder,#pricesettings_new input::placeholder,#pricesettings_new textarea::placeholder { color:var(--theme-text-muted);opacity:1; }
+#pricesettings_new option { background:var(--theme-card-bg);color:var(--theme-text-primary); }
+#pricesettings_new .table,#pricesettings_new .table td,#pricesettings_new .table th { color:var(--theme-text-primary);border-color:var(--theme-border-color); }
+#pricesettings_new .table thead th { background:var(--theme-table-header-bg); }
+#pricesettings_new .nav-tabs .nav-link.active,#pricesettings_new .nav-tabs .nav-link:hover { color:var(--theme-text-primary);border-color:var(--theme-border-color);background:var(--theme-table-row-hover); }
+#pricesettings_new .btn-light,#pricesettings_new .btn-outline-secondary { background:var(--theme-table-header-bg);color:var(--theme-text-primary);border-color:var(--theme-border-color); }
+#pricesettings_new .text-muted,#pricesettings_new small { color:var(--theme-text-secondary) !important; }
 </style>
 <div class="vertical-layout page_loader" id="pricesettings_new" style="display: none">
     <div id="containerbar">

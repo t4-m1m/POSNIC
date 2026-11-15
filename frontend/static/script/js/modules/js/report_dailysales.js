@@ -313,8 +313,14 @@ PosnicPro.quickreport = {
         if (!debtPaymentTotal && debtPaymentData.length) {
           debtPaymentTotal = debtPaymentData.reduce(function (sum, debt) { return sum + safeNum(debt.amount); }, 0);
         }
-        if (debtPaymentTotal > 0 && !paymentData.some(function (payment) { return payment.is_debt_collection; })) {
-          paymentData.push({ payment_mode: 'Cash', sale_payment: debtPaymentTotal, is_debt_collection: true });
+        if (debtPaymentData.length) {
+          debtPaymentData.forEach(function (debt) {
+            var method = String(debt.payment_mode || 'other').toLowerCase();
+            paymentData.push({ payment_mode: debtMethodLabels[method] || String(debt.payment_mode || 'Other'), sale_payment: safeNum(debt.amount), is_debt_collection: true });
+          });
+        } else if (debtPaymentTotal > 0 && !paymentData.some(function (payment) { return payment.is_debt_collection; })) {
+          // Missing historical tender metadata must never be invented as Cash.
+          paymentData.push({ payment_mode: 'Mode non enregistré (dette)', sale_payment: debtPaymentTotal, is_debt_collection: true });
         }
         $("#daily_report_tender_details tbody").children("tr").remove();
         var tenderTotal = 0;
@@ -434,8 +440,8 @@ PosnicPro.quickreport = {
 
         var summaryCash = 0, summaryCard = 0;
         PosnicPro.quickreport.lastReport.payments.forEach(function (payment) {
-          if (/^cash$/i.test(payment.label)) summaryCash += payment.amount;
-          if (/^card$/i.test(payment.label)) summaryCard += payment.amount;
+          if (/^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(payment.label || '').trim())) summaryCash += payment.amount;
+          if (/^(card|carte|tpe)$/i.test(String(payment.label || '').trim())) summaryCard += payment.amount;
         });
         var summary = $('#daily-payment-summary').empty().addClass('d-flex flex-wrap');
         summary.css('gap', '16px');
@@ -458,7 +464,7 @@ PosnicPro.quickreport = {
             + '<tr><td>Gross profit</td><td class="text-right">' + money(r.gross_profit) + '</td></tr>'
             + '<tr><td>Expenses</td><td class="text-right">' + (r.expenses == null ? 'Non disponible dans le rapport' : money(r.expenses)) + '</td></tr>'
             + '<tr><td>Net profit</td><td class="text-right">' + (r.gross_profit == null || r.expenses == null ? 'Non disponible dans le rapport' : money(r.gross_profit - r.expenses)) + '</td></tr>'
-            + '<tr><td>Payments received (including debt collections in Cash)</td><td class="text-right">' + money(r.tenderTotal) + '</td></tr>';
+            + '<tr><td>Payments received (sales + debt collections by recorded method)</td><td class="text-right">' + money(r.tenderTotal) + '</td></tr>';
           r.payments.forEach(function (p) {
             rows += '<tr><td>' + $('<i>').text(p.label).html() + '</td><td class="text-right">' + money(p.amount) + '</td></tr>';
           });
@@ -1262,8 +1268,8 @@ $(document).on('change', '#dailysale_branch_value', function () {
 'use strict';
 var key='posnic_day_close_studio_v2', historyKey='posnic_day_close_history', selected=null, blocks=[], reportCache=null;
 var agendaDate=new Date(), selectedDate=new Date(), loadingDay=false;
-var defaults=[['title','CLÔTURE DE CAISSE'],['date','Date de clôture'],['sales','Ventes'],['cost','Coût des marchandises'],['gross','Bénéfice brut'],['expenses','Dépenses'],['salary','Paiements salaires'],['net','Bénéfice net'],['payments','Détail des paiements'],['debt','Encaissements de dettes'],['count','Nombre de ventes'],['footer','Clôture effectuée. Merci.']];
-var labels={title:'CLÔTURE DE CAISSE',date:'Date de clôture',sales:'Ventes',cost:'Coût des marchandises',gross:'Bénéfice brut',expenses:'Dépenses',salary:'Paiements salaires',net:'Bénéfice net',payments:'Détail des paiements',debt:'Encaissements de dettes',count:'Nombre de ventes',text:'Texte libre',divider:'',footer:'Clôture effectuée. Merci.'};
+var defaults=[['title','CLÔTURE DE CAISSE'],['date','Date de clôture'],['sales','Ventes'],['cost','Coût des marchandises'],['gross','Bénéfice brut'],['expenses','Dépenses'],['salary','Paiements salaires'],['net','Bénéfice net'],['payments','Détail des paiements'],['debt','Encaissements de dettes'],['cashhand','Espèces nettes du jour (hors fond de caisse)'],['count','Nombre de ventes'],['footer','Clôture effectuée. Merci.']];
+var labels={title:'CLÔTURE DE CAISSE',date:'Date de clôture',sales:'Ventes',cost:'Coût des marchandises',gross:'Bénéfice brut',expenses:'Dépenses',salary:'Paiements salaires',net:'Bénéfice net',payments:'Détail des paiements',debt:'Encaissements de dettes',cashhand:'Espèces nettes du jour (hors fond de caisse)',count:'Nombre de ventes',text:'Texte libre',divider:'',footer:'Clôture effectuée. Merci.'};
 function id(){return 'dc-'+Math.random().toString(36).slice(2,10);}
 function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function load(){try{var d=JSON.parse(localStorage.getItem(key)||'null');if(d&&Array.isArray(d.blocks)){blocks=d.blocks;['expenses','salary','count','debt'].forEach(function(type){if(!blocks.some(function(b){return b.type===type;})){var at=type==='salary'?blocks.findIndex(function(b){return b.type==='expenses';}):type==='debt'?blocks.findIndex(function(b){return b.type==='payments';}):-1;blocks.splice(at>=0?at+1:blocks.length,0,{id:id(),type:type,label:labels[type],size:12,align:'left'});}});$('#dc-studio-width').val(d.width||'80');return;}}catch(e){}blocks=defaults.map(function(x){return {id:id(),type:x[0],label:x[1],size:x[0]==='title'?16:12,align:x[0]==='title'?'center':'left'};});}
@@ -1278,12 +1284,15 @@ function metrics(){
  payments.forEach(function(p){var l=String(p.label||p.name||'').trim().toLowerCase(),a=num(p.amount!=null?p.amount:p.total);if(/cash|esp[eè]ce/.test(l))pay.cash+=a;else if(/credit|cr[eé]dit|debt|dette/.test(l))pay.credit+=a;else if(/baridi/.test(l))pay.baridimob+=a;else if(/tpe|card|carte/.test(l))pay.tpe+=a;else pay.other+=a;});
  /* Some older API responses expose only the aggregate debt collection total. In that case, include it as cash, without double-counting when method-level debt details have already been merged into payments. */
  var debtDetails=Array.isArray(r.debt_payments)?r.debt_payments:[], debtTotal=num(r.debt_payment_total);
- if(!debtDetails.length&&debtTotal>0&&!payments.some(function(p){return p.is_debt_collection;})){pay.cash+=debtTotal;}
+ // Payment rows already include debt collections split by their recorded method.
+ // Never add the aggregate again to Cash.
+ var salaryCashTotal=salaryPayments.reduce(function(sum,row){return /^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(row.method||'cash').trim())?sum+num(row.amount):sum;},0);
+ var cashExpected=expensesAvailable?pay.cash-expenses-salaryCashTotal:null;
  var date=r.from||r.starting_date||iso(selectedDate), rawCount=r.sales_count!=null?r.sales_count:(r.number_of_sales!=null?r.number_of_sales:(r.total_sales_count!=null?r.total_sales_count:(Array.isArray(r.sales)?r.sales.length:null))), count=rawCount==null?null:num(rawCount);
- return {date:date,sales:total,cost:cost,gross:gross,expenses:expenses,expensesAvailable:expensesAvailable,salaryPayments:salaryPayments,salaryPaymentsTotal:salaryPaymentsTotal,net:gross-expenses-salaryPaymentsTotal,count:count,pay:pay,payments:payments,report:r};
+ return {date:date,sales:total,cost:cost,gross:gross,expenses:expenses,expensesAvailable:expensesAvailable,salaryPayments:salaryPayments,salaryPaymentsTotal:salaryPaymentsTotal,salaryCashTotal:salaryCashTotal,cashExpected:cashExpected,net:gross-expenses-salaryPaymentsTotal,count:count,pay:pay,payments:payments,debtPayments:debtDetails,debtTotal:debtTotal,report:r};
 }
 function money(v){return num(v).toLocaleString('fr-DZ',{minimumFractionDigits:2,maximumFractionDigits:2})+' DA';}
-function value(b,m){switch(b.type){case'date':return m.date;case'sales':return money(m.sales);case'cost':return m.report.cost_of_goods!=null||m.report.cost_of_goods_total!=null||m.report.total_cost!=null?money(m.cost):'Non disponible dans le rapport';case'gross':return m.report.gross_profit!=null||m.report.gross_profit_total!=null||m.report.profit!=null?money(m.gross):'Non disponible dans le rapport';case'expenses':return m.expensesAvailable?money(m.expenses):'Non disponible dans le rapport';case'salary':var salaryRows=m.salaryPayments.map(function(row){return String(row.worker_name||'Employé')+': '+money(row.amount);});return salaryRows.length?money(m.salaryPaymentsTotal)+'\n'+salaryRows.join('\n'):money(m.salaryPaymentsTotal);case'net':return (m.report.gross_profit!=null||m.report.gross_profit_total!=null||m.report.profit!=null)?money(m.net):'Non disponible dans le rapport';case'count':return m.count==null?'Non disponible dans le rapport':String(m.count);case'payments':var rows=m.payments.map(function(p){return String(p.label||p.name||'Autre')+': '+money(p.amount!=null?p.amount:p.total);});if(!m.payments.length){rows=['Cash: '+money(m.pay.cash),'Crédit: '+money(m.pay.credit),'TPE: '+money(m.pay.tpe),'BaridiMob: '+money(m.pay.baridimob)];if(m.pay.other)rows.push('Autres: '+money(m.pay.other));}else if(!m.report.debt_payments||!m.report.debt_payments.length){var debt=num(m.report.debt_payment_total);if(debt>0&&!m.payments.some(function(p){return p.is_debt_collection;})){rows.push('Cash (encaissements de dettes): '+money(debt));}}return rows.join('\n');case'debt':return money(m.report.debt_payment_total||0);default:return '';}}
+function value(b,m){switch(b.type){case'date':return m.date;case'sales':return money(m.sales);case'cost':return m.report.cost_of_goods!=null||m.report.cost_of_goods_total!=null||m.report.total_cost!=null?money(m.cost):'Non disponible dans le rapport';case'gross':return m.report.gross_profit!=null||m.report.gross_profit_total!=null||m.report.profit!=null?money(m.gross):'Non disponible dans le rapport';case'expenses':return m.expensesAvailable?money(m.expenses):'Non disponible dans le rapport';case'salary':var salaryRows=m.salaryPayments.map(function(row){return String(row.worker_name||'Employé')+' ('+String(row.method||'cash')+'): '+money(row.amount);});return salaryRows.length?money(m.salaryPaymentsTotal)+'\n'+salaryRows.join('\n'):money(m.salaryPaymentsTotal);case'net':return (m.report.gross_profit!=null||m.report.gross_profit_total!=null||m.report.profit!=null)?money(m.net):'Non disponible dans le rapport';case'count':return m.count==null?'Non disponible dans le rapport':String(m.count);case'payments':var rows=m.payments.map(function(p){return String(p.label||p.name||'Autre')+': '+money(p.amount!=null?p.amount:p.total);});if(!m.payments.length){rows=['Cash: '+money(m.pay.cash),'Crédit: '+money(m.pay.credit),'TPE: '+money(m.pay.tpe),'BaridiMob: '+money(m.pay.baridimob)];if(m.pay.other)rows.push('Autres: '+money(m.pay.other));}else if(!m.report.debt_payments||!m.report.debt_payments.length){var debt=num(m.report.debt_payment_total);if(debt>0&&!m.payments.some(function(p){return p.is_debt_collection;})){rows.push('Cash (encaissements de dettes): '+money(debt));}}return rows.join('\n');case'debt':var debtRows=m.debtPayments.map(function(row){return String(row.payment_mode||'Autre')+': '+money(row.amount);});return money(m.debtTotal)+(debtRows.length?'\n'+debtRows.join('\n'):'');case'cashhand':return m.cashExpected==null?'Non disponible dans le rapport':money(m.cashExpected);default:return '';}}
 function render(){
  var m=metrics(),$p=$('#day-close-ticket-preview').empty().css('width',($('#dc-studio-width').val()||80)+'mm');
  if(!blocks.length)$p.append('<div class="dc-studio-drop-hint">Glissez des éléments ici</div>');

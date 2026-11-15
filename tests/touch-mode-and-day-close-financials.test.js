@@ -30,3 +30,32 @@ test('Ticket Studio includes a salary-payment block and subtracts actual RH paym
   assert.match(report, /net:gross-expenses-salaryPaymentsTotal/);
   assert.match(report, /worker_name/);
 });
+
+test('Price Changing editor uses selected POSNIC theme surfaces instead of light-only fills', () => {
+  const price = read('frontend/modules/priceSettings.html');
+  assert.match(price, /--ps-surface: var\(--theme-card-bg/);
+  assert.match(price, /--ps-success-surface: color-mix/);
+  assert.match(price, /background:var\(--theme-input-bg,var\(--ps-surface\)\)/);
+  assert.doesNotMatch(price, /background:#e8f5ee !important/);
+  assert.doesNotMatch(price, /background:#e9f4ff !important/);
+  assert.match(price, /#pricesettings_new \.form-control[\s\S]*?var\(--theme-input-bg/);
+});
+
+test('debt collections keep their actual payment method and are not automatically added to cash twice', () => {
+  const report = read('frontend/static/script/js/modules/js/report_dailysales.js');
+  assert.match(report, /debtPaymentData\.forEach\(function \(debt\)/);
+  assert.match(report, /debtMethodLabels\[method\]/);
+  assert.match(report, /Mode non enregistré \(dette\)/);
+  assert.doesNotMatch(report, /payment_mode: 'Cash', sale_payment: debtPaymentTotal/);
+  assert.match(report, /Never add the aggregate again to Cash/);
+});
+
+test('cash expected for the day subtracts only cash salary payments and active cash-book expenses', () => {
+  const report = read('frontend/static/script/js/modules/js/report_dailysales.js');
+  const controller = read('api/src/controllers/sales.controller.js');
+  assert.match(report, /salaryCashTotal=salaryPayments\.reduce/);
+  assert.match(report, /cashExpected=expensesAvailable\?pay\.cash-expenses-salaryCashTotal:null/);
+  assert.match(report, /case'cashhand'/);
+  assert.match(report, /case'debt':[\s\S]*?debtRows/);
+  assert.match(controller, /branch_id: branchObjectId,[\s\S]{0,100}is_deleted: \{ \$ne: true \}/);
+});

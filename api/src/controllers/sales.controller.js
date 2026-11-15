@@ -1886,6 +1886,7 @@ class SalesController extends BaseController {
         { $match: {
           license: BaseModel.license || req.user.license || req.user.license_id,
           branch_id: branchObjectId,
+          is_deleted: { $ne: true },
         } },
         {
           $addFields: {
