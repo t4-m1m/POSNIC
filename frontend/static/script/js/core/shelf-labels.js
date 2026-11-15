@@ -595,7 +595,7 @@
         }).catch(function (e) { if (state.token === scopeToken) { state.loading = false; state.loadError = e; refresh(); } });
     }
     function labelPrinterName() {
-        try { return root.localStorage.getItem('posnic.shelf-label-printer') || 'default'; } catch (_) { return 'default'; }
+        try { return root.localStorage.getItem('posnic.shelf-label-printer') || ''; } catch (_) { return ''; }
     }
     function loadLabelPrinters() {
         var select = $('#sl-printer');
@@ -613,8 +613,11 @@
                 var name = String(printer.name);
                 html += '<option value="' + $('<span>').text(name).html().replace(/"/g, '&quot;') + '">' + $('<span>').text(printer.displayName || name).html() + '</option>';
             });
-            select.html(html).val(saved);
-            if (!select.val()) select.val('default');
+            var tsc = (Array.isArray(printers) ? printers : []).find(function (printer) { return /tsc.*tdp.?225|tdp.?225.*tsc/i.test(String(printer && printer.name || '')); })
+                || (Array.isArray(printers) ? printers : []).find(function (printer) { return /tdp.?225/i.test(String(printer && printer.name || '')); });
+            var preferred = saved || (tsc && tsc.name) || 'default';
+            select.html(html).val(preferred);
+            if (!select.val()) select.val(tsc ? tsc.name : 'default');
             select.prop('disabled', false);
         }).catch(function () {
             select.html('<option value="default">System default printer</option>').val('default').prop('disabled', false);
@@ -722,7 +725,13 @@
         }
         var printer = root.electronAPI && root.electronAPI.printer;
         var selectedPrinter = 'default';
-        try { selectedPrinter = root.localStorage.getItem('posnic.shelf-label-printer') || 'default'; } catch (_) {}
+        try { selectedPrinter = root.localStorage.getItem('posnic.shelf-label-printer') || ''; } catch (_) {}
+        if (!selectedPrinter) {
+            var available = await printer.list();
+            var tsc = (Array.isArray(available) ? available : []).find(function (entry) { return /tsc.*tdp.?225|tdp.?225.*tsc/i.test(String(entry && entry.name || '')); })
+                || (Array.isArray(available) ? available : []).find(function (entry) { return /tdp.?225/i.test(String(entry && entry.name || '')); });
+            selectedPrinter = tsc ? tsc.name : 'default';
+        }
         if (printer && typeof printer.print === 'function') {
             var pageWidth = s.paper === 'a4' ? 210 : s.width;
             var pageHeight = s.paper === 'a4' ? 297 : s.height;

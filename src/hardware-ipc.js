@@ -393,11 +393,21 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
       const { normalizeTargets, columnsFor } = require('./printer-targets');
       // PRP-300 is an 80mm printer. Keep that as the default while still
       // respecting an explicitly configured printer/paper target.
+      let preferredReceiptPrinter = config.printerName || options.printerName || '';
+      if (!preferredReceiptPrinter && !(options.printers && options.printers.length)) {
+        // Default counter printer for both ordinary receipts and F6 versements.
+        // Match the installed queue name; if it is absent, retain the existing
+        // Windows-default fallback rather than redirecting a ticket elsewhere.
+        const installed = await hardwareManager.listPrinters();
+        const match = installed.find((printer) => /(?:tysoo|tysso).*prp.?300|prp.?300.*(?:tysoo|tysso)/i.test(String(printer.name || '')))
+          || installed.find((printer) => /prp.?300/i.test(String(printer.name || '')));
+        if (match) preferredReceiptPrinter = match.name;
+      }
       const targetConfig = config.printerName
         ? { printerName: config.printerName, paperSize: config.paperWidth }
         : (options.printers && options.printers.length
           ? { printers: options.printers }
-          : { printerName: options.printerName !== undefined ? options.printerName : '', paperSize: options.paperWidth || config.paperWidth || '80mm' });
+          : { printerName: preferredReceiptPrinter, paperSize: options.paperWidth || config.paperWidth || '80mm' });
       const targets = normalizeTargets(targetConfig, options.paperWidth || config.paperWidth || '80mm');
       const results = [];
       const requestId = options.jobId || 'receipt:' + require('crypto').createHash('sha256')

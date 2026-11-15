@@ -89,7 +89,7 @@ async function printPdfDocument(bytes, { parent, printerName = '', paperSize = '
     fs.writeFileSync(file, pdf, { flag: 'wx', mode: 0o600 });
     if (process.platform === 'win32') {
       const { print } = require('pdf-to-printer');
-      await print(file, { printDialog: !printerName, printer: printerName === 'default' ? undefined : printerName || undefined,
+      await print(file, { printDialog: false, printer: printerName === 'default' ? undefined : printerName || undefined,
         paperSize: paperSize === 'letter' ? 'letter' : paperSize.toUpperCase(), copies, scale: 'noscale' });
       // The native chooser can be cancelled; returning means it closed, not
       // that paper was confirmed. The frontend must not announce "printed".
@@ -113,8 +113,7 @@ async function printPdfDocument(bytes, { parent, printerName = '', paperSize = '
       win.once('closed', () => resolve({ cancelled: true }));
       win.loadFile(file).then(() => {
         if (win.isDestroyed()) return;
-        win.show();
-        win.webContents.print({ silent: !!printerName, deviceName: printerName === 'default' ? '' : printerName,
+        win.webContents.print({ silent: true, deviceName: printerName === 'default' ? '' : printerName,
           pageSize: paperSize === 'letter' ? 'Letter' : paperSize.toUpperCase(), copies, printBackground: true }, (success, reason) => {
           finish(success ? { success: true } : /cancel/i.test(reason || '')
             ? { cancelled: true } : { success: false, error: reason || 'Printing failed' });

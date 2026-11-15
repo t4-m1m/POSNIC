@@ -653,7 +653,7 @@ class HardwareManager {
       }
       if (!this._htmlPrintWindow) {
         this._htmlPrintWindow = new BrowserWindow({
-          show: options.showPrintDialog === true,
+          show: false,
           width: pageSize.windowWidth,
           height: 600,
           webPreferences: {
@@ -666,9 +666,9 @@ class HardwareManager {
         hardenPrintWindow(this._htmlPrintWindow);
       }
       printWindow = this._htmlPrintWindow;
-      if (options.showPrintDialog === true && !printWindow.isVisible()) printWindow.show();
+      // Printing is always submitted silently to the resolved device.
 
-      const deviceName = options.showPrintDialog === true ? null : await this._resolvePrinterName(options.printerName);
+      const deviceName = await this._resolvePrinterName(options.printerName);
       receiptPrinter = deviceName;
 
       const expectedReceipt = /data-receipt-design\s*=/.test(htmlContent);
@@ -773,7 +773,7 @@ class HardwareManager {
       }
       // Keep the warmed print surface for the next sale. It is destroyed when
       // the main POS window closes (see setMainWindow above).
-      if (printWindow && !printWindow.isDestroyed() && options.showPrintDialog !== true) printWindow.hide();
+      if (printWindow && !printWindow.isDestroyed()) printWindow.hide();
     }
   }
 
