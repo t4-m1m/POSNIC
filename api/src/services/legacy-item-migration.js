@@ -91,12 +91,12 @@ async function inspect(payload, context) {
       { barcodes: { $in: barcodes } },
       { name: { $in: namePatterns } },
     ],
-  }, { projection: { name: 1, barcode_id: 1 } }).toArray();
+  }, { projection: { name: 1, barcode_id: 1, barcodes: 1 } }).toArray();
 
   const byBarcode = new Map();
   const byName = new Map();
   existing.forEach((item) => {
-    if (item.barcode_id) byBarcode.set(String(item.barcode_id), item);
+    itemBarcodes.codes(item).forEach((code) => byBarcode.set(String(code), item));
     if (item.name) byName.set(String(item.name).toLocaleLowerCase(), item);
   });
   const conflicts = [];
