@@ -271,6 +271,38 @@
             }, Infinity);
             if (!Number.isFinite(canvasTopOffset)) canvasTopOffset = 0;
         }
+        // Reserve real vertical room for the two customer lines below the
+        // seller. If the basket or footer starts too soon, move those later
+        // blocks down instead of printing client details over the basket.
+        var versementCustomerShift = 0;
+        if (layout.canvas && !sheet && data.versement_checkout && data.sales_id &&
+            (present(values.customer_name) || present(values.customer_phone))) {
+            var customerAnchor = layout.blocks.find(function (entry) {
+                return entry.type === 'field' && entry.field === 'seller_name';
+            });
+            if (customerAnchor) {
+                var anchorY = Number(customerAnchor.y) || 0;
+                var anchorHeight = Math.max(18, Number(customerAnchor.h) || 18);
+                var anchorBasket = layout.blocks.find(function (entry) { return entry.type === 'items'; });
+                if (dynamicItemsShift && anchorBasket &&
+                    anchorY >= Number(anchorBasket.y) + Math.max(28, Number(anchorBasket.h) || 0)) {
+                    anchorY += dynamicItemsShift;
+                }
+                var clientFontSize = Number(customerAnchor.fontSize);
+                if (!Number.isFinite(clientFontSize) || clientFontSize < 8 || clientFontSize > 96) clientFontSize = 14;
+                var customerBottom = anchorY - canvasTopOffset + anchorHeight + 3 +
+                    (present(values.customer_name) ? clientFontSize + 4 : 0) +
+                    (present(values.customer_phone) ? clientFontSize + 4 : 0);
+                layout.blocks.forEach(function (entry) {
+                    if (entry.id === customerAnchor.id) return;
+                    var entryY = Number(entry.y);
+                    if (!Number.isFinite(entryY) || entryY < anchorY + anchorHeight) return;
+                    if (entry === anchorBasket && dynamicItemsShift) entryY += dynamicItemsShift;
+                    var finalY = entryY - canvasTopOffset;
+                    if (finalY < customerBottom + 3) versementCustomerShift = Math.max(versementCustomerShift, customerBottom + 3 - finalY);
+                });
+            }
+        }
         var rendered = layout.blocks.map(function (originalBlock) {
             var b = Object.assign({}, originalBlock);
             var basket = layout.blocks.find(function (block) { return block.type === 'items'; });
@@ -278,6 +310,15 @@
                 b.y = Number(b.y) + dynamicItemsShift;
             }
             if (layout.canvas && !sheet && canvasTopOffset > 0) b.y = Math.max(0, Number(b.y) - canvasTopOffset);
+            if (versementCustomerShift && data.versement_checkout && data.sales_id) {
+                var sellerAnchor = layout.blocks.find(function (entry) {
+                    return entry.type === 'field' && entry.field === 'seller_name';
+                });
+                if (sellerAnchor && b.id !== sellerAnchor.id &&
+                    Number(originalBlock.y) >= Number(sellerAnchor.y) + Math.max(18, Number(sellerAnchor.h) || 18)) {
+                    b.y = Number(b.y) + versementCustomerShift;
+                }
+            }
             var content = '';
             if (b.type === 'field' && ((b.field === 'fssai' && headerFssai) || (b.field === 'total_quantity' && fixedItems))) return '';
             if (data.versement_checkout && data.sales_id && b.type === 'field' && ['customer_name', 'customer_phone'].indexOf(b.field) !== -1) return '';
