@@ -376,6 +376,7 @@
         },function(){failed();});
     }
     function showAdd() {
+        // Called directly by the catalogue button, even when the current hash is already /items/new.
         // Always start a clean, visible draft. Do not rely on the saved/editing
         // flags: the success view may have hidden the layout after the POST.
         reset();
