@@ -9,7 +9,10 @@ function dailyReportPeriod(query, timezone, dayparts = []) {
     const text = String(value || '').trim();
     const prefix = text.match(/^(\d{4})[/-](\d{2})[/-](\d{2})/);
     const day = prefix ? prefix.slice(1).join('-') : text;
-    return moment.tz(day, ['YYYY-MM-DD', 'MM/DD/YYYY'], true, zone).startOf('day');
+    // The POS UI displays dates in French day/month/year order. Accept
+    // that exact format as well as ISO and the legacy US format so dates such
+    // as 15/11/2026 do not become Invalid Date and fail the whole report.
+    return moment.tz(day, ['YYYY-MM-DD', 'DD/MM/YYYY', 'DD-MM-YYYY', 'MM/DD/YYYY'], true, zone).startOf('day');
   };
   const first = parseDay(query.starting_date),
     last = parseDay(query.ending_date);
