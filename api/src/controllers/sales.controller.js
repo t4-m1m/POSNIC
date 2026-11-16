@@ -1889,7 +1889,7 @@ class SalesController extends BaseController {
       const db = await BaseModel.getDb();
       const settledVersements = await db.collection('sale_versements').find({
         branch_id: branchObjectId, status: 'settled',
-        settled_at: { $gte: new Date(filteredDateRange.start_date), $lte: new Date(filteredDateRange.end_date) },
+        settled_at: { $gte: new Date(filteredDateRange.start_date), $lt: new Date(filteredDateRange.end_date) },
       }).toArray();
       const tenderLabels = { cash: 'Espèces', tpe: 'TPE', baridimob: 'BaridiMob' };
       const versementPaymentMap = new Map();
@@ -1916,7 +1916,7 @@ class SalesController extends BaseController {
         } },
         { $match: { $expr: { $and: [
           { $gte: ['$reportRefundDate', new Date(filteredDateRange.start_date)] },
-          { $lte: ['$reportRefundDate', new Date(filteredDateRange.end_date)] },
+          { $lt: ['$reportRefundDate', new Date(filteredDateRange.end_date)] },
         ] } } },
         { $group: { _id: '$reportRefundMethod', amount: { $sum: '$reportRefundAmount' } } },
       ]).toArray();
@@ -1939,7 +1939,7 @@ class SalesController extends BaseController {
         { $match: {
           license: BaseModel.license || req.user.license || req.user.license_id,
           branch_id: branchObjectId,
-          received_at: { $gte: new Date(filteredDateRange.start_date), $lte: new Date(filteredDateRange.end_date) },
+          received_at: { $gte: new Date(filteredDateRange.start_date), $lt: new Date(filteredDateRange.end_date) },
         } },
         { $group: { _id: '$method', amount: { $sum: '$amount' }, count: { $sum: 1 } } },
         { $sort: { _id: 1 } },
@@ -1988,7 +1988,7 @@ class SalesController extends BaseController {
             $expr: {
               $and: [
                 { $gte: ['$reportExpenseDate', reportStart] },
-                { $lte: ['$reportExpenseDate', reportEnd] },
+                { $lt: ['$reportExpenseDate', reportEnd] },
                 { $not: [{ $in: ['$reportExpenseType', ['credit', 'income', 'money in']] }] },
               ],
             },
@@ -2024,7 +2024,7 @@ class SalesController extends BaseController {
             $expr: {
               $and: [
                 { $gte: ['$reportSalaryDate', reportStart] },
-                { $lte: ['$reportSalaryDate', reportEnd] },
+                { $lt: ['$reportSalaryDate', reportEnd] },
               ],
             },
           },
