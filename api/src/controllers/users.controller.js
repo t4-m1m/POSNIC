@@ -208,13 +208,16 @@ class UsersController extends BaseController {
         .findOne({ $or: [{ username: loginId }, { email: loginId }] })
         .select('+password');
 
-      // The Super Admin may use the Gmail local-part without changing the
+      // The Super Admin may use the email local-part without changing the
       // stored account or password. Existing username logins remain unchanged.
       if (!loginId.includes('@') && /^[a-z0-9._+-]+$/i.test(loginId)) {
         const escapedLocalPart = loginId.replace(/[.+]/g, (char) => '\\' + char);
-        const alias = await this.userModel
-          .findOne({ email: new RegExp('^' + escapedLocalPart + '@gmail\\.com$', 'i') })
-          .select('+password +usertype +role');
+        const alias = await this.userModel.findOne({
+          $and: [
+            { email: new RegExp('^' + escapedLocalPart + '@[^@]+$', 'i') },
+            { $or: [{ usertype: 'super_admin' }, { role: 'super_admin' }] },
+          ],
+        }).select('+password +usertype +role');
         const aliasRoles = [alias && alias.usertype, alias && alias.role]
           .map((value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
         if (alias && aliasRoles.includes('superadmin')) user = alias;
@@ -320,7 +323,12 @@ class UsersController extends BaseController {
       if (!loginId.includes('@')) {
         const escapedLocalPart = loginId.replace(/[.+]/g, (char) => '\\' + char);
         const candidate = await this.userModel
-          .findOne({ email: new RegExp('^' + escapedLocalPart + '@gmail\\.com$', 'i') })
+          .findOne({
+            $and: [
+              { email: new RegExp('^' + escapedLocalPart + '@[^@]+$', 'i') },
+              { $or: [{ usertype: 'super_admin' }, { role: 'super_admin' }] },
+            ],
+          })
           .select('+password +license +branch_access +printing_design +access +plan +plan_access +activate +firstname +lastname +username +user_name +email +image +register_status +usertype +role +role_id +is_super_admin')
           .lean();
         const candidateRoles = [candidate && candidate.usertype, candidate && candidate.role]

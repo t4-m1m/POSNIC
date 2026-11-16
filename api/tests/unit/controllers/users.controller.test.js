@@ -439,7 +439,7 @@ describe('legacyVerifyLogin', () => {
   test('allows a first-run Super Admin with no username to sign in using the email local part', async () => {
     const emailOnlySuperAdmin = {
       ...fakeUser,
-      email: 'owner@gmail.com',
+      email: 'owner@example.com',
       username: undefined,
       user_name: undefined,
       usertype: 'super_admin',
@@ -458,8 +458,8 @@ describe('legacyVerifyLogin', () => {
     await ctrl.legacyVerifyLogin(req, res);
 
     const aliasQuery = mockUserModel.findOne.mock.calls[1][0];
-    expect(aliasQuery.email).toBeInstanceOf(RegExp);
-    expect(aliasQuery.email.test('OWNER@gmail.com')).toBe(true);
+    expect(aliasQuery.$and[0].email).toBeInstanceOf(RegExp);
+    expect(aliasQuery.$and[0].email.test('OWNER@example.com')).toBe(true);
     expect(res.status).toHaveBeenCalledWith(200);
   });
 
@@ -473,8 +473,8 @@ describe('legacyVerifyLogin', () => {
     const res = mockRes();
     await ctrl.legacyVerifyLogin(req, res);
     const aliasQuery = mockUserModel.findOne.mock.calls[1][0];
-    expect(aliasQuery.email).toBeInstanceOf(RegExp);
-    expect(aliasQuery.email.test('ADMIN@gmail.com')).toBe(true);
+    expect(aliasQuery.$and[0].email).toBeInstanceOf(RegExp);
+    expect(aliasQuery.$and[0].email.test('ADMIN@gmail.com')).toBe(true);
     expect(res.status).toHaveBeenCalledWith(200);
   });
   test('404 when password invalid', async () => {

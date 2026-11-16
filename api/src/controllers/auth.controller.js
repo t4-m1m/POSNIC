@@ -77,17 +77,25 @@ exports.login = async (req, res, next) => {
     // A Gmail local-part is a Super Admin alias. Resolve it case-insensitively
     // for both "ADMIN" and "ADMIN@gmail.com", including fresh-PC login forms
     // that submit the address in the username field.
-    const gmailAlias = normalizedIdentifier.endsWith('@gmail.com')
-      ? normalizedIdentifier
-      : (!normalizedIdentifier.includes('@') ? normalizedIdentifier + '@gmail.com' : '');
-    if (gmailAlias && (!user || usingUsername)) {
-      // Match older raw-imported records case-insensitively too; keep the
-      // exact Gmail address and the Super Admin role gate below.
-      const escapedAlias = gmailAlias.replace(/[.+]/g, (char) => '\\' + char);
-      const alias = await User.findOne({ email: new RegExp('^' + escapedAlias + '$', 'i') }).select('+password');
-      const aliasRoles = [alias && alias.usertype, alias && alias.role]
-        .map((value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
-      if (alias && aliasRoles.includes('superadmin')) user = alias;
+    if (!user || usingUsername) {
+      const aliasLocalPart = normalizedIdentifier.includes('@')
+        ? normalizedIdentifier.split('@')[0]
+        : normalizedIdentifier;
+      if (/^[a-z0-9._+-]+$/i.test(aliasLocalPart)) {
+        // Match the exact email local-part case-insensitively. This supports
+        // legacy raw-imported addresses such as ADMIN@gmail.com as well as
+        // first-run Super Admin accounts, without changing stored credentials.
+        const escapedLocalPart = aliasLocalPart.replace(/[.+]/g, (char) => '\\' + char);
+        const alias = await User.findOne({
+          $and: [
+            { email: new RegExp('^' + escapedLocalPart + '@[^@]+$', 'i') },
+            { $or: [{ usertype: 'super_admin' }, { role: 'super_admin' }] },
+          ],
+        }).select('+password');
+        const aliasRoles = [alias && alias.usertype, alias && alias.role]
+          .map((value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+        if (alias && aliasRoles.includes('superadmin')) user = alias;
+      }
     }
 
     const userRoles = [user && user.usertype, user && user.role]
