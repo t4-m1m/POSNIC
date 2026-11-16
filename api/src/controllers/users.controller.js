@@ -288,21 +288,15 @@ class UsersController extends BaseController {
       }
 
       // PHP GUMP filter: trim|sanitize_string (no lowercase)
+      // Keep the legacy POS login on exact email/username matches only.
+      // Super Admin Gmail-local-part alias handling is intentionally disabled.
       const loginId = String(username).trim();
-      // Preserve ordinary username login. Only the email-alias fallback is
-      // restricted to Super Admin; filtering the whole query locked out
-      // existing admin/cashier usernames.
-      const emailAddress = loginId.includes('@')
-        ? loginId
-        : loginId.replace(/[^a-z0-9]/gi, '') + '@gmail.com';
-      const escapedEmail = emailAddress.replace(/[.*+?^$()|[\]\\]/g, '\\$&');
-      const emailPattern = new RegExp('^' + escapedEmail + '$', 'i');
-
-      let user = await this.userModel
+      const user = await this.userModel
         .findOne({
           $or: [
-            { email: emailPattern },
-            { username: loginId }, { username: loginId.toLowerCase() },
+            { email: loginId },
+            { username: loginId },
+            { username: loginId.toLowerCase() },
             { user_name: loginId },
           ],
         })
@@ -310,16 +304,6 @@ class UsersController extends BaseController {
           '+password +license +branch_access +printing_design +access +plan +plan_access +activate +firstname +lastname +username +email +image +register_status +usertype +role +role_id +is_super_admin'
         )
         .lean();
-
-      if (!loginId.includes('@') && user) {
-        const usernameMatches = [user.username, user.user_name].some(
-          (value) => String(value || '').toLowerCase() === loginId.toLowerCase()
-        );
-        if (!usernameMatches) {
-          const roles = [user.usertype, user.role].map((value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
-          if (!roles.includes('superadmin') && user.is_super_admin !== true) user = null;
-        }
-      }
       /*
        * ONE MESSAGE FOR BOTH FAILURES, DELIBERATELY.
        *
