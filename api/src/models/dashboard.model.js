@@ -1070,11 +1070,18 @@ class DashboardModel extends BaseModel {
       // Grouping Logic
       let groupDate;
       const filter = data.filter || 'month';
+      // Bucket completed sales into useful chart intervals. A day view needs
+      // hourly points (not one single point for the entire day); week/month use
+      // calendar days and year uses months. Fall back to the original sale date
+      // when an older document has no updated_date.
+      const chartDate = { $ifNull: ['$updated_date', '$date'] };
       if (filter === 'year') {
-        groupDate = { $month: { date: '$updated_date', timezone: this.timeZone } };
+        groupDate = { $month: { date: chartDate, timezone: this.timeZone } };
+      } else if (filter === 'day') {
+        groupDate = { $dateToString: { format: '%H', date: chartDate, timezone: this.timeZone } };
       } else {
         groupDate = {
-          $dateToString: { format: '%Y-%m-%d', date: '$updated_date', timezone: this.timeZone },
+          $dateToString: { format: '%Y-%m-%d', date: chartDate, timezone: this.timeZone },
         };
       }
 
@@ -1083,11 +1090,8 @@ class DashboardModel extends BaseModel {
           { $match: condition },
           {
             $group: {
-              _id: {
-                datetime: groupDate,
-                sales_id: '$sales_id',
-                sale_amount: { $sum: reportSaleTotal() },
-              },
+              _id: { datetime: groupDate },
+            sale_amount: { $sum: reportSaleTotal() },
             },
           },
           { $sort: { _id: 1 } },
@@ -1099,11 +1103,8 @@ class DashboardModel extends BaseModel {
           { $match: purchasecondition },
           {
             $group: {
-              _id: {
-                datetime: groupDate,
-                receiving_id: '$receiving_id',
-                purchase_amount: { $sum: '$items_total' },
-              },
+              _id: { datetime: groupDate },
+            purchase_amount: { $sum: '$items_total' },
             },
           },
           { $sort: { _id: 1 } },
@@ -1115,11 +1116,8 @@ class DashboardModel extends BaseModel {
           { $match: return_condition },
           {
             $group: {
-              _id: {
-                datetime: groupDate,
-                sales_id: '$sales_id',
-                return_amount: { $sum: '$items_return_total' },
-              },
+              _id: { datetime: groupDate },
+            return_amount: { $sum: '$items_return_total' },
             },
           },
           { $sort: { _id: 1 } },
@@ -1131,11 +1129,8 @@ class DashboardModel extends BaseModel {
           { $match: returnpurchase_condition },
           {
             $group: {
-              _id: {
-                datetime: groupDate,
-                receiving_id: 'receiving_id',
-                return_amount: { $sum: '$items_return_total' },
-              },
+              _id: { datetime: groupDate },
+            return_amount: { $sum: '$items_return_total' },
             },
           },
           { $sort: { _id: 1 } },
@@ -1147,7 +1142,7 @@ class DashboardModel extends BaseModel {
         const y_axis = [];
         list.forEach((item) => {
           const datetime = item._id.datetime;
-          const amount = item._id[amountField] || 0;
+          const amount = item[amountField] != null ? item[amountField] : (item._id && item._id[amountField]) || 0;
 
           let label;
 
@@ -1158,14 +1153,8 @@ class DashboardModel extends BaseModel {
           } else {
             const d = new Date(datetime);
             if (filter === 'day') {
-              label = new Date()
-                .toLocaleDateString('en-US', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
-                  weekday: 'short',
-                })
-                .replace(/,/g, '');
+              const hour = Number(datetime);
+              label = Number.isFinite(hour) ? String(hour).padStart(2, '0') + ':00' : String(datetime || '');
             } else if (filter === 'week') {
               label = d.toLocaleDateString('en-US', { weekday: 'long' });
             } else {
