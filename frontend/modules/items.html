@@ -25,6 +25,11 @@
                             data-toggle="tooltip" title="Import from CSV/Excel" data-t-title="lang_import_from_csv_excel" aria-label="Import items" data-t-aria-label="lang_import_items">
                             <i class="feather icon-download"></i>
                         </a>
+                        <button type="button" class="btn btn-outline-primary" data-module="item" data-access="write"
+                            onclick="PosnicPro.items.openLegacyMigration(); return false;"
+                            title="Import legacy Firebird JSON" aria-label="Import legacy Firebird JSON">
+                            <i class="feather icon-database mr-1"></i><span class="d-none d-xl-inline">Legacy JSON</span>
+                        </button>
                         <div class="btn-group">
                         <button type="button" class="btn btn-primary-rgba dropdown-toggle" data-toggle="dropdown"
                             aria-haspopup="true" aria-expanded="false" title="Export CSV" data-t-title="lang_export_csv" aria-label="Export CSV" data-t-aria-label="lang_export_csv">
