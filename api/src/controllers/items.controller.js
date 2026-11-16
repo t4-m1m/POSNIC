@@ -2170,6 +2170,47 @@ class ItemsController extends BaseController {
     }
   }
 
+  /** Preview and additive import for the legacy Firebird standalone catalogue. */
+  async legacyMigrationPreview(req, res) {
+    try {
+      if (req.user?.access?.item?.write === false) return this.error(res, ERROR_MESSAGES.UNAUTHORIZED, 403);
+      await this.ensureContext(req);
+      const context = {
+        branchId: this.model?.branchId || null,
+        licenseId: this.model?.licenseId || null,
+        user: req.user || {},
+        userName: req.user?.name || req.user?.username || req.user?.email || 'System',
+        userId: req.user?._id || null,
+        branchName: req.user?.branch?.branch_name || req.user?.branch_name || req.user?.branch?.name || '',
+      };
+      const service = require('../services/legacy-item-migration');
+      const result = await service.preview(req.body, context);
+      return this.success(res, result, 'Legacy migration preview');
+    } catch (error) {
+      return this.error(res, error.message || 'Could not preview legacy migration', 400, error.details || null);
+    }
+  }
+
+  async legacyMigrationImport(req, res) {
+    try {
+      if (req.user?.access?.item?.write === false) return this.error(res, ERROR_MESSAGES.UNAUTHORIZED, 403);
+      await this.ensureContext(req);
+      const context = {
+        branchId: this.model?.branchId || null,
+        licenseId: this.model?.licenseId || null,
+        user: req.user || {},
+        userName: req.user?.name || req.user?.username || req.user?.email || 'System',
+        userId: req.user?._id || null,
+        branchName: req.user?.branch?.branch_name || req.user?.branch_name || req.user?.branch?.name || '',
+      };
+      const service = require('../services/legacy-item-migration');
+      const result = await service.importArticles(req.body, context);
+      return this.success(res, result, result.message || 'Legacy migration completed');
+    } catch (error) {
+      return this.error(res, error.message || 'Could not import legacy articles', 400, error.details || null);
+    }
+  }
+
   /**
    * PHP: itemsImport() - Bulk import items from CSV/Excel
    * Frontend posts to `items/itemsImport` with body { result: [...] }.
