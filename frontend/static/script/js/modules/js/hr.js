@@ -67,7 +67,7 @@
   }
   function loadPayroll() {
     var p=$('#hr_period').val()||period(); $('#hr_period').val(p);
-    $('#hr_payroll_rows').html('<tr><td colspan="9">Chargement…</td></tr>');
+    $('#hr_payroll_rows').html('<tr><td colspan="7">Chargement…</td></tr>');
     request('GET','hr/payroll/'+encodeURIComponent(p),{},function(d){
       var rows=(Array.isArray(d)?d:(d.data||[])).map(function(w){
         return '<tr><td>'+esc(w.name)+'</td><td>'+money(w.monthly_salary)+'</td><td>'+money(w.overtime)+'</td><td>'+money(w.weekly_primes)+'</td><td>'+money(w.monthly_primes)+'</td><td>'+money(w.advances)+'</td><td>'+money(w.paid)+'</td><td><strong>'+money(w.remaining)+'</strong></td><td><button class="btn btn-sm btn-primary" onclick="PosnicPro.hr.openTransaction(\''+esc(w._id)+'\',\'salary_payment\',\''+esc(p)+'\')">Payer</button></td></tr>';
