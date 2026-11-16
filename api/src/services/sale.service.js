@@ -37,120 +37,50 @@ const { normalizeSaleCharges } = require('./sale-charges');
 //   sum the full sales_total/total as before.
 // - Finally we merge both paths and group again by tender name to produce
 //   a single { _id: <tender>, total: <amount> } list.
-const buildDailyPaymentAggregationPipeline = (match) => [
-  { $match: match },
-  {
-    $project: {
-      sales_total: {
-        $toDouble: {
-          $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, '$items_total'],
-        },
-      },
-      items_total: {
-        $toDouble: { $ifNull: ['$items_total', 0] },
-      },
-      multi_payment: 1,
-      payment_mode: 1,
-      payment_status: 1,
-      payment_pending: 1,
-      partial_check: 1,
-      partial_balance: 1,
-      paid_amount: 1,
-      collected_total: {
-        $switch: {
-          branches: [
-            {
-              case: { $in: ['$payment_status', ['Unpaid', 'unpaid']] },
-              then: 0,
-            },
-            {
-              case: { $eq: ['$payment_status', 'Paid'] },
-              then: { $toDouble: { $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, '$items_total'] } },
-            },
-            {
-              case: { $gt: [{ $toDouble: { $ifNull: ['$payment_pending', 0] } }, 0] },
-              then: {
-                $max: [
-                  0,
-                  {
-                    $subtract: [
-                      { $toDouble: { $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, '$items_total'] } },
-                      { $toDouble: { $ifNull: ['$payment_pending', 0] } },
-                    ],
-                  },
-                ],
-              },
-            },
-            {
-              case: { $eq: ['$partial_check', 'true'] },
-              then: { $toDouble: { $ifNull: ['$partial_balance', 0] } },
-            },
-          ],
-          default: 0,
-        },
-      },
-      payment_entries: {
-        $cond: [
-          { $eq: [{ $type: '$multi_payment' }, 'object'] },
-          { $objectToArray: '$multi_payment' },
-          [],
-        ],
-      },
-    },
-  },
-  {
-    $addFields: {
-      has_split: { $gt: [{ $size: '$payment_entries' }, 0] },
-    },
-  },
-  {
-    $facet: {
-      // Sales with split/multi payment methods
+const buildDailyPaymentAggregationPipeline = (match) => {
+  // Historical sales can contain legacy numeric strings or malformed values.
+  // Never let one old record abort the entire cash-closing report.
+  const asNumber = (input) => ({ $convert: { input, to: 'double', onError: 0, onNull: 0 } });
+  const salesTotal = asNumber({ $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, '$items_total'] });
+  const pending = asNumber({ $ifNull: ['$payment_pending', 0] });
+  return [
+    { $match: match },
+    { $project: {
+      sales_total: salesTotal,
+      items_total: asNumber({ $ifNull: ['$items_total', 0] }),
+      multi_payment: 1, payment_mode: 1, payment_status: 1, payment_pending: 1,
+      partial_check: 1, partial_balance: 1, paid_amount: 1,
+      collected_total: { $switch: { branches: [
+        { case: { $in: ['$payment_status', ['Unpaid', 'unpaid']] }, then: 0 },
+        { case: { $eq: ['$payment_status', 'Paid'] }, then: salesTotal },
+        { case: { $gt: [pending, 0] }, then: { $max: [0, { $subtract: [salesTotal, pending] }] } },
+        { case: { $eq: ['$partial_check', 'true'] }, then: asNumber({ $ifNull: ['$partial_balance', 0] }) }
+      ], default: 0 } },
+      payment_entries: { $cond: [
+        { $eq: [{ $type: '$multi_payment' }, 'object'] },
+        { $objectToArray: '$multi_payment' }, []
+      ] }
+    } },
+    { $addFields: { has_split: { $gt: [{ $size: '$payment_entries' }, 0] } } },
+    { $facet: {
       split_payments: [
         { $match: { has_split: true, collected_total: { $gt: 0 } } },
         { $unwind: '$payment_entries' },
-        // Credit and Versement are not ordinary drawer collections.
         { $match: { $expr: { $not: [{ $in: [{ $toLower: '$payment_entries.k' }, ['credit', 'versement']] }] } } },
-        {
-          $group: {
-            _id: '$payment_entries.k',
-            total: {
-              $sum: {
-                $toDouble: { $ifNull: ['$payment_entries.v', 0] },
-              },
-            },
-          },
-        },
+        { $group: { _id: '$payment_entries.k', total: { $sum: asNumber({ $ifNull: ['$payment_entries.v', 0] }) } } }
       ],
-      // Sales without multi_payment: fall back to single payment_mode
       single_payments: [
         { $match: { has_split: false, $expr: { $ne: [{ $toLower: { $ifNull: ['$payment_mode', 'Cash'] } }, 'versement'] } } },
-        {
-          $group: {
-            _id: { $ifNull: ['$payment_mode', 'Cash'] },
-            total: {
-              $sum: { $toDouble: { $ifNull: ['$collected_total', 0] } },
-            },
-          },
-        },
-      ],
-    },
-  },
-  {
-    $project: {
-      combined: { $concatArrays: ['$split_payments', '$single_payments'] },
-    },
-  },
-  { $unwind: '$combined' },
-  { $replaceRoot: { newRoot: '$combined' } },
-  {
-    $group: {
-      _id: '$_id',
-      total: { $sum: '$total' },
-    },
-  },
-  { $sort: { total: -1 } },
-];
+        { $group: { _id: { $ifNull: ['$payment_mode', 'Cash'] }, total: { $sum: asNumber({ $ifNull: ['$collected_total', 0] }) } } }
+      ]
+    } },
+    { $project: { combined: { $concatArrays: ['$split_payments', '$single_payments'] } } },
+    { $unwind: '$combined' },
+    { $replaceRoot: { newRoot: '$combined' } },
+    { $group: { _id: '$_id', total: { $sum: '$total' } } },
+    { $sort: { total: -1 } }
+  ];
+};
 
 const getReportServingPeriods = async (context) => new ItemRepository().shopDayparts(context);
 
@@ -2869,17 +2799,13 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
     { $unwind: '$items' },
     {
       $addFields: {
-        'items.tax_amount': { $ifNull: ['$items.tax_amount', 0] },
+        reportTaxAmount: { $convert: { input: { $ifNull: ['$items.tax_amount', 0] }, to: 'double', onError: 0, onNull: 0 } },
         'items.tax_rate': { $ifNull: ['$items.tax_rate', '$items.tax'] },
         'items.tax_name': { $ifNull: ['$items.tax_name', ''] },
         'items.tax_type': { $ifNull: ['$items.tax_type', 'inclusive'] },
       },
     },
-    {
-      $match: {
-        'items.tax_amount': { $gt: 0 },
-      },
-    },
+    { $match: { reportTaxAmount: { $gt: 0 } } },
     {
       $group: {
         _id: {
@@ -2887,11 +2813,7 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
           tax_name: '$items.tax_name',
           tax_type: '$items.tax_type',
         },
-        tax_amount: {
-          $sum: {
-            $toDouble: { $ifNull: ['$items.tax_amount', 0] },
-          },
-        },
+        tax_amount: { $sum: '$reportTaxAmount' },
       },
     },
     { $sort: { tax_amount: -1 } },
@@ -2913,14 +2835,10 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
           item_name: { $ifNull: ['$changes.items.item_name', ''] },
         },
         cancel_count: {
-          $sum: {
-            $toDouble: { $ifNull: ['$changes.items.item_quantity', 0] },
-          },
+          $sum: { $convert: { input: { $ifNull: ['$changes.items.item_quantity', 0] }, to: 'double', onError: 0, onNull: 0 } },
         },
         cancel_amount: {
-          $sum: {
-            $toDouble: { $ifNull: ['$changes.items.total', 0] },
-          },
+          $sum: { $convert: { input: { $ifNull: ['$changes.items.total', 0] }, to: 'double', onError: 0, onNull: 0 } },
         },
       },
     },
