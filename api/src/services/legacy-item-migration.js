@@ -215,6 +215,7 @@ async function importArticles(payload, context) {
       is_active: true,
       branch_id: scope.branchId,
       branch_name: context.branchName || user.branch_name || user.branch?.branch_name || 'Default Branch',
+      branch_access: [{ branch_id: scope.branchId, branch_name: context.branchName || user.branch_name || user.branch?.branch_name || 'Default Branch' }],
       license: scope.licenseId,
       created_by: context.userName || user.username || user.email || '',
       created_by_id: ObjectId.isValid(String(context.userId || user._id || '')) ? new ObjectId(String(context.userId || user._id)) : undefined,
@@ -250,4 +251,43 @@ async function importArticles(payload, context) {
   });
 }
 
-module.exports = { preview, importArticles };
+
+/**
+ * Repair only records created by this migration, in the active branch/license.
+ * The legacy catalogue and sales picker use branch_access as their canonical
+ * branch relation; the first importer version wrote branch_id only.
+ * This is idempotent and changes no stock, prices, categories or barcodes.
+ */
+async function repairImported(context) {
+  const scope = await getScope(context);
+  const db = await BaseModel.getDb();
+  const items = db.collection('items');
+  const branch = await db.collection('branches').findOne(
+    { _id: scope.branchId },
+    { projection: { branch_name: 1 } }
+  );
+  const user = context.user || {};
+  const branchName = context.branchName || branch?.branch_name ||
+    user.branch_name || user.branch?.branch_name || 'Default Branch';
+  const filter = {
+    license: scope.licenseId,
+    branch_id: scope.branchId,
+    legacy_source_database: 'EHANOUTE.FDB',
+    del_status: { $nin: [1, '1', true] },
+  };
+  const before = await items.countDocuments(filter);
+  const result = await items.updateMany(filter, {
+    $set: {
+      branch_access: [{ branch_id: scope.branchId, branch_name: branchName }],
+    },
+  });
+  return {
+    matched: result.matchedCount || before,
+    repaired: result.modifiedCount || 0,
+    unchanged: Math.max(0, before - (result.modifiedCount || 0)),
+    message: (result.modifiedCount || 0) +
+      ' imported article(s) are now linked to the active branch. Stock, prices, categories and barcodes were preserved.',
+  };
+}
+
+module.exports = { preview, importArticles, repairImported };
