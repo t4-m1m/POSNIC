@@ -30,6 +30,11 @@
                             title="Import legacy Firebird JSON" aria-label="Import legacy Firebird JSON">
                             <i class="feather icon-database mr-1"></i><span class="d-none d-xl-inline">Legacy JSON</span>
                         </button>
+                        <button type="button" class="btn btn-outline-warning" data-module="item" data-access="write"
+                            onclick="PosnicPro.items.repairLegacyMigration(); return false;"
+                            title="Repair visibility of already imported Firebird articles" aria-label="Repair imported articles">
+                            <i class="feather icon-tool mr-1"></i><span class="d-none d-xl-inline">Repair legacy</span>
+                        </button>
                         <div class="btn-group">
                         <button type="button" class="btn btn-primary-rgba dropdown-toggle" data-toggle="dropdown"
                             aria-haspopup="true" aria-expanded="false" title="Export CSV" data-t-title="lang_export_csv" aria-label="Export CSV" data-t-aria-label="lang_export_csv">
