@@ -250,6 +250,27 @@ Var POSNIC_DELETE_DATA
   DeleteRegValue HKCU "Software\Posnic" "Start Menu Folder"
   DeleteRegKey /ifempty HKCU "Software\Posnic"
   
+  ; The old item editor wrote photos inside resources/api/uploads. The
+  ; previous install directory is removed during upgrades, so copy any legacy
+  ; photos to Electron's persistent user-data folder before that can happen.
+  ; Existing persistent files win; this never overwrites a newer copy.
+  IfFileExists "$INSTDIR\\resources\\api\\uploads\\item_images\\*.*" 0 posnic_images_preserved
+    CreateDirectory "$APPDATA\\posnic\\uploads\\item_images"
+    FindFirst $0 $1 "$INSTDIR\\resources\\api\\uploads\\item_images\\*.*"
+  posnic_image_copy_loop:
+    StrCmp $1 "" posnic_image_copy_done
+    StrCmp $1 "." posnic_image_copy_next
+    StrCmp $1 ".." posnic_image_copy_next
+    IfFileExists "$APPDATA\\posnic\\uploads\\item_images\\$1" posnic_image_copy_next
+    CopyFiles /SILENT "$INSTDIR\\resources\\api\\uploads\\item_images\\$1" "$APPDATA\\posnic\\uploads\\item_images"
+  posnic_image_copy_next:
+    FindNext $0 $1
+    IfErrors posnic_image_copy_done
+    Goto posnic_image_copy_loop
+  posnic_image_copy_done:
+    FindClose $0
+  posnic_images_preserved:
+
   DetailPrint "Cleaning up application data..."
   StrCmp $POSNIC_DELETE_DATA "1" 0 unskipdata
     DetailPrint "Deleting database and backups (user choice)..."
