@@ -552,7 +552,7 @@
                     return Promise.resolve(printer.list ? printer.list() : []).then(function (queues) {
                         queues = Array.isArray(queues) ? queues : [];
                         var receiptQueue = queues.find(function (queue) {
-                            return queue && /(?:tysso|tysoo).*prp.?300|prp.?300.*(?:tysso|tysoo)/i.test(String(queue.name || ''));
+                            return queue && /(?:tysso|tysoo).*(?:prp.?300|thermal.*receipt)|(?:prp.?300|thermal.*receipt).*(?:tysso|tysoo)/i.test(String(queue.name || ''));
                         });
                         if (!receiptQueue) throw new Error('Tysso/Tysoo PRP-300 receipt printer was not found. No PDF/default printer will be used.');
                         return receiptQueue.name;
@@ -613,7 +613,7 @@
                 && ['a4', 'a5', 'letter'].indexOf(requested) === -1) {
                 var queues = await window.electronAPI.printer.list();
                 var receiptQueue = (Array.isArray(queues) ? queues : []).find(function (queue) {
-                    return queue && /(?:tysso|tysoo).*prp.?300|prp.?300.*(?:tysso|tysoo)/i.test(String(queue.name || ''));
+                    return queue && /(?:tysso|tysoo).*(?:prp.?300|thermal.*receipt)|(?:prp.?300|thermal.*receipt).*(?:tysso|tysoo)/i.test(String(queue.name || ''));
                 });
                 if (!receiptQueue) throw new Error('Tysso/Tysoo PRP-300 receipt printer was not found. Check its Windows printer name and connection; no PDF/default printer will be used.');
                 var savedTarget = Array.isArray(targets) && targets.length ? targets[0] : null;
