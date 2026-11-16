@@ -315,15 +315,13 @@
             nameInput.dispatchEvent(new Event('input', { bubbles: true }));
     }
     function open(initialName) {
-        // A successful save leaves the editor in its result/locked state. A new
-        // Add article action must start a fresh draft just like Create another;
-        // otherwise the previous article's values and detail state leak forward.
-        if (editing || saved) reset();
+        // Opening only reveals and initializes the editor. Draft reset belongs
+        // to the explicit new-item entry point, after workspace initialization.
         if (P.HideSideBarModal) P.HideSideBarModal();
         $('.page_loader,#osk-container').hide(); $('#items_v2').show();
         capabilities = readCapabilities();
         P.itemsV2Details.init();
-        P.itemsV2Workspace.init({refresh:render,reset:reset,edit:function () {
+        P.itemsV2Workspace.init({refresh:render,reset:showAdd,edit:function () {
             if (!savedItemId || savedBranch !== P.local.get('branch_id_set')) return;
             editing = true; saved = false; attempted = false;
             document.getElementById('iv2-copy-source').value = '';
@@ -376,11 +374,13 @@
         },function(){failed();});
     }
     function showAdd() {
-        // Initialize/reveal the editor and its workspace first. Then reset every
-        // editor subsystem, including the success/locked workspace, on every click.
-        // This works even when the route is already #/items/new.
+        // One deterministic entry path for the dropdown, router and
+        // "Create another" action. Initialize/reveal first, then clear the
+        // previous saved/locked state exactly once.
+        $('#items').hide();
         open();
         reset();
+        $('#items_v2').show();
         return false;
     }
     P.items_v2 = { showEdit: showEdit, showClone: function(id){showEdit(id,true);}, showAdd: showAdd, showDataTablePage: open, setBusinessContext: function (category) {
