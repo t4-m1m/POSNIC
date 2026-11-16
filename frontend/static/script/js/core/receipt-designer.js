@@ -534,39 +534,35 @@
             if (options.sample) throw error;
             PosnicPro.alert('error', error.message || label('Print failed'));
         };
-        var thermalFormat = ['58', '80', '112'].indexOf(String(format)) !== -1;
-        var printMode = options.target && options.target.printMode;
-        // Receipt Studio is a visual document, not an ESC/POS text template.
-        // Always send its rendered HTML through Chromium/Windows printer driver:
-        // raw thermal jobs were arriving as printer-command garbage on tills
-        // whose Windows queue expects rendered graphics rather than ESC/POS bytes.
-        // Keep the complete saved layout (logo, barcode, images, fonts and Unicode).
-        var fastReceiptLines = null;
-        var useFastReceipt = false;
-        var useRawThermal = false;
         if (printer && printer.print && options.showDialog !== true) {
-            return Promise.resolve().then(function () {
-                    // The thermal receipt destination is fixed to the PRP-300.
-                    // Never let a Windows virtual printer or label printer become
-                    // the implicit destination for a sale receipt.
-                    return Promise.resolve(printer.list ? printer.list() : []).then(function (queues) {
-                        queues = Array.isArray(queues) ? queues : [];
-                        var receiptQueue = queues.find(function (queue) {
-                            return queue && /(?:tysso|tysoo).*(?:prp.?300|thermal.*receipt)|(?:prp.?300|thermal.*receipt).*(?:tysso|tysoo)/i.test(String(queue.name || ''));
-                        });
-                        if (!receiptQueue) throw new Error('Tysso/Tysoo PRP-300 receipt printer was not found. No PDF/default printer will be used.');
-                        return receiptQueue.name;
+            // Use the configured receipt destination, or Windows' current
+            // default printer when the preference is "default". Do not scan
+            // for a model-specific queue name: that lookup made checkout
+            // depend on a particular Windows driver label and delayed sales.
+            return Promise.resolve(PosnicPro.syncPrinterPreferences ? PosnicPro.syncPrinterPreferences() : null)
+                .catch(function () {})
+                .then(function () {
+                    var chosen = options.target ? options.target.name : PosnicPro.resolveReceiptPrinter();
+                    if (chosen === 'default') chosen = '';
+                    if (chosen) return chosen;
+                    return Promise.resolve(printer.getDefault ? printer.getDefault() : null).then(function (fallback) {
+                        var name = fallback && typeof fallback === 'object' ? fallback.name : fallback;
+                        if (!name || (PosnicPro._kitchenPrinters || []).indexOf(String(name).trim().toLowerCase()) !== -1) {
+                            throw new Error('Choose a receipt printer in Hardware Manager.');
+                        }
+                        return name;
                     });
                 }).then(function (name) { return printer.print(doc, { printerName: name,
                 pageSize: ['58', '80', '112'].indexOf(format) !== -1 ? format + 'mm' : format,
                 copies: options.target ? options.target.copies : 1,
                 receiptLog: options.receiptLog || null,
                 fitReceipt: ['58', '80', '112'].indexOf(format) !== -1,
-                // Saved Receipt Studio HTML is printed by the Windows driver.
-                // Never pass this document to the ESC/POS raw-byte encoder.
+                // Preserve the complete Receipt Studio HTML (logo, barcode,
+                // images, fonts and Unicode) and submit it silently through
+                // the already-warmed Chromium print surface.
                 thermalRaster: false,
                 fastReceiptLines: null,
-                silent: true, strictPrinter: true, forceHtml: true, printBackground: true, margins: { marginType: 'none' } }); })
+                silent: true, forceHtml: true, printBackground: true, margins: { marginType: 'none' } }); })
                 .then(function (result) {
                     if (!result || !result.success) throw new Error(result && result.error || label('Print failed'));
                     if (!options.sample && !options.batch) PosnicPro.afterPrint();
@@ -606,23 +602,8 @@
             var hasSavedStudioDesign = !!(data && data.receipt_designs && data.receipt_designs.layouts);
             if (!data.receipt_designs) data = Object.assign({}, data, { receipt_designs: defaults(data) });
             var targets = window.electronAPI && PosnicPro.printSettings ? PosnicPro.printSettings.get('sales') : [null];
-            // All counter-sale receipts (F1/F2/F6) have one fixed physical
-            // destination. Do not trust a stale "default" or virtual PDF queue
-            // saved in older printer preferences.
-            if (window.electronAPI && window.electronAPI.printer && window.electronAPI.printer.list
-                && ['a4', 'a5', 'letter'].indexOf(requested) === -1) {
-                var queues = await window.electronAPI.printer.list();
-                var receiptQueue = (Array.isArray(queues) ? queues : []).find(function (queue) {
-                    return queue && /(?:tysso|tysoo).*(?:prp.?300|thermal.*receipt)|(?:prp.?300|thermal.*receipt).*(?:tysso|tysoo)/i.test(String(queue.name || ''));
-                });
-                if (!receiptQueue) throw new Error('Tysso/Tysoo PRP-300 receipt printer was not found. Check its Windows printer name and connection; no PDF/default printer will be used.');
-                var savedTarget = Array.isArray(targets) && targets.length ? targets[0] : null;
-                targets = [{
-                    name: receiptQueue.name,
-                    pageSize: savedTarget && savedTarget.pageSize || '80mm',
-                    copies: savedTarget && savedTarget.copies || 1
-                }];
-            }
+            // Thermal receipts use the saved receipt printer preference; when it is
+            // set to Default, printDocument resolves Windows' default queue.
             if (window.electronAPI && PosnicPro.printSettings && ['a4', 'a5', 'letter'].indexOf(requested) !== -1) {
                 // An A4 override must not silently send a sheet to the counter roll.
                 targets = targets.filter(function (target) { return ['a4', 'a5', 'letter'].indexOf(target.pageSize) !== -1; });
