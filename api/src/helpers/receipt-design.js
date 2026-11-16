@@ -235,11 +235,18 @@
           // The renderer accepts only this allow-list, so saved designs cannot inject CSS.
           const fontFamilies = [
             'Arial, sans-serif',
+            'Arial Black, sans-serif',
             'Tahoma, sans-serif',
             'Verdana, sans-serif',
             'Georgia, serif',
             'Courier New, monospace',
             'monospace',
+            'Trebuchet MS, sans-serif',
+            'Segoe UI, sans-serif',
+            'Impact, sans-serif',
+            'Franklin Gothic Medium, sans-serif',
+            'Lucida Console, monospace',
+            'Times New Roman, serif',
           ];
           if (block.fontFamily != null) {
             if (!fontFamilies.includes(block.fontFamily))
@@ -251,6 +258,12 @@
             if (!Number.isFinite(fontSize) || fontSize < 8 || fontSize > 32)
               throw new Error('Block text size must be between 8 and 32 px.');
             b.fontSize = fontSize;
+          }
+          if (block.fontWeight != null && block.fontWeight !== '') {
+            const fontWeight = Number(block.fontWeight);
+            if (!Number.isInteger(fontWeight) || fontWeight < 400 || fontWeight > 900 || fontWeight % 100 !== 0)
+              throw new Error('Choose a font weight between 400 and 900.');
+            b.fontWeight = fontWeight;
           }
         }
         if (block.type === 'divider') {
