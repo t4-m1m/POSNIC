@@ -713,28 +713,82 @@ PosnicPro.dashboard = {
     },
 
     renderAnalytics: function (data) {
-        var totals=data.totals||{},days=Array.isArray(totals.sales_days)?totals.sales_days:[],amounts=Array.isArray(totals.sales_amounts)?totals.sales_amounts:[];
-        var host=$('#dashboard-sales-trend').empty(),values=amounts.map(function(v){return Number(v)||0;}),max=Math.max(1,...values),w=720,h=190,p=16;
-        if(!values.length){host.text('No sales data for this period.');}else{
-            var pts=values.map(function(v,i){return{x:p+i*(w-2*p)/Math.max(1,values.length-1),y:h-p-v/max*(h-2*p)};});
-            var path=pts.map(function(q,i){return(i?'L':'M')+q.x.toFixed(1)+' '+q.y.toFixed(1);}).join(' ');
-            var svg=$('<svg viewBox="0 0 720 200" role="img" aria-label="Sales trend" style="width:100%;height:auto;max-height:210px"></svg>');
-            [0,.5,1].forEach(function(v){var y=p+v*(h-2*p);svg.append($('<line x1="16" x2="704">').attr({y1:y,y2:y,stroke:'var(--theme-border-color,#dbe3ed)','stroke-dasharray':'4 5'}));});
-            svg.append($('<path>').attr({d:path+' L '+pts[pts.length-1].x+' '+(h-p)+' L '+pts[0].x+' '+(h-p)+' Z',fill:'rgba(37,99,235,.12)'}));
-            svg.append($('<path>').attr({d:path,fill:'none',stroke:'#2563eb','stroke-width':3,'stroke-linecap':'round','stroke-linejoin':'round'}));
-            pts.forEach(function(q,i){if(i===0||i===pts.length-1||i%Math.max(1,Math.floor(pts.length/6))===0)svg.append($('<circle>').attr({cx:q.x,cy:q.y,r:3.5,fill:'#2563eb'}));});
-            host.append(svg);
-            host.append($('<div class="d-flex justify-content-between text-muted small">').append($('<span>').text(days[0]||''),$('<span>').text(days[Math.floor(days.length/2)]||''),$('<span>').text(days[days.length-1]||'')));
+        var totals = data.totals || {};
+        var days = Array.isArray(totals.sales_days) ? totals.sales_days : [];
+        var values = (Array.isArray(totals.sales_amounts) ? totals.sales_amounts : []).map(function (value) { return Number(value) || 0; });
+        var host = $('#dashboard-sales-trend').empty();
+        var width = 720, height = 220, left = 42, right = 14, top = 16, bottom = 28;
+        var plotWidth = width - left - right, plotHeight = height - top - bottom;
+        var max = Math.max(1, ...values);
+        if (!values.length) {
+            host.html('<div class="text-muted text-center py-5">No completed sales in this period yet.</div>');
+        } else {
+            var points = values.map(function (value, index) {
+                return { x: left + (values.length === 1 ? plotWidth / 2 : index * plotWidth / (values.length - 1)), y: top + plotHeight - (value / max) * plotHeight, value: value, label: days[index] || '' };
+            });
+            var linePath = points.map(function (point, index) { return (index ? 'L' : 'M') + point.x.toFixed(1) + ' ' + point.y.toFixed(1); }).join(' ');
+            var areaPath = linePath + ' L ' + points[points.length - 1].x.toFixed(1) + ' ' + (top + plotHeight) + ' L ' + points[0].x.toFixed(1) + ' ' + (top + plotHeight) + ' Z';
+            var svg = $('<svg viewBox="0 0 720 220" role="img" aria-label="Sales trend based on completed POSNIC sales" style="display:block;width:100%;height:auto;max-height:250px;overflow:visible"></svg>');
+            var defs = $('<defs><linearGradient id="posnicSalesArea" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#4f46e5" stop-opacity=".32"/><stop offset="100%" stop-color="#06b6d4" stop-opacity=".025"/></linearGradient><linearGradient id="posnicSalesLine" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#2563eb"/><stop offset="55%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient></defs>');
+            svg.append(defs);
+            [0, .25, .5, .75, 1].forEach(function (step) {
+                var y = top + step * plotHeight;
+                svg.append($('<line>').attr({ x1: left, x2: width - right, y1: y, y2: y, stroke: 'var(--theme-border-color,#dbe3ed)', 'stroke-dasharray': '4 5', 'stroke-width': 1 }));
+            });
+            svg.append($('<path>').attr({ d: areaPath, fill: 'url(#posnicSalesArea)' }));
+            if (points.length > 1) {
+                svg.append($('<path>').attr({ d: linePath, fill: 'none', stroke: 'url(#posnicSalesLine)', 'stroke-width': 4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+            } else {
+                var singleBar = $('<rect>').attr({ x: points[0].x - 16, y: points[0].y, width: 32, height: Math.max(5, top + plotHeight - points[0].y), rx: 7, fill: 'url(#posnicSalesLine)' });
+                svg.append(singleBar);
+            }
+            points.forEach(function (point, index) {
+                var marker = $('<circle>').attr({ cx: point.x, cy: point.y, r: values.length > 24 ? 3 : 5, fill: '#fff', stroke: ['#2563eb', '#7c3aed', '#06b6d4'][index % 3], 'stroke-width': 3 });
+                marker.append($('<title>').text((point.label || 'Sales') + ': ' + PosnicPro.dashboard.money(point.value)));
+                svg.append(marker);
+            });
+            var labels = $('<div class="d-flex justify-content-between text-muted small mt-1"></div>');
+            labels.append($('<span>').text(days[0] || ''), $('<span>').text(days[Math.floor(days.length / 2)] || ''), $('<span>').text(days[days.length - 1] || ''));
+            host.append(svg, labels);
         }
-        var mix=Array.isArray(data.paymentMix)?data.paymentMix:[],donut=$('#dashboard-payment-donut').empty(),sum=mix.reduce(function(s,x){return s+(Number(x.pct)||0);},0);
-        if(!mix.length||sum<=0){donut.text('No payment data for this period.');return;}
-        var colors=['#2563eb','#16a34a','#d97706','#8b5cf6','#0891b2','#dc2626'],r=43,circ=2*Math.PI*r,offset=0;
-        var ring=$('<svg viewBox="0 0 120 120" style="width:124px;height:124px;flex:0 0 124px" role="img" aria-label="Payment distribution"></svg>');
-        mix.forEach(function(x,i){var len=circ*(Number(x.pct)||0)/sum;ring.append($('<circle cx="60" cy="60" r="43" fill="none" stroke-width="13">').attr({stroke:colors[i%colors.length],'stroke-dasharray':len+' '+(circ-len),'stroke-dashoffset':-offset,transform:'rotate(-90 60 60)'}));offset+=len;});
-        ring.append($('<text x="60" y="57" text-anchor="middle" font-size="15" font-weight="700" fill="currentColor">').text(Math.round(sum)+'%'));
-        ring.append($('<text x="60" y="70" text-anchor="middle" font-size="7" fill="currentColor">').text('PAYMENTS'));
-        var legend=$('<div style="flex:1;min-width:145px">');mix.forEach(function(x,i){var line=$('<div class="d-flex justify-content-between small mb-2">').append($('<span>').text(x.mode),$('<strong>').text((Number(x.pct)||0).toFixed(1)+'%'));line.prepend($('<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px">').css('background',colors[i%colors.length]));legend.append(line);});
-        donut.append($('<div class="d-flex flex-wrap align-items-center" style="gap:16px">').append(ring,legend));
+
+        var mix = Array.isArray(data.paymentMix) ? data.paymentMix : [];
+        var donut = $('#dashboard-payment-donut').empty();
+        var totalPct = mix.reduce(function (sum, item) { return sum + Math.max(0, Number(item.pct) || 0); }, 0);
+        if (!mix.length || totalPct <= 0) {
+            donut.html('<div class="text-muted text-center py-5">No recorded payments in this period yet.</div>');
+            return;
+        }
+        var colors = ['#2563eb', '#16a34a', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#f97316'];
+        var radius = 46, circumference = 2 * Math.PI * radius, offset = 0;
+        var ring = $('<svg viewBox="0 0 132 132" role="img" aria-label="Payment distribution from recorded POSNIC payments" style="width:142px;height:142px;flex:0 0 142px;overflow:visible"></svg>');
+        ring.append($('<circle cx="66" cy="66" r="46" fill="none" stroke="var(--theme-border-color,#e5e7eb)" stroke-width="14"></circle>'));
+        mix.forEach(function (item, index) {
+            var percentage = Math.max(0, Number(item.pct) || 0);
+            var segment = circumference * percentage / totalPct;
+            ring.append($('<circle cx="66" cy="66" r="46" fill="none" stroke-width="14" stroke-linecap="round"></circle>').attr({
+                stroke: colors[index % colors.length],
+                'stroke-dasharray': segment + ' ' + (circumference - segment),
+                'stroke-dashoffset': -offset,
+                transform: 'rotate(-90 66 66)'
+            }));
+            offset += segment;
+        });
+        ring.append($('<text x="66" y="63" text-anchor="middle" font-size="18" font-weight="700" fill="currentColor"></text>').text(Math.round(totalPct) + '%'));
+        ring.append($('<text x="66" y="77" text-anchor="middle" font-size="8" letter-spacing=".8" fill="currentColor"></text>').text('PAYMENTS'));
+        var legend = $('<div style="flex:1;min-width:145px"></div>');
+        mix.forEach(function (item, index) {
+            var row = $('<div class="d-flex align-items-center justify-content-between small mb-2" style="gap:8px"></div>');
+            row.append($('<span class="d-flex align-items-center" style="min-width:0;gap:7px"></span>').append(
+                $('<span style="display:inline-block;width:10px;height:10px;flex:0 0 10px;border-radius:50%"></span>').css('background', colors[index % colors.length]),
+                $('<span class="text-truncate"></span>').text(item.mode || 'Other')
+            ));
+            var valueText = (Number(item.pct) || 0).toFixed(1) + '%';
+            if (item.amount != null) valueText += ' · ' + PosnicPro.dashboard.money(item.amount);
+            row.append($('<strong style="white-space:nowrap"></strong>').text(valueText));
+            legend.append(row);
+        });
+        donut.append($('<div class="d-flex flex-wrap align-items-center justify-content-center" style="gap:18px"></div>').append(ring, legend));
     },
 
     renderBestSellers: function (items) {
