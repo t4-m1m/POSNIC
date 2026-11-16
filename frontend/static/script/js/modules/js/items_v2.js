@@ -376,11 +376,12 @@
         },function(){failed();});
     }
     function showAdd() {
-        // Called directly by the catalogue button, even when the current hash is already /items/new.
-        // Always start a clean, visible draft. Do not rely on the saved/editing
-        // flags: the success view may have hidden the layout after the POST.
-        reset();
+        // Initialize/reveal the editor and its workspace first. Then reset every
+        // editor subsystem, including the success/locked workspace, on every click.
+        // This works even when the route is already #/items/new.
         open();
+        reset();
+        return false;
     }
     P.items_v2 = { showEdit: showEdit, showClone: function(id){showEdit(id,true);}, showAdd: showAdd, showDataTablePage: open, setBusinessContext: function (category) {
         businessContext = ['restaurant', 'retail', 'service'].includes(category) ? category : null;
