@@ -289,12 +289,15 @@ class UsersController extends BaseController {
 
       // PHP GUMP filter: trim|sanitize_string (no lowercase)
       const loginId = String(username).trim();
-      const emailParts = loginId.includes('@') ? loginId.split('@') : [loginId, 'gmail.com'];
-      const emailLocal = emailParts[0].replace(/[^a-z0-9]/gi, '');
-      const emailDomain = emailParts[1].replace(/[^a-z0-9.]/gi, '').replace(/\./g, '[.]');
-      const emailPattern = new RegExp('^' + emailLocal + '@' + emailDomain + String.fromCharCode(36), 'i');
+      // Preserve ordinary username login. Only the email-alias fallback is
+      // restricted to Super Admin; filtering the whole query locked out
+      // existing admin/cashier usernames.
+      const emailAddress = loginId.includes('@')
+        ? loginId
+        : loginId.replace(/[^a-z0-9]/gi, '') + '@gmail.com';
+      const escapedEmail = emailAddress.replace(/[.*+?^$()|[\]\\]/g, '\\$&');
+      const emailPattern = new RegExp('^' + escapedEmail + '$', 'i');
 
-      // Match mixed-case stored email addresses and the Super Admin Gmail local-part.
       let user = await this.userModel
         .findOne({
           $or: [
@@ -309,8 +312,13 @@ class UsersController extends BaseController {
         .lean();
 
       if (!loginId.includes('@') && user) {
-        const roles = [user.usertype, user.role].map((value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
-        if (!roles.includes('superadmin') && user.is_super_admin !== true) user = null;
+        const usernameMatches = [user.username, user.user_name].some(
+          (value) => String(value || '').toLowerCase() === loginId.toLowerCase()
+        );
+        if (!usernameMatches) {
+          const roles = [user.usertype, user.role].map((value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+          if (!roles.includes('superadmin') && user.is_super_admin !== true) user = null;
+        }
       }
       /*
        * ONE MESSAGE FOR BOTH FAILURES, DELIBERATELY.
