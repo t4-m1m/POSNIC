@@ -5,6 +5,7 @@
  */
 const { ObjectId } = require('mongodb');
 const BaseModel = require('../models/base.model');
+const itemBarcodes = require('../utils/item-barcodes');
 
 const MAX_ROWS = 1000;
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -82,11 +83,12 @@ async function inspect(payload, context) {
   const barcodes = rows.map((r) => r.barcode);
   const namePatterns = names.map((name) => new RegExp('^' + escapeRegex(name) + '$', 'i'));
   const existing = await items.find({
-    branch_id: scope.branchId,
     license: scope.licenseId,
     del_status: { $nin: [1, '1', true] },
+    $and: [itemBarcodes.branchScope(scope.branchId)],
     $or: [
       { barcode_id: { $in: barcodes } },
+      { barcodes: { $in: barcodes } },
       { name: { $in: namePatterns } },
     ],
   }, { projection: { name: 1, barcode_id: 1 } }).toArray();
@@ -142,6 +144,7 @@ async function preview(payload, context) {
 }
 
 async function importArticles(payload, context) {
+  return itemBarcodes.withWriteLock(context, async () => {
   const previewResult = await inspect(payload, context);
   if (!previewResult.ready_to_import) {
     return { ...previewResult, imported: 0, migration_id: null, message: 'No new articles to import. Existing records were left unchanged.' };
@@ -244,6 +247,7 @@ async function importArticles(payload, context) {
     created_categories: newCategoryDocs.map((c) => c.name),
     message: docs.length + ' article(s) imported. Existing articles were not modified.',
   };
+  });
 }
 
 module.exports = { preview, importArticles };
