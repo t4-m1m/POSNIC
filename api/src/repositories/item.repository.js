@@ -1765,11 +1765,11 @@ class ItemRepository extends BaseModel {
         data = { ...data, ...purchaseCost, company_price: purchaseCost.purchase_cost_dzd };
       }
 
-      // The shop uses compact seven-digit numeric Code 128 labels for every
-      // newly-created sellable item (including variant children). Keep the
-      // number numeric: letters, branch prefixes and timestamps make the
-      // narrow retail label denser and harder for scanners to decode.
-      if (!id && !/^\d{7}$/.test(itemBarcodes.normalize(data.barcode_id))) {
+      // Generate a compact seven-digit code only when the cashier leaves
+      // the barcode blank. A manually entered barcode is an intentional
+      // migration identity: preserve it byte-for-byte (after normal trimming)
+      // so old labels continue scanning after moving to POSNIC.
+      if (!id && !itemBarcodes.normalize(data.barcode_id)) {
         let generatedBarcode = '';
         for (let attempt = 0; attempt < 250; attempt += 1) {
           const candidate = String(require('crypto').randomInt(10000000)).padStart(7, '0');

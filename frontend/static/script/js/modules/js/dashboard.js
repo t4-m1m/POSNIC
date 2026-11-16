@@ -19,6 +19,12 @@ PosnicPro.dashboard = {
         }
         PosnicPro.local.set('hourAlertregister', 'true');
 
+        // The dashboard view is injected after the application shell is ready,
+        // so document.ready is not a reliable place to load its analytics.
+        // Start the real database-backed overview whenever this view is opened.
+        if ($('#dashboard-sales-trend').length && $('#dashboard-payment-donut').length) {
+            PosnicPro.dashboard.loadOverview('day');
+        }
     },
     toggleFullScreen: function () {
         $('.add_new_tooltip').tooltip("hide");
@@ -672,8 +678,6 @@ PosnicPro.dashboard = {
 
         PosnicPro.get({ url: 'dashboard/getOverview', data: { filter: filter } }, function (response) {
             if (!current()) { finish(false); return; }
-            /* crash-hunt probe gate: skippable render */
-            if (window.__posnicSkip === 'overview' || window.__posnicSkip === 'all') { finish(false); return; }
             if (response.type !== 'success' || !response.data) {
                 $(PosnicPro.dashboard.KPI_IDS).html('&mdash;');
                 finish(false);

@@ -189,7 +189,7 @@
             '.rd-document,.rd-document *{box-sizing:border-box;}' +
             '.rd-signature{display:inline-block;text-align:center;vertical-align:top;}.rd-signature img{display:block;margin:0 auto;max-height:18mm;max-width:100%;}.rd-signature-blank{height:12mm;}.rd-signature-line{border-top:1px solid #777;padding-top:1mm;margin-top:1mm;font-size:.85em;}' +
             '.rd-document{width:' + f.content + 'mm;max-width:100%;margin:0 auto;font:' + font + 'px/' + (sheet ? '1.5 Arial,sans-serif' : '1.25 monospace') + ';color:#111;overflow-wrap:anywhere;}' +
-            '.rd-block{margin:0 0 ' + (sheet ? '14px' : '4px') + ';break-inside:avoid;}' +
+            '.rd-block{margin:0 0 ' + (sheet ? '14px' : '2px') + ';break-inside:avoid;}' +
             '.rd-field-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:3mm;break-inside:avoid;}.rd-field-row>.rd-block{min-width:0;}.rd-invoice-customer-fields>.rd-field-row{grid-column:1/-1;}' +
             '.rd-block-items{break-inside:auto;}.rd-document h1{font-size:1.7em;line-height:1.2;margin:0 0 5px;color:#111;}' +
             '.rd-store-contact{white-space:pre-line;}.rd-document p{margin:2px 0;}.rd-document img{height:auto;max-width:100%;object-fit:contain;}' +
@@ -205,7 +205,7 @@
             '.rd-muted{color:#555;font-size:.9em;}.rd-text{white-space:pre-wrap;}.rd-divider{border:0;border-top:1px dashed #777;margin:10px 0;}' +
             '.rd-sheet .rd-store{padding-bottom:12px;border-bottom:2px solid #222;}.rd-terms{margin-top:20px;font-size:.9em;white-space:pre-line;}' +
             (sheet ? sheetCss(format) :
-                '.rd-document{display:flow-root;padding:1mm 0;}.rd-block:last-child{margin-bottom:0;}' +
+                '.rd-document{display:flow-root;padding:0!important;}.rd-block:first-child{margin-top:0!important;}.rd-block-logo{margin-top:0!important;padding-top:0!important;}.rd-block:last-child{margin-bottom:0;}' +
                 '.rd-document th{padding:3px 2px;}.rd-document td{padding:3px 2px;}' +
                 '.rd-document h1{margin-bottom:3px;}.rd-document p{margin:0;}' +
                 '.rd-total-row{margin:1px 0;}.rd-grand-total{padding-top:4px;margin-top:4px;}' +
@@ -427,9 +427,11 @@
             }
             if (contract.textTypes.indexOf(b.type) !== -1) {
                 if (Number.isFinite(Number(b.fontSize)) && Number(b.fontSize) >= 8 && Number(b.fontSize) <= 96) style += ';font-size:' + Number(b.fontSize) + 'px';
-                var safeFontFamilies = ['Arial, sans-serif','Tahoma, sans-serif','Verdana, sans-serif','Georgia, serif','Courier New, monospace','monospace'];
+                var safeFontFamilies = ['Arial, sans-serif','Arial Black, sans-serif','Tahoma, sans-serif','Verdana, sans-serif','Georgia, serif','Courier New, monospace','monospace','Trebuchet MS, sans-serif','Segoe UI, sans-serif','Impact, sans-serif','Franklin Gothic Medium, sans-serif','Lucida Console, monospace','Times New Roman, serif'];
                 if (safeFontFamilies.indexOf(b.fontFamily) !== -1) style += ';font-family:' + b.fontFamily;
-                if (b.bold === true) style += ';font-weight:bold';
+                var fontWeight = Number(b.fontWeight);
+                if (Number.isFinite(fontWeight) && fontWeight >= 400 && fontWeight <= 900) style += ';font-weight:' + Math.round(fontWeight / 100) * 100;
+                else if (b.bold === true) style += ';font-weight:700';
             }
             return { type: b.type, half: b.type === 'field' && b.width === 50, customer: b.type === 'field' && /^customer_/.test(b.field), supporting: b.type === 'text' || b.type === 'field' || ((b.type === 'qr' || b.type === 'image') && b.width <= 40), html: '<section class="rd-block rd-block-' + b.type + (b.type === 'field' ? ' rd-field-' + b.field : '') + '" data-block-id="' + esc(b.id) + '" style="' + style + '">' + content + '</section>' };
         }).filter(Boolean);
@@ -575,7 +577,12 @@
                     if (!result || !result.success) throw new Error(result && result.error || label('Print failed'));
                     if (!options.sample && !options.batch) PosnicPro.afterPrint();
                     return result;
-                }).catch(failure);
+                }).catch(function (error) {
+                    if (options.sample || options.showDialog === true || options._silentFallback) return failure(error);
+                    // If a driver rejects silent printing, retry through Chromium's
+                    // normal Windows print dialog instead of losing the receipt.
+                    return printDocument(html, format, Object.assign({}, options, { showDialog: true, _silentFallback: true }));
+                });
         }
         var frame = $('<iframe title="Receipt print" data-t-title="lang_receipt_print" sandbox="allow-same-origin allow-modals">').css({ position: 'fixed', left: '-10000px', top: 0, width: contract.formats[format].width + 'mm', height: '1000px', border: 0 });
         return new Promise(function (resolve, reject) {
@@ -644,7 +651,7 @@
                     });
                     if (!nativeResult || !nativeResult.success) throw new Error(nativeResult && nativeResult.error || label('Print failed'));
                 } else {
-                    await print(render(data, chosen, kitchenBill), chosen, { target: target, batch: true, sample: false, showDialog: true, receiptLog: { saleId: data.sales_id, total: data.items_total, title: kitchenBill ? label('Bill') : label('Receipt'), source: 'Till' } });
+                    await print(render(data, chosen, kitchenBill), chosen, { target: target, batch: true, sample: false, showDialog: false, receiptLog: { saleId: data.sales_id, total: data.items_total, title: kitchenBill ? label('Bill') : label('Receipt'), source: 'Till' } });
                 }
             }
             if (!options.preserveWorkspace) PosnicPro.afterPrint();
