@@ -297,7 +297,10 @@
                     if (entry.id === customerAnchor.id) return;
                     var entryY = Number(entry.y);
                     if (!Number.isFinite(entryY) || entryY < anchorY + anchorHeight) return;
-                    if (entry === anchorBasket && dynamicItemsShift) entryY += dynamicItemsShift;
+                    if (dynamicItemsShift && anchorBasket && entry !== anchorBasket &&
+                        entryY >= Number(anchorBasket.y) + Math.max(28, Number(anchorBasket.h) || 0)) {
+                        entryY += dynamicItemsShift;
+                    }
                     var finalY = entryY - canvasTopOffset;
                     if (finalY < customerBottom + 3) versementCustomerShift = Math.max(versementCustomerShift, customerBottom + 3 - finalY);
                 });
