@@ -276,17 +276,56 @@ async function repairImported(context) {
     del_status: { $nin: [1, '1', true] },
   };
   const before = await items.countDocuments(filter);
-  const result = await items.updateMany(filter, {
-    $set: {
+  const categoryCollection = db.collection('categories');
+  const categoryRows = await categoryCollection.find({
+    branch_id: scope.branchId,
+    license: scope.licenseId,
+    is_deleted: { $ne: true },
+  }, { projection: { _id: 1, name: 1 } }).toArray();
+  const categoryByName = new Map(categoryRows.map((category) => [
+    String(category.name || '').trim().toLocaleLowerCase(), category._id,
+  ]));
+  const importedRows = await items.find(filter, {
+    projection: { _id: 1, category_id: 1, category_name: 1, barcode_id: 1, available_quantity: 1, quantity: 1 },
+  }).toArray();
+  const bulk = importedRows.map((item) => {
+    const categoryId = item.category_id || categoryByName.get(String(item.category_name || '').trim().toLocaleLowerCase());
+    const set = {
       branch_access: [{ branch_id: scope.branchId, branch_name: branchName }],
-    },
+      is_active: true,
+      is_deleted: false,
+      item_status: 'normal',
+      track_inventory: true,
+      negative_stock: false,
+    };
+    // Keep the source barcode exactly as imported; do not regenerate or coerce it.
+    if (typeof item.barcode_id === 'string' && item.barcode_id.trim()) set.barcode_id = item.barcode_id;
+    if (categoryId) set.category_id = categoryId;
+    if (!Number.isFinite(Number(item.available_quantity)) && Number.isFinite(Number(item.quantity))) {
+      set.available_quantity = Number(item.quantity);
+    }
+    return { updateOne: { filter: { _id: item._id }, update: { $set: set } } };
   });
+  if (bulk.length) await items.bulkWrite(bulk, { ordered: false });
+
+  // Categories created by this migration are already active, but explicitly
+  // restore that state if a user had toggled one inactive before this repair.
+  const categoryRepair = await categoryCollection.updateMany({
+    branch_id: scope.branchId,
+    license: scope.licenseId,
+    legacy_migration_id: { $exists: true },
+    is_deleted: { $ne: true },
+  }, { $set: { is_active: true } });
+
   return {
-    matched: result.matchedCount || before,
-    repaired: result.modifiedCount || 0,
-    unchanged: Math.max(0, before - (result.modifiedCount || 0)),
-    message: (result.modifiedCount || 0) +
-      ' imported article(s) are now linked to the active branch. Stock, prices, categories and barcodes were preserved.',
+    matched: before,
+    repaired: bulk.length,
+    categories_activated: categoryRepair.modifiedCount || 0,
+    unchanged: Math.max(0, before - bulk.length),
+    message: bulk.length +
+      ' imported article(s) are now ready for the active branch sale catalogue; ' +
+      (categoryRepair.modifiedCount || 0) + ' legacy category status(es) restored. ' +
+      'Stock quantities, prices and barcode text were preserved.',
   };
 }
 
