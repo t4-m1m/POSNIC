@@ -2242,6 +2242,20 @@ function createWindow(showStartupLoader = !isWarmStartup()) {
   /* Kept so the quit handler can ask whether an update is waiting. */
   updateService = setupUpdateIPC({
     beforeInstall: async () => {
+      // Preserve old image files before the installer replaces resources/api.
+      // The operation is additive and never overwrites an existing user-data file.
+      try {
+        const migration = require('./item-image-storage').preserveLegacyItemImages({
+          apiPath: path.join(process.resourcesPath, 'api'),
+          userDataPath: app.getPath('userData'),
+        });
+        console.log('[ItemImages] Pre-update preservation:', migration);
+      } catch (error) {
+        // Keep the update backup as the hard safety gate; report image-copy
+        // failures but do not silently delete or overwrite any image data.
+        console.warn('[ItemImages] Could not preserve legacy item images:', error.message);
+      }
+
       const result = await getBackupManager().runBackup({
         force: true,
         _manual: true,

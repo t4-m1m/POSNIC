@@ -3,6 +3,11 @@ const { app: electronApp } = require('electron');
 const fs = require('fs');
 const Module = require('module');
 
+// Share Electron's stable per-install data directory with API services.
+// Uploaded item images must never be written into the replaceable install tree.
+const userDataPath = electronApp.getPath('userData');
+process.env.POSNIC_USER_DATA_PATH = userDataPath;
+
 // Add api node_modules to module paths BEFORE requiring setup-mongodb
 // This allows setup-mongodb.js to find 'mongodb' package
 const initialApiPath = electronApp.isPackaged 
@@ -196,6 +201,21 @@ module.exports = async function startServer(options = {}) {
   
   console.log('API Path:', apiPath);
   console.log('API Path exists:', fs.existsSync(apiPath));
+
+  // One-time, non-destructive migration for images still present in the old
+  // install folder. Never overwrite a newer persistent copy.
+  try {
+    const migration = require('./item-image-storage').preserveLegacyItemImages({
+      apiPath,
+      userDataPath,
+    });
+    if (migration.copied) {
+      console.log('[ItemImages] Preserved ' + migration.copied + ' legacy image(s) in user data');
+    }
+  } catch (error) {
+    // Missing legacy files must not prevent the POS from starting.
+    console.warn('[ItemImages] Legacy image migration skipped:', error.message);
+  }
   
   if (!fs.existsSync(apiPath)) {
     console.error('ERROR: api path does not exist!');

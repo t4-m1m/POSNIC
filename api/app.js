@@ -929,7 +929,12 @@ app.use(
 // Also serve at root for backward compatibility
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve uploaded files (receiving images, etc.) with CORS headers
+// Serve persistent shop uploads first. Item photos must live outside the
+// installed resources tree because installers replace that tree on updates.
+// Keep the bundled API uploads as a read-only compatibility fallback.
+const persistentUploadsDir = process.env.POSNIC_USER_DATA_PATH
+  ? path.join(process.env.POSNIC_USER_DATA_PATH, 'uploads')
+  : null;
 app.use(
   '/uploads',
   (req, res, next) => {
@@ -937,6 +942,7 @@ app.use(
     res.header('Cross-Origin-Resource-Policy', 'cross-origin');
     next();
   },
+  ...(persistentUploadsDir ? [express.static(persistentUploadsDir)] : []),
   express.static(path.join(__dirname, 'uploads'))
 );
 

@@ -232,7 +232,12 @@ class ItemService {
       // URLs like /uploads/item_images/<file> are served correctly by
       // the existing express static mount and remain compatible with
       // legacy PHP paths.
-      const uploadBaseDir = path.join(rootDir, 'uploads');
+      // Installed application resources are replaced during upgrades. Item
+      // photos belong to the shop's user-data folder, which survives updates.
+      const persistentDataRoot = process.env.POSNIC_USER_DATA_PATH;
+      const uploadBaseDir = persistentDataRoot
+        ? path.join(persistentDataRoot, 'uploads')
+        : path.join(rootDir, 'uploads');
       const itemImagesDir = path.join(uploadBaseDir, 'item_images');
       const publicDir = path.join(rootDir, 'public');
 
