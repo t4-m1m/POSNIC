@@ -67,16 +67,21 @@ exports.login = async (req, res, next) => {
 
     const usingUsername = Boolean(username) && !username.includes('@');
     const identifier = usingUsername ? username : (email || username);
+    const normalizedIdentifier = String(identifier).trim().toLowerCase();
     let user = await User.findOne(
       usingUsername
         ? { $or: [{ username: identifier }, { user_name: identifier }] }
-        : { email: String(identifier).toLowerCase() }
+        : { email: normalizedIdentifier }
     ).select('+password');
 
-    // A Gmail local-part is a Super Admin alias. Prefer the matching Super Admin
-    // account even if another staff record happens to use the same short username.
-    if (usingUsername && !identifier.includes('@')) {
-      const alias = await User.findOne({ email: identifier.toLowerCase() + '@gmail.com' }).select('+password');
+    // A Gmail local-part is a Super Admin alias. Resolve it case-insensitively
+    // for both "ADMIN" and "ADMIN@gmail.com", including fresh-PC login forms
+    // that submit the address in the username field.
+    const gmailAlias = normalizedIdentifier.endsWith('@gmail.com')
+      ? normalizedIdentifier
+      : (!normalizedIdentifier.includes('@') ? normalizedIdentifier + '@gmail.com' : '');
+    if (gmailAlias && (!user || usingUsername)) {
+      const alias = await User.findOne({ email: gmailAlias }).select('+password');
       const aliasRoles = [alias && alias.usertype, alias && alias.role]
         .map((value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
       if (alias && aliasRoles.includes('superadmin')) user = alias;
