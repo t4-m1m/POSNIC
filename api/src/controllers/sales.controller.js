@@ -2048,6 +2048,31 @@ class SalesController extends BaseController {
       const salaryPaymentsTotal = roundToTwo(
         salaryPaymentDetails.reduce((sum, row) => sum + row.amount, 0)
       );
+      const salaryAdvanceRows = await db.collection('hr_transactions').aggregate([
+        { $match: { license: BaseModel.license || req.user.license || req.user.license_id, type: 'advance' } },
+        { $addFields: {
+          reportAdvanceDate: { $convert: { input: '$date', to: 'date', onError: null, onNull: null } },
+          reportAdvanceAmount: { $convert: { input: '$amount', to: 'double', onError: 0, onNull: 0 } },
+        } },
+        { $match: { $expr: { $and: [
+          { $gte: ['$reportAdvanceDate', reportStart] },
+          { $lt: ['$reportAdvanceDate', reportEnd] },
+        ] } } },
+        { $group: {
+          _id: { worker_name: '$worker_name', method: { $ifNull: ['$method', 'cash'] }, notes: { $ifNull: ['$notes', ''] } },
+          amount: { $sum: '$reportAdvanceAmount' }, count: { $sum: 1 },
+        } },
+        { $sort: { '_id.worker_name': 1 } },
+      ]).toArray();
+      const salaryAdvanceDetails = salaryAdvanceRows.map((row) => ({
+        worker_name: String(row._id?.worker_name || 'Employé'),
+        method: String(row._id?.method || 'cash'),
+        notes: String(row._id?.notes || ''),
+        amount: roundToTwo(row.amount || 0),
+        count: Number(row.count) || 0,
+      }));
+      const salaryAdvancesTotal = roundToTwo(salaryAdvanceDetails.reduce((sum, row) => sum + row.amount, 0));
+
       const salesCount = salesPayments.length;
 
       // ---- Build response data ----
@@ -2066,6 +2091,8 @@ class SalesController extends BaseController {
         expenses_count: expensesCount,
         salary_payments_total: salaryPaymentsTotal,
         salary_payment_details: salaryPaymentDetails,
+        salary_advances_total: salaryAdvancesTotal,
+        salary_advance_details: salaryAdvanceDetails,
         outstanding_amount: roundToTwo(outstandingAmount),
         dine_details: dineDetails,
         tax_details: taxDetails,
