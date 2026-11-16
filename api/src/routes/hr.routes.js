@@ -84,7 +84,9 @@ router.get('/summary', async (req, res) => {
     const advances = monthTx.filter(t => t.type === 'advance').reduce((s,t)=>s+t.amount,0);
     const overtime = monthTx.filter(t => t.type === 'overtime').reduce((s,t)=>s+t.amount,0);
     const payments = monthTx.filter(t => t.type === 'salary_payment').reduce((s,t)=>s+t.amount,0);
-    res.json({ status:true, data:{ workers:workers.length, monthlyPayroll:workers.reduce((s,w)=>s+Number(w.monthly_salary||0),0), advances, overtime, payments, period } });
+    const activeWorkerIds = new Set(workers.map(w => String(w._id)));
+    const additions = monthTx.filter(t => activeWorkerIds.has(String(t.worker_id)) && ['overtime','prime_weekly','prime_monthly','adjustment'].includes(t.type)).reduce((s,t)=>s+Number(t.amount||0),0);
+    res.json({ status:true, data:{ workers:workers.length, monthlyPayroll:workers.reduce((s,w)=>s+Number(w.monthly_salary||0),0)+additions, advances, overtime, payments, period } });
   } catch(e) { sendError(res,e); }
 });
 router.get('/workers', async (req,res) => {
