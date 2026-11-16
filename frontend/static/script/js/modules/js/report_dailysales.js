@@ -122,14 +122,24 @@ PosnicPro.quickreport = {
       daterange.indexOf(" - ") > -1
         ? daterange.split(" - ")
         : daterange.split("-");
-    var startDate = trim(fields[0]);
-    var endDate = trim(fields[1]);
-
-    if (!startDate || !endDate) {
+    var startDateText = trim(fields[0]);
+    var endDateText = trim(fields[1]);
+    // Normalize the date-picker's display strings before they cross the API
+    // boundary. The UI displays YYYY/MM/DD plus a localized clock suffix;
+    // the report API receives date-only ISO values and applies the branch
+    // timezone itself. This avoids locale parsing and AM/PM text changing
+    // which historical day is queried.
+    var acceptedDateFormats = ["YYYY/MM/DD h:mm A", "YYYY-MM-DD", "DD/MM/YYYY", "DD-MM-YYYY"];
+    var parsedStartDate = moment(startDateText, acceptedDateFormats, true);
+    var parsedEndDate = moment(endDateText, acceptedDateFormats, true);
+    if (!parsedStartDate.isValid() || !parsedEndDate.isValid() ||
+        parsedEndDate.isBefore(parsedStartDate, "day")) {
       loader.find(".loadingSpinner:first").remove();
       PosnicPro.alert("error", "Select a valid date range");
       return;
     }
+    var startDate = parsedStartDate.format("YYYY-MM-DD");
+    var endDate = parsedEndDate.format("YYYY-MM-DD");
 
     var params = {
       url: "sales/dailySalesReports",
