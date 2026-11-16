@@ -316,16 +316,39 @@
         preview.style.background=checked('auto-tile')&&P.autoTile?P.autoTile(val('name')).color:val('tile-color');preview.style.color='white';
     }
     function reset() {
-        generation++; reading=0; photos=[]; variants=[]; signature='';
-        el('variant-rows').replaceChildren(); el('auto-tile').checked=true;
-        el('type-name').value=''; el('brand-abbr').value=''; el('reference').value='';
-        el('reference-date').value=currentYYMM(); el('name').value='';
-        el('type-name').required=true; el('brand-abbr').required=true; el('reference').required=true;
-        el('cost-eur').value='';
+        // Invalidate any FileReader callbacks from the previous article.
+        generation++;
+        reading = 0;
+        photos = [];
+        variants = [];
+        signature = '';
+        manualPurchaseCost = false;
+
+        el('variant-rows').replaceChildren();
+        el('auto-tile').checked = true;
+        el('type-name').value = '';
+        el('brand-abbr').value = '';
+        el('reference').value = '';
+        el('reference-date').value = currentYYMM();
+        el('name').value = '';
+        el('type-name').required = true;
+        el('brand-abbr').required = true;
+        el('reference').required = true;
+        el('photos').value = '';
+        el('error').textContent = '';
+        el('error').hidden = true;
+
         var purchaseDefaults = readPurchaseSettings();
-        el('exchange-rate').value=String(purchaseDefaults.exchangeRate);
-        el('purchase-vat').value=String(purchaseDefaults.extraCost);
-        updatePurchaseCost(); photoPicker(); P.itemTranslationsV2.reset();
+        el('cost-eur').value = '';
+        el('exchange-rate').value = String(purchaseDefaults.exchangeRate);
+        el('purchase-vat').value = String(purchaseDefaults.extraCost);
+        updatePurchaseCost();
+        photoPicker();
+        P.itemTranslationsV2.reset();
+
+        // The composed-name preview is outside the native form controls, so
+        // form.reset() alone cannot clear the previous item's preview.
+        el('preview-name').textContent = label('lang_your_next_item', 'Your next item');
     }
     function currentYYMM() { var d = new Date(); return String(d.getFullYear()).slice(-2) + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
     function syncComposedName() {
