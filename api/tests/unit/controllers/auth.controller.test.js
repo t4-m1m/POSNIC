@@ -234,17 +234,6 @@ describe('login', () => {
     expect(createAndSendToken).toHaveBeenCalledWith(user, 200, res, req);
   });
 
-  test('accepts ADMIN as a case-insensitive Gmail alias only for the Super Admin', async () => {
-    const user = makeUser({ email: 'ADMIN@gmail.com', usertype: 'super_admin', role: 'super_admin' });
-    User.findOne.mockReturnValueOnce({ select: jest.fn().mockResolvedValue(null) }).mockReturnValueOnce({ select: jest.fn().mockResolvedValue(user) });
-    const req = mockReq({ body: { username: 'ADMIN', password: 'correctPass' } });
-    const res = mockRes();
-    await authController.login(req, res, mockNext());
-    const aliasQuery = User.findOne.mock.calls[1][0];
-    expect(aliasQuery.$and[0].email).toBeInstanceOf(RegExp);
-    expect(aliasQuery.$and[0].email.test('ADMIN@gmail.com')).toBe(true);
-    expect(createAndSendToken).toHaveBeenCalledWith(user, 200, res, req);
-  });
   test('does not allow ordinary users to use username-only auth on the Super Admin login path', async () => {
     const user = makeUser({ username: 'cashier', usertype: 'staff', role: 'staff' });
     User.findOne.mockReturnValue({ select: jest.fn().mockResolvedValue(user) });

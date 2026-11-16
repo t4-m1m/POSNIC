@@ -320,7 +320,7 @@ class UsersController extends BaseController {
         )
         .lean();
 
-      if (!loginId.includes('@')) {
+      if (!loginId.includes('@') && /^[a-z0-9._+-]+$/i.test(loginId)) {
         const escapedLocalPart = loginId.replace(/[.+]/g, (char) => '\\' + char);
         const candidate = await this.userModel
           .findOne({
