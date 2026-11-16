@@ -534,36 +534,51 @@
             if (options.sample) throw error;
             PosnicPro.alert('error', error.message || label('Print failed'));
         };
-        if (printer && printer.print && options.showDialog !== true) {
-            // Use the configured receipt destination, or Windows' current
-            // default printer when the preference is "default". Do not scan
-            // for a model-specific queue name: that lookup made checkout
-            // depend on a particular Windows driver label and delayed sales.
-            return Promise.resolve(PosnicPro.syncPrinterPreferences ? PosnicPro.syncPrinterPreferences() : null)
+        if (window.electronAPI) {
+            // Desktop receipts must never fall through to window.print(): that
+            // opens the Microsoft dialog and can select "Microsoft Print to PDF".
+            if (!printer || typeof printer.print !== 'function' || typeof printer.list !== 'function') {
+                return Promise.reject(new Error('Silent receipt printing is unavailable in this desktop build.')).catch(failure);
+            }
+            var isVirtual = function (value) {
+                return /microsoft print to pdf|print to pdf|pdf creator|onenote|xps|fax|print to file/i.test(String(value || ''));
+            };
+            return Promise.resolve(PosnicPro.printSettings ? PosnicPro.printSettings.ready() : null)
                 .catch(function () {})
                 .then(function () {
-                    var chosen = options.target ? options.target.name : PosnicPro.resolveReceiptPrinter();
-                    if (chosen === 'default') chosen = '';
-                    if (chosen) return chosen;
-                    return Promise.resolve(printer.getDefault ? printer.getDefault() : null).then(function (fallback) {
-                        var name = fallback && typeof fallback === 'object' ? fallback.name : fallback;
-                        if (!name || (PosnicPro._kitchenPrinters || []).indexOf(String(name).trim().toLowerCase()) !== -1) {
-                            throw new Error('Choose a receipt printer in Hardware Manager.');
-                        }
-                        return name;
+                    var configured = options.target ? options.target.name : PosnicPro.resolveReceiptPrinter();
+                    if (configured === 'default') configured = '';
+                    return Promise.resolve(printer.list()).then(function (queues) {
+                        queues = Array.isArray(queues) ? queues : [];
+                        var physical = queues.filter(function (queue) {
+                            return queue && queue.name && !isVirtual(queue.name) && !isVirtual(queue.displayName);
+                        });
+                        var selected = configured && !isVirtual(configured)
+                            ? physical.find(function (queue) {
+                                return String(queue.name).toLowerCase() === String(configured).trim().toLowerCase()
+                                    || String(queue.displayName || '').toLowerCase() === String(configured).trim().toLowerCase();
+                            })
+                            : null;
+                        // A stale saved queue name must not block checkout. Prefer
+                        // Windows' default physical printer, then the first physical
+                        // queue; never send a receipt to a PDF/XPS virtual printer.
+                        selected = selected || physical.find(function (queue) { return queue.isDefault; }) || physical[0];
+                        if (!selected) throw new Error('No physical receipt printer is available. Set the Tysso as the Windows default printer.');
+                        return selected.name;
                     });
-                }).then(function (name) { return printer.print(doc, { printerName: name,
-                pageSize: ['58', '80', '112'].indexOf(format) !== -1 ? format + 'mm' : format,
-                copies: options.target ? options.target.copies : 1,
-                receiptLog: options.receiptLog || null,
-                fitReceipt: ['58', '80', '112'].indexOf(format) !== -1,
-                // Preserve the complete Receipt Studio HTML (logo, barcode,
-                // images, fonts and Unicode) and submit it silently through
-                // the already-warmed Chromium print surface.
-                thermalRaster: false,
-                fastReceiptLines: null,
-                silent: true, forceHtml: true, printBackground: true, margins: { marginType: 'none' } }); })
-                .then(function (result) {
+                }).then(function (name) {
+                    return printer.print(doc, {
+                        printerName: name,
+                        pageSize: ['58', '80', '112'].indexOf(String(format)) !== -1 ? format + 'mm' : format,
+                        copies: options.target ? options.target.copies : 1,
+                        receiptLog: options.receiptLog || null,
+                        fitReceipt: ['58', '80', '112'].indexOf(String(format)) !== -1,
+                        thermalRaster: false,
+                        fastReceiptLines: null,
+                        silent: true, strictPrinter: true, forceHtml: true,
+                        printBackground: true, margins: { marginType: 'none' }
+                    });
+                }).then(function (result) {
                     if (!result || !result.success) throw new Error(result && result.error || label('Print failed'));
                     if (!options.sample && !options.batch) PosnicPro.afterPrint();
                     return result;
