@@ -675,7 +675,7 @@ class HardwareManager {
       const deviceName = await this._resolvePrinterName(options.printerName);
       receiptPrinter = deviceName;
 
-      const expectedReceipt = /data-receipt-design\\s*=/.test(htmlContent);
+      const expectedReceipt = /data-receipt-design\s*=/.test(htmlContent);
       const prepare = async (waitForLoad) => {
         if (waitForLoad) await this._waitForPrintPage(printWindow.webContents);
         await printWindow.webContents.executeJavaScript(

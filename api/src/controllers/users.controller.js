@@ -289,8 +289,10 @@ class UsersController extends BaseController {
 
       // PHP GUMP filter: trim|sanitize_string (no lowercase)
       const loginId = String(username).trim();
-      const aliasPart = loginId.replace(/[^a-z0-9]/gi, '');
-      const emailPattern = new RegExp('^' + aliasPart + '(@gmail[.]com)?' + String.fromCharCode(36), 'i');
+      const emailParts = loginId.includes('@') ? loginId.split('@') : [loginId, 'gmail.com'];
+      const emailLocal = emailParts[0].replace(/[^a-z0-9]/gi, '');
+      const emailDomain = emailParts[1].replace(/[^a-z0-9.]/gi, '').replace(/\./g, '[.]');
+      const emailPattern = new RegExp('^' + emailLocal + '@' + emailDomain + String.fromCharCode(36), 'i');
 
       // Match mixed-case stored email addresses and the Super Admin Gmail local-part.
       let user = await this.userModel
