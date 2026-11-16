@@ -473,6 +473,9 @@
         return '<style>' + css(format, layout.fontSize) + canvasCss + (fixedItems ? '.rd-fixed-columns .rd-number{white-space:nowrap;}.rd-fixed-columns td{border-bottom:0;padding-top:2px;padding-bottom:2px;}.rd-fixed-columns th,.rd-total-quantity td,.rd-grand-total{border-color:#333;border-top-style:' + (fixedItems.lineStyle || 'dotted') + ';border-bottom-style:' + (fixedItems.lineStyle || 'dotted') + ';}.rd-transaction{border-bottom-style:' + (fixedItems.lineStyle || 'dotted') + ';}.rd-total-quantity td{border-top:1px ' + (fixedItems.lineStyle || 'dotted') + ' #333;padding-top:6px;}.rd-grand-total{border-top-width:1px;border-bottom:1px ' + (fixedItems.lineStyle || 'dotted') + ' #333;padding-bottom:6px;}' : '') + '</style><article class="rd-document' + (sheet ? ' rd-sheet' : '') + '" data-receipt-design="' + format + '">' + html + '</article>';
     }
     var activeSale = false;
+    // Queue sale receipts instead of dropping a second print request while the
+    // Windows printer dialog for the previous sale is still open.
+    var salePrintQueue = Promise.resolve();
     var printCount = 0;
     function printProgress() {
         printCount++;
@@ -590,7 +593,7 @@
             frame.attr('srcdoc', doc).appendTo('body');
         }).catch(failure);
     }
-    async function printSale(data, requested, kitchenBill, options) {
+    async function printSaleNow(data, requested, kitchenBill, options) {
         options = options || {};
         var diagnostic = function (fields) { window.electronAPI?.diagnostics?.event('renderer', fields).catch(function () {}); };
         if (activeSale) return;
@@ -651,6 +654,12 @@
             diagnostic({ stage: 'sale-print-finish', durationMs: Date.now() - salePrintStartedAt, format: requested || 'configured' });
             activeSale = false; finish();
         }
+    }
+    function printSale(data, requested, kitchenBill, options) {
+        var run = function () { return printSaleNow(data, requested, kitchenBill, options); };
+        var queued = salePrintQueue.then(run, run);
+        salePrintQueue = queued.catch(function () {});
+        return queued;
     }
     PosnicPro.receiptDesigner = { contract: contract, defaults: defaults, standardLayout: standardLayout, render: render, css: css, print: print, printSale: printSale, block: block, fastLines: fastLines, label: label, copy: copy, formatFor: formatFor };
 }());
