@@ -76,7 +76,7 @@ router.get('/summary', async (req, res) => {
   try {
     const { license } = req.hrContext;
     const [workers, tx] = await Promise.all([
-      (await collection('hr_workers')).find({ license, active: { $ne: false } }).toArray(),
+      (await collection('hr_workers')).find({ license, active: { $ne: false }, deleted: { $ne: true } }).toArray(),
       (await collection('hr_transactions')).find({ license }).sort({ date: -1 }).limit(5000).toArray()
     ]);
     const now = new Date(), period = String(now.getFullYear()) + '-' + String(now.getMonth() + 1).padStart(2, '0');
@@ -89,7 +89,7 @@ router.get('/summary', async (req, res) => {
 });
 router.get('/workers', async (req,res) => {
   try {
-    const rows = await (await collection('hr_workers')).find({ license:req.hrContext.license }).sort({ name:1 }).toArray();
+    const rows = await (await collection('hr_workers')).find({ license:req.hrContext.license, deleted: { $ne: true } }).sort({ name:1 }).toArray();
     res.json({status:true,data:rows.map(w=>({...w,_id:String(w._id)}))});
   } catch(e) { sendError(res,e); }
 });
@@ -121,6 +121,16 @@ router.put('/workers/:id', async (req,res) => {
     res.json({status:true,data:{...updated,_id:String(updated._id)},message:'Worker updated.'});
   } catch(e) { sendError(res,e); }
 });
+router.post('/workers/:id/delete', async (req,res) => {
+  try {
+    if (!ObjectId.isValid(req.params.id)) return res.status(400).json({status:false,message:'Invalid worker ID.'});
+    const {license,username}=req.hrContext;
+    const col=await collection('hr_workers');
+    const result=await col.updateOne({_id:new ObjectId(req.params.id),license,deleted:{$ne:true}},{$set:{active:false,deleted:true,deleted_at:new Date(),deleted_by_name:username,updated_at:new Date()}});
+    if (!result.matchedCount) return res.status(404).json({status:false,message:'Employee not found or already deleted.'});
+    res.json({status:true,message:'Employee removed from the active list. Payroll history has been preserved.'});
+  } catch(e) { sendError(res,e); }
+});
 router.get('/transactions', async (req,res) => {
   try {
     const q={license:req.hrContext.license};
@@ -137,7 +147,7 @@ router.post('/transactions', async (req,res) => {
     const workerId=new ObjectId(String(b.worker_id)), worker=await (await collection('hr_workers')).findOne({_id:workerId,license,active:{$ne:false}});
     if(!worker)return res.status(404).json({status:false,message:'Active worker not found.'});
     const type=String(b.type||'');
-    if(!['salary_payment','advance','overtime','adjustment'].includes(type))return res.status(400).json({status:false,message:'Invalid transaction type.'});
+    if(!['salary_payment','advance','overtime','prime_weekly','prime_monthly','adjustment'].includes(type))return res.status(400).json({status:false,message:'Invalid transaction type.'});
     const d=dateValue(b.date), period=payrollPeriod(b.period, d);
     let value;
     if(type==='overtime') {
@@ -149,13 +159,14 @@ router.post('/transactions', async (req,res) => {
     if (type === 'salary_payment' || type === 'advance') {
       // Prevent both advances and salary payments from exceeding the unpaid balance.
       const existing = await (await collection('hr_transactions'))
-        .find({ license, worker_id: workerId, period, type: { $in: ['salary_payment', 'advance', 'overtime', 'adjustment'] } })
+        .find({ license, worker_id: workerId, period, type: { $in: ['salary_payment', 'advance', 'overtime', 'prime_weekly', 'prime_monthly', 'adjustment'] } })
         .toArray();
       const advances = existing.filter(t => t.type === 'advance').reduce((sum, t) => sum + Number(t.amount || 0), 0);
       const paid = existing.filter(t => t.type === 'salary_payment').reduce((sum, t) => sum + Number(t.amount || 0), 0);
       const overtime = existing.filter(t => t.type === 'overtime').reduce((sum, t) => sum + Number(t.amount || 0), 0);
       const adjustments = existing.filter(t => t.type === 'adjustment').reduce((sum, t) => sum + Number(t.amount || 0), 0);
-      const gross = Math.max(0, Number(worker.monthly_salary || 0) + overtime + adjustments);
+      const primes = existing.filter(t => t.type === 'prime_weekly' || t.type === 'prime_monthly').reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      const gross = Math.max(0, Number(worker.monthly_salary || 0) + overtime + primes + adjustments);
       const remaining = Math.max(0, gross - advances - paid);
       if (value.amount > remaining) {
         return res.status(400).json({
@@ -175,17 +186,20 @@ router.get('/payroll/:period', async (req,res) => {
     if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(period))return res.status(400).json({status:false,message:'Period must use a valid YYYY-MM month.'});
     const {license}=req.hrContext;
     const [workers,tx]=await Promise.all([
-      (await collection('hr_workers')).find({license,active:{$ne:false}}).toArray(),
+      (await collection('hr_workers')).find({license,active:{$ne:false},deleted:{$ne:true}}).toArray(),
       (await collection('hr_transactions')).find({license,period}).toArray()
     ]);
     const rows=workers.map(w=>{
       const entries=tx.filter(t=>String(t.worker_id)===String(w._id));
       const advances=entries.filter(t=>t.type==='advance').reduce((s,t)=>s+t.amount,0);
       const overtime=entries.filter(t=>t.type==='overtime').reduce((s,t)=>s+t.amount,0);
+      const weekly_primes=entries.filter(t=>t.type==='prime_weekly').reduce((s,t)=>s+t.amount,0);
+      const monthly_primes=entries.filter(t=>t.type==='prime_monthly').reduce((s,t)=>s+t.amount,0);
+      const primes=weekly_primes+monthly_primes;
       const adjustments=entries.filter(t=>t.type==='adjustment').reduce((s,t)=>s+t.amount,0);
       const paid=entries.filter(t=>t.type==='salary_payment').reduce((s,t)=>s+t.amount,0);
-      const gross=Math.max(0,Number(w.monthly_salary||0)+overtime+adjustments);
-      return {_id:String(w._id),name:w.name,monthly_salary:Number(w.monthly_salary||0),overtime,adjustments,advances,paid,gross,remaining:Math.max(0,gross-advances-paid)};
+      const gross=Math.max(0,Number(w.monthly_salary||0)+overtime+primes+adjustments);
+      return {_id:String(w._id),name:w.name,monthly_salary:Number(w.monthly_salary||0),overtime,weekly_primes,monthly_primes,primes,adjustments,advances,paid,gross,remaining:Math.max(0,gross-advances-paid)};
     });
     res.json({status:true,data:rows});
   } catch(e) { sendError(res,e); }

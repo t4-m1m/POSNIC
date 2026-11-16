@@ -57,7 +57,7 @@
     request('GET','hr/workers',{},function(d){
       currentWorkers=Array.isArray(d)?d:(d.data||[]);
       var rows=currentWorkers.map(function(w){
-        return '<tr><td>'+esc(w.name)+'</td><td>'+esc(w.job_title||'—')+'</td><td>'+money(w.monthly_salary)+'</td><td>'+money(w.hourly_rate)+'</td><td>'+(w.active===false?'<span class="badge badge-secondary">Inactif</span>':'<span class="badge badge-success">Actif</span>')+'</td><td><div class="btn-group btn-group-sm"><button class="btn btn-outline-primary" onclick="PosnicPro.hr.editWorker(\''+esc(w._id)+'\')">Modifier</button><button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown">Mouvement</button><div class="dropdown-menu dropdown-menu-right"><a class="dropdown-item" href="#" onclick="PosnicPro.hr.openTransaction(\''+esc(w._id)+'\',\'advance\');return false">Acompte</a><a class="dropdown-item" href="#" onclick="PosnicPro.hr.openTransaction(\''+esc(w._id)+'\',\'overtime\');return false">Heures supplémentaires</a><a class="dropdown-item" href="#" onclick="PosnicPro.hr.openTransaction(\''+esc(w._id)+'\',\'salary_payment\');return false">Paiement salaire</a><a class="dropdown-item" href="#" onclick="PosnicPro.hr.openTransaction(\''+esc(w._id)+'\',\'adjustment\');return false">Ajustement +</a></div></div></td></tr>';
+        return '<tr><td>'+esc(w.name)+'</td><td>'+esc(w.job_title||'—')+'</td><td>'+money(w.monthly_salary)+'</td><td>'+money(w.hourly_rate)+'</td><td>'+(w.active===false?'<span class="badge badge-secondary">Inactif</span>':'<span class="badge badge-success">Actif</span>')+'</td><td><div class="btn-group btn-group-sm"><button class="btn btn-outline-primary" onclick="PosnicPro.hr.editWorker(\''+esc(w._id)+'\')">Modifier</button><button class="btn btn-outline-danger" onclick="PosnicPro.hr.deleteWorker(\'"+esc(w._id)+"\')">Supprimer</button><button class="btn btn-outline-secondary dropdown-toggle" data-toggle="dropdown">Mouvement</button><div class="dropdown-menu dropdown-menu-right"><a class="dropdown-item" href="#" onclick="PosnicPro.hr.openTransaction(\''+esc(w._id)+'\',\'advance\');return false">Acompte</a><a class="dropdown-item" href="#" onclick="PosnicPro.hr.openTransaction(\''+esc(w._id)+'\',\'overtime\');return false">Prime hebdomadaire</a><a class="dropdown-item" href="#" onclick="PosnicPro.hr.openTransaction(\'"+esc(w._id)+"\',\'prime_monthly\');return false">Prime mensuelle</a><a class="dropdown-item" href="#" onclick="PosnicPro.hr.openTransaction(\''+esc(w._id)+'\',\'salary_payment\');return false">Paiement salaire</a><a class="dropdown-item" href="#" onclick="PosnicPro.hr.openTransaction(\''+esc(w._id)+'\',\'adjustment\');return false">Ajustement +</a></div></div></td></tr>';
       }).join('');
       $('#hr_workers_rows').html(rows||'<tr><td colspan="6" class="text-muted">Aucun employé. Ajoutez votre premier employé.</td></tr>');
       var options='<option value="">Tous les employés</option>'+currentWorkers.map(function(w){return '<option value="'+esc(w._id)+'">'+esc(w.name)+'</option>';}).join('');
@@ -70,7 +70,7 @@
     $('#hr_payroll_rows').html('<tr><td colspan="7">Chargement…</td></tr>');
     request('GET','hr/payroll/'+encodeURIComponent(p),{},function(d){
       var rows=(Array.isArray(d)?d:(d.data||[])).map(function(w){
-        return '<tr><td>'+esc(w.name)+'</td><td>'+money(w.monthly_salary)+'</td><td>'+money(w.overtime)+'</td><td>'+money(w.advances)+'</td><td>'+money(w.paid)+'</td><td><strong>'+money(w.remaining)+'</strong></td><td><button class="btn btn-sm btn-primary" onclick="PosnicPro.hr.openTransaction(\''+esc(w._id)+'\',\'salary_payment\',\''+esc(p)+'\')">Payer</button></td></tr>';
+        return '<tr><td>'+esc(w.name)+'</td><td>'+money(w.monthly_salary)+'</td><td>'+money((w.overtime||0)+(w.primes||0))+'</td><td>'+money(w.advances)+'</td><td>'+money(w.paid)+'</td><td><strong>'+money(w.remaining)+'</strong></td><td><button class="btn btn-sm btn-primary" onclick="PosnicPro.hr.openTransaction(\''+esc(w._id)+'\',\'salary_payment\',\''+esc(p)+'\')">Payer</button></td></tr>';
       }).join('');
       $('#hr_payroll_rows').html(rows||'<tr><td colspan="7">Aucun salarié actif.</td></tr>');
     });
@@ -79,7 +79,7 @@
     var data={}; if($('#hr_tx_worker').val())data.worker_id=$('#hr_tx_worker').val();if($('#hr_tx_period').val())data.period=$('#hr_tx_period').val();
     $('#hr_transactions_rows').html('<tr><td colspan="6">Chargement…</td></tr>');
     request('GET','hr/transactions',data,function(d){
-      var labels={salary_payment:'Paiement salaire',advance:'Acompte',overtime:'Heures supplémentaires',adjustment:'Ajustement'};
+      var labels={salary_payment:'Paiement salaire',advance:'Acompte',overtime:'Heures supplémentaires (ancien)',prime_weekly:'Prime hebdomadaire',prime_monthly:'Prime mensuelle',adjustment:'Ajustement'};
       var rows=(Array.isArray(d)?d:(d.data||[])).map(function(t){
         return '<tr><td>'+esc(String(t.date||'').slice(0,10))+'</td><td>'+esc(t.worker_name)+'</td><td>'+esc(labels[t.type]||t.type)+'</td><td>'+esc(t.period)+'</td><td>'+money(t.amount)+'</td><td>'+esc([t.hours?String(t.hours)+' h':'',t.method||'',t.reference||'',t.notes||''].filter(Boolean).join(' · ')||'—')+'</td></tr>';
       }).join('');
@@ -94,9 +94,10 @@
       w=w||{};$('#hr_worker_form')[0].reset();$('#hr_worker_id').val(w._id||'');$('#hr_worker_name').val(w.name||'');$('#hr_worker_job').val(w.job_title||'');$('#hr_worker_phone').val(w.phone||'');$('#hr_worker_salary').val(w.monthly_salary||0);$('#hr_worker_rate').val(w.hourly_rate||0);$('#hr_worker_start').val(w.start_date?String(w.start_date).slice(0,10):today());$('#hr_worker_notes').val(w.notes||'');$('#hr_worker_active').prop('checked',w.active!==false);$('#hr_worker_modal').modal('show');
     },
     editWorker:function(id){var w=currentWorkers.find(function(x){return String(x._id)===String(id);});if(w)this.openWorkerForm(w);},
+    deleteWorker:function(id){var w=currentWorkers.find(function(x){return String(x._id)===String(id);});if(!w)return;if(!window.confirm('Supprimer '+w.name+' de la liste des employés ? Son historique de paie sera conservé.'))return;request('POST','hr/workers/'+encodeURIComponent(id)+'/delete',{},function(){notice('Employé supprimé de la liste active. Historique conservé.','success');loadWorkers();loadPayroll();loadTransactions();});},
     openTransaction:function(id,type,p){
       var w=currentWorkers.find(function(x){return String(x._id)===String(id);});if(!w){notice('Employé introuvable.','danger');return;}
-      var labels={salary_payment:'Paiement du salaire',advance:'Acompte',overtime:'Heures supplémentaires',adjustment:'Ajustement positif'};
+      var labels={salary_payment:'Paiement du salaire',advance:'Acompte',overtime:'Heures supplémentaires (ancien)',prime_weekly:'Prime hebdomadaire',prime_monthly:'Prime mensuelle',adjustment:'Ajustement positif'};
       var selectedPeriod = p || period();
       $('#hr_tx_form')[0].reset();$('#hr_tx_type').val(type);$('#hr_tx_worker_id').val(w._id);$('#hr_tx_worker_name').val(w.name);$('#hr_tx_title').text(labels[type]||'Mouvement');$('#hr_tx_date').val(today());$('#hr_tx_period_input').val(selectedPeriod);$('#hr_tx_amount').val('');$('#hr_tx_rate').val(w.hourly_rate||0);$('#hr_tx_amount_wrap').toggle(type!=='overtime');$('#hr_tx_hours_wrap').toggle(type==='overtime');$('#hr_tx_modal').modal('show');
       if (type === 'salary_payment') {
