@@ -87,6 +87,7 @@ router.use(protect);
 // Dedicated Firebird JSON migration; separate from the legacy CSV importer.
 router.post('/legacy-migration/preview', bindController(itemsController.legacyMigrationPreview));
 router.post('/legacy-migration/import', bindController(itemsController.legacyMigrationImport));
+router.post('/legacy-migration/repair', bindController(itemsController.legacyMigrationRepair));
 const stockPreference = require('../services/item-stock-preference');
 const preferenceHandler = (fn) => async (req, res, next) => {
   try {
