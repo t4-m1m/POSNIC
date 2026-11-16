@@ -221,6 +221,111 @@ PosnicPro.items = {
             }
         });
     },
+    openLegacyMigration: function () {
+        var $old = $('#legacy_item_migration_modal');
+        if ($old.length) $old.remove();
+        var markup = '<div class="modal fade" id="legacy_item_migration_modal" tabindex="-1" role="dialog" aria-labelledby="legacy_item_migration_title" aria-hidden="true">'
+            + '<div class="modal-dialog modal-lg modal-dialog-centered" role="document"><div class="modal-content">'
+            + '<div class="modal-header"><h5 class="modal-title" id="legacy_item_migration_title"><i class="feather icon-database mr-2"></i>Import legacy Firebird articles</h5><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>'
+            + '<div class="modal-body"><p class="text-muted">Select the JSON exported from EHANOUTE.FDB. This imports standalone articles with positive stock and keeps the original barcode text, including leading zeroes.</p>'
+            + '<div class="form-group"><label for="legacy_item_migration_file">Migration JSON file</label><input id="legacy_item_migration_file" class="form-control" type="file" accept=".json,application/json"></div>'
+            + '<div id="legacy_item_migration_status" class="small text-muted" aria-live="polite">No file selected.</div>'
+            + '<div id="legacy_item_migration_summary" class="mt-3" hidden></div></div>'
+            + '<div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button><button type="button" class="btn btn-outline-primary" id="legacy_item_migration_preview" disabled>Preview import</button><button type="button" class="btn btn-primary" id="legacy_item_migration_apply" disabled>Import new articles</button></div>'
+            + '</div></div></div>';
+        $('body').append(markup);
+        var $modal = $('#legacy_item_migration_modal'), source = null, preview = null, busy = false;
+        function status(message, danger) {
+            $('#legacy_item_migration_status').text(message).toggleClass('text-danger', !!danger).toggleClass('text-muted', !danger);
+        }
+        function post(url, callback) {
+            if (!source || busy) return;
+            busy = true;
+            $('#legacy_item_migration_preview,#legacy_item_migration_apply').prop('disabled', true);
+            PosnicPro.post({ url: url, data: JSON.stringify(source) }, function (response) {
+                busy = false;
+                callback(response);
+            }, function (xhr) {
+                busy = false;
+                var body = {};
+                try { body = JSON.parse(xhr.responseText || '{}'); } catch (e) {}
+                status(body.message || 'The migration request failed. No existing article was changed.', true);
+                $('#legacy_item_migration_preview').prop('disabled', false);
+            });
+        }
+        $('#legacy_item_migration_file').on('change', function () {
+            source = null; preview = null;
+            $('#legacy_item_migration_summary').prop('hidden', true).empty();
+            $('#legacy_item_migration_apply').prop('disabled', true);
+            var file = this.files && this.files[0];
+            if (!file) { status('No file selected.'); $('#legacy_item_migration_preview').prop('disabled', true); return; }
+            if (file.size > 5 * 1024 * 1024) { status('File is too large. Maximum size is 5 MB.', true); $('#legacy_item_migration_preview').prop('disabled', true); return; }
+            var reader = new FileReader();
+            reader.onload = function () {
+                try {
+                    source = JSON.parse(String(reader.result || ''));
+                    if (!source || !source.metadata || !Array.isArray(source.articles)) throw new Error('Expected metadata and articles array.');
+                    status(file.name + ' loaded · ' + source.articles.length + ' article rows.');
+                    $('#legacy_item_migration_preview').prop('disabled', false);
+                } catch (error) {
+                    source = null; status('Invalid JSON: ' + error.message, true);
+                    $('#legacy_item_migration_preview').prop('disabled', true);
+                }
+            };
+            reader.onerror = function () { status('Could not read the selected file.', true); };
+            reader.readAsText(file);
+        });
+        $('#legacy_item_migration_preview').on('click', function () {
+            post('items/legacy-migration/preview', function (response) {
+                if (!response || response.type !== 'success' || !response.data) {
+                    status((response && response.message) || 'Could not preview this file.', true); return;
+                }
+                preview = response.data;
+                var lines = [
+                    '<div class="alert alert-info mb-2"><strong>Preview only — no database changes have been made.</strong></div>',
+                    '<div class="row text-center">',
+                    '<div class="col-4"><strong>' + Number(preview.received_articles || 0) + '</strong><br><small>Rows checked</small></div>',
+                    '<div class="col-4"><strong>' + Number(preview.ready_to_import || 0) + '</strong><br><small>New articles</small></div>',
+                    '<div class="col-4"><strong>' + Number(preview.skipped_existing || 0) + '</strong><br><small>Existing conflicts</small></div></div>'
+                ];
+                if (preview.declared_articles && Number(preview.declared_articles) !== Number(preview.received_articles)) {
+                    lines.push('<p class="text-warning mt-2 mb-1">The file metadata declares ' + Number(preview.declared_articles) + ' articles, but contains ' + Number(preview.received_articles) + ' rows.</p>');
+                }
+                if (preview.missing_categories && preview.missing_categories.length) {
+                    lines.push('<p class="mt-2 mb-1"><strong>Categories to create:</strong> ' + preview.missing_categories.map(function (x) { return $('<div>').text(x).html(); }).join(', ') + '</p>');
+                }
+                if (preview.conflicts && preview.conflicts.length) {
+                    lines.push('<p class="text-warning mt-2 mb-1"><strong>Conflicts (will be skipped):</strong></p><ul class="small mb-0">');
+                    preview.conflicts.slice(0, 12).forEach(function (x) {
+                        lines.push('<li>Row ' + Number(x.row) + ': ' + $('<div>').text(x.name).html() + ' — ' + $('<div>').text(x.reason).html() + '</li>');
+                    });
+                    if (preview.conflicts.length > 12) lines.push('<li>…and ' + (preview.conflicts.length - 12) + ' more.</li>');
+                    lines.push('</ul>');
+                }
+                $('#legacy_item_migration_summary').html(lines.join('')).prop('hidden', false);
+                status('Preview complete. Existing items will never be overwritten.');
+                $('#legacy_item_migration_apply').prop('disabled', !(Number(preview.ready_to_import) > 0));
+                $('#legacy_item_migration_preview').prop('disabled', false);
+            });
+        });
+        $('#legacy_item_migration_apply').on('click', function () {
+            if (!preview || !Number(preview.ready_to_import)) return;
+            var question = 'Import ' + preview.ready_to_import + ' new article(s)? Existing-name/barcode conflicts (' + preview.skipped_existing + ') will be skipped. Missing categories will be created. Existing stock and article records will not be modified.';
+            if (!window.confirm(question)) return;
+            post('items/legacy-migration/import', function (response) {
+                if (!response || response.type !== 'success' || !response.data) {
+                    status((response && response.message) || 'Import failed.', true); return;
+                }
+                var result = response.data;
+                status(result.message || (Number(result.imported || 0) + ' articles imported.'));
+                $('#legacy_item_migration_apply').prop('disabled', true);
+                $('#legacy_item_migration_preview').prop('disabled', false);
+                PosnicPro.alert('success', result.message || 'Legacy articles imported successfully.');
+            });
+        });
+        $modal.modal('show');
+        $modal.on('hidden.bs.modal', function () { $modal.remove(); });
+    },
     showAdd: function () {
         PosnicPro.items_v2.showAdd();
     },
