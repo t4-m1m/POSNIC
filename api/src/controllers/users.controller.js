@@ -288,22 +288,33 @@ class UsersController extends BaseController {
       }
 
       // PHP GUMP filter: trim|sanitize_string (no lowercase)
-      // Keep the legacy POS login on exact email/username matches only.
-      // Super Admin Gmail-local-part alias handling is intentionally disabled.
       const loginId = String(username).trim();
-      const user = await this.userModel
+
+      // Find user by email or username, including all fields needed for the legacy response
+      // Support the Super Admin Gmail local-part alias and legacy user_name records.
+      let user = await this.userModel
         .findOne({
           $or: [
-            { email: loginId },
-            { username: loginId },
-            { username: loginId.toLowerCase() },
+            { email: loginId }, { email: loginId.toLowerCase() },
+            { username: loginId }, { username: loginId.toLowerCase() },
             { user_name: loginId },
           ],
         })
         .select(
-          '+password +license +branch_access +printing_design +access +plan +plan_access +activate +firstname +lastname +username +email +image +register_status +usertype +role +role_id +is_super_admin'
+          '+password +license +branch_access +printing_design +access +plan +plan_access +activate +firstname +lastname +username +email +image +register_status +usertype +role_id'
         )
         .lean();
+
+      if (!loginId.includes('@')) {
+        const candidate = await this.userModel
+          .findOne({ email: loginId.toLowerCase() + '@gmail.com' })
+          .select('+password +license +branch_access +printing_design +access +plan +plan_access +activate +firstname +lastname +username +user_name +email +image +register_status +usertype +role +role_id')
+          .lean();
+        const candidateRoles = [candidate && candidate.usertype, candidate && candidate.role]
+          .map((value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+        if (candidate && (candidateRoles.includes('superadmin') || candidate.is_super_admin === true)) user = candidate;
+      }
+
       /*
        * ONE MESSAGE FOR BOTH FAILURES, DELIBERATELY.
        *
