@@ -375,7 +375,13 @@
             if (duplicate) prepareCopy();
         },function(){failed();});
     }
-    P.items_v2 = { showEdit: showEdit, showClone: function(id){showEdit(id,true);}, showAdd: open, showDataTablePage: open, setBusinessContext: function (category) {
+    function showAdd() {
+        // Always start a clean, visible draft. Do not rely on the saved/editing
+        // flags: the success view may have hidden the layout after the POST.
+        reset();
+        open();
+    }
+    P.items_v2 = { showEdit: showEdit, showClone: function(id){showEdit(id,true);}, showAdd: showAdd, showDataTablePage: open, setBusinessContext: function (category) {
         businessContext = ['restaurant', 'retail', 'service'].includes(category) ? category : null;
         if (bound) { capabilities = readCapabilities(); reset(); if (capabilities.restaurant) loadRestaurantOptions(); }
     } };
