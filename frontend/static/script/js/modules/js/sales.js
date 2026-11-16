@@ -12334,7 +12334,13 @@ $(document).on('keydown.posnicSaleShortcuts', function (event) {
                     dialog = document.createElement('dialog');
                     dialog.id = 'posnic-price-tier-dialog';
                     dialog.className = 'posnic-price-tier-dialog';
-                    dialog.innerHTML = '<form method="dialog"><h3>Choose selling price</h3><p class="posnic-price-tier-item"></p><div class="posnic-price-tier-options"></div><button class="btn btn-light" value="cancel">Cancel</button></form>';
+                    if (!document.getElementById('posnic-price-tier-theme-style')) {
+                        var themeStyle = document.createElement('style');
+                        themeStyle.id = 'posnic-price-tier-theme-style';
+                        themeStyle.textContent = '#posnic-price-tier-dialog{background:var(--theme-card-bg,var(--theme-body-bg,#fff));color:var(--theme-text-primary,#24344b);border:1px solid var(--theme-border-color,#d9e2ef);border-radius:12px}#posnic-price-tier-dialog .posnic-price-tier-cancel{appearance:none!important;background:var(--theme-card-bg,var(--theme-body-bg,#fff))!important;color:var(--theme-text-primary,#24344b)!important;border:1px solid var(--theme-border-color,#d9e2ef)!important;box-shadow:none!important}#posnic-price-tier-dialog .posnic-price-tier-cancel:hover,#posnic-price-tier-dialog .posnic-price-tier-cancel:focus{background:var(--theme-hover-bg,var(--theme-card-bg,#fff))!important;color:var(--theme-text-primary,#24344b)!important;border-color:var(--theme-primary-color,#64748b)!important}#posnic-price-tier-dialog::backdrop{background:rgba(10,18,30,.42)}';
+                        document.head.appendChild(themeStyle);
+                    }
+                    dialog.innerHTML = '<form method="dialog"><h3>Choose selling price</h3><p class="posnic-price-tier-item"></p><div class="posnic-price-tier-options"></div><button type="submit" class="posnic-price-tier-cancel" value="cancel">Cancel</button></form>';
                     dialog.querySelector('.posnic-price-tier-item').textContent = String(itemText.item_name || itemText.name || 'Selected item');
                     var options = dialog.querySelector('.posnic-price-tier-options');
                     prices.forEach(function (entry) {

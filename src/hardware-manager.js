@@ -24,6 +24,7 @@ class HardwareManager {
     this.mainWindow = null;
     this._htmlPrintWindow = null;
     this._htmlPrintWindowSecure = null;
+    this._htmlPrintDocumentReady = false;
     this._htmlPrintQueue = Promise.resolve();
     // Cash drawer
     this.cashDrawerPort = null;
@@ -38,6 +39,7 @@ class HardwareManager {
         const printWindow = this._htmlPrintWindow;
         this._htmlPrintWindow = null;
         this._htmlPrintWindowSecure = null;
+        this._htmlPrintDocumentReady = false;
         if (printWindow && !printWindow.isDestroyed()) printWindow.destroy();
       });
     }
@@ -650,6 +652,7 @@ class HardwareManager {
         if (!this._htmlPrintWindow.isDestroyed()) this._htmlPrintWindow.destroy();
         this._htmlPrintWindow = null;
         this._htmlPrintWindowSecure = null;
+        this._htmlPrintDocumentReady = false;
       }
       if (!this._htmlPrintWindow) {
         this._htmlPrintWindow = new BrowserWindow({
@@ -663,6 +666,7 @@ class HardwareManager {
           }
         });
         this._htmlPrintWindowSecure = route.secure;
+        this._htmlPrintDocumentReady = false;
         hardenPrintWindow(this._htmlPrintWindow);
       }
       printWindow = this._htmlPrintWindow;
@@ -671,28 +675,34 @@ class HardwareManager {
       const deviceName = await this._resolvePrinterName(options.printerName);
       receiptPrinter = deviceName;
 
-      const expectedReceipt = /data-receipt-design\s*=/.test(htmlContent);
-      const prepare = async () => {
-        await this._waitForPrintPage(printWindow.webContents);
+      const expectedReceipt = /data-receipt-design\\s*=/.test(htmlContent);
+      const prepare = async (waitForLoad) => {
+        if (waitForLoad) await this._waitForPrintPage(printWindow.webContents);
         await printWindow.webContents.executeJavaScript(
           `(${prepareDocument.toString()})(document, ${expectedReceipt})`
         );
       };
       try {
-        await printWindow.loadURL(route.url);
-        await prepare();
-        diagnostics?.record('print.document', { trace, stage: 'loaded', status: 'ready' });
+        if (this._htmlPrintDocumentReady) {
+          // Reuse the warmed Chromium renderer between sales; avoid repeated navigation.
+          await printWindow.webContents.executeJavaScript(
+            `document.body.innerHTML = ${JSON.stringify(String(htmlContent || ''))}; document.title = 'Posnic Receipt';`
+          );
+          await prepare(false);
+          diagnostics?.record('print.document', { trace, stage: 'reused', status: 'ready' });
+        } else {
+          await printWindow.loadURL(route.url);
+          await prepare(true);
+          this._htmlPrintDocumentReady = true;
+          diagnostics?.record('print.document', { trace, stage: 'loaded', status: 'ready' });
+        }
       } catch (loadError) {
-        /* The local route was reachable a moment ago and is not now. Rather
-           than fail the job, fall back to the document itself - the window was
-           created with web security matching the route we chose, so this only
-           costs the stylesheet, not the print. */
+        this._htmlPrintDocumentReady = false;
         if (route.secure) {
           console.warn('[Print] local print route failed, using the inline document:', loadError.message);
-          await printWindow.loadURL(
-            `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`
-          );
-          await prepare();
+          await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
+          await prepare(true);
+          this._htmlPrintDocumentReady = true;
           diagnostics?.record('print.document', { trace, stage: 'inline-recovery', status: 'ready' });
         } else {
           throw loadError;

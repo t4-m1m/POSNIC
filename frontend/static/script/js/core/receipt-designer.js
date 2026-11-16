@@ -240,7 +240,7 @@
             receipt_number: data.sales_id || data.sale_number || '', receipt_date: data.receipt_date || data.created_date || data.date || '', seller_name: (data.versement_checkout && data.versement_checkout.vendor_name) || data.cashier_name || data.seller_name || data.steward_name || data.steward || data.created_by || data.user_name,
             customer_name: data.customer_name || (data.versement_checkout && data.versement_checkout.customer_name), customer_phone: data.customer_phone || (data.versement_checkout && data.versement_checkout.phone), customer_email: data.customer_email,
             customer_tax_number: taxNumber,
-            customer_address: data.customer_address, sale_note: data.sales_description, brand_url: data.website || PosnicPro.BRAND_URL,
+            customer_address: data.customer_address, sale_note: data.sales_description || data.sale_note || data.sales_note || data.note || data.description, brand_url: data.website || PosnicPro.BRAND_URL,
             total_quantity: receiptItems.reduce(function (n, i) { return n + Number(i.item_quantity || 0); }, 0),
             table: data.table_number, order_type: data.dine_type, covers: data.covers || data.person_count,
             steward: data.cashier_name || data.seller_name || data.steward_name || data.steward || data.created_by || data.user_name, session: data.serving_session || data.session_name,
@@ -263,15 +263,25 @@
                 dynamicItemsShift = Math.max(0, basketHeight - Math.max(28, Number(basketBlock.h) || 0));
             }
         }
+        var canvasTopOffset = 0;
+        if (layout.canvas && !sheet) {
+            canvasTopOffset = layout.blocks.reduce(function (top, block) {
+                var y = Number(block.y);
+                return Number.isFinite(y) && y >= 0 ? Math.min(top, y) : top;
+            }, Infinity);
+            if (!Number.isFinite(canvasTopOffset)) canvasTopOffset = 0;
+        }
         var rendered = layout.blocks.map(function (originalBlock) {
             var b = Object.assign({}, originalBlock);
             var basket = layout.blocks.find(function (block) { return block.type === 'items'; });
             if (dynamicItemsShift && basket && b.id !== basket.id && Number(b.y) >= Number(basket.y) + Math.max(28, Number(basket.h) || 0)) {
                 b.y = Number(b.y) + dynamicItemsShift;
             }
+            if (layout.canvas && !sheet && canvasTopOffset > 0) b.y = Math.max(0, Number(b.y) - canvasTopOffset);
             var content = '';
             if (b.type === 'field' && ((b.field === 'fssai' && headerFssai) || (b.field === 'total_quantity' && fixedItems))) return '';
-            if (b.type === 'field' && ['receipt_number', 'receipt_date', 'seller_name'].indexOf(b.field) === -1 && !contract.fieldAvailable(b.field, data) && !(b.field === 'sale_note' && typeof b.text === 'string' && b.text.trim())) return '';
+            if (data.versement_checkout && data.sales_id && b.type === 'field' && ['customer_name', 'customer_phone'].indexOf(b.field) !== -1) return '';
+            if (b.type === 'field' && ['receipt_number', 'receipt_date', 'seller_name'].indexOf(b.field) === -1 && !contract.fieldAvailable(b.field, data) && !(b.field === 'sale_note' && ((typeof b.text === 'string' && b.text.trim()) || present(values.sale_note)))) return '';
             if (b.type === 'store') {
                 function storeText(key, fallback) { return String(b[key] || '').trim() || fallback || ''; }
                 var storeName = storeText('nameText', data.branch_name || data.store_name || PosnicPro.local.get('branchname'));
@@ -346,8 +356,8 @@
                     var versementRemaining = Math.max(0, versementTotal - versementPaid);
                     content += pair('Versement', money(versementPaid));
                     content += pair('Reste à payer', money(versementRemaining));
-                    if (!hasField('customer_name') && present(values.customer_name)) content += pair('Client', esc(String(values.customer_name)));
-                    if (!hasField('customer_phone') && present(values.customer_phone)) content += pair('Téléphone', esc(String(values.customer_phone)));
+                    if (!(data.versement_checkout && data.sales_id) && !hasField('customer_name') && present(values.customer_name)) content += pair('Client', esc(String(values.customer_name)));
+                    if (!(data.versement_checkout && data.sales_id) && !hasField('customer_phone') && present(values.customer_phone)) content += pair('Téléphone', esc(String(values.customer_phone)));
                     if (!hasField('seller_name') && present(values.seller_name)) content += pair('Vendeur', esc(String(values.seller_name)));
                 } else if (!beforePayment && data.sales_id) {
                     var paymentRows = PosnicSalePayments.rows(data);
@@ -435,13 +445,28 @@
             }
             return { type: b.type, half: b.type === 'field' && b.width === 50, customer: b.type === 'field' && /^customer_/.test(b.field), supporting: b.type === 'text' || b.type === 'field' || ((b.type === 'qr' || b.type === 'image') && b.width <= 40), html: '<section class="rd-block rd-block-' + b.type + (b.type === 'field' ? ' rd-field-' + b.field : '') + '" data-block-id="' + esc(b.id) + '" style="' + style + '">' + content + '</section>' };
         }).filter(Boolean);
+        if (data.versement_checkout && data.sales_id && (present(values.customer_name) || present(values.customer_phone))) {
+            var customerTop = 0;
+            if (layout.canvas) {
+                var headerBlock = layout.blocks.find(function (entry) { return ['transaction', 'store', 'logo'].indexOf(entry.type) !== -1; });
+                var itemsBlock = layout.blocks.find(function (entry) { return entry.type === 'items'; });
+                if (headerBlock) customerTop = Math.max(0, Number(headerBlock.y) + Math.max(24, Number(headerBlock.h) || 24) + 3 - canvasTopOffset);
+                if (itemsBlock && Number.isFinite(Number(itemsBlock.y))) customerTop = Math.min(customerTop, Math.max(0, Number(itemsBlock.y) - canvasTopOffset - 36));
+            }
+            var customerHtml = '<section class="rd-block rd-versement-customer" style="' + (layout.canvas ? 'position:absolute;left:0;top:' + customerTop + 'px;width:100%;margin:0;' : '') + '">' +
+                (present(values.customer_name) ? '<div><strong>' + esc(label('Client')) + ':</strong> ' + esc(String(values.customer_name).trim()) + '</div>' : '') +
+                (present(values.customer_phone) ? '<div><strong>' + esc(label('Téléphone')) + ':</strong> ' + esc(String(values.customer_phone).trim()) + '</div>' : '') + '</section>';
+            var customerIndex = rendered.findIndex(function (entry) { return entry.type === 'items' || entry.type === 'totals'; });
+            if (customerIndex < 0) customerIndex = rendered.length;
+            rendered.splice(customerIndex, 0, { type: 'versement_customer', half: false, customer: false, supporting: true, html: customerHtml });
+        }
         rendered = pairFields(rendered);
         // Free-position mode must use the same absolute canvas for preview and
         // print. Sheet composition wraps blocks in grids, which breaks x/y
         // positioning once a block has been dragged.
         var html = sheet && !layout.canvas ? composeSheet(rendered) : rendered.map(function (b) { return b.html; }).join('');
         var canvasHeight = Math.max(80, Math.min(8000, Number(layout.canvasHeight) || 0));
-        if (pendingGoods) html += '<section class="rd-block rd-payment-status" style="' + (layout.canvas ? 'position:absolute;left:0;top:' + canvasHeight + 'px;width:100%;' : '') + '">' + esc(label('Payment pending')) + '</section>';
+        if (pendingGoods) html += '<section class="rd-block rd-payment-status" style="' + (layout.canvas ? 'position:absolute;left:0;top:' + Math.max(0, canvasHeight - canvasTopOffset) + 'px;width:100%;' : '') + '">' + esc(label('Payment pending')) + '</section>';
         var canvasExtraHeight = 0;
         if (sheet) {
             var notes = '';
@@ -467,7 +492,7 @@
                     }, 28);
                     height = Math.max(height, Math.min(4000, rowsHeight));
                 }
-                return Math.max(bottom, Number(b.y) + height);
+                return Math.max(bottom, Math.max(0, Number(b.y) - canvasTopOffset) + height);
             }, 0);
             finalCanvasHeight = Math.min(8000, Math.max(80, measuredBottom + 38));
         }
