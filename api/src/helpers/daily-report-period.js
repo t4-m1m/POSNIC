@@ -7,12 +7,14 @@ function dailyReportPeriod(query, timezone, dayparts = []) {
   const zone = moment.tz.zone(timezone) ? timezone : 'UTC';
   const parseDay = (value) => {
     const text = String(value || '').trim();
-    const prefix = text.match(/^(\d{4})[/-](\d{2})[/-](\d{2})/);
-    const day = prefix ? prefix.slice(1).join('-') : text;
-    // The POS UI displays dates in French day/month/year order. Accept
-    // that exact format as well as ISO and the legacy US format so dates such
-    // as 15/11/2026 do not become Invalid Date and fail the whole report.
-    return moment.tz(day, ['YYYY-MM-DD', 'DD/MM/YYYY', 'DD-MM-YYYY', 'MM/DD/YYYY'], true, zone).startOf('day');
+    // Date-range controls may send a date with a clock suffix (for example
+    // "2026/11/15 12:00 AM"). Strip the time before strict parsing so locale
+    // display text can never turn a valid historical day into Invalid Date.
+    const prefix = text.match(/^(\d{4}[/-]\d{1,2}[/-]\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{4})/);
+    const day = prefix ? prefix[1] : text;
+    const formats = ['YYYY-MM-DD', 'YYYY/M/D', 'YYYY/MM/DD', 'DD/MM/YYYY', 'D/M/YYYY', 'DD-MM-YYYY', 'D-M-YYYY', 'MM/DD/YYYY', 'M/D/YYYY'];
+    const parsed = moment.tz(day, formats, true, zone);
+    return parsed.isValid() ? parsed.startOf('day') : moment.invalid();
   };
   const first = parseDay(query.starting_date),
     last = parseDay(query.ending_date);
