@@ -175,17 +175,43 @@
         }, function () { taxLoading = false; show('iv2-tax-error', true); });
     }
     function reset() {
-        busy = false; editing = false; savedItemId = null; savedBranch = null; existingItem = null; editBaseline = null; editSequence++;
+        // Reset the editor's parent state and every child module as one
+        // transaction. Do this after the previous save has completed so no
+        // saved/locked state can leak into the next article.
+        busy = false;
+        saved = false;
+        attempted = false;
+        editing = false;
+        savedItemId = null;
+        savedBranch = null;
+        existingItem = null;
+        editBaseline = null;
+        editSequence++;
+        touched.clear();
+
         document.getElementById('iv2-copy-source').value = '';
-        P.itemsV2Workspace.reset(); touched.clear();
-        document.getElementById('iv2-form').reset(); P.itemsV2Details.reset(); applyBusinessContext(); saved = false; attempted = false;
+        document.getElementById('iv2-form').reset();
+        P.itemsV2Details.reset();
+        applyBusinessContext();
+
+        // The fieldset can remain disabled after a successful save; native
+        // form.reset() does not restore disabled properties.
         document.getElementById('iv2-fields').disabled = false;
         document.getElementById('iv2-save').disabled = false;
-        text('iv2-save', 'Save item →'); show('iv2-success', false); show('iv2-error', false);
+        text('iv2-save', 'Save item →');
+        show('iv2-success', false);
+        show('iv2-error', false);
+
         document.getElementById('iv2-tax-type').value = P.local.get('tax_type') === 'exclusive' ? 'exclusive' : 'inclusive';
         var def = P.local.get('default_tax_id');
         if (def && Array.from(document.getElementById('iv2-tax').options).some(function (o) { return o.value === String(def); })) document.getElementById('iv2-tax').value = def;
-        render(); document.getElementById('iv2-name').focus();
+
+        // Workspace reset comes after child/form reset so the success screen,
+        // lock and active step are the final state before rendering.
+        P.itemsV2Workspace.reset();
+        render();
+        var firstField = document.getElementById('iv2-type-name');
+        if (firstField && !firstField.disabled) firstField.focus();
     }
     function save(event) {
         if (event) event.preventDefault();
