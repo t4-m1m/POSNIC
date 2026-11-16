@@ -742,9 +742,11 @@ class HardwareManager {
         result = await this._sendPrintJob(printWindow, fallbackOpts);
       }
 
-      // Never route a failed thermal receipt through a PDF/virtual-printer
-      // fallback: Windows may prompt to save a file instead of printing paper.
-      // Keep the original silent Windows spooler path and report its real error.
+      if (!result.success && result.retryable !== false) {
+        console.warn('Electron print failed, retrying through PDF fallback:', result.error || 'unknown');
+        result = await this._printViaPdfFallback(printWindow, deviceName, options);
+      }
+
 
       receiptAttempts.push({ name: deviceName, status: result.success ? 'success' : 'failed', reason: result.error, jobId: result.jobId });
       if (result.success) {
