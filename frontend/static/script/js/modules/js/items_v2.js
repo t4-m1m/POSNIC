@@ -274,6 +274,19 @@
         // required controls in hidden panels before submit fires, preventing the
         // custom validator/save handler from running at all. Validate in save().
         form.noValidate = true;
+        // The router only fires when the hash changes. After saving an item,
+        // the user is still on #/items/new, so clicking the same dropdown link
+        // would otherwise do nothing. Handle that same-route click explicitly;
+        // different routes continue through the normal router unchanged.
+        document.addEventListener('click', function (event) {
+            var target = event.target;
+            var link = target && target.closest ? target.closest('a[href="#/items/new"]') : null;
+            if (!link) return;
+            var currentRoute = String(root.location.hash || '').replace(/^#\\/?/, '').replace(/\\/$/, '');
+            if (currentRoute !== 'items/new') return;
+            event.preventDefault();
+            showAdd();
+        });
         form.addEventListener('submit', save);
         form.addEventListener('focusout', function (event) { touched.add(event.target.id); if (!saved && !busy) render(); });
         form.addEventListener('input', function (event) {
