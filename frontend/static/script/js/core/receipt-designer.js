@@ -546,26 +546,15 @@
         var useRawThermal = false;
         if (printer && printer.print && options.showDialog !== true) {
             return Promise.resolve().then(function () {
-                    // Never send a receipt to a virtual PDF queue: Windows then
-                    // asks for a filename instead of printing paper. If the saved
-                    // or system-default queue is virtual, prefer the installed
-                    // PRP-300 receipt printer, then a physical Windows default.
-                    var chosen = options.target ? options.target.name : PosnicPro.resolveReceiptPrinter();
-                    var isVirtualQueue = function (name) {
-                        return /print.*pdf|pdf.*print|xps|onenote|fax/i.test(String(name || ''));
-                    };
-                    if (chosen === 'default') chosen = '';
-                    if (chosen && !isVirtualQueue(chosen)) return chosen;
+                    // The thermal receipt destination is fixed to the PRP-300.
+                    // Never let a Windows virtual printer or label printer become
+                    // the implicit destination for a sale receipt.
                     return Promise.resolve(printer.list ? printer.list() : []).then(function (queues) {
                         queues = Array.isArray(queues) ? queues : [];
-                        var physical = queues.filter(function (queue) {
-                            var name = queue && queue.name;
-                            return name && !isVirtualQueue(name) && !/(?:label|tsc)/i.test(String(name));
+                        var receiptQueue = queues.find(function (queue) {
+                            return queue && /(?:tysso|tysoo).*prp.?300|prp.?300.*(?:tysso|tysoo)/i.test(String(queue.name || ''));
                         });
-                        var receiptQueue = physical.find(function (queue) { return /prp.?300/i.test(String(queue.name)); });
-                        if (!receiptQueue) receiptQueue = physical.find(function (queue) { return queue.isDefault === true; });
-                        if (!receiptQueue && chosen && !isVirtualQueue(chosen)) return chosen;
-                        if (!receiptQueue) throw new Error('No physical receipt printer is available. Connect the Tysso/Tysoo PRP-300 and select it in Printers & paper.');
+                        if (!receiptQueue) throw new Error('Tysso/Tysoo PRP-300 receipt printer was not found. No PDF/default printer will be used.');
                         return receiptQueue.name;
                     });
                 }).then(function (name) { return printer.print(doc, { printerName: name,
@@ -617,6 +606,23 @@
             var hasSavedStudioDesign = !!(data && data.receipt_designs && data.receipt_designs.layouts);
             if (!data.receipt_designs) data = Object.assign({}, data, { receipt_designs: defaults(data) });
             var targets = window.electronAPI && PosnicPro.printSettings ? PosnicPro.printSettings.get('sales') : [null];
+            // All counter-sale receipts (F1/F2/F6) have one fixed physical
+            // destination. Do not trust a stale "default" or virtual PDF queue
+            // saved in older printer preferences.
+            if (window.electronAPI && window.electronAPI.printer && window.electronAPI.printer.list
+                && ['a4', 'a5', 'letter'].indexOf(requested) === -1) {
+                var queues = await window.electronAPI.printer.list();
+                var receiptQueue = (Array.isArray(queues) ? queues : []).find(function (queue) {
+                    return queue && /(?:tysso|tysoo).*prp.?300|prp.?300.*(?:tysso|tysoo)/i.test(String(queue.name || ''));
+                });
+                if (!receiptQueue) throw new Error('Tysso/Tysoo PRP-300 receipt printer was not found. Check its Windows printer name and connection; no PDF/default printer will be used.');
+                var savedTarget = Array.isArray(targets) && targets.length ? targets[0] : null;
+                targets = [{
+                    name: receiptQueue.name,
+                    pageSize: savedTarget && savedTarget.pageSize || '80mm',
+                    copies: savedTarget && savedTarget.copies || 1
+                }];
+            }
             if (window.electronAPI && PosnicPro.printSettings && ['a4', 'a5', 'letter'].indexOf(requested) !== -1) {
                 // An A4 override must not silently send a sheet to the counter roll.
                 targets = targets.filter(function (target) { return ['a4', 'a5', 'letter'].indexOf(target.pageSize) !== -1; });
