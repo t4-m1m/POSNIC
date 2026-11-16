@@ -290,8 +290,26 @@ class UsersController extends BaseController {
       // PHP GUMP filter: trim|sanitize_string (no lowercase)
       const loginId = String(username).trim();
       const aliasPart = loginId.replace(/[^a-z0-9]/gi, '');
-      const emailPattern = new RegExp('^' + aliasPart + '(?:@gmail\\.com)?
+      const emailPattern = new RegExp('^' + aliasPart + '(@gmail[.]com)?' + String.fromCharCode(36), 'i');
 
+      // Match mixed-case stored email addresses and the Super Admin Gmail local-part.
+      let user = await this.userModel
+        .findOne({
+          $or: [
+            { email: emailPattern },
+            { username: loginId }, { username: loginId.toLowerCase() },
+            { user_name: loginId },
+          ],
+        })
+        .select(
+          '+password +license +branch_access +printing_design +access +plan +plan_access +activate +firstname +lastname +username +email +image +register_status +usertype +role +role_id +is_super_admin'
+        )
+        .lean();
+
+      if (!loginId.includes('@') && user) {
+        const roles = [user.usertype, user.role].map((value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+        if (!roles.includes('superadmin') && user.is_super_admin !== true) user = null;
+      }
       /*
        * ONE MESSAGE FOR BOTH FAILURES, DELIBERATELY.
        *
