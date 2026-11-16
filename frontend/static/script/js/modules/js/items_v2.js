@@ -282,7 +282,10 @@
             var target = event.target;
             var link = target && target.closest ? target.closest('a[href="#/items/new"]') : null;
             if (!link) return;
-            var currentRoute = String(root.location.hash || '').replace(/^#\\/?/, '').replace(/\\/$/, '');
+            var currentRoute = String(root.location.hash || '');
+            if (currentRoute.charAt(0) === '#') currentRoute = currentRoute.slice(1);
+            if (currentRoute.charAt(0) === '/') currentRoute = currentRoute.slice(1);
+            if (currentRoute.charAt(currentRoute.length - 1) === '/') currentRoute = currentRoute.slice(0, -1);
             if (currentRoute !== 'items/new') return;
             event.preventDefault();
             showAdd();
