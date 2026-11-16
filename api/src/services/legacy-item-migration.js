@@ -310,12 +310,18 @@ async function repairImported(context) {
 
   // Categories created by this migration are already active, but explicitly
   // restore that state if a user had toggled one inactive before this repair.
-  const categoryRepair = await categoryCollection.updateMany({
-    branch_id: scope.branchId,
-    license: scope.licenseId,
-    legacy_migration_id: { $exists: true },
-    is_deleted: { $ne: true },
-  }, { $set: { is_active: true } });
+  const linkedCategoryIds = Array.from(new Set(bulk
+    .map((operation) => operation.updateOne.update.$set.category_id)
+    .filter(Boolean)
+    .map((id) => String(id)))).map((id) => new ObjectId(id));
+  const categoryRepair = linkedCategoryIds.length
+    ? await categoryCollection.updateMany({
+        _id: { $in: linkedCategoryIds },
+        branch_id: scope.branchId,
+        license: scope.licenseId,
+        is_deleted: { $ne: true },
+      }, { $set: { is_active: true } })
+    : { modifiedCount: 0 };
 
   return {
     matched: before,
