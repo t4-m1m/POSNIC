@@ -450,7 +450,7 @@
             // using the same saved receipt typography rather than a detached default.
             var sellerBlock = layout.blocks.find(function (entry) { return entry.type === 'field' && entry.field === 'seller_name'; });
             var sellerRenderedIndex = rendered.findIndex(function (entry) { return entry.type === 'field' && entry.html.indexOf('rd-field-seller_name') !== -1; });
-            var customerTop = 0, customerStyle = '';
+            var customerTop = 0, customerLeft = 0, customerWidth = 100, customerStyle = '';
             if (sellerBlock) {
                 var sellerFont = Number(sellerBlock.fontSize);
                 var sellerWeight = Number(sellerBlock.fontWeight);
@@ -459,12 +459,28 @@
                 if (safeFonts.indexOf(sellerBlock.fontFamily) !== -1) customerStyle += 'font-family:' + sellerBlock.fontFamily + ';';
                 customerStyle += 'font-weight:' + (Number.isFinite(sellerWeight) && sellerWeight >= 400 ? Math.min(900, Math.max(400, Math.round(sellerWeight / 100) * 100)) : (sellerBlock.bold === false ? 600 : 700)) + ';';
                 if (sellerBlock.align) customerStyle += 'text-align:' + esc(String(sellerBlock.align)) + ';';
-                if (layout.canvas) customerTop = Math.max(0, Number(sellerBlock.y) + Math.max(18, Number(sellerBlock.h) || 18) + 2 - canvasTopOffset);
+                if (layout.canvas) {
+                    // Match the seller block's FINAL canvas position after the
+                    // basket expansion shift, not its original saved y value.
+                    var sellerY = Number(sellerBlock.y) || 0;
+                    var basketForCustomer = layout.blocks.find(function (entry) { return entry.type === 'items'; });
+                    if (dynamicItemsShift && basketForCustomer &&
+                        sellerY >= Number(basketForCustomer.y) + Math.max(28, Number(basketForCustomer.h) || 0)) {
+                        sellerY += dynamicItemsShift;
+                    }
+                    customerTop = Math.max(0, sellerY - canvasTopOffset + Math.max(18, Number(sellerBlock.h) || 18) + 3);
+                    customerLeft = Math.max(0, Number(sellerBlock.x) || 0);
+                    customerWidth = Math.max(5, Math.min(100, Number(sellerBlock.w) || 100));
+                }
             } else if (layout.canvas) {
                 var headerBlock = layout.blocks.find(function (entry) { return ['transaction', 'store', 'logo'].indexOf(entry.type) !== -1; });
-                if (headerBlock) customerTop = Math.max(0, Number(headerBlock.y) + Math.max(24, Number(headerBlock.h) || 24) + 3 - canvasTopOffset);
+                if (headerBlock) {
+                    customerTop = Math.max(0, Number(headerBlock.y) + Math.max(24, Number(headerBlock.h) || 24) + 3 - canvasTopOffset);
+                    customerLeft = Math.max(0, Number(headerBlock.x) || 0);
+                    customerWidth = Math.max(5, Math.min(100, Number(headerBlock.w) || 100));
+                }
             }
-            var customerHtml = '<section class="rd-block rd-versement-customer rd-sale-client" style="' + customerStyle + (layout.canvas ? 'position:absolute;left:0;top:' + customerTop + 'px;width:100%;margin:0;' : 'margin:2px 0 0;') + '">' +
+            var customerHtml = '<section class="rd-block rd-versement-customer rd-sale-client" style="' + customerStyle + (layout.canvas ? 'position:absolute;left:' + customerLeft + '%;top:' + customerTop + 'px;width:' + customerWidth + '%;margin:0;z-index:2;background:#fff;' : 'margin:2px 0 0;') + '">' +
                 (present(values.customer_name) ? '<div><strong>' + esc(label('Client')) + ': ' + esc(String(values.customer_name).trim()) + '</strong></div>' : '') +
                 (present(values.customer_phone) ? '<div><strong>' + esc(label('Téléphone')) + ': ' + esc(String(values.customer_phone).trim()) + '</strong></div>' : '') + '</section>';
             var customerIndex = sellerRenderedIndex >= 0 ? sellerRenderedIndex + 1 : rendered.findIndex(function (entry) { return entry.type === 'items' || entry.type === 'totals'; });
