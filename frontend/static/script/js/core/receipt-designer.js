@@ -446,17 +446,28 @@
             return { type: b.type, half: b.type === 'field' && b.width === 50, customer: b.type === 'field' && /^customer_/.test(b.field), supporting: b.type === 'text' || b.type === 'field' || ((b.type === 'qr' || b.type === 'image') && b.width <= 40), html: '<section class="rd-block rd-block-' + b.type + (b.type === 'field' ? ' rd-field-' + b.field : '') + '" data-block-id="' + esc(b.id) + '" style="' + style + '">' + content + '</section>' };
         }).filter(Boolean);
         if (data.versement_checkout && data.sales_id && (present(values.customer_name) || present(values.customer_phone))) {
-            var customerTop = 0;
-            if (layout.canvas) {
+            // Keep the Versement customer directly beneath the vendor/seller line,
+            // using the same saved receipt typography rather than a detached default.
+            var sellerBlock = layout.blocks.find(function (entry) { return entry.type === 'field' && entry.field === 'seller_name'; });
+            var sellerRenderedIndex = rendered.findIndex(function (entry) { return entry.type === 'field' && entry.html.indexOf('rd-field-seller_name') !== -1; });
+            var customerTop = 0, customerStyle = '';
+            if (sellerBlock) {
+                var sellerFont = Number(sellerBlock.fontSize);
+                var sellerWeight = Number(sellerBlock.fontWeight);
+                var safeFonts = ['Arial, sans-serif','Arial Black, sans-serif','Tahoma, sans-serif','Verdana, sans-serif','Georgia, serif','Courier New, monospace','monospace','Trebuchet MS, sans-serif','Segoe UI, sans-serif','Impact, sans-serif','Franklin Gothic Medium, sans-serif','Lucida Console, monospace','Times New Roman, serif'];
+                if (Number.isFinite(sellerFont) && sellerFont >= 8 && sellerFont <= 96) customerStyle += 'font-size:' + sellerFont + 'px;';
+                if (safeFonts.indexOf(sellerBlock.fontFamily) !== -1) customerStyle += 'font-family:' + sellerBlock.fontFamily + ';';
+                customerStyle += 'font-weight:' + (Number.isFinite(sellerWeight) && sellerWeight >= 400 ? Math.min(900, Math.max(400, Math.round(sellerWeight / 100) * 100)) : (sellerBlock.bold === false ? 600 : 700)) + ';';
+                if (sellerBlock.align) customerStyle += 'text-align:' + esc(String(sellerBlock.align)) + ';';
+                if (layout.canvas) customerTop = Math.max(0, Number(sellerBlock.y) + Math.max(18, Number(sellerBlock.h) || 18) + 2 - canvasTopOffset);
+            } else if (layout.canvas) {
                 var headerBlock = layout.blocks.find(function (entry) { return ['transaction', 'store', 'logo'].indexOf(entry.type) !== -1; });
-                var itemsBlock = layout.blocks.find(function (entry) { return entry.type === 'items'; });
                 if (headerBlock) customerTop = Math.max(0, Number(headerBlock.y) + Math.max(24, Number(headerBlock.h) || 24) + 3 - canvasTopOffset);
-                if (itemsBlock && Number.isFinite(Number(itemsBlock.y))) customerTop = Math.min(customerTop, Math.max(0, Number(itemsBlock.y) - canvasTopOffset - 36));
             }
-            var customerHtml = '<section class="rd-block rd-versement-customer" style="' + (layout.canvas ? 'position:absolute;left:0;top:' + customerTop + 'px;width:100%;margin:0;' : '') + '">' +
-                (present(values.customer_name) ? '<div><strong>' + esc(label('Client')) + ':</strong> ' + esc(String(values.customer_name).trim()) + '</div>' : '') +
-                (present(values.customer_phone) ? '<div><strong>' + esc(label('Téléphone')) + ':</strong> ' + esc(String(values.customer_phone).trim()) + '</div>' : '') + '</section>';
-            var customerIndex = rendered.findIndex(function (entry) { return entry.type === 'items' || entry.type === 'totals'; });
+            var customerHtml = '<section class="rd-block rd-versement-customer rd-sale-client" style="' + customerStyle + (layout.canvas ? 'position:absolute;left:0;top:' + customerTop + 'px;width:100%;margin:0;' : 'margin:2px 0 0;') + '">' +
+                (present(values.customer_name) ? '<div><strong>' + esc(label('Client')) + ': ' + esc(String(values.customer_name).trim()) + '</strong></div>' : '') +
+                (present(values.customer_phone) ? '<div><strong>' + esc(label('Téléphone')) + ': ' + esc(String(values.customer_phone).trim()) + '</strong></div>' : '') + '</section>';
+            var customerIndex = sellerRenderedIndex >= 0 ? sellerRenderedIndex + 1 : rendered.findIndex(function (entry) { return entry.type === 'items' || entry.type === 'totals'; });
             if (customerIndex < 0) customerIndex = rendered.length;
             rendered.splice(customerIndex, 0, { type: 'versement_customer', half: false, customer: false, supporting: true, html: customerHtml });
         }
