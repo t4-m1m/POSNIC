@@ -546,17 +546,27 @@
         var useRawThermal = false;
         if (printer && printer.print && options.showDialog !== true) {
             return Promise.resolve().then(function () {
-                    // Preferences are synchronized when Hardware Manager loads or changes them.
-                    // Avoid a settings round-trip on every checkout print.
+                    // Never send a receipt to a virtual PDF queue: Windows then
+                    // asks for a filename instead of printing paper. If the saved
+                    // or system-default queue is virtual, prefer the installed
+                    // PRP-300 receipt printer, then a physical Windows default.
                     var chosen = options.target ? options.target.name : PosnicPro.resolveReceiptPrinter();
+                    var isVirtualQueue = function (name) {
+                        return /print.*pdf|pdf.*print|xps|onenote|fax/i.test(String(name || ''));
+                    };
                     if (chosen === 'default') chosen = '';
-                    if (chosen) return chosen;
-                    return Promise.resolve(printer.getDefault()).then(function (fallback) {
-                        var name = fallback && typeof fallback === 'object' ? fallback.name : fallback;
-                        if (!name || (PosnicPro._kitchenPrinters || []).indexOf(String(name).trim().toLowerCase()) !== -1) {
-                            throw new Error('Choose a receipt printer in Hardware Manager.');
-                        }
-                        return name;
+                    if (chosen && !isVirtualQueue(chosen)) return chosen;
+                    return Promise.resolve(printer.list ? printer.list() : []).then(function (queues) {
+                        queues = Array.isArray(queues) ? queues : [];
+                        var physical = queues.filter(function (queue) {
+                            var name = queue && queue.name;
+                            return name && !isVirtualQueue(name) && !/(?:label|tsc)/i.test(String(name));
+                        });
+                        var receiptQueue = physical.find(function (queue) { return /prp.?300/i.test(String(queue.name)); });
+                        if (!receiptQueue) receiptQueue = physical.find(function (queue) { return queue.isDefault === true; });
+                        if (!receiptQueue && chosen && !isVirtualQueue(chosen)) return chosen;
+                        if (!receiptQueue) throw new Error('No physical receipt printer is available. Connect the Tysso/Tysoo PRP-300 and select it in Printers & paper.');
+                        return receiptQueue.name;
                     });
                 }).then(function (name) { return printer.print(doc, { printerName: name,
                 pageSize: ['58', '80', '112'].indexOf(format) !== -1 ? format + 'mm' : format,
