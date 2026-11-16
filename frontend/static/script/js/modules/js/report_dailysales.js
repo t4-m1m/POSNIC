@@ -151,7 +151,16 @@ PosnicPro.quickreport = {
         loader.find(".loadingSpinner:first").remove();
         if (response.type !== "success") {
           $("#daily-meal-status").text("Could not update the report.");
-          PosnicPro.alert(response.type, response.message);
+          // The API keeps the original exception in response.data while
+          // returning a generic SERVER_ERROR message. Surface that detail so
+          // a failed cash-closing report can be diagnosed instead of hiding
+          // the actual MongoDB/date error behind "Server error".
+          var reportErrorDetail = typeof response.data === "string"
+            ? response.data
+            : (response.data && (response.data.message || response.data.error)) || "";
+          PosnicPro.alert(response.type, reportErrorDetail
+            ? response.message + " — " + reportErrorDetail
+            : response.message);
           return;
         }
 
