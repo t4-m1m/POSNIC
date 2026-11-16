@@ -70,20 +70,24 @@
     $('#hr_payroll_rows').html('<tr><td colspan="7">Chargement…</td></tr>');
     request('GET','hr/payroll/'+encodeURIComponent(p),{},function(d){
       var rows=(Array.isArray(d)?d:(d.data||[])).map(function(w){
-        return '<tr><td>'+esc(w.name)+'</td><td>'+money(w.monthly_salary)+'</td><td>'+money((w.overtime||0)+(w.primes||0))+'</td><td>'+money(w.advances)+'</td><td>'+money(w.paid)+'</td><td><strong>'+money(w.remaining)+'</strong></td><td><button class="btn btn-sm btn-primary" onclick="PosnicPro.hr.openTransaction(\''+esc(w._id)+'\',\'salary_payment\',\''+esc(p)+'\')">Payer</button></td></tr>';
+        return '<tr><td>'+esc(w.name)+'</td><td>'+money(w.monthly_salary)+'</td><td>'+money(w.overtime)+'</td><td>'+money(w.weekly_primes)+'</td><td>'+money(w.monthly_primes)+'</td><td>'+money(w.advances)+'</td><td>'+money(w.paid)+'</td><td><strong>'+money(w.remaining)+'</strong></td><td><button class="btn btn-sm btn-primary" onclick="PosnicPro.hr.openTransaction(\''+esc(w._id)+'\',\'salary_payment\',\''+esc(p)+'\')">Payer</button></td></tr>';
       }).join('');
-      $('#hr_payroll_rows').html(rows||'<tr><td colspan="7">Aucun salarié actif.</td></tr>');
+      $('#hr_payroll_rows').html(rows||'<tr><td colspan="9">Aucun salarié actif.</td></tr>');
     });
   }
   function loadTransactions() {
     var data={}; if($('#hr_tx_worker').val())data.worker_id=$('#hr_tx_worker').val();if($('#hr_tx_period').val())data.period=$('#hr_tx_period').val();
-    $('#hr_transactions_rows').html('<tr><td colspan="6">Chargement…</td></tr>');
+    $('#hr_transactions_rows').html('<tr><td colspan="7">Chargement…</td></tr>');
     request('GET','hr/transactions',data,function(d){
       var labels={salary_payment:'Paiement salaire',advance:'Acompte',overtime:'Heures supplémentaires (ancien)',prime_weekly:'Prime hebdomadaire',prime_monthly:'Prime mensuelle',adjustment:'Ajustement'};
       var rows=(Array.isArray(d)?d:(d.data||[])).map(function(t){
-        return '<tr><td>'+esc(String(t.date||'').slice(0,10))+'</td><td>'+esc(t.worker_name)+'</td><td>'+esc(labels[t.type]||t.type)+'</td><td>'+esc(t.period)+'</td><td>'+money(t.amount)+'</td><td>'+esc([t.hours?String(t.hours)+' h':'',t.method||'',t.reference||'',t.notes||''].filter(Boolean).join(' · ')||'—')+'</td></tr>';
+        var cancelled=!!(t.cancelled_at||t.is_cancelled);
+        var typeLabel=labels[t.type]||t.type;
+        if(cancelled)typeLabel+=' (annulé)';
+        var action=t.type==='salary_payment'&&!cancelled?'<button class="btn btn-sm btn-outline-danger" onclick="PosnicPro.hr.cancelSalaryPayment(\''+esc(t._id)+'\')">Annuler</button>':(t.type==='salary_payment'&&cancelled?'<span class="badge badge-secondary">Annulé</span>':'—');
+        return '<tr><td>'+esc(String(t.date||'').slice(0,10))+'</td><td>'+esc(t.worker_name)+'</td><td>'+esc(typeLabel)+'</td><td>'+esc(t.period)+'</td><td>'+money(t.amount)+'</td><td>'+esc([t.hours?String(t.hours)+' h':'',t.method||'',t.reference||'',t.notes||'',t.cancellation_note||''].filter(Boolean).join(' · ')||'—')+'</td><td>'+action+'</td></tr>';
       }).join('');
-      $('#hr_transactions_rows').html(rows||'<tr><td colspan="6">Aucun mouvement pour ces filtres.</td></tr>');
+      $('#hr_transactions_rows').html(rows||'<tr><td colspan="7">Aucun mouvement pour ces filtres.</td></tr>');
     });
   }
   PosnicPro.hr={
@@ -112,6 +116,12 @@
           }
         });
       }
+    },
+    cancelSalaryPayment:function(id){
+      if(!id||!window.confirm('Annuler ce paiement de salaire ? Il restera visible dans l’historique avec le statut annulé et sera retiré des calculs de paie et de clôture.'))return;
+      var reason=window.prompt('Motif de l’annulation (facultatif) :','');
+      if(reason===null)return;
+      request('POST','hr/transactions/'+encodeURIComponent(id)+'/cancel',{reason:reason},function(){notice('Paiement annulé. Les totaux de paie et de clôture seront recalculés.','success');loadPayroll();loadTransactions();loadSummary();});
     },
     loadPayroll:loadPayroll,
     loadTransactions:loadTransactions

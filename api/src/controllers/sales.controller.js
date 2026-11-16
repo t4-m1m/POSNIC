@@ -2007,6 +2007,8 @@ class SalesController extends BaseController {
           $match: {
             license: BaseModel.license || req.user.license || req.user.license_id,
             type: 'salary_payment',
+            cancelled_at: { $exists: false },
+            is_cancelled: { $ne: true },
           },
         },
         {
@@ -2049,7 +2051,7 @@ class SalesController extends BaseController {
         salaryPaymentDetails.reduce((sum, row) => sum + row.amount, 0)
       );
       const salaryAdvanceRows = await db.collection('hr_transactions').aggregate([
-        { $match: { license: BaseModel.license || req.user.license || req.user.license_id, type: 'advance' } },
+        { $match: { license: BaseModel.license || req.user.license || req.user.license_id, type: 'advance', cancelled_at: { $exists: false }, is_cancelled: { $ne: true } } },
         { $addFields: {
           reportAdvanceDate: { $convert: { input: '$date', to: 'date', onError: null, onNull: null } },
           reportAdvanceAmount: { $convert: { input: '$amount', to: 'double', onError: 0, onNull: 0 } },
@@ -2073,6 +2075,37 @@ class SalesController extends BaseController {
       }));
       const salaryAdvancesTotal = roundToTwo(salaryAdvanceDetails.reduce((sum, row) => sum + row.amount, 0));
 
+      const salaryPrimeRows = await db.collection('hr_transactions').aggregate([
+        { $match: {
+          license: BaseModel.license || req.user.license || req.user.license_id,
+          type: { $in: ['prime_weekly', 'prime_monthly'] },
+          cancelled_at: { $exists: false },
+          is_cancelled: { $ne: true },
+        } },
+        { $addFields: {
+          reportPrimeDate: { $convert: { input: '$date', to: 'date', onError: null, onNull: null } },
+          reportPrimeAmount: { $convert: { input: '$amount', to: 'double', onError: 0, onNull: 0 } },
+        } },
+        { $match: { $expr: { $and: [
+          { $gte: ['$reportPrimeDate', reportStart] },
+          { $lt: ['$reportPrimeDate', reportEnd] },
+        ] } } },
+        { $group: {
+          _id: { worker_name: '$worker_name', type: '$type', method: { $ifNull: ['$method', 'cash'] }, notes: { $ifNull: ['$notes', ''] } },
+          amount: { $sum: '$reportPrimeAmount' }, count: { $sum: 1 },
+        } },
+        { $sort: { '_id.worker_name': 1, '_id.type': 1 } },
+      ]).toArray();
+      const salaryPrimeDetails = salaryPrimeRows.map((row) => ({
+        worker_name: String(row._id?.worker_name || 'Employé'),
+        type: String(row._id?.type || 'prime_weekly'),
+        method: String(row._id?.method || 'cash'),
+        notes: String(row._id?.notes || ''),
+        amount: roundToTwo(row.amount || 0),
+        count: Number(row.count) || 0,
+      }));
+      const salaryPrimesTotal = roundToTwo(salaryPrimeDetails.reduce((sum, row) => sum + row.amount, 0));
+
       const salesCount = salesPayments.length;
 
       // ---- Build response data ----
@@ -2093,6 +2126,8 @@ class SalesController extends BaseController {
         salary_payment_details: salaryPaymentDetails,
         salary_advances_total: salaryAdvancesTotal,
         salary_advance_details: salaryAdvanceDetails,
+        salary_primes_total: salaryPrimesTotal,
+        salary_prime_details: salaryPrimeDetails,
         outstanding_amount: roundToTwo(outstandingAmount),
         dine_details: dineDetails,
         tax_details: taxDetails,

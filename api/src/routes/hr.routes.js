@@ -77,7 +77,7 @@ router.get('/summary', async (req, res) => {
     const { license } = req.hrContext;
     const [workers, tx] = await Promise.all([
       (await collection('hr_workers')).find({ license, active: { $ne: false }, deleted: { $ne: true } }).toArray(),
-      (await collection('hr_transactions')).find({ license }).sort({ date: -1 }).limit(5000).toArray()
+      (await collection('hr_transactions')).find({ license, cancelled_at: { $exists: false }, is_cancelled: { $ne: true } }).sort({ date: -1 }).limit(5000).toArray()
     ]);
     const now = new Date(), period = String(now.getFullYear()) + '-' + String(now.getMonth() + 1).padStart(2, '0');
     const monthTx = tx.filter(t => String(t.period || '').startsWith(period));
@@ -161,7 +161,7 @@ router.post('/transactions', async (req,res) => {
     if (type === 'salary_payment' || type === 'advance') {
       // Prevent both advances and salary payments from exceeding the unpaid balance.
       const existing = await (await collection('hr_transactions'))
-        .find({ license, worker_id: workerId, period, type: { $in: ['salary_payment', 'advance', 'overtime', 'prime_weekly', 'prime_monthly', 'adjustment'] } })
+        .find({ license, worker_id: workerId, period, cancelled_at: { $exists: false }, is_cancelled: { $ne: true }, type: { $in: ['salary_payment', 'advance', 'overtime', 'prime_weekly', 'prime_monthly', 'adjustment'] } })
         .toArray();
       const advances = existing.filter(t => t.type === 'advance').reduce((sum, t) => sum + Number(t.amount || 0), 0);
       const paid = existing.filter(t => t.type === 'salary_payment').reduce((sum, t) => sum + Number(t.amount || 0), 0);
@@ -182,6 +182,26 @@ router.post('/transactions', async (req,res) => {
     res.status(201).json({status:true,data:{...doc,_id:String(result.insertedId),worker_id:String(workerId)},message:'Transaction recorded.'});
   } catch(e) { sendError(res,e); }
 });
+router.post('/transactions/:id/cancel', async (req,res) => {
+  try {
+    if (!ObjectId.isValid(req.params.id)) return res.status(400).json({status:false,message:'Invalid transaction ID.'});
+    const {license,username,userId}=req.hrContext;
+    const col=await collection('hr_transactions');
+    const now=new Date();
+    const result=await col.updateOne(
+      {_id:new ObjectId(req.params.id),license,type:'salary_payment',cancelled_at:{$exists:false},is_cancelled:{$ne:true}},
+      {$set:{cancelled_at:now,cancelled_by:userId,cancelled_by_name:username,cancellation_note:String((req.body||{}).reason||'').trim(),updated_at:now}}
+    );
+    if (!result.matchedCount) {
+      const existing=await col.findOne({_id:new ObjectId(req.params.id),license});
+      if (!existing) return res.status(404).json({status:false,message:'Salary payment not found.'});
+      if (existing.type!=='salary_payment') return res.status(400).json({status:false,message:'Only salary payments can be cancelled here.'});
+      return res.status(409).json({status:false,message:'This salary payment is already cancelled.'});
+    }
+    res.json({status:true,message:'Salary payment cancelled. Payroll and cash closing totals have been recalculated.'});
+  } catch(e) { sendError(res,e); }
+});
+
 router.get('/payroll/:period', async (req,res) => {
   try {
     const period=String(req.params.period||'');
@@ -189,10 +209,10 @@ router.get('/payroll/:period', async (req,res) => {
     const {license}=req.hrContext;
     const [workers,tx]=await Promise.all([
       (await collection('hr_workers')).find({license,active:{$ne:false},deleted:{$ne:true}}).toArray(),
-      (await collection('hr_transactions')).find({license,period}).toArray()
+      (await collection('hr_transactions')).find({license,period,cancelled_at:{$exists:false},is_cancelled:{$ne:true}}).toArray()
     ]);
     const rows=workers.map(w=>{
-      const entries=tx.filter(t=>String(t.worker_id)===String(w._id));
+      const entries=tx.filter(t=>String(t.worker_id)===String(w._id) && !t.cancelled_at && t.is_cancelled!==true);
       const advances=entries.filter(t=>t.type==='advance').reduce((s,t)=>s+t.amount,0);
       const overtime=entries.filter(t=>t.type==='overtime').reduce((s,t)=>s+t.amount,0);
       const weekly_primes=entries.filter(t=>t.type==='prime_weekly').reduce((s,t)=>s+t.amount,0);
