@@ -1923,7 +1923,16 @@ class SalesController extends BaseController {
       const refundLabels = { cash: 'Cash', tpe: 'TPE', baridimob: 'BaridiMob', card: 'Card' };
       refundRows.forEach((row) => {
         const amount = roundToTwo(row.amount || 0);
-        if (amount > 0) addPaymentMovement(refundLabels[String(row._id || 'cash').toLowerCase()] || String(row._id || 'Cash'), -amount, { is_refund: true });
+        if (amount > 0) {
+          // Refunds are outflows, not fresh receipts. Keep them in the same
+          // payment breakdown as a negative movement; the old call referenced
+          // an undefined helper and threw a 500 whenever this day had a refund.
+          paymentDetails.push({
+            payment_mode: refundLabels[String(row._id || 'cash').toLowerCase()] || String(row._id || 'Cash'),
+            sale_payment: -amount,
+            is_refund: true,
+          });
+        }
       });
 
       const debtPaymentRows = await db.collection('credit_payments').aggregate([
