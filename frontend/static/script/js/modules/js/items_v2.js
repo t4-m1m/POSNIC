@@ -315,7 +315,10 @@
             nameInput.dispatchEvent(new Event('input', { bubbles: true }));
     }
     function open(initialName) {
-        if (editing) reset();
+        // A successful save leaves the editor in its result/locked state. A new
+        // Add article action must start a fresh draft just like Create another;
+        // otherwise the previous article's values and detail state leak forward.
+        if (editing || saved) reset();
         if (P.HideSideBarModal) P.HideSideBarModal();
         $('.page_loader,#osk-container').hide(); $('#items_v2').show();
         capabilities = readCapabilities();
