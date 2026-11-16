@@ -827,6 +827,35 @@ PosnicPro.dashboard = {
         // estimate - not a confident green profit or an alarming red loss - and
         // say plainly what to fix, so a data gap never reads as a real loss.
         var reliable = profit.cost_reliable !== false;
+        var composition = $('#dashboard-profit-composition').empty();
+        var marginRing = $('#dashboard-profit-margin-ring').empty();
+        if (reliable) {
+            var grossValue = Number(profit.gross_profit) || 0;
+            var expenseValue = Number(profit.expenses) || 0;
+            var maxValue = Math.max(Math.abs(grossValue), Math.abs(expenseValue), 1);
+            function addProfitBar(label, amount, fill) {
+                var width = Math.max(0, Math.min(100, Math.abs(amount) / maxValue * 100));
+                var row = $('<div class="mb-2" style="display:grid;grid-template-columns:105px minmax(40px,1fr) auto;align-items:center;gap:10px;font-size:12px"></div>');
+                row.append($('<span class="text-muted"></span>').text(label));
+                var track = $('<div style="height:12px;border-radius:20px;background:var(--theme-border-color,#e5e7eb);overflow:hidden"></div>');
+                track.append($('<span style="display:block;height:100%;border-radius:20px"></span>').css({width:width+'%',background:fill}));
+                row.append(track, $('<strong style="white-space:nowrap"></strong>').text(money(amount)));
+                composition.append(row);
+            }
+            addProfitBar('Gross profit', grossValue, '#16a34a');
+            addProfitBar('Expenses', expenseValue, '#ef4444');
+            var marginPercent = Number(profit.margin_percent) || 0;
+            var radius = 43, circumference = 2 * Math.PI * radius;
+            var ring = $('<svg viewBox="0 0 120 120" role="img" aria-label="Net profit margin" style="width:116px;height:116px;display:block"></svg>');
+            ring.append('<circle cx="60" cy="60" r="43" fill="none" stroke="var(--theme-border-color,#e5e7eb)" stroke-width="10"></circle>');
+            ring.append($('<circle cx="60" cy="60" r="43" fill="none" stroke="#16a34a" stroke-width="10" stroke-linecap="round" transform="rotate(-90 60 60)"></circle>').attr({'stroke-dasharray':(circumference*Math.max(0,Math.min(100,marginPercent))/100)+' '+circumference}));
+            ring.append($('<text x="60" y="57" text-anchor="middle" font-size="17" font-weight="700" fill="currentColor"></text>').text(marginPercent.toFixed(1)+'%'));
+            ring.append('<text x="60" y="72" text-anchor="middle" font-size="8" fill="currentColor">NET MARGIN</text>');
+            marginRing.append(ring);
+        } else {
+            composition.html('<div class="text-muted small py-3">Profit comparison unavailable until item costs are complete.</div>');
+            marginRing.html('<div class="text-muted small text-center py-4">N/A</div>');
+        }
         var netEl = $('#profit_net').removeClass('text-success text-danger text-muted');
         if (reliable) {
             var net = Number(profit.net_profit) || 0;

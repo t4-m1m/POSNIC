@@ -12065,7 +12065,7 @@ document.addEventListener('keydown',function(event){if(event.key!=='F6'||event.r
         var name = String(chosenName || '').trim();
         var key = $modal.data('pending-key');
         if (!name || cashierNames().indexOf(name) === -1) {
-            $('#posnic-vendeur-select').trigger('focus');
+            $('#posnic-vendeur-options .posnic-vendeur-option').first().trigger('focus');
             PosnicPro.alert('warning', 'Sélectionnez un vendeur configuré dans Paramètres > Général > Vente.');
             return;
         }
