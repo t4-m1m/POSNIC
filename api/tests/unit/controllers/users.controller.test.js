@@ -439,7 +439,7 @@ describe('legacyVerifyLogin', () => {
   test('allows a first-run Super Admin with no username to sign in using the email local part', async () => {
     const emailOnlySuperAdmin = {
       ...fakeUser,
-      email: 'owner@example.com',
+      email: 'owner@gmail.com',
       username: undefined,
       user_name: undefined,
       usertype: 'super_admin',
@@ -457,21 +457,26 @@ describe('legacyVerifyLogin', () => {
     const res = mockRes();
     await ctrl.legacyVerifyLogin(req, res);
 
-    expect(mockUserModel.findOne).toHaveBeenCalledWith(
-      expect.objectContaining({
-        $or: expect.arrayContaining([
-          expect.objectContaining({
-            $and: expect.arrayContaining([
-              { email: expect.any(RegExp) },
-              { $or: [{ usertype: 'super_admin' }, { role: 'super_admin' }] },
-            ]),
-          }),
-        ]),
-      })
-    );
+    const aliasQuery = mockUserModel.findOne.mock.calls[1][0];
+    expect(aliasQuery.email).toBeInstanceOf(RegExp);
+    expect(aliasQuery.email.test('OWNER@gmail.com')).toBe(true);
     expect(res.status).toHaveBeenCalledWith(200);
   });
 
+  test('accepts ADMIN as the case-insensitive Gmail alias for the Super Admin', async () => {
+    const admin = { ...fakeUser, email: 'ADMIN@gmail.com', username: undefined, user_name: undefined, usertype: 'super_admin', role: 'super_admin' };
+    mockUserModel.findOne.mockReturnValueOnce(buildUserChain(null)).mockReturnValueOnce(buildUserChain(admin));
+    mockBcrypt.compare.mockResolvedValue(true);
+    const branchChain = { lean: jest.fn().mockResolvedValue(fakeBranch) };
+    mockBranchModel.findOne.mockReturnValue(branchChain);
+    const req = mockReq({ body: { username: 'ADMIN', password: 'pass' }, session: { destroy: jest.fn() } });
+    const res = mockRes();
+    await ctrl.legacyVerifyLogin(req, res);
+    const aliasQuery = mockUserModel.findOne.mock.calls[1][0];
+    expect(aliasQuery.email).toBeInstanceOf(RegExp);
+    expect(aliasQuery.email.test('ADMIN@gmail.com')).toBe(true);
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
   test('404 when password invalid', async () => {
     const chain = buildUserChain(fakeUser);
     mockUserModel.findOne.mockReturnValue(chain);

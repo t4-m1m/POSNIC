@@ -204,9 +204,21 @@ class UsersController extends BaseController {
         return next(new AppError('Please provide a username and password!', httpStatus.BAD_REQUEST));
       }
 
-      const user = await this.userModel
+      let user = await this.userModel
         .findOne({ $or: [{ username: loginId }, { email: loginId }] })
         .select('+password');
+
+      // The Super Admin may use the Gmail local-part without changing the
+      // stored account or password. Existing username logins remain unchanged.
+      if (!loginId.includes('@') && /^[a-z0-9._+-]+$/i.test(loginId)) {
+        const escapedLocalPart = loginId.replace(/[.+]/g, (char) => '\\' + char);
+        const alias = await this.userModel
+          .findOne({ email: new RegExp('^' + escapedLocalPart + '@gmail\\.com$', 'i') })
+          .select('+password +usertype +role');
+        const aliasRoles = [alias && alias.usertype, alias && alias.role]
+          .map((value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+        if (alias && aliasRoles.includes('superadmin')) user = alias;
+      }
 
       if (
         !user ||
@@ -306,9 +318,10 @@ class UsersController extends BaseController {
         .lean();
 
       if (!loginId.includes('@')) {
+        const escapedLocalPart = loginId.replace(/[.+]/g, (char) => '\\' + char);
         const candidate = await this.userModel
-          .findOne({ email: loginId.toLowerCase() + '@gmail.com' })
-          .select('+password +license +branch_access +printing_design +access +plan +plan_access +activate +firstname +lastname +username +user_name +email +image +register_status +usertype +role +role_id')
+          .findOne({ email: new RegExp('^' + escapedLocalPart + '@gmail\\.com$', 'i') })
+          .select('+password +license +branch_access +printing_design +access +plan +plan_access +activate +firstname +lastname +username +user_name +email +image +register_status +usertype +role +role_id +is_super_admin')
           .lean();
         const candidateRoles = [candidate && candidate.usertype, candidate && candidate.role]
           .map((value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''));

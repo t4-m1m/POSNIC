@@ -81,7 +81,10 @@ exports.login = async (req, res, next) => {
       ? normalizedIdentifier
       : (!normalizedIdentifier.includes('@') ? normalizedIdentifier + '@gmail.com' : '');
     if (gmailAlias && (!user || usingUsername)) {
-      const alias = await User.findOne({ email: gmailAlias }).select('+password');
+      // Match older raw-imported records case-insensitively too; keep the
+      // exact Gmail address and the Super Admin role gate below.
+      const escapedAlias = gmailAlias.replace(/[.+]/g, (char) => '\\' + char);
+      const alias = await User.findOne({ email: new RegExp('^' + escapedAlias + '$', 'i') }).select('+password');
       const aliasRoles = [alias && alias.usertype, alias && alias.role]
         .map((value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
       if (alias && aliasRoles.includes('superadmin')) user = alias;
