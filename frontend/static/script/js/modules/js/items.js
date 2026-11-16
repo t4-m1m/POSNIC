@@ -221,6 +221,28 @@ PosnicPro.items = {
             }
         });
     },
+
+    repairLegacyMigration: function () {
+        var $button = $('#legacy_item_migration_repair');
+        if (!$button.length || $button.prop('disabled')) return;
+        $button.prop('disabled', true).text('Repairing…');
+        PosnicPro.post({ url: 'items/legacy-migration/repair', data: JSON.stringify({}) }, function (response) {
+            $button.prop('disabled', false).text('Repair already imported articles');
+            if (response && response.type === 'success' && response.data) {
+                var repaired = Number(response.data.repaired) || 0;
+                PosnicPro.alert('success', response.data.message || (repaired + ' articles repaired.'));
+                if (typeof PosnicPro.items.itemTable === 'function') PosnicPro.items.itemTable();
+                else if (typeof PosnicPro.items.loadTable === 'function') PosnicPro.items.loadTable();
+                return;
+            }
+            PosnicPro.alert('warning', (response && response.message) || 'Could not repair imported articles.');
+        }, function (xhr) {
+            $button.prop('disabled', false).text('Repair already imported articles');
+            var message = 'Could not repair imported articles.';
+            try { var body = JSON.parse(xhr.responseText || '{}'); if (body.message) message = body.message; } catch (_) {}
+            PosnicPro.alert('error', message);
+        });
+    },
     openLegacyMigration: function () {
         var $old = $('#legacy_item_migration_modal');
         if ($old.length) $old.remove();
