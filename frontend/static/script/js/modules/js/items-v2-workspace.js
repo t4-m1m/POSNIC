@@ -76,7 +76,17 @@
         if (pendingVariants.some(function (row) { return row.unit_id && !available.includes(row.unit_id); })) return;
         var rows = pendingVariants; pendingVariants = null; P.itemsV2Details.restoreDraft(rows);
     }
-    function reset() { clear(); locked = false; el('layout').hidden = false; el('success').hidden = true; el('draft-notice').hidden = true; el('draft-note').textContent = ''; select('step1'); }
+    function reset() {
+        clear();
+        locked = false;
+        active = 'step1';
+        el('layout').hidden = false;
+        el('success').hidden = true;
+        el('success').replaceChildren();
+        el('draft-notice').hidden = true;
+        el('draft-note').textContent = '';
+        select('step1');
+    }
     function button(text, action) { var b = document.createElement('button'); b.type = 'button'; b.textContent = text; b.onclick = action; return b; }
     function init(actions) {
         callbacks = actions; if (bound) return; bound = true;
