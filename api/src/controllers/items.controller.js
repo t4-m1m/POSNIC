@@ -2170,6 +2170,27 @@ class ItemsController extends BaseController {
     }
   }
 
+
+  async legacyMigrationRepair(req, res) {
+    try {
+      if (req.user?.access?.item?.write === false) return this.error(res, ERROR_MESSAGES.UNAUTHORIZED, 403);
+      await this.ensureContext(req);
+      const context = {
+        branchId: this.model?.branchId || null,
+        licenseId: this.model?.licenseId || null,
+        user: req.user || {},
+        userName: req.user?.name || req.user?.username || req.user?.email || 'System',
+        userId: req.user?._id || null,
+        branchName: req.user?.branch?.branch_name || req.user?.branch_name || req.user?.branch?.name || '',
+      };
+      const service = require('../services/legacy-item-migration');
+      const result = await service.repairImported(context);
+      return this.success(res, result, result.message);
+    } catch (error) {
+      return this.error(res, error.message || 'Could not repair imported articles', 400);
+    }
+  }
+
   /** Preview and additive import for the legacy Firebird standalone catalogue. */
   async legacyMigrationPreview(req, res) {
     try {
