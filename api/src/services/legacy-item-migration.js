@@ -84,7 +84,7 @@ async function inspect(payload, context) {
   const existing = await items.find({
     branch_id: scope.branchId,
     license: scope.licenseId,
-    del_status: { $ne: 'deleted' },
+    del_status: { $nin: [1, '1', true] },
     $or: [
       { barcode_id: { $in: barcodes } },
       { name: { $in: namePatterns } },
