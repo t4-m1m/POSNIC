@@ -551,7 +551,10 @@
                     return Promise.resolve(printer.list()).then(function (queues) {
                         queues = Array.isArray(queues) ? queues : [];
                         var physical = queues.filter(function (queue) {
-                            return queue && queue.name && !isVirtual(queue.name) && !isVirtual(queue.displayName);
+                            var queueName = String(queue && (queue.displayName || queue.name) || '');
+                            // Never let receipt fallback select the TSC label printer.
+                            return queue && queue.name && !isVirtual(queue.name) && !isVirtual(queue.displayName)
+                                && !/tsc.*tdp.?225|tdp.?225|label printer/i.test(queueName);
                         });
                         var selected = configured && !isVirtual(configured)
                             ? physical.find(function (queue) {
