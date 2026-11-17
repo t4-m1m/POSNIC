@@ -362,7 +362,7 @@
     }
     function currentYYMM() { var d = new Date(); return String(d.getFullYear()).slice(-2) + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
     function syncComposedName() {
-        var type = el('type-name').value.trim(), brand = el('brand-abbr').value.trim(), ref = el('reference').value.trim(), date = el('reference-date').value || currentYYMM();
+        var type = el('type-name').value.trim(), brand = el('brand-abbr').value.trim().toLowerCase(), ref = el('reference').value.trim(), date = el('reference-date').value || currentYYMM();
         var base = [type, brand].filter(Boolean).join(' ');
         var full = base;
         if (ref) full += (full ? '-' : '') + date + '/' + ref;
