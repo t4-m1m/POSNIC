@@ -362,7 +362,7 @@ PosnicPro.items = {
         return PosnicPro.items_v2.showModify(String(id));
     },
     showEdit: function (id) {
-        return PosnicPro.items.showModify(id);
+        return PosnicPro.items_v2.showEdit(id);
     },
     showDelete: function (id) {
         PosnicPro.deleteTableRowData(id, 'items');
@@ -1884,11 +1884,13 @@ PosnicPro.items = {
         });
     },
     /*Edit item dsetails*/
-    editItem: function (id) { return PosnicPro.items.modifyItem(id); },
+    editItem: function (id) { return PosnicPro.items_v2.showEdit(id); },
     modifyItem: function (id) {
-        if (!id) return false;
-        hasher.setHash('items/' + encodeURIComponent(String(id)) + '/modify');
-        return false;
+        if (!id || !PosnicPro.items_v2 || typeof PosnicPro.items_v2.showEdit !== 'function') return false;
+        // Open the record-bound editor directly. The route remains registered
+        // for bookmarks/history, but a click must not depend on a hash event
+        // racing the catalogue's legacy add-page state.
+        return PosnicPro.items_v2.showEdit(String(id));
     },
     _legacyEditItem: function (id) {
         var loader = $(".loader-item");
@@ -2072,7 +2074,7 @@ PosnicPro.items = {
     },
 
     resetEditButton: function (id) {
-        PosnicPro.items.editItem(id);
+        return PosnicPro.items_v2.showEdit(id);
     },
     addItemButton: function () {
         var loader = $(".loader-item");
