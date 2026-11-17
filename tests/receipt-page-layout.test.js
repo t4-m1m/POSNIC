@@ -14,10 +14,10 @@ test('thermal paper follows receipt content, never the enclosing window height',
         const fitted = fitDocument(doc);
         const printableWidth = ({ '58': 48, '80': 72, '112': 104 })[format];
         assert.equal(fitted.width, printableWidth * 1000);
-        assert.equal(fitted.height, 106100);
-        assert.match(doc.querySelector('#rd-fitted-paper').textContent, new RegExp('@page\\{size:' + printableWidth + 'mm 106.1mm;margin:0;'));
+        assert.equal(fitted.height, undefined);
+        assert.match(doc.querySelector('#rd-fitted-paper').textContent, new RegExp('@page\\{size:' + printableWidth + 'mm auto;margin:0;'));
         height = 200;
-        assert.equal(fitDocument(doc).height, 53200);
+        assert.equal(fitDocument(doc).height, undefined);
         assert.equal(doc.querySelectorAll('#rd-fitted-paper').length, 1);
         dom.window.close();
     }
@@ -44,7 +44,7 @@ test('browser dialogs use the selected printer paper without centring a smaller 
         assert.doesNotMatch(css, /size:\d/);
         assert.match(css, new RegExp('width:' + (({ '58': 48, '80': 72, '112': 104 })[format]) + 'mm!important'));
         assert.match(css, /\.rd-document\{margin:0!important;\}/);
-        assert.equal(result.height, 106100, 'The measured content remains available to desktop callers');
+        assert.equal(result.height, undefined, 'Thermal print media is continuous and has no calculated page height');
         assert.equal(doc.querySelectorAll('#rd-fitted-paper').length, 1);
         dom.window.close();
     }

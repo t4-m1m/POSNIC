@@ -996,7 +996,17 @@ PosnicPro.sales.view = {
             done();
         }, function () { done(); /* print what we have rather than nothing */ });
     },
-    printSale: function (id, name, isKotHistoryPrint, layoutOverride, copies) {
+    // Single-copy reprint entry point used by the Reports → Versements row action.
+    printVersementReceipt: function (saleId) {
+        var id = String(saleId || '').trim();
+        if (!id) {
+            PosnicPro.alert('error', 'Référence de vente introuvable.');
+            return false;
+        }
+        PosnicPro.sales.view.printSale(id, 'sale', false, null, 1);
+        return true;
+    },
+printSale: function (id, name, isKotHistoryPrint, layoutOverride, copies) {
         var copiesOverride = Number(copies);
         copiesOverride = Number.isFinite(copiesOverride) && copiesOverride > 0 ? Math.max(1, Math.min(20, Math.floor(copiesOverride))) : 1;
         PosnicPro.sales.view._layoutOverride =

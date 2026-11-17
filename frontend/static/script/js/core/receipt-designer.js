@@ -211,7 +211,7 @@
                 '.rd-total-row{margin:1px 0;}.rd-grand-total{padding-top:4px;margin-top:4px;}' +
                 '.rd-transaction{padding-bottom:4px;}.rd-divider{margin:4px 0;}' +
                 '.rd-block-logo,.rd-block-image,.rd-block-qr,.rd-block-barcode{line-height:0;}.rd-document img{vertical-align:top;}') +
-            '@media print{.rd-document{max-width:none!important;}body{width:auto!important;min-width:0!important;}.rd-document,.rd-document *{color:#000!important;opacity:1!important;text-shadow:none!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}}';
+            '@media print{html,body{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;}.rd-document{height:auto!important;max-height:none!important;overflow:visible!important;break-inside:avoid!important;page-break-inside:avoid!important;max-width:none!important;}body{width:auto!important;min-width:0!important;}.rd-document,.rd-document *{color:#000!important;opacity:1!important;text-shadow:none!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}}';
     }
     function render(data, format, preview) {
         var designs = data.receipt_designs;

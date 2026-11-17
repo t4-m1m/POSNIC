@@ -18,7 +18,6 @@
     if (!Number.isFinite(height) || height <= 0) throw new Error('The receipt could not be measured.');
     // One CSS pixel of rounding tolerance; the receipt includes its own small
     // top/bottom padding. Keep long receipts paginated instead of clipping them.
-    var heightMm = Math.max(20, Math.ceil((height + 1) * 25.4 / 96 * 10) / 10);
     var style = doc.getElementById('rd-fitted-paper');
     if (!style) {
       style = doc.createElement('style');
@@ -35,7 +34,7 @@
     // Rendered receipts carry their base style in the body. Keep the fitted
     // dimensions last so that the base @page size:auto cannot override them.
     (doc.body || doc.head).appendChild(style);
-    return { width: width * 1000, height: Math.round(heightMm * 1000) };
+    return { width: width * 1000 };
   }
   // Serialized into the hidden Electron window. A completed HTTP load can
   // still be an empty 404 response, so readiness must include actual content.
