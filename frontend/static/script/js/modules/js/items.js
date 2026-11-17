@@ -848,6 +848,77 @@ PosnicPro.items = {
             hasher.setHash('items');
         }
     },
+
+    /* Independent Modify workspace. This page has its own DOM, state and
+       submit handler; it never enters items_v2 or the Add New Item route. */
+    _modifyRecord: null,
+    _modifyStep: 1,
+    openIndependentModify: function (id) {
+        var self = PosnicPro.items;
+        if (!id) return;
+        if (PosnicPro.aclLoaded && PosnicPro.aclLoaded() && !PosnicPro.checkAccess('item','write')) {
+            PosnicPro.alert('error','You do not have permission to modify items.'); return;
+        }
+        var esc = function(v){return $('<span>').text(v == null ? '' : v).html();};
+        var host = document.getElementById('posnic_independent_modify_page');
+        if (!host) {
+            host = document.createElement('section'); host.id = 'posnic_independent_modify_page';
+            host.className = 'page_loader'; host.style.cssText = 'display:none;padding:22px;min-height:70vh;';
+            document.body.appendChild(host);
+        }
+        host.innerHTML = '<div class="card" style="max-width:1120px;margin:0 auto;"><div class="card-header d-flex align-items-center justify-content-between"><div><h4 class="mb-1">Modify article</h4><small class="text-muted">Independent article editor · existing record only</small></div><button type="button" class="btn btn-light" id="posnic_modify_close">Back to article</button></div><div class="card-body"><div class="d-flex flex-wrap mb-4" style="gap:10px"><span class="badge badge-primary p-2">1 · Article details</span><span class="badge badge-light p-2">2 · Pricing and information</span></div><div id="posnic_modify_status" class="text-muted mb-3">Loading selected article…</div><form id="posnic_independent_modify_form" autocomplete="off"><div id="posnic_modify_step1"><div class="form-row"><div class="form-group col-md-8"><label for="posnic_modify_name">Article name</label><input id="posnic_modify_name" class="form-control" maxlength="200" required></div><div class="form-group col-md-4"><label for="posnic_modify_category">Category</label><select id="posnic_modify_category" class="form-control"><option value="">No category</option></select></div></div><div class="form-row"><div class="form-group col-md-6"><label for="posnic_modify_barcode">Barcode (read only)</label><input id="posnic_modify_barcode" class="form-control" readonly></div><div class="form-group col-md-6"><label for="posnic_modify_sku">SKU (read only)</label><input id="posnic_modify_sku" class="form-control" readonly></div></div></div><div id="posnic_modify_step2" hidden><div class="form-row"><div class="form-group col-md-4"><label for="posnic_modify_price">Selling price</label><input id="posnic_modify_price" class="form-control" type="number" min="0" step="0.01" required></div><div class="form-group col-md-4"><label for="posnic_modify_cost">Purchase cost</label><input id="posnic_modify_cost" class="form-control" type="number" min="0" step="0.01"></div><div class="form-group col-md-4"><label>Current stock (unchanged)</label><input id="posnic_modify_stock" class="form-control" readonly></div></div><div class="form-group"><label for="posnic_modify_description">Description</label><textarea id="posnic_modify_description" class="form-control" rows="4" maxlength="2000"></textarea></div></div><div class="d-flex justify-content-between mt-4"><button type="button" class="btn btn-outline-secondary" id="posnic_modify_prev" disabled>← Back</button><div><button type="button" class="btn btn-primary" id="posnic_modify_next">Continue →</button><button type="submit" class="btn btn-success" id="posnic_modify_save" hidden>Save changes</button></div></div></form></div></div>';
+        $('#items').hide(); $('#items_v2_mount,#items_modify_page,#items_new').hide(); $('.page-title-box').hide(); $(host).show();
+        self._modifyRecord = null; self._modifyStep = 1;
+        function step(n) {
+            self._modifyStep=n; $('#posnic_modify_step1').prop('hidden',n!==1); $('#posnic_modify_step2').prop('hidden',n!==2);
+            $('#posnic_modify_prev').prop('disabled',n===1); $('#posnic_modify_next').prop('hidden',n===2); $('#posnic_modify_save').prop('hidden',n!==2);
+            host.querySelectorAll('.badge').forEach(function(b,i){b.className='badge p-2 '+(i===n-1?'badge-primary':'badge-light');});
+        }
+        $('#posnic_modify_close').off('click').on('click',function(){ $(host).hide(); $('.page-title-box,#items').show(); });
+        $('#posnic_modify_next').off('click').on('click',function(){var name=$.trim($('#posnic_modify_name').val());if(!name){$('#posnic_modify_name').trigger('focus');return;}step(2);});
+        $('#posnic_modify_prev').off('click').on('click',function(){step(1);});
+        $('#posnic_independent_modify_form').off('submit').on('submit',function(e){
+            e.preventDefault(); var record=self._modifyRecord; if(!record || !record._id && !record.id){PosnicPro.alert('error','The selected article is not loaded.');return;}
+            var price=Number($('#posnic_modify_price').val()),cost=Number($('#posnic_modify_cost').val());
+            if(!Number.isFinite(price)||price<0||!Number.isFinite(cost)||cost<0){PosnicPro.alert('warning','Enter valid non-negative prices.');return;}
+            var category=$('#posnic_modify_category option:selected');
+            var data=Object.assign({},record,{
+                name:$.trim($('#posnic_modify_name').val()), selling_price:price, company_price:cost,
+                description:$('#posnic_modify_description').val(),
+                category_id:$('#posnic_modify_category').val()||'', category_name:category.data('name')||category.text()||''
+            });
+            ['_id','id','branch_id','branch_access','license','created_date','updated_date'].forEach(function(k){delete data[k];});
+            $('#posnic_modify_save').prop('disabled',true).text('Saving…');
+            PosnicPro.request({url:'items/'+encodeURIComponent(String(record._id||record.id))+'/details',method:'PUT',data:JSON.stringify(data)},function(resp){
+                $('#posnic_modify_save').prop('disabled',false).text('Save changes');
+                if(!resp||resp.type!=='success'){PosnicPro.alert('error',(resp&&resp.message)||'Could not update article.');return;}
+                PosnicPro.alert('success',resp.message||'Article updated.');
+                $(host).hide();$('.page-title-box,#items').show();self.loadList(self._page);self.openDoc(String(record._id||record.id));
+            },function(xhr){$('#posnic_modify_save').prop('disabled',false).text('Save changes');var msg='Could not update article.';try{msg=JSON.parse(xhr.responseText).message||msg;}catch(_){}PosnicPro.alert('error',msg);});
+        });
+        step(1);
+        PosnicPro.get({url:'items/getItemDetails',data:{id:id}},function(resp){
+            if(!resp||resp.type!=='success'||!resp.data){$('#posnic_modify_status').text('Could not load this article.');return;}
+            var queue=[resp.data],seen=[],item=null,keys=['name','item_name','selling_price','company_price','itemid','sku_id'];
+            while(queue.length){var x=queue.shift();if(!x||typeof x!=='object'||Array.isArray(x)||seen.indexOf(x)!==-1)continue;seen.push(x);if(keys.some(function(k){return x[k]!=null;}))item=x;['item','data','result','record','details','item_details'].forEach(function(k){if(x[k]&&typeof x[k]==='object')queue.push(x[k]);});}
+            if(!item){$('#posnic_modify_status').text('The server did not return an article record.');return;}
+            self._modifyRecord=Object.assign({},item,{name:item.name||item.item_name||item.title||''});
+            $('#posnic_modify_name').val(self._modifyRecord.name);
+            $('#posnic_modify_barcode').val(item.barcode_id||item.barcode||'');
+            $('#posnic_modify_sku').val(item.itemid||item.sku_id||'');
+            $('#posnic_modify_price').val(item.selling_price!=null?item.selling_price:item.price||0);
+            $('#posnic_modify_cost').val(item.company_price!=null?item.company_price:item.purchase_cost_dzd||0);
+            $('#posnic_modify_stock').val(item.available_quantity!=null?item.available_quantity:item.quantity||0);
+            $('#posnic_modify_description').val(item.description||'');
+            $('#posnic_modify_status').text('Loaded: '+self._modifyRecord.name+' · changes will update this article only.');
+            PosnicPro.get({url:'categories/getCategoryAjaxList',data:'query='},function(cats){
+                var sel=document.getElementById('posnic_modify_category');((cats&&cats.suggestions)||[]).forEach(function(c){var o=new Option(c.name,c.id);o.dataset.name=c.name;sel.add(o);});
+                sel.value=String(item.category_id||'');
+                if(sel.value!==String(item.category_id||'')){var opt=new Option(item.category_name||item.category||'Current category',item.category_id||'');opt.dataset.name=item.category_name||item.category||'';sel.add(opt);sel.value=String(item.category_id||'');}
+            });
+        },function(){$('#posnic_modify_status').text('Could not load this article.');});
+    },
+
     renderItemDoc: function (d) {
         var esc = function (t) { return $('<span>').text(t == null ? '' : t).html(); };
         var real = function (v) { return v && v !== 'null' && v !== 'undefined' ? v : ''; };
@@ -862,6 +933,7 @@ PosnicPro.items = {
             + '<button type="button" class="btn btn-sm btn-light" title="Show or hide the list" data-t-title="lang_show_or_hide_the_list" aria-label="Show or hide the list" data-t-aria-label="lang_show_or_hide_the_list" onclick="PosnicPro.masterDetail.toggleRail(\'#items_split\');"><i class="feather icon-sidebar"></i></button>'
             + '<span class="p-doc-title">' + esc(d.name) + '</span>'
             + (low ? '<span class="rs-pill unpaid"><lang class="lang_low_stock">Low stock</lang></span>' : '')
+            + '<button type="button" class="btn btn-sm btn-primary" data-module="item" data-access="write" onclick="PosnicPro.items.openIndependentModify(\'' + esc(id) + '\');"><i class="feather icon-edit-2 mr-1"></i>Modify article</button>'
             + '<span class="ml-auto"></span>'
 
             + (real(d.barcode_id) ? '<button type="button" class="btn btn-sm btn-light" title="Quick print price labels" aria-label="Quick print price labels" onclick="PosnicPro.items.quickPrintLabels(\'' + esc(id) + '\');"><i class="feather icon-printer mr-1"></i>Price labels</button>' : '')
@@ -919,9 +991,7 @@ PosnicPro.items = {
         var photo = img
             ? '<div class="i-doc-photo"><img loading="lazy" decoding="async" src="' + esc(img) + '" alt="' + esc(d.name) + '" onerror="this.style.display=\'none\';"></div>'
             : '';
-        var body = '<div class="s-doc-body"><div class="i-doc-edit-action" style="display:flex;justify-content:flex-end;margin:0 0 14px;">'
-            + '<button type="button" class="btn btn-primary" data-module="item" data-access="write" onclick="if(window.PosnicPro&amp;&amp;PosnicPro.items_v2&amp;&amp;typeof PosnicPro.items_v2.openModifyPage===&quot;function&quot;){PosnicPro.items_v2.openModifyPage(&quot;' + esc(id) + '&quot;)}"><i class="feather icon-edit-2 mr-2"></i>Edit article</button>'
-            + '</div><div class="q-sheet s-sheet">'
+        var body = '<div class="s-doc-body"><div class="q-sheet s-sheet">'
             + '<div class="i-doc-top">' + '<div class="i-doc-main">' + stats
             + '<div class="s-doc-grid">' + identity + pricing + record + '</div>'
             + '</div>' + photo + '</div>'
