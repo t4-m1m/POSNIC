@@ -216,6 +216,14 @@
     function save(event) {
         if (event) event.preventDefault();
         if (busy || saved) return false;
+        // Once an existing item has loaded, its ID is authoritative. Keep the
+        // editor in update mode even if a navigation/render callback changed
+        // the transient flag; never fall through to POST and create a duplicate.
+        if (savedItemId && existingItem) editing = true;
+        if (editing && (!savedItemId || !existingItem)) {
+            fail('The selected item is not fully loaded. Reopen it before saving so no duplicate item is created.');
+            return false;
+        }
         if (P.itemsV2Workspace.currentStep() === 'step1') { P.itemsV2Workspace.goToStep('step2', true); return false; }
         if (P.aclLoaded && P.aclLoaded() && !P.checkAccess('item', 'write')) { fail('You don’t have permission to create items.'); return false; }
         if (editing && savedBranch !== P.local.get('branch_id_set')) { fail(P.i18n.t('lang_iv2_edit_branch_changed', 'The active branch changed. Open the item again before editing.')); return false; }
