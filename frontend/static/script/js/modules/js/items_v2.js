@@ -14,10 +14,12 @@
     function payload(f) {
         var a = assess(f);
         if (a.error) throw new Error(a.error);
-        return { name: f.name.trim(), selling_price: a.price, company_price: Number(f.cost), available_quantity: a.quantity,
+        var tier2=f.price2===''?a.price:Number(f.price2),tier3=f.price3===''?tier2:Number(f.price3);
+        return { name: f.name.trim(), selling_price: a.price, selling_price_2: tier2, selling_price_3: tier3, company_price: Number(f.cost), available_quantity: a.quantity,
             inventory: a.tracked, negative_stock: a.negative, item_kind: f.kind === 'service' ? 'service' : 'product', service_unit: 'fixed',
             tax_id: f.taxId || '', tax_name: f.taxName || '', tax: Number(f.taxRate) || 0, tax_type: f.taxType,
             category_id: f.categoryId || '', category_name: f.categoryName || '', barcode_id: f.barcode.trim(), sku_id: f.sku.trim(),
+            brand_abbreviation: f.brandAbbreviation || '', reference_date: f.referenceDate || '',
             description: f.description.trim(), unit: 'qty', ecommerce: false, open_price: false, item_weight_machine_based: false };
     }
     if (typeof module === 'object' && module.exports) { module.exports = { assess: assess, payload: payload }; return; }
@@ -66,7 +68,9 @@
         var tax = document.getElementById('iv2-tax').selectedOptions[0];
         var category = document.getElementById('iv2-category').selectedOptions[0];
         var details = P.itemsV2Details.status();
-        return { name: value('iv2-name'), price: details.family && details.prices.length ? Math.min.apply(null, details.prices) : value('iv2-price'), cost: value('iv2-cost'), quantity: details.family && details.quantities.length ? Math.min.apply(null, details.quantities) : value('iv2-quantity'), kind: selected('iv2-kind'), stock: selected('iv2-stock'), zeroStock: selected('iv2-zero-stock'), confirmZero: document.getElementById('iv2-confirm-zero').checked, openPrice: details.openPrice, family: details.family,
+        var quantities=details.quantities.filter(function(n){return Number.isFinite(Number(n));});
+        return { name: value('iv2-name'), price: value('iv2-price'), price2: value('iv2-price2'), price3: value('iv2-price3'), cost: value('iv2-cost'), quantity: details.family ? quantities.reduce(function(sum,n){return sum+Number(n||0);},0) : value('iv2-quantity'), kind: selected('iv2-kind'), stock: selected('iv2-stock'), zeroStock: selected('iv2-zero-stock'), confirmZero: document.getElementById('iv2-confirm-zero').checked, openPrice: details.openPrice, family: details.family,
+            brandAbbreviation: value('iv2-brand-abbr'), referenceDate: value('iv2-reference-date'),
             taxId: taxReady && capabilities.tax ? value('iv2-tax') : '', taxName: capabilities.tax && tax && tax.dataset.name || '', taxRate: capabilities.tax && tax && tax.dataset.rate || 0, taxType: value('iv2-tax-type'), categoryId: value('iv2-category'), categoryName: category && category.dataset.name || '', barcode: value('iv2-barcode'), sku: value('iv2-sku'), description: value('iv2-description') };
     }
     function money(n) { return (P.local.get('currencySign') || '') + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -119,8 +123,10 @@
         if (details.hsn) f.taxRate = details.tax;
         var price = Number(f.price);
         show('iv2-zero-price', (attempted || touched.has('iv2-price')) && price === 0 && !f.openPrice);
-        show('iv2-quantity-row', tracked && !f.family);
-        document.getElementById('iv2-quantity').disabled = editing || !tracked || f.family;
+        show('iv2-quantity-row', tracked);
+        document.getElementById('iv2-quantity').readOnly = !!f.family;
+        document.getElementById('iv2-quantity').disabled = editing || !tracked;
+        if(f.family)document.getElementById('iv2-quantity').value=f.quantity;
         document.getElementById('iv2-has-variants').disabled = editing;
         if (editing) show('iv2-quantity-row', false);
         show('iv2-zero-stock', (attempted || touched.has('iv2-quantity')) && tracked && Number(f.quantity) === 0);
@@ -174,6 +180,14 @@
         document.getElementById('iv2-tax-type').value = P.local.get('tax_type') === 'exclusive' ? 'exclusive' : 'inclusive';
         var def = P.local.get('default_tax_id');
         if (def && Array.from(document.getElementById('iv2-tax').options).some(function (o) { return o.value === String(def); })) document.getElementById('iv2-tax').value = def;
+        var now=new Date(),yy=String(now.getFullYear()).slice(-2),mm=String(now.getMonth()+1).padStart(2,'0');
+        var dateField=document.getElementById('iv2-reference-date');if(dateField)dateField.value=yy+'-'+mm;
+        ['iv2-article-type','iv2-brand-abbr','iv2-model-reference','iv2-price2','iv2-price3','iv2-price-eur','iv2-extra-cost'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+        var rateField=document.getElementById('iv2-exchange-rate');if(rateField)rateField.value='280';
+        var costField=document.getElementById('iv2-cost');if(costField)costField.value='0.00';
+        var generatedName=document.getElementById('iv2-name');if(generatedName)generatedName.value='';
+        var stepOne=document.getElementById('iv2-owner-step1'),stepTwo=document.getElementById('iv2-owner-step2');
+        if(stepOne&&stepTwo){stepOne.classList.add('active');stepTwo.classList.remove('active');var tabs=document.querySelectorAll('#iv2-owner-steps .iv2-owner-tabs button');if(tabs.length){tabs[0].classList.add('active');tabs[1].classList.remove('active');}}
         render(); document.getElementById('iv2-name').focus();
     }
     function save(event) {
@@ -185,6 +199,8 @@
         if (!P.itemsV2Workspace.ready()) { fail(P.i18n.t('lang_iv2_draft_lists', 'Some draft selections are unavailable. Reload to retry, or discard the draft before saving.')); return false; }
         var f = fields(), a = assess(f);
         if (a.error) { fail(a.error, a.field); return false; }
+        var tier1=Number(f.price),tier2=f.price2===''?tier1:Number(f.price2),tier3=f.price3===''?tier2:Number(f.price3);
+        if(![tier1,tier2,tier3].every(function(n){return Number.isFinite(n)&&n>=0;})||tier2>tier1||tier3>tier2){fail('Selling prices must follow: Price 3 ≤ Price 2 ≤ Price 1.','iv2-price2');return false;}
         var advancedError = P.itemsV2Details.validate();
         if (advancedError) { fail(advancedError.error, advancedError.field); return false; }
         var form = document.getElementById('iv2-form');
@@ -276,12 +292,59 @@
             var nameInput = document.getElementById('iv2-name'); nameInput.focus(); nameInput.select();
             nameInput.dispatchEvent(new Event('input', { bubbles: true }));
     }
+    function prepareCustomCreateLayout() {
+        var fieldsBox=document.getElementById('iv2-fields');
+        if(!fieldsBox || fieldsBox.dataset.posnicTwoStep==='1') return;
+        fieldsBox.dataset.posnicTwoStep='1';
+        var style=document.createElement('style');
+        style.textContent='#items_v2 .iv2-layout{display:block!important}#items_v2 .iv2-aside,#items_v2 .iv2-section-picker,#items_v2 .iv2-tabs{display:none!important}#items_v2 .iv2-owner-tabs{display:flex;gap:10px;border-bottom:1px solid #dce7f5;margin:0 0 18px;padding:0 0 10px}#items_v2 .iv2-owner-tabs button{border:1px solid #d5e1f0;background:#f6f9fd;color:#34506f;border-radius:8px;padding:11px 18px;font-weight:700}#items_v2 .iv2-owner-tabs button.active{background:#e8f1ff;border-color:#2672c9;color:#1557a6}#items_v2 .iv2-owner-panel{display:none}#items_v2 .iv2-owner-panel.active{display:block}#items_v2 .iv2-owner-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px}#items_v2 .iv2-owner-field{min-width:0;display:flex;flex-direction:column;gap:6px}#items_v2 .iv2-owner-field label{font-size:13px;font-weight:700;color:var(--theme-text-primary,#24344d)}#items_v2 .iv2-owner-field input,#items_v2 .iv2-owner-field select{min-height:40px;border:1px solid var(--theme-border-color,#d5deea);border-radius:8px;padding:8px 11px;width:100%;background:var(--theme-input-bg,#fff);color:var(--theme-text-primary,#24344d)}#items_v2 .iv2-owner-panel .iv2-section{margin:14px 0;padding:18px;border:1px solid #e2eaf4;border-radius:10px;background:var(--theme-card-bg,#fff)}#items_v2 .iv2-owner-nav{display:flex;justify-content:space-between;gap:10px;margin:18px 0 6px}#items_v2 .iv2-owner-nav button{min-height:42px;padding:9px 18px;border-radius:8px;font-weight:700}#items_v2 .iv2-owner-primary{background:#1768bd;color:#fff;border:1px solid #1768bd}#items_v2 .iv2-owner-secondary{background:#fff;color:#334155;border:1px solid #cbd5e1}#items_v2 #iv2-codes #iv2-plu,#items_v2 #iv2-codes #iv2-sku,#items_v2 #iv2-codes #iv2-gtin,#items_v2 #iv2-codes #iv2-same-sku,#items_v2 #iv2-codes #iv2-alt-barcodes,#items_v2 #iv2-codes #iv2-purchase-unit,#items_v2 #iv2-codes #iv2-pack-size{display:none!important}#items_v2 #iv2-codes label[for=iv2-plu],#items_v2 #iv2-codes label[for=iv2-sku],#items_v2 #iv2-codes label[for=iv2-gtin],#items_v2 #iv2-codes label[for=iv2-alt-barcodes],#items_v2 #iv2-codes label[for=iv2-purchase-unit],#items_v2 #iv2-codes label[for=iv2-pack-size]{display:none!important}#items_v2 #iv2-stock-intro,#items_v2 .iv2-stock-modes,#items_v2 #iv2-zero-stock,#items_v2 #iv2-tax-extra,#items_v2 #iv2-tax-field,#items_v2 .iv2-tax-row,#items_v2 #iv2-zero-price{display:none!important}#items_v2 .iv2-owner-generated input{background:#f4f7fb;font-weight:700}#items_v2 .iv2-owner-price-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}@media(max-width:760px){#items_v2 .iv2-owner-fields,#items_v2 .iv2-owner-price-grid{grid-template-columns:1fr}}';
+        document.head.appendChild(style);
+        var root=document.createElement('div');root.id='iv2-owner-steps';
+        root.innerHTML='<nav class="iv2-owner-tabs"><button type="button" class="active">1  Basic information</button><button type="button">2  Stock &amp; pricing</button></nav><section id="iv2-owner-step1" class="iv2-owner-panel active"><section class="iv2-section" id="iv2-owner-identity"><h2>Basic information</h2><div class="iv2-owner-fields" id="iv2-owner-name-fields"></div></section><div id="iv2-owner-step1-content"></div><div class="iv2-owner-nav"><span></span><button type="button" class="iv2-owner-primary" id="iv2-owner-next">Continue to step 2 →</button></div></section><section id="iv2-owner-step2" class="iv2-owner-panel"><div class="iv2-owner-nav"><button type="button" class="iv2-owner-secondary" id="iv2-owner-back">← Back to step 1</button><span></span></div><div id="iv2-owner-step2-content"></div></section>';
+        var p1=root.querySelector('#iv2-owner-step1-content'),p2=root.querySelector('#iv2-owner-step2-content'),nameFields=root.querySelector('#iv2-owner-name-fields');
+        function field(labelText,id,type,required,placeholder){var wrap=document.createElement('div');wrap.className='iv2-owner-field';var lab=document.createElement('label');lab.htmlFor=id;lab.textContent=labelText;var input=document.createElement('input');input.id=id;input.type=type||'text';input.required=!!required;if(placeholder)input.placeholder=placeholder;wrap.append(lab,input);nameFields.appendChild(wrap);return input;}
+        var articleType=field('Article Type / Name','iv2-article-type','text',true,'e.g. dress, robe, sneakers, pull');
+        var brandAbbr=field('Brand Abbreviation','iv2-brand-abbr','text',true,'e.g. mqn, stl, hdd');brandAbbr.maxLength=20;
+        var refDate=field('Reference Date (YY-MM)','iv2-reference-date','text',true,'26-11');refDate.pattern='[0-9]{2}-[0-9]{2}';
+        var modelRef=field('Model Reference','iv2-model-reference','text',true,'e.g. 133, 048');
+        var nameLabel=document.querySelector('label[for=iv2-name]'),nameInput=document.getElementById('iv2-name');
+        var nameWrap=document.createElement('div');nameWrap.className='iv2-owner-field iv2-owner-generated';nameLabel.textContent='Generated article name';nameInput.readOnly=true;nameInput.required=true;nameWrap.append(nameLabel,nameInput);nameFields.appendChild(nameWrap);
+        function move(selector,target){var node=document.querySelector(selector);if(node)target.appendChild(node);return node;}
+        move('#iv2-details-extra',p1);move('#iv2-codes',p1);move('#iv2-variants',p1);
+        var stockSection=document.querySelector('#iv2-panel-basics section:nth-of-type(2)');
+        if(stockSection){var modes=stockSection.querySelector('.iv2-stock-modes');if(modes)modes.remove();var zero=stockSection.querySelector('#iv2-zero-stock');if(zero)zero.remove();var stockTitle=stockSection.querySelector('.iv2-section-title');if(stockTitle)stockTitle.remove();move('#iv2-quantity-row',stockSection);p2.appendChild(stockSection);}
+        var priceLabel=document.querySelector('label[for=iv2-price]'),priceInput=document.getElementById('iv2-price');
+        var priceSection=document.createElement('section');priceSection.className='iv2-section';priceSection.innerHTML='<h2>Selling prices (DA)</h2><div class="iv2-owner-price-grid" id="iv2-owner-price-grid"></div>';
+        var priceGrid=priceSection.querySelector('#iv2-owner-price-grid'),priceWrap=document.createElement('div');priceWrap.className='iv2-owner-field';priceLabel.textContent='Selling Price 1 (DA)';priceInput.required=true;priceWrap.append(priceLabel,priceInput);priceGrid.appendChild(priceWrap);
+        function tier(id,labelText){var wrap=document.createElement('div');wrap.className='iv2-owner-field';var lab=document.createElement('label');lab.htmlFor=id;lab.textContent=labelText;var input=document.createElement('input');input.id=id;input.type='number';input.min='0';input.step='any';wrap.append(lab,input);priceGrid.appendChild(wrap);}
+        tier('iv2-price2','Selling Price 2 (DA)');tier('iv2-price3','Selling Price 3 (Minimum - DA)');p2.appendChild(priceSection);
+        move('#iv2-pricing-extra',p2);move('#iv2-appearance',p2);
+        var costLabel=document.querySelector('label[for=iv2-cost]'),costInput=document.getElementById('iv2-cost');if(costLabel)costLabel.textContent='Calculated Purchase Price (DA)';if(costInput)costInput.readOnly=true;
+        var exchange=document.createElement('section');exchange.className='iv2-section';exchange.innerHTML='<h2>Purchase cost calculation</h2><div class="iv2-owner-fields" id="iv2-owner-exchange"></div>';
+        var exchangeGrid=exchange.querySelector('#iv2-owner-exchange');
+        function numeric(id,labelText,initial){var wrap=document.createElement('div');wrap.className='iv2-owner-field';var lab=document.createElement('label');lab.htmlFor=id;lab.textContent=labelText;var input=document.createElement('input');input.id=id;input.type='number';input.min='0';input.step='any';input.value=String(initial);wrap.append(lab,input);exchangeGrid.appendChild(wrap);return input;}
+        var eur=numeric('iv2-price-eur','Price (EUR)',0),rate=numeric('iv2-exchange-rate','Taux d’échange (DA / EUR)',280),extra=numeric('iv2-extra-cost','Extra Cost (DA)',0);p2.appendChild(exchange);
+        var error=document.getElementById('iv2-error'),actions=document.querySelector('.iv2-actions');if(error)p2.appendChild(error);if(actions){var save=document.getElementById('iv2-save');if(save)save.textContent='Enregistrer et Valider →';p2.appendChild(actions);}
+        var nav=root.querySelector('.iv2-owner-tabs').querySelectorAll('button'),step1=root.querySelector('#iv2-owner-step1'),step2=root.querySelector('#iv2-owner-step2');
+        function setStep(n){var second=n===2;step1.classList.toggle('active',!second);step2.classList.toggle('active',second);nav[0].classList.toggle('active',!second);nav[1].classList.toggle('active',second);if(second)root.scrollIntoView({behavior:'smooth',block:'start'});}
+        function updateName(){var type=articleType.value.trim(),abbr=brandAbbr.value.trim().toLowerCase(),date=refDate.value.trim(),model=modelRef.value.trim();nameInput.value=type&&abbr&&date&&model?type+' '+abbr+'-'+date+'/'+model:'';nameInput.dispatchEvent(new Event('input',{bubbles:true}));}
+        function updateCost(){if(costInput){costInput.value=((Number(eur.value)||0)*(Number(rate.value)||0)+(Number(extra.value)||0)).toFixed(2);costInput.dispatchEvent(new Event('input',{bubbles:true}));}}
+        function continueStep(){[articleType,brandAbbr,refDate,modelRef].forEach(function(x){x.value=x.value.trim();});if(!articleType.reportValidity()||!brandAbbr.reportValidity()||!refDate.reportValidity()||!modelRef.reportValidity())return;if(refDate.value.length!==5||refDate.value.charAt(2)!=='-'||!/[0-9]/.test(refDate.value.charAt(0))||!/[0-9]/.test(refDate.value.charAt(1))||!/[0-9]/.test(refDate.value.charAt(3))||!/[0-9]/.test(refDate.value.charAt(4))){refDate.setCustomValidity('Use YY-MM, for example 26-11.');refDate.reportValidity();refDate.setCustomValidity('');return;}updateName();setStep(2);}
+        nav[0].addEventListener('click',function(){setStep(1);});nav[1].addEventListener('click',continueStep);root.querySelector('#iv2-owner-next').addEventListener('click',continueStep);root.querySelector('#iv2-owner-back').addEventListener('click',function(){setStep(1);});
+        [articleType,brandAbbr,refDate,modelRef].forEach(function(x){x.addEventListener('input',updateName);});[eur,rate,extra].forEach(function(x){x.addEventListener('input',updateCost);});
+        var now=new Date(),yy=String(now.getFullYear()).slice(-2),mm=String(now.getMonth()+1).padStart(2,'0');refDate.value=yy+'-'+mm;
+        var tracked=document.querySelector('#items_v2 input[name=iv2-stock][value=tracked]');if(tracked)tracked.checked=true;
+        var oldPanels=document.querySelectorAll('#items_v2 .iv2-tab-panel');oldPanels.forEach(function(x){x.hidden=true;});var oldTypes=document.querySelector('#items_v2 .iv2-types');if(oldTypes)oldTypes.hidden=true;
+        var form=document.getElementById('iv2-form');form.insertBefore(root,fieldsBox.firstChild);
+        updateName();updateCost();
+    }
     function open(initialName) {
         if (editing) reset();
         if (P.HideSideBarModal) P.HideSideBarModal();
         $('.page_loader,#osk-container').hide(); $('#items_v2').show();
         capabilities = readCapabilities();
         P.itemsV2Details.init();
+        prepareCustomCreateLayout();
         P.itemsV2Workspace.init({refresh:render,reset:reset,edit:function () {
             if (!savedItemId || savedBranch !== P.local.get('branch_id_set')) return;
             editing = true; saved = false; attempted = false;
