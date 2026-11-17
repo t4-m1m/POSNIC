@@ -4641,7 +4641,15 @@ $(function () {
     });
     $(window).on('hashchange', function () {
         if (/items\/(new|[^/]+\/(edit|clone))/.test(window.location.hash)) {
-            setTimeout(syncVariantLink, 400);
+            setTimeout(function () {
+                syncVariantLink();
+                // Every new article starts on step one; do not change the
+                // selected tab for an existing-item edit or a clone.
+                if (/^#\/items\/new(?:$|[/?])/.test(window.location.hash)
+                    && PosnicPro.items && typeof PosnicPro.items.goToTab === 'function') {
+                    PosnicPro.items.goToTab('item_tab_main');
+                }
+            }, 400);
         }
     });
     $("#product_without_variant, #product_with_variant").change(function () {
