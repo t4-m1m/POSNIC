@@ -402,7 +402,7 @@
         P.itemsV2Workspace.goToStep('step1');
         render(); document.getElementById('iv2-name').focus();
     }
-    function showEdit(id, duplicate) {
+    function showModify(id, duplicate) {
         // The modify route is a dedicated editor state, not the create route.
         // Hide the catalogue and legacy form before mounting the shared two-step layout.
         $('#items').hide(); $('#items_new').hide(); $('#items_v2').show();
@@ -514,7 +514,7 @@
         P.itemsV2Workspace.goToStep('step1');
         return false;
     }
-    P.items_v2 = { showModify: showEdit, showEdit: showEdit, showClone: function(id){showEdit(id,true);}, showAdd: showAdd, showDataTablePage: open, setBusinessContext: function (category) {
+    P.items_v2 = { showModify: showModify, showEdit: showModify, showClone: function(id){showModify(id,true);}, showAdd: showAdd, showDataTablePage: open, setBusinessContext: function (category) {
         businessContext = ['restaurant', 'retail', 'service'].includes(category) ? category : null;
         if (bound) { capabilities = readCapabilities(); reset(); if (capabilities.restaurant) loadRestaurantOptions(); }
     } };
