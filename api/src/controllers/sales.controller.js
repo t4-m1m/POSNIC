@@ -1626,12 +1626,36 @@ class SalesController extends BaseController {
       const body = req.body || {};
       const date = String(body.date || '');
       const counted = Number(body.counted_cash);
-      const expected = Number(body.expected_cash);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(counted) || counted < 0 || !Number.isFinite(expected)) return this.error(res, 'Enter a valid date and counted cash amount.', 400);
-      const branchId = this.model?.branchId || body.branch;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(counted) || counted < 0) return this.error(res, 'Enter a valid date and counted cash amount.', 400);
+      const branchId = this.model?.branchId || req.user?.branch_id || body.branch;
       const licenseId = this.model?.licenseId || req.user?.license || req.user?.license_id;
-      if (!branchId || !licenseId) return this.error(res, ERROR_MESSAGES.BRANCH_LICENSE_REQUIRED, 400);
+      if (!branchId || !licenseId || !mongoose.Types.ObjectId.isValid(String(branchId))) return this.error(res, 'A valid active branch is required.', 400);
       const branchObjectId = new mongoose.Types.ObjectId(String(branchId));
+
+      // Recalculate on the server at confirmation time. Never trust the
+      // expected amount sent by the browser: sales, refunds or cash payouts
+      // may have changed while the cashier was counting the drawer.
+      const previousQuery = req.query;
+      const previousDayCloseFlag = req.cashierDayClose;
+      let summaryResponse = null;
+      req.query = { branch: String(branchId), starting_date: date, ending_date: date, type: 'VIEW' };
+      req.cashierDayClose = true;
+      const captureResponse = {
+        statusCode: 200,
+        status(code) { this.statusCode = code; return this; },
+        json(payload) { summaryResponse = payload; return this; },
+      };
+      try {
+        await this.dailySalesReports(req, captureResponse);
+      } finally {
+        req.query = previousQuery;
+        if (previousDayCloseFlag === undefined) delete req.cashierDayClose;
+        else req.cashierDayClose = previousDayCloseFlag;
+      }
+      const expected = Number(summaryResponse && summaryResponse.data && summaryResponse.data.cash_expected);
+      if (!summaryResponse || summaryResponse.type !== 'success' || !Number.isFinite(expected)) {
+        return this.error(res, summaryResponse && summaryResponse.message || 'Could not calculate expected cash for this day.', captureResponse.statusCode || 500);
+      }
       const difference = roundToTwo(counted - expected);
       const db = await BaseModel.getDb();
       const cashierId = String(req.user?._id || req.user?.id || req.user?.username || 'cashier');
