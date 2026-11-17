@@ -15113,6 +15113,18 @@ $(document)
 
 })();
 
+/* POS search: focusing the item field selects its current query so the next
+ * typed/scanned query replaces it instead of being appended to old text. */
+(function () {
+    if (window.__posnicSalesSearchSelectOnFocus) return;
+    window.__posnicSalesSearchSelectOnFocus = true;
+    document.addEventListener('focusin', function (event) {
+        var input = event.target;
+        if (!input || input.id !== 'sales_new_item_name' || input.disabled || input.readOnly) return;
+        if (typeof input.select === 'function') input.select();
+    }, true);
+})();
+
 
 /* Sales search uses the exact quick-label workflow used by Articles:
  * the same copy-count modal, saved design, printer selection and error handling. */

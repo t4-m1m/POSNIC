@@ -85,7 +85,7 @@ router.get('/summary', async (req, res) => {
     const overtime = monthTx.filter(t => t.type === 'overtime').reduce((s,t)=>s+t.amount,0);
     const payments = monthTx.filter(t => t.type === 'salary_payment').reduce((s,t)=>s+t.amount,0);
     const activeWorkerIds = new Set(workers.map(w => String(w._id)));
-    const additions = monthTx.filter(t => activeWorkerIds.has(String(t.worker_id)) && ['overtime','prime_weekly','prime_monthly','adjustment'].includes(t.type)).reduce((s,t)=>s+Number(t.amount||0),0);
+    const additions = monthTx.filter(t => activeWorkerIds.has(String(t.worker_id)) && ['overtime','adjustment'].includes(t.type)).reduce((s,t)=>s+Number(t.amount||0),0);
     res.json({ status:true, data:{ workers:workers.length, monthlyPayroll:workers.reduce((s,w)=>s+Number(w.monthly_salary||0),0)+additions, advances, overtime, payments, period } });
   } catch(e) { sendError(res,e); }
 });
@@ -167,8 +167,7 @@ router.post('/transactions', async (req,res) => {
       const paid = existing.filter(t => t.type === 'salary_payment').reduce((sum, t) => sum + Number(t.amount || 0), 0);
       const overtime = existing.filter(t => t.type === 'overtime').reduce((sum, t) => sum + Number(t.amount || 0), 0);
       const adjustments = existing.filter(t => t.type === 'adjustment').reduce((sum, t) => sum + Number(t.amount || 0), 0);
-      const primes = existing.filter(t => t.type === 'prime_weekly' || t.type === 'prime_monthly').reduce((sum, t) => sum + Number(t.amount || 0), 0);
-      const gross = Math.max(0, Number(worker.monthly_salary || 0) + overtime + primes + adjustments);
+      const gross = Math.max(0, Number(worker.monthly_salary || 0) + overtime + adjustments);
       const remaining = Math.max(0, gross - advances - paid);
       if (value.amount > remaining) {
         return res.status(400).json({
@@ -238,7 +237,7 @@ router.get('/payroll/:period', async (req,res) => {
       const primes=weekly_primes+monthly_primes;
       const adjustments=entries.filter(t=>t.type==='adjustment').reduce((s,t)=>s+t.amount,0);
       const paid=entries.filter(t=>t.type==='salary_payment').reduce((s,t)=>s+t.amount,0);
-      const gross=Math.max(0,Number(w.monthly_salary||0)+overtime+primes+adjustments);
+      const gross=Math.max(0,Number(w.monthly_salary||0)+overtime+adjustments);
       return {_id:String(w._id),name:w.name,monthly_salary:Number(w.monthly_salary||0),overtime,weekly_primes,monthly_primes,primes,adjustments,advances,paid,gross,remaining:Math.max(0,gross-advances-paid)};
     });
     res.json({status:true,data:rows});
