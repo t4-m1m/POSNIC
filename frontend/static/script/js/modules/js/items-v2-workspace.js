@@ -99,10 +99,11 @@
         var price = document.createElement('strong'); price.className = 'iv2-result-price'; price.textContent = family ? P.i18n.t('lang_variants_2', 'Variants') : data.open_price ? P.i18n.t('lang_cashier_types_the_price', 'Cashier types the price') : '…';
         var stock = document.createElement('p'); stock.textContent = data.inventory ? P.i18n.t('lang_opening_stock', 'Opening stock') + ': ' + (family ? P.i18n.t('lang_variants_2', 'Variants') : data.available_quantity) : P.i18n.t('lang_iv2_not_tracked', 'Stock not tracked');
         var actions = document.createElement('div'); actions.className = 'iv2-result-actions';
-        var another = button(P.i18n.t('lang_iv2_another', 'Create another'), callbacks.reset); actions.append(another);
+        var another = button(P.i18n.t('lang_iv2_another', 'Create new item'), callbacks.reset); actions.append(another);
         if (id && /^[a-zA-Z0-9_-]+$/.test(String(id))) {
             [['', P.i18n.t('lang_iv2_view', 'View item')]].forEach(function (entry) { var a = document.createElement('a'); a.href = '#/items/' + encodeURIComponent(id) + entry[0]; a.textContent = entry[1]; actions.append(a); });
         }
+        if (id && !family && P.items && typeof P.items.quickPrintLabels === 'function') actions.append(button('Fast print price labels', function(){ P.items.quickPrintLabels(String(id)); }));
         if (id && !family) actions.append(button(P.i18n.t('lang_iv2_add_details', 'Add more details'), callbacks.edit));
         if (id && family) { var manage = document.createElement('a'); manage.href = '#/items/' + encodeURIComponent(id) + '/edit'; manage.textContent = P.i18n.t('lang_manage_variants', 'Manage variants'); actions.append(manage); }
         actions.append(button(P.i18n.t('lang_iv2_duplicate', 'Duplicate this item'), function () { callbacks.duplicate(); }));
