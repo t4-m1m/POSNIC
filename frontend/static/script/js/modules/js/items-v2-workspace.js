@@ -124,7 +124,7 @@
         select('basics');
     }
     function ready() { clearTimeout(timer); return key === scope() && !pending.length && !pendingVariants; }
-    function saved(data, id, assessment, family) {
+    function saved(data, id, assessment, family, newlyCreated) {
         clear(); locked = true; el('draft-notice').hidden = true;
         var box = el('success'); box.replaceChildren(); box.className = 'iv2-success iv2-result';
         var heading = document.createElement('h2'); heading.textContent = data.name;
@@ -136,7 +136,17 @@
         if (id && /^[a-zA-Z0-9_-]+$/.test(String(id))) {
             [['', P.i18n.t('lang_iv2_view', 'View item')]].forEach(function (entry) { var a = document.createElement('a'); a.href = '#/items/' + encodeURIComponent(id) + entry[0]; a.textContent = entry[1]; actions.append(a); });
         }
-        if (id && !family) actions.append(button(P.i18n.t('lang_iv2_add_details', 'Add more details'), callbacks.edit));
+        if (id && !family) actions.append(button(P.i18n.t('lang_iv2_edit_item', 'Edit item'), callbacks.edit));
+        if (newlyCreated && id && !family && data.barcode_id) {
+            actions.append(button(P.i18n.t('lang_print_price_labels', 'Print price labels'), function () {
+                var trigger = document.createElement('button');
+                trigger.type = 'button';
+                trigger.setAttribute('data-item-id', String(id));
+                if (typeof window.posnicPrintSearchLabel === 'function') window.posnicPrintSearchLabel(trigger);
+                else if (P.items && typeof P.items.quickPrintLabels === 'function') P.items.quickPrintLabels(String(id));
+                else P.alert('error', 'The price-label printer is not available.');
+            }));
+        }
         if (id && family) { var manage = document.createElement('a'); manage.href = '#/items/' + encodeURIComponent(id) + '/edit'; manage.textContent = P.i18n.t('lang_manage_variants', 'Manage variants'); actions.append(manage); }
         actions.append(button(P.i18n.t('lang_iv2_duplicate', 'Duplicate this item'), function () { callbacks.duplicate(); }));
         box.append(state, heading, price, stock, actions); el('layout').hidden = true; box.hidden = false; another.focus(); box.scrollIntoView({ block: 'start' });

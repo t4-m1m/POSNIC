@@ -295,7 +295,7 @@
             }
             document.getElementById('iv2-copy-source').value = '';
             show('iv2-copy-notice', false);
-            P.itemsV2Workspace.saved(data, id, a, f.family);
+            P.itemsV2Workspace.saved(data, id, a, f.family, !editing);
         }, function (xhr) {
             unlock(); var message = 'Couldn’t confirm the save. Check your item list before trying again.';
             try { message = JSON.parse(xhr.responseText).message || message; } catch (_) { /* preserve the form */ }
