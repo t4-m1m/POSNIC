@@ -1492,9 +1492,15 @@ printSale: function (id, name, isKotHistoryPrint, layoutOverride, copies) {
                 }
 
                 let sales_description = data.sales_description;
-                if (data.print_sale_notes === true && $.trim(sales_description).length !== 0) {
+                // A cashier-entered sale note is part of the transaction details,
+                // so keep it on the receipt even when the optional template toggle
+                // was previously off. It remains a dedicated block, never an item.
+                if ($.trim(sales_description || '').length !== 0) {
                     $('.print-sale-notes-hide').show();
-                    $('.print-sale-notes').text(sales_description).css('white-space', 'pre-line');
+                    $('.print-sale-notes').text(sales_description).css({
+                        'white-space': 'pre-line',
+                        'display': 'block'
+                    });
                 } else {
                     $('.print-sale-notes-hide').hide();
                 }
