@@ -94,6 +94,42 @@
   </div>
 </div>
 </div>
+<style id="iv2-payment-screen-fit-final">
+@media(min-width:901px){
+ #items_v2_mount{height:calc(100vh - 70px)!important;min-height:0!important;overflow:hidden!important}
+ #items_v2{height:100%!important;min-height:0!important;overflow:hidden!important;padding:5px 9px!important}
+ #items_v2 .iv2-workspace{height:100%!important;min-height:0!important;padding:0!important;gap:3px!important}
+ #items_v2 .iv2-heading{flex:0 0 auto;padding:0 2px 4px!important;margin:0!important}
+ #items_v2 .iv2-heading h1{font-size:18px!important;line-height:1.15!important;margin:0!important}
+ #items_v2 .iv2-layout{height:auto!important;flex:1 1 auto!important;min-height:0!important;overflow:hidden!important}
+ #items_v2 #iv2-form{height:100%!important;min-height:0!important;overflow:hidden!important;grid-template-columns:repeat(12,minmax(0,1fr))!important;grid-template-rows:minmax(0,1fr) minmax(0,1fr) minmax(0,.85fr) minmax(0,.85fr) 38px!important;gap:5px!important;align-content:stretch!important}
+ #items_v2 #iv2-codes{grid-column:1/span 6!important;grid-row:1!important}
+ #items_v2 #iv2-variants{grid-column:7/span 6!important;grid-row:1!important}
+ #items_v2 .iv2-name-builder{grid-column:1/span 6!important;grid-row:2!important}
+ #items_v2 #iv2-details-extra{grid-column:7/span 6!important;grid-row:2!important}
+ #items_v2 #iv2-appearance{grid-column:1/span 6!important;grid-row:3!important}
+ #items_v2 #iv2-stock-card{grid-column:7/span 6!important;grid-row:3!important}
+ #items_v2 .iv2-purchase-cost{grid-column:1/span 6!important;grid-row:4!important}
+ #items_v2 #iv2-pricing-extra{grid-column:7/span 6!important;grid-row:4!important}
+ #items_v2 .iv2-section,#items_v2 .iv2-name-builder,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-stock-card{min-height:0!important;padding:5px 7px!important;overflow:visible!important}
+ #items_v2 .iv2-section-title,#items_v2 .iv2-subheading{font-size:11px!important;line-height:1.1!important;margin:0 0 3px!important}
+ #items_v2 label{font-size:9px!important;line-height:1.05!important;margin:0 0 1px!important}
+ #items_v2 input:not([type=checkbox]):not([type=radio]):not([type=file]),#items_v2 select{height:24px!important;min-height:24px!important;padding:1px 5px!important;font-size:10px!important}
+ #items_v2 .iv2-grid,#items_v2 #iv2-variants .iv2-grid,#items_v2 #iv2-pricing-extra .iv2-grid.iv2-pricing{gap:3px!important}
+ #items_v2 .iv2-note,#items_v2 #iv2-purchase-cost-summary{font-size:8px!important;line-height:1.05!important;margin-top:1px!important}
+ #items_v2 #iv2-variant-rows{max-height:75px!important;overflow:auto!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:3px!important;margin-top:3px!important}
+ #items_v2 #iv2-variant-rows .iv2-variant{padding:3px!important}
+ #items_v2 #iv2-variant-rows .iv2-variant h3{font-size:9px!important;margin:0 0 2px!important}
+ #items_v2 #iv2-variant-rows input{height:21px!important;min-height:21px!important;font-size:9px!important}
+ #items_v2 .iv2-photo-list{max-height:38px!important;overflow:auto!important;gap:3px!important}
+ #items_v2 #iv2-quantity-row{grid-template-columns:minmax(0,1fr) 75px!important;gap:3px!important;margin:0!important}
+ #items_v2 .iv2-actions{grid-column:1/-1!important;grid-row:5!important;min-height:0!important;padding:2px 7px!important;margin:0!important;overflow:hidden!important}
+ #items_v2 #iv2-save{height:30px!important;min-height:30px!important;min-width:150px!important;font-size:12px!important}
+}
+@media(max-height:820px) and (min-width:901px){#items_v2 #iv2-form{grid-template-rows:minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.8fr) 34px!important;gap:3px!important}#items_v2 .iv2-section,#items_v2 .iv2-name-builder,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-stock-card{padding:3px 5px!important}#items_v2 .iv2-section-title,#items_v2 .iv2-subheading{font-size:10px!important}#items_v2 input:not([type=checkbox]):not([type=radio]):not([type=file]),#items_v2 select{height:22px!important;min-height:22px!important;font-size:9px!important}}
+@media(max-width:900px){#items_v2_mount,#items_v2{height:auto!important;min-height:100%!important;overflow:visible!important}#items_v2 .iv2-workspace,#items_v2 .iv2-layout,#items_v2 #iv2-form{height:auto!important;overflow:visible!important}#items_v2 #iv2-form{grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-template-rows:auto!important}#items_v2 #iv2-codes,#items_v2 #iv2-variants,#items_v2 .iv2-name-builder,#items_v2 #iv2-details-extra,#items_v2 #iv2-appearance,#items_v2 #iv2-stock-card,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-pricing-extra{grid-column:1/-1!important;grid-row:auto!important}}
+</style>
+
 <div id="items_modify_page" class="page_loader" style="display:none"></div>
 <style>
 /* Simplified Step 2 fields requested for the catalogue workflow. Keep legacy controls in the DOM for compatibility, but do not show them. */

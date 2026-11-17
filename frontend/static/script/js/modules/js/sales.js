@@ -14919,6 +14919,17 @@ $(document).ready(function () {
         },
         switchTo: function (id) {
             if (id === this.activeId) return;
+            var pendingPayment = PosnicPro.sales._pendingPaymentRequest;
+            if (pendingPayment && id !== pendingPayment.sessionId) {
+                PosnicPro.alert('info', 'Finish opening this payment before switching customer tabs.');
+                return;
+            }
+            var tenderVisible = $('#infobar-settings-sidebar-tender-details').hasClass('sidebarview') ||
+                $('#tenderpage:visible').length > 0 || $('.sales-payment-panel:visible').length > 0;
+            if (tenderVisible) {
+                PosnicPro.alert('info', 'Finish or close the current payment before switching customer tabs.');
+                return;
+            }
             var current = this.sessions.find(function (item) { return item.id === this.activeId; }, this);
             if (current) current.snapshot = this.snapshot();
             var next = this.sessions.find(function (item) { return item.id === id; });
@@ -15112,18 +15123,34 @@ $(document)
 })();
 
 
-/* Restore barcode focus after product/category navigation inside the Sales workspace. */
+/* Keep the barcode search focused after every product/category/brand tab change. */
 (function () {
     if (window.__posnicSalesCategoryRefocus) return;
     window.__posnicSalesCategoryRefocus = true;
-    var selectors = '#home-tab-justified,#profile-tab-justified,#contact-tab-justified,#sales_new .nav-link,#sales_new [data-category-id],#sales_new .sales-category,#sales_new .category-tab,#sales_new .items_head,#sales_new .sales_new_class';
+    var timer = null;
     function refocus() {
-        var root = document.getElementById('sales_new');
-        if (!root || !root.getClientRects().length) return;
-        window.setTimeout(function () { if (window.PosnicPro && PosnicPro.sales && PosnicPro.sales.focusBarcodeInput) PosnicPro.sales.focusBarcodeInput(true); }, 100);
+        window.clearTimeout(timer);
+        timer = window.setTimeout(function () {
+            var root = document.getElementById('sales_new');
+            var input = document.getElementById('sales_new_item_name');
+            if (!root || !input || !root.getClientRects().length || !input.offsetWidth || !input.offsetHeight) return;
+            if ($('#infobar-settings-sidebar-tender-details').hasClass('sidebarview') || $('.modal.show:visible').length) return;
+            if (window.PosnicPro && PosnicPro.sales && PosnicPro.sales.focusBarcodeInput) PosnicPro.sales.focusBarcodeInput(true);
+        }, 260);
     }
-    document.addEventListener('click', function (event) { if (event.target && event.target.closest && event.target.closest(selectors)) refocus(); }, true);
-    document.addEventListener('shown.bs.tab', function (event) { var root = document.getElementById('sales_new'); if (root && root.contains(event.target)) refocus(); }, true);
+    document.addEventListener('click', function (event) {
+        if (event.target && event.target.closest && event.target.closest('#defaultTabJustified .items_head, #sales_new_categoryList [data-category-id], #sales_new_brandList [data-brand-id], #sales_new_categoryList a, #sales_new_brandList a')) refocus();
+    }, true);
+    $(document).off('shown.bs.tab.posnicSalesScanner', '#defaultTabJustified .items_head').on('shown.bs.tab.posnicSalesScanner', '#defaultTabJustified .items_head', refocus);
+    function observeList(id) {
+        var node = document.getElementById(id);
+        if (!node || !window.MutationObserver || node.__posnicScannerObserver) return;
+        node.__posnicScannerObserver = new MutationObserver(function () { refocus(); });
+        node.__posnicScannerObserver.observe(node, { childList: true, subtree: true });
+    }
+    observeList('sales_new_categoryList'); observeList('sales_new_brandList');
+    var pageObserver = new MutationObserver(function () { observeList('sales_new_categoryList'); observeList('sales_new_brandList'); });
+    if (document.documentElement) pageObserver.observe(document.documentElement, { childList: true, subtree: true });
 })();
 
 /* POS search: focusing the item field selects its current query so the next

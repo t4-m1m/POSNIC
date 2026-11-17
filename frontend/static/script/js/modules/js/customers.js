@@ -7,15 +7,18 @@ PosnicPro.customers = {
         else $('#customer_phone').val(number || '');
     },
     showAdd: function () {
+        var salesQuickCreate = /^#\/sales\/customers\/new(?:[/?]|$)/.test(String(window.location.hash || ''));
         PosnicPro.customers.loadSelectCustomerState(PosnicPro.local.get('countryid'), 'add');
-        $(".infobar-settings-sidebar-overlay").css({"background": "transparent", "position": "initial"});
-        $(".infobar-settings-sidebar").removeClass("sidebarshow");
-        $('.nav-link-active,.tab-pane-active,.dropdown-item').removeClass('active');
-        $(".vertical-menu li a").removeClass("active");
-        $(".vertical-layout").removeClass("toggle-menu");
-        $('#v-pills-customer-tab,.customer_new_shortcut').addClass('active');
-        $('#v-pills-customer').addClass('show active');
-        $('.vertical-menu li a#view_customers_page').addClass('active');
+        if (!salesQuickCreate) {
+            $(".infobar-settings-sidebar-overlay").css({"background": "transparent", "position": "initial"});
+            $(".infobar-settings-sidebar").removeClass("sidebarshow");
+            $('.nav-link-active,.tab-pane-active,.dropdown-item').removeClass('active');
+            $(".vertical-menu li a").removeClass("active");
+            $(".vertical-layout").removeClass("toggle-menu");
+            $('#v-pills-customer-tab,.customer_new_shortcut').addClass('active');
+            $('#v-pills-customer').addClass('show active');
+            $('.vertical-menu li a#view_customers_page').addClass('active');
+        }
         PosnicPro.showAddModal('customer');
         $('#customer_reset').show();
         $('.customer_edit_reset').hide();
@@ -1388,6 +1391,18 @@ PosnicPro.closesalesdetails = {
         });
     }
 };
+
+
+$(document).off('hidden.bs.modal.posnicSalesQuickCreate', '#customers_new').on('hidden.bs.modal.posnicSalesQuickCreate', '#customers_new', function () {
+    if (!PosnicPro.customers || !PosnicPro.customers._salesQuickCreatePending) return;
+    hasher.changed.active = false;
+    hasher.replaceHash('sales/new');
+    hasher.changed.active = true;
+    $('.page_loader').not('#sales_new').hide();
+    $('.page-title-box,#sales_new').show();
+    if (PosnicPro.sales && PosnicPro.sales.focusBarcodeInput) window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(true); }, 120);
+    PosnicPro.customers._salesQuickCreatePending = false;
+});
 
 $("#customers_new").on('shown.bs.modal', function () {
     $(this).find('#customer_name').focus();
