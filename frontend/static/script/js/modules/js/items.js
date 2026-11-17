@@ -913,9 +913,10 @@ PosnicPro.items = {
         }
         host.innerHTML = `
 <style id="posnic-modify-blue-two-step">
+#items_modify_page{display:block!important;position:static!important;inset:auto!important;z-index:auto!important;width:100%!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;margin:0!important;padding:0!important}
 #posnic_independent_modify_page{display:flex!important;flex-direction:column!important;justify-content:flex-start!important;align-items:center!important;box-sizing:border-box!important;position:static!important;inset:auto!important;z-index:auto!important;width:100%!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;margin:0!important;padding:16px 24px!important;background:var(--theme-body-bg,#f3f6fb);color:var(--theme-text-primary,#24344d)}
 #posnic_independent_modify_page *{box-sizing:border-box}
-#posnic_independent_modify_page .pm-shell{width:min(1150px,100%);max-width:1150px;margin:0 auto;background:var(--theme-card-bg,#fff);border:1px solid #d9e5f5;border-radius:12px;box-shadow:0 5px 22px rgba(27,74,137,.09);overflow:visible}
+#posnic_independent_modify_page .pm-shell{width:min(1150px,100%);max-width:1150px;margin:0 auto;background:var(--theme-card-bg,#fff);border:1px solid #d9e5f5;border-radius:12px;box-shadow:0 5px 22px rgba(27,74,137,.09);overflow:hidden}
 #posnic_independent_modify_page .pm-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 20px;background:linear-gradient(110deg,#1557a6,#2879d0);color:#fff;border-radius:11px 11px 0 0}
 #posnic_independent_modify_page .pm-head h3{margin:0 0 3px;font-size:20px;font-weight:750;color:#fff}
 #posnic_independent_modify_page .pm-head .pm-sub{font-size:12px;color:rgba(255,255,255,.82)}
@@ -941,7 +942,7 @@ PosnicPro.items = {
 #posnic_independent_modify_page .pm-span-3{grid-column:span 1}
 #posnic_independent_modify_page .pm-span-2{grid-column:span 1}
 #posnic_independent_modify_page .pm-price-title{font-size:14px;font-weight:800;color:#1e5fa8;margin:0 0 -3px}
-#posnic_independent_modify_page .pm-image{display:grid;grid-template-columns:180px minmax(180px,1fr) 190px;align-items:center;gap:14px;margin-top:16px;padding:12px;border:1px solid #d7e5f5;border-radius:9px;background:#f5f9fe}
+#posnic_independent_modify_page .pm-image{display:grid;grid-template-columns:180px minmax(180px,1fr) 190px;align-items:center;gap:14px;margin-top:12px;padding:0;border:0;border-radius:0;background:transparent}
 #posnic_independent_modify_page .pm-image strong{color:#244d79;font-size:13px}
 #posnic_independent_modify_page .pm-image-preview{height:130px;display:flex;align-items:center;justify-content:center;border:1px dashed #a9c4e2;border-radius:8px;background:#fff;overflow:hidden}
 #posnic_independent_modify_page .pm-image-preview img{max-width:100%;max-height:120px;object-fit:contain}
