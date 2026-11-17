@@ -396,6 +396,10 @@
             document.getElementById('iv2-name').value = initialName;
             document.getElementById('iv2-name').dispatchEvent(new Event('input', { bubbles: true }));
         }
+        // Every entry into the modern editor starts on the first page. Do
+        // this here as well as in showAdd(), so router re-entry and
+        // "Create another" cannot inherit Step 2 from the previous session.
+        P.itemsV2Workspace.goToStep('step1');
         render(); document.getElementById('iv2-name').focus();
     }
     function showEdit(id, duplicate) {
@@ -408,11 +412,20 @@
         P.get({url:'items/getItemDetails',data:{id:id}}, function(r) {
             if(sequence!==editSequence || branch!==P.local.get('branch_id_set'))return;
             if(!r || r.type!=='success' || !r.data)return failed(r&&r.message);
-            var item = r.data; existingItem = item;
+            // The legacy details endpoint normally returns the item directly,
+            // but tolerate the wrapped shapes used by newer API adapters too.
+            var item = r.data.item || r.data.item_details || r.data.data || r.data;
+            if (!item || typeof item !== 'object' || (!item.name && !item.itemid && !item._id && !item.id)) {
+                return failed('The item details response did not contain a usable item record. No changes were made.');
+            }
+            existingItem = item;
             function set(id,v){var e=document.getElementById('iv2-'+id);if(e)e.value=v==null?'':v;}
             function choice(name,v){document.querySelectorAll('#items_v2 [name="iv2-'+name+'"]').forEach(function(e){e.checked=e.value===v;});}
-            choice('kind',item.item_kind==='service'?'service':'product');choice('stock',item.track_inventory?'tracked':'untracked');choice('zero-stock',item.negative_stock?'negative':'later');
-            set('name',item.name);set('price',item.selling_price);set('cost',item.company_price);set('quantity',Math.max(0,Number(item.available_quantity)||0));set('sku',item.itemid);set('barcode',item.barcode_id);set('description',item.description);set('tax-type',item.tax_type||'inclusive');set('diet',item.diet);
+            var tracked = item.track_inventory != null ? item.track_inventory : item.inventory;
+            choice('kind',item.item_kind==='service' || item.kind==='service'?'service':'product');
+            choice('stock',tracked === false ? 'untracked' : 'tracked');
+            choice('zero-stock',item.negative_stock?'negative':'later');
+            set('name',item.name || item.item_name);set('price',item.selling_price);set('cost',item.company_price);set('quantity',Math.max(0,Number(item.available_quantity)||0));set('sku',item.itemid);set('barcode',item.barcode_id);set('description',item.description);set('tax-type',item.tax_type||'inclusive');set('diet',item.diet);
             document.getElementById('iv2-confirm-zero').checked=Number(item.selling_price)===0;
             document.getElementById('iv2-orderable').checked=!!item.ecommerce;document.getElementById('iv2-menu').checked=item.show_on_menu!==false;
             function select(id,v,name,rate){var e=document.getElementById('iv2-'+id),o=new Option(name||'',String(v||''));o.dataset.name=name||'';o.dataset.rate=rate||0;e.add(o);e.value=String(v||'');}
