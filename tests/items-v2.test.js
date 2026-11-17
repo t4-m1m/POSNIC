@@ -74,11 +74,11 @@ test('the simplified item editor hides the requested advanced fields without rem
 });
 
 
-test('the item dossier opens a dedicated modify route and the editor hydrates before enabling fields', () => {
+test('the item dossier opens the record-bound Modify editor directly and hydrates before enabling fields', () => {
   const items = require('node:fs').readFileSync('frontend/static/script/js/modules/js/items.js', 'utf8');
   const editor = require('node:fs').readFileSync('frontend/static/script/js/modules/js/items_v2.js', 'utf8');
   const routes = require('node:fs').readFileSync('frontend/static/script/js/routes.js', 'utf8');
-  assert.match(items, /items\\/' \\+ encodeURIComponent\\(id\\) \\+ '\\/modify/);
+  assert.match(items, /modifyItem: function \\(id\\)[\\s\\S]*?showModify\\(String\\(id\\)\\)/);
   assert.match(routes, /items\\/\\{id\\}\\/modify/);
   assert.match(editor, /showModify: showEdit/);
   assert.ok(editor.indexOf('P.itemsV2Details.load(item)') < editor.indexOf('document.getElementById(\'iv2-fields\').disabled=false'));
