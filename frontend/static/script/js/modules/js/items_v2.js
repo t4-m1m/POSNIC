@@ -424,11 +424,16 @@
     }
     function openModifyPage(id, duplicate) {
         if (!id) { P.alert('error', 'Choose an item before opening its editor.'); return false; }
-        // Only this route mounts the editor inside the dedicated Modify page.
-        // Clone remains a create operation and stays in the creation mount.
+        // Open Modify directly from the dossier action rather than relying on
+        // route matching that can fall back to the Create item entry point.
         mountEditor(duplicate ? 'create' : 'modify');
         $('#items').hide(); $('#items_new').hide();
         open(); reset();
+        if (!duplicate) {
+            text('iv2-title', 'Modify item');
+            var heading = document.querySelector('#items_v2 .iv2-heading p');
+            if (heading) heading.textContent = 'Edit the saved article and save your changes.';
+        }
         var sequence = ++editSequence, branch = P.local.get('branch_id_set');
         editing = true; savedItemId = String(id); savedBranch = branch; busy = true;
         P.itemsV2Workspace.edit(); render();
