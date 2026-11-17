@@ -166,12 +166,12 @@
         var price = document.createElement('strong'); price.className = 'iv2-result-price'; price.textContent = family ? P.i18n.t('lang_variants_2', 'Variants') : data.open_price ? P.i18n.t('lang_cashier_types_the_price', 'Cashier types the price') : '…';
         var stock = document.createElement('p'); stock.textContent = data.inventory ? P.i18n.t('lang_opening_stock', 'Opening stock') + ': ' + (family ? P.i18n.t('lang_variants_2', 'Variants') : data.available_quantity) : P.i18n.t('lang_iv2_not_tracked', 'Stock not tracked');
         var actions = document.createElement('div'); actions.className = 'iv2-result-actions';
-        var another = button(P.i18n.t('lang_iv2_another', 'Create new item'), callbacks.reset); actions.append(another);
+        var another = button(P.i18n.t('lang_iv2_another', 'Create another'), callbacks.reset); actions.append(another);
         if (id && /^[a-zA-Z0-9_-]+$/.test(String(id))) {
             [['', P.i18n.t('lang_iv2_view', 'View item')]].forEach(function (entry) { var a = document.createElement('a'); a.href = '#/items/' + encodeURIComponent(id) + entry[0]; a.textContent = entry[1]; actions.append(a); });
         }
         if (newlyCreated && id && !family && data.barcode_id) {
-            actions.append(button(P.i18n.t('lang_print_price_labels', 'Fast print price labels'), function () {
+            actions.append(button(P.i18n.t('lang_print_price_labels', 'Print price labels'), function () {
                 var trigger = document.createElement('button');
                 trigger.type = 'button';
                 trigger.setAttribute('data-item-id', String(id));
