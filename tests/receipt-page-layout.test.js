@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { JSDOM } = require('jsdom');
 const { fitDocument } = require('../src/receipt-page-layout');
 
-test('thermal paper follows receipt content, never the enclosing window height', () => {
+test('thermal receipt media stays continuous and never receives a calculated page height', () => {
     for (const format of ['58', '80', '112']) {
         const dom = new JSDOM('<article class="rd-document" data-receipt-design="' + format + '"></article>');
         const doc = dom.window.document;
@@ -61,7 +61,7 @@ test('fitted paper overrides receipt styles in the body, including after refitti
     fitDocument(doc);
     assert.equal(doc.body.lastElementChild.id, 'rd-fitted-paper');
     const styles = Array.from(doc.querySelectorAll('style'));
-    assert.match(styles[styles.length - 1].textContent, /@page\{size:72mm 106\.1mm/);
+    assert.match(styles[styles.length - 1].textContent, /@page\{size:72mm auto/);
     assert.equal(doc.querySelectorAll('#rd-fitted-paper').length, 1);
     dom.window.close();
 });
