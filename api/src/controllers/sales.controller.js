@@ -1627,7 +1627,7 @@ class SalesController extends BaseController {
       const date = String(body.date || '');
       const counted = Number(body.counted_cash);
       const expected = Number(body.expected_cash);
-      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || !Number.isFinite(counted) || counted < 0 || !Number.isFinite(expected)) return this.error(res, 'Enter a valid date and counted cash amount.', 400);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(counted) || counted < 0 || !Number.isFinite(expected)) return this.error(res, 'Enter a valid date and counted cash amount.', 400);
       const branchId = this.model?.branchId || body.branch;
       const licenseId = this.model?.licenseId || req.user?.license || req.user?.license_id;
       if (!branchId || !licenseId) return this.error(res, ERROR_MESSAGES.BRANCH_LICENSE_REQUIRED, 400);
