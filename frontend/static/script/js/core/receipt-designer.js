@@ -475,7 +475,7 @@
                         effectiveHeight = Math.max(estimatedRowsHeight, 28);
                         style += 'height:auto;max-height:none;overflow:visible;';
                     } else {
-                        style += 'min-height:' + Math.min(4000, effectiveHeight) + 'px;';
+                        style += 'min-height:' + effectiveHeight + 'px;';
                     }
                 };
             }
@@ -536,7 +536,7 @@
         // print. Sheet composition wraps blocks in grids, which breaks x/y
         // positioning once a block has been dragged.
         var html = sheet && !layout.canvas ? composeSheet(rendered) : rendered.map(function (b) { return b.html; }).join('');
-        var canvasHeight = Math.max(80, Math.min(8000, Number(layout.canvasHeight) || 0));
+        var canvasHeight = Math.max(80, Number(layout.canvasHeight) || 0);
         if (pendingGoods) html += '<section class="rd-block rd-payment-status" style="' + (layout.canvas ? 'position:absolute;left:0;top:' + Math.max(0, canvasHeight - canvasTopOffset) + 'px;width:100%;' : '') + '">' + esc(label('Payment pending')) + '</section>';
         var canvasExtraHeight = 0;
         if (sheet) {
@@ -550,7 +550,7 @@
                 html += '<div class="rd-invoice-end"' + (layout.canvas ? ' style="position:absolute;left:0;top:' + (canvasHeight + 28) + 'px;width:100%;"' : '') + '><div class="rd-invoice-end-notes">' + notes + '</div></div>';
             }
         }
-        var finalCanvasHeight = Math.min(8000, canvasHeight + canvasExtraHeight);
+        var finalCanvasHeight = Math.max(80, canvasHeight + canvasExtraHeight);
         if (layout.canvas && !sheet) {
             var measuredBottom = layout.blocks.reduce(function (bottom, b) {
                 if (!Number.isFinite(Number(b.y)) || Number(b.y) < 0) return bottom;
@@ -561,13 +561,13 @@
                         var lines = Math.max(1, Math.ceil(Array.from(String(itemName || '')).length / (format === '58' ? 14 : 22)));
                         return total + 18 * lines + 8;
                     }, 28);
-                    height = Math.max(height, Math.min(4000, rowsHeight));
+                    height = Math.max(height, rowsHeight);
                 }
                 return Math.max(bottom, Math.max(0, Number(b.y) - canvasTopOffset) + height);
             }, 0);
-            finalCanvasHeight = Math.min(8000, Math.max(80, measuredBottom + 38));
+            finalCanvasHeight = Math.max(80, measuredBottom + 38);
         }
-        var canvasCss = layout.canvas ? '.rd-document{position:relative;height:' + finalCanvasHeight + 'px;min-height:' + finalCanvasHeight + 'px;overflow:visible;}.rd-document>.rd-block{box-sizing:border-box;}' : '';
+        var canvasCss = layout.canvas ? '.rd-document{position:relative;height:auto;min-height:' + finalCanvasHeight + 'px;max-height:none;overflow:visible;break-inside:avoid;page-break-inside:avoid;}.rd-document>.rd-block{box-sizing:border-box;}' : '';
         return '<style>' + css(format, layout.fontSize) + canvasCss + (fixedItems ? '.rd-fixed-columns .rd-number{white-space:nowrap;}.rd-fixed-columns td{border-bottom:0;padding-top:2px;padding-bottom:2px;}.rd-fixed-columns th,.rd-total-quantity td,.rd-grand-total{border-color:#333;border-top-style:' + (fixedItems.lineStyle || 'dotted') + ';border-bottom-style:' + (fixedItems.lineStyle || 'dotted') + ';}.rd-transaction{border-bottom-style:' + (fixedItems.lineStyle || 'dotted') + ';}.rd-total-quantity td{border-top:1px ' + (fixedItems.lineStyle || 'dotted') + ' #333;padding-top:6px;}.rd-grand-total{border-top-width:1px;border-bottom:1px ' + (fixedItems.lineStyle || 'dotted') + ' #333;padding-bottom:6px;}' : '') + '</style><article class="rd-document' + (sheet ? ' rd-sheet' : '') + '" data-receipt-design="' + format + '">' + html + '</article>';
     }
     var activeSale = false;
@@ -661,7 +661,7 @@
                     });
                 }).then(function (name) { return printer.print(doc, { printerName: name,
                 pageSize: ['58', '80', '112'].indexOf(format) !== -1 ? format + 'mm' : format,
-                copies: options.target ? options.target.copies : 1,
+                copies: Number(options.copies) > 0 ? Number(options.copies) : (options.target ? options.target.copies : 1),
                 receiptLog: options.receiptLog || null,
                 fitReceipt: ['58', '80', '112'].indexOf(format) !== -1,
                 // Saved Receipt Studio HTML is printed by the Windows driver.
@@ -713,6 +713,12 @@
             var hasSavedStudioDesign = !!(data && data.receipt_designs && data.receipt_designs.layouts);
             if (!data.receipt_designs) data = Object.assign({}, data, { receipt_designs: defaults(data) });
             var targets = window.electronAPI && PosnicPro.printSettings ? PosnicPro.printSettings.get('sales') : [null];
+            if (Number.isFinite(Number(options.copies)) && Number(options.copies) > 0) {
+                var copiesOverride = Math.max(1, Math.min(20, Math.floor(Number(options.copies))));
+                targets = targets.map(function (target) {
+                    return target ? Object.assign({}, target, { copies: copiesOverride }) : null;
+                });
+            }
             if (window.electronAPI && PosnicPro.printSettings && ['a4', 'a5', 'letter'].indexOf(requested) !== -1) {
                 // An A4 override must not silently send a sheet to the counter roll.
                 targets = targets.filter(function (target) { return ['a4', 'a5', 'letter'].indexOf(target.pageSize) !== -1; });
@@ -743,11 +749,12 @@
                         paperWidth: chosen,
                         kind: 'receipt-design-sample',
                         source: 'Receipt designer',
-                        cut: true
+                        cut: true,
+                        copies: Number(options.copies) > 0 ? Number(options.copies) : undefined
                     });
                     if (!nativeResult || !nativeResult.success) throw new Error(nativeResult && nativeResult.error || label('Print failed'));
                 } else {
-                    await print(render(data, chosen, kitchenBill), chosen, { target: target, batch: true, sample: false, showDialog: false, receiptLog: { saleId: data.sales_id, total: data.items_total, title: kitchenBill ? label('Bill') : label('Receipt'), source: 'Till' } });
+                    await print(render(data, chosen, kitchenBill), chosen, { target: target, copies: options.copies, batch: true, sample: false, showDialog: false, receiptLog: { saleId: data.sales_id, total: data.items_total, title: kitchenBill ? label('Bill') : label('Receipt'), source: 'Till' } });
                 }
             }
             if (!options.preserveWorkspace) PosnicPro.afterPrint();

@@ -4843,10 +4843,7 @@ PosnicPro.sales.addSale = {
                             typeof PosnicPro.sales.view.printSale === 'function';
                         if (versementSaleId && directVersementPrint) {
                             try {
-                                PosnicPro.sales.view.printSale(versementSaleId, 'sale');
-                                window.setTimeout(function () {
-                                    PosnicPro.sales.view.printSale(versementSaleId, 'sale');
-                                }, 650);
+                                PosnicPro.sales.view.printSale(versementSaleId, 'sale', false, null, 2);
                             } catch (printError) {
                                 PosnicPro.alert('warning', 'Versement enregistré. Impression directe impossible ; réimprimez le ticket depuis l’historique des ventes.');
                             }
