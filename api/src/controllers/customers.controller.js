@@ -218,6 +218,9 @@ class CustomerController extends BaseController {
       balance: req.body.balance || DEFAULTS.BALANCE,
       partial_balance: normalizeBoolean(req.body.partial_balance),
       price_tier: Math.max(1, Math.min(3, Number(req.body.price_tier) || 1)),
+      creditLimit: Number.isFinite(Number(req.body.creditLimit))
+        ? Math.max(0, Number(req.body.creditLimit))
+        : 0,
     };
     // Do not persist an empty string for an omitted phone number.
     if (!customerData.phone) delete customerData.phone;
