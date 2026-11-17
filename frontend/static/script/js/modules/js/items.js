@@ -1890,7 +1890,7 @@ PosnicPro.items = {
         // Open the record-bound editor directly. The route remains registered
         // for bookmarks/history, but a click must not depend on a hash event
         // racing the catalogue's legacy add-page state.
-        return PosnicPro.items_v2.showEdit(String(id));
+        return PosnicPro.items.showModify(String(id));
     },
     _legacyEditItem: function (id) {
         var loader = $(".loader-item");
