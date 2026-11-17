@@ -130,8 +130,10 @@
         return [['available_quantity','Stock initial','number'],['barcode_id','Barcode','text']];
     }
     function captureVariants() {
-        document.querySelectorAll('#iv2-variant-rows .iv2-variant').forEach(function (card, i) {
-            card.querySelectorAll('[data-field]').forEach(function (input) { variants[i][input.dataset.field] = input.value; });
+        document.querySelectorAll('#iv2-variant-rows .iv2-variant').forEach(function (card) {
+            var index=Number(card.dataset.variantIndex);
+            if(!variants[index])return;
+            card.querySelectorAll('[data-field]').forEach(function (input) { variants[index][input.dataset.field] = input.value; });
         });
     }
     function variantSignature() { return JSON.stringify([val('axis1'),val('values1'),val('axis2'),val('values2')]); }
@@ -176,10 +178,10 @@
     }
     function isFamily() { return checked('has-variants') && document.querySelector('#items_v2 [name="iv2-kind"]:checked').value !== 'service'; }
     function validate() {
-        if (caps.tax && val('hsn') && !/^\d{4,8}$/.test(val('hsn'))) return error(P.i18n.t('lang_iv2_hsn_code_invalid', 'Choose an HSN / SAC code from the suggestions, or enter a 4 to 8 digit code.'), 'hsn');
+        if (caps.tax && val('hsn') && !/^\\d{4,8}$/.test(val('hsn'))) return error(P.i18n.t('lang_iv2_hsn_code_invalid', 'Choose an HSN / SAC code from the suggestions, or enter a 4 to 8 digit code.'), 'hsn');
         if (caps.tax && val('hsn') && val('hsn-rate') === '') return error(P.i18n.t('lang_iv2_hsn_rate_required', 'Enter the applicable tax rate for this code. Enter 0 for a zero-rated item.'), 'hsn-rate');
         var invalid = document.querySelector('#iv2-fields input:invalid, #iv2-fields select:invalid, #iv2-fields textarea:invalid');
-        if (invalid) return { error: invalid.validationMessage, field: invalid.id };
+        if (invalid) return error(invalid.validationMessage, invalid.id);
         if (reading) return error('Wait for the selected photos to finish loading.', 'photos');
         if (!P.itemTranslationsV2.ready()) return error(label('lang_item_ai_finish', 'Wait for the suggestion, then keep or cancel it before saving.'), 'item_translation_ai');
         if (val('pack-size') && !(Number(val('pack-size')) > 0)) return error('Units per pack must be greater than zero.', 'pack-size');
@@ -187,15 +189,15 @@
         if (!validGtin(val('gtin')) && !isFamily()) return error('Enter a valid GTIN with a matching check digit.', 'gtin');
         if (isFamily()) {
             captureVariants();
-            if (variants.length < 2 || variantSignature() !== signature) return error('Generate the variants after choosing their names and values.', 'values1');
+            var active=variants.filter(function(row){return !row._deleted;});
+            if (active.length < 1 || variantSignature() !== signature) return error('Generate the variants after choosing their names and values.', 'values1');
             var codes = new Set();
             for (var i=0;i<variants.length;i++) {
-                var row=variants[i];
-                if (!validGtin(row.gtin)) return error('Enter a valid GTIN for ' + row.variant_value + '.', 'variant-'+i+'-gtin');
-                for (var code of [row.barcode_id, row.gtin].filter(Boolean)) {
-                    if (codes.has(code)) return error('Each variant needs its own barcode or GTIN.', 'variant-'+i+'-barcode_id');
-                }
-                [row.barcode_id,row.gtin].filter(Boolean).forEach(function (code) { codes.add(code); });
+                var row=variants[i];if(row._deleted)continue;
+                var code=String(row.barcode_id||'').trim();
+                if(!code)return error('Enter or generate a unique barcode for ' + row.variant_value + '.', 'variant-'+i+'-barcode_id');
+                if(codes.has(code))return error('Each variant needs its own unique barcode.', 'variant-'+i+'-barcode_id');
+                codes.add(code);
             }
         }
         return null;
