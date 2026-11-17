@@ -723,26 +723,11 @@ class SalesController extends BaseController {
   }
 
   // Shared internal implementation for creating or holding a sale (PHP salesInsertUpdate parity)
-  // A manual discount (line or extra) detected on this sale is a restricted
-  // till action. If this user can't apply discounts on their own, a valid
-  // manager-approval token is required - the same server-side gate as
-  // void/refund. Coupon and loyalty discounts are validated by their own rules
-  // (prepareCouponRedemption / prepareLoyaltyRedemption) and are never counted
-  // by collectSaleAuditChanges, so they never trip this. Fails open for
-  // unconfigured users so existing tills are never blocked.
+  // Manual remise is an ordinary till action. Keep the method in place
+  // for both Add and Edit call sites, but do not block a sale or require a
+  // manager token based on role permissions or discount percentage.
   discountNeedsApproval(req, payload, auditChanges) {
-    if (!auditChanges || !Array.isArray(auditChanges.discounts) || !auditChanges.discounts.length) {
-      return false;
-    }
-    if (canPos(req.user, 'discount_apply')) {
-      // Allowed to discount - but the role may cap how deep (0 = no cap).
-      const pos = (req.user && req.user.access && req.user.access.pos) || {};
-      const cap = Number(pos.discount_max_percent) || 0;
-      if (cap <= 0 || estimateManualDiscountPct(payload) <= cap) return false;
-    }
-    const token =
-      (payload && payload.approval_token) || (req.body && req.body.approval_token) || null;
-    return !isApprovedFor(token, 'discount_apply', req.user && req.user._id);
+    return false;
   }
 
   async buildSaleContext(req) {

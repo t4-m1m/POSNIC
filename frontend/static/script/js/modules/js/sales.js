@@ -233,13 +233,10 @@ PosnicPro.sales = {
         var displayPage = 'sales';
         $('#' + displayPage + '_new').show();
         PosnicPro.sales.pinFunctionToolbar();
-        db.saleAutoFocus.get('1').then(function (data) {
-            if (data && data.addSale === true) {
-                $('#sales_new_item_name').focus();
-            } else {
-                $('#sales_new_item_name').blur();
-            }
-        });
+        // Barcode scanners are keyboard wedges: keep the scan field ready
+        // whenever the cashier enters the New Sale workspace. The old optional
+        // preference could leave the till unfocused and silently miss scans.
+        window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(); }, 80);
         $('#time-format').addClass('commonDate');
         $('#time-format').removeClass('commonEditDate');
         PosnicPro.commonDate();
@@ -3258,13 +3255,17 @@ PosnicPro.sales = {
                 PosnicPro.sales.initPaymentValidation();
                 return;
             }
-            // Selecting a tender is a transfer of the complete bill amount,
-            // not an additional split alongside the previous Cash allocation.
-            // Clear every other method first so 5,200 DA moves from Cash to
-            // TPE/BaridiMob instead of being counted twice.
-            $('.payment-amount-input').val('0.00').prop('disabled', false);
+            // A second tender receives only the outstanding remainder.
+            // Keep the amount already entered in Cash (or another method), then
+            // fill the clicked method with total minus every other allocation.
+            var allocatedElsewhere = 0;
+            $('.payment-amount-input').not($input).each(function () {
+                allocatedElsewhere += Math.max(0, Number(String($(this).val() || '0').replace(/,/g, '')) || 0);
+            });
+            var remainder = Math.max(0, billTotal - allocatedElsewhere);
+            $('.payment-amount-input').prop('disabled', false);
             $('.payment_mode').prop('checked', false);
-            $input.val(Math.max(0, billTotal).toFixed(2));
+            $input.val(remainder.toFixed(2));
             $button.closest('.payment-method-card').find('.payment_mode').prop('checked', true);
             $('.btn-payment-method').removeClass('active').css({
                 'background': 'transparent', 'color': '#495057', 'border': '2px solid #dee2e6'
@@ -4413,39 +4414,11 @@ PosnicPro.sales._manualDiscountPct = function (data) {
 // discount, or this user may apply it within their cap; otherwise the
 // manager PIN/card modal runs first and the token is attached to the
 // payload for the server-side check.
-PosnicPro.sales.guardDiscountApproval = function (params, proceed, checkedPending) {
-    if (!checkedPending && PosnicPro.businessApproval && PosnicPro.businessApproval.hasPending()) {
-        PosnicPro.businessApproval.offer(params, proceed, function () {
-            PosnicPro.sales.guardDiscountApproval(params, proceed, true);
-        }, true);
-        return;
-    }
-    var data;
-    try { data = JSON.parse(params.data); } catch (e) { proceed(); return; }
-    if (!data || !PosnicPro.sales._manualDiscountOn(data)) { proceed(); return; }
-    if (PosnicPro.posCan('discount_apply')) {
-        var pos = PosnicPro.userACL && PosnicPro.userACL.pos;
-        var cap = pos ? PosnicPro.sales._num(pos.discount_max_percent) : 0;
-        if (cap <= 0 || PosnicPro.sales._manualDiscountPct(data) <= cap) {
-            proceed();
-            return;
-        }
-    }
-    var localApproval = function () { PosnicPro.requireManagerApproval('discount_apply',
-        { prompt: "This discount needs a manager's approval.", force: true },
-        function (approval) {
-            if (approval && approval.approval_token) {
-                data.approval_token = approval.approval_token;
-                params.data = JSON.stringify(data);
-            }
-            proceed();
-        }, function () {
-            PosnicPro.sales.submissionInProgress = false;
-            $('#save_btn').prop('disabled', false);
-            $('#save_submit').removeClass('disabled');
-        }); };
-    if (PosnicPro.businessApproval) PosnicPro.businessApproval.offer(params, proceed, localApproval);
-    else localApproval();
+// Discounts are intentionally unrestricted at checkout. Keep this
+// compatibility wrapper because both Add and Edit submit paths call it, but
+// never require a manager PIN or a discount-cap approval token.
+PosnicPro.sales.guardDiscountApproval = function (params, proceed) {
+    if (typeof proceed === 'function') proceed();
 };
 
 /*********** START - ADD NEW SALES ***********/
@@ -7367,24 +7340,12 @@ PosnicPro.sales.renderCharges = function () {
     }
 };
 $(document).on('click', '#sale_add_discount', function () {
-    // one action: the user already said "add discount" - the editor opens
-    // with the cursor in it. editable('show') skips the click gate, so the
-    // same discount_apply rail runs here explicitly.
-    var open = function () {
-        $('.addDisc-hide-show').show();
-        setTimeout(function () {
-            try { $('#extraDisc').editable('show'); } catch (e) { $('#extraDisc').trigger('click'); }
-            setTimeout(function () { $('.editable-input input').focus().select(); }, 120);
-        }, 60);
-    };
-    if (PosnicPro.posCan && !PosnicPro.posCan('discount_apply')) {
-        var local = function () { PosnicPro.requireManagerApproval('discount_apply',
-            { prompt: "Applying a discount needs a manager's approval." }, open); };
-        if (PosnicPro.businessApproval) PosnicPro.businessApproval.editOrLocal(open, local);
-        else local();
-        return;
-    }
-    open();
+    // Applying a bill-level discount is a normal cashier action; no manager PIN.
+    $('.addDisc-hide-show').show();
+    setTimeout(function () {
+        try { $('#extraDisc').editable('show'); } catch (e) { $('#extraDisc').trigger('click'); }
+        setTimeout(function () { $('.editable-input input').focus().select(); }, 120);
+    }, 60);
 });
 /*
  * Inline add-charge row (queue #7): the prompt() pair is gone. The entry
@@ -8816,13 +8777,7 @@ PosnicPro.sales.itemsMenu = {
             $("#save_submit").removeClass("disabled");
             let hash = window.location.hash.slice(1);
             if (hash === '/sales/new') {
-                db.saleAutoFocus.get('1').then(function (data) {
-                    if (data && data.addSale === true) {
-                        $('#sales_new_item_name').focus();
-                    } else {
-                        $('#sales_new_item_name').blur();
-                    }
-                });
+                window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(); }, 0);
             }
             PosnicPro.sales.itemsMenu.clickEffect();
             if (barcodeScanned) {
@@ -8831,6 +8786,7 @@ PosnicPro.sales.itemsMenu = {
                 item._quantityConfirmed = true;
             }
             PosnicPro.sales.addSalesLineItems(item);
+            if (barcodeScanned) window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(); }, 0);
         });
     },
     clickEffect: function () {
@@ -11477,6 +11433,30 @@ $(window).resize(function () {
 }).resize();
 /* ONE resolution path for every way a barcode arrives - hardware scanner
    wedge or the camera (L3). Looks the code up, stock-checks, adds the line. */
+PosnicPro.sales.focusBarcodeInput = function () {
+    var input = document.getElementById('sales_new_item_name');
+    var page = document.getElementById('sales_new');
+    if (!input || !page || window.getComputedStyle(page).display === 'none' ||
+        !input.offsetWidth || !input.offsetHeight || input.disabled) return false;
+    // Never steal focus from payment, a modal, or an intentional text editor.
+    if ($('#infobar-settings-sidebar-tender-details').hasClass('sidebarview') ||
+        $('.modal.show:visible').length ||
+        $(document.activeElement).is('input,textarea,select,[contenteditable="true"]') &&
+        document.activeElement !== input) return false;
+    try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); }
+    return document.activeElement === input;
+};
+
+// Clicking the unused sales workspace or returning to the app restores the
+// scanner target. Editable fields and checkout controls keep their own focus.
+$(document).off('click.posnicBarcodeReady', '#sales_new').on('click.posnicBarcodeReady', '#sales_new', function (event) {
+    if ($(event.target).closest('input,textarea,select,button,a,[contenteditable="true"],.cart-qty,#tenderpage,.modal').length) return;
+    window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(); }, 25);
+});
+$(window).off('focus.posnicBarcodeReady').on('focus.posnicBarcodeReady', function () {
+    window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(); }, 80);
+});
+
 PosnicPro.sales.addScannedItem = function (itemData) {
     // Barcode results are live. Do not replace the selected record's price
     // with an older detail-cache entry when adding it to the basket.
@@ -12677,26 +12657,7 @@ PosnicPro.sales.quickSale = {
         });
     }
 };
-/*
- * Discounts are a POS power (owner ask): the discount_apply permission
- * gates the sale-screen discount editor; a cashier without it gets the
- * manager PIN prompt, the same rail as price edits and refunds. The
- * capture-phase listener beats the x-editable's own direct binding.
- */
-document.addEventListener('click', function (e) {
-    var t = e.target.closest && e.target.closest('#extraDisc, #percentIcon, #rupeeIcon, #click_discount_description');
-    if (!t) { return; }
-    if (PosnicPro._discountApproved) { PosnicPro._discountApproved = false; return; }
-    if (PosnicPro.posCan && !PosnicPro.posCan('discount_apply')) {
-        e.preventDefault();
-        e.stopPropagation();
-        var open = function () { PosnicPro._discountApproved = true; t.click(); };
-        var local = function () { PosnicPro.requireManagerApproval('discount_apply',
-            { prompt: "Applying a discount needs a manager's approval." }, open); };
-        if (PosnicPro.businessApproval) PosnicPro.businessApproval.editOrLocal(open, local);
-        else local();
-    }
-}, true);
+/* Bill-level remise fields are always editable by the cashier. */
 
 /* One shape vocabulary for every tile renderer. */
 PosnicPro.tileShapeCss = function (shape, baseRadius) {

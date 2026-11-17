@@ -1721,14 +1721,21 @@ body[data-theme="warmnight"]{color-scheme:dark}
     window.__posnicSendWhatsAppReceiptAfterSave=true;
     $('#save_btn').trigger('click');
   });
-  $(document).off('input.posnicSplit change.posnicSplit','#Partial_amount').on('input.posnicSplit change.posnicSplit','#Partial_amount',function(){window.setTimeout(allocatePartial,0);});
+  // Only a real cashier edit of the aggregate amount should redistribute
+  // it to the selected tender. Programmatic updates from tender switching are
+  // summaries and must not collapse an existing Cash + TPE split.
+  $(document).off('input.posnicSplit change.posnicSplit','#Partial_amount').on('input.posnicSplit change.posnicSplit','#Partial_amount',function(e){
+    if(e.originalEvent && e.originalEvent.isTrusted) window.setTimeout(allocatePartial,0);
+  });
   $(document).off('input.posnicCredit change.posnicCredit','#payment_id .payment-method-card .payment-amount-input').on('input.posnicCredit change.posnicCredit','#payment_id .payment-method-card .payment-amount-input',function(){
     var method=String($(this).closest('.payment-method-card').find('.payment_mode').first().attr('id')||'').toLowerCase();
     if(method==='credit')window.setTimeout(allocateCredit,0);
   });
   $(document).off('input.posnicSplit change.posnicSplit','.payment-amount-input, #unpaid_payment_toggle').on('input.posnicSplit change.posnicSplit','.payment-amount-input, #unpaid_payment_toggle',function(){window.setTimeout(renderSplit,0);});
   $(document).off('click.posnicSplit','.btn-payment-method').on('click.posnicSplit','.btn-payment-method',function(){
-    var clicked=this;window.setTimeout(function(){var method=String($(clicked).closest('.payment-method-card').find('.payment_mode').first().attr('id')||'').toLowerCase();if(method&&method!=='credit')allocatePartial();renderSplit();},0);
+    // The native tender selector has already preserved previous methods and
+    // allocated the remaining balance to this method.
+    window.setTimeout(renderSplit,0);
   });
   $(document).off('change.posnicSplitCustomer input.posnicSplitCustomer','#sales_new_customer_id, #sales_new_customer_name').on('change.posnicSplitCustomer input.posnicSplitCustomer','#sales_new_customer_id, #sales_new_customer_name',function(){window.setTimeout(renderSplit,0);});
   $(function(){renderSplit();var host=document.getElementById('payment_id');if(host&&window.MutationObserver)new MutationObserver(function(){window.setTimeout(renderSplit,0);}).observe(host,{childList:true,subtree:true});});
