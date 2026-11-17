@@ -15,7 +15,7 @@ exports.ensureForSale = async (req, sale) => {
   const initial = money(meta.initial_amount), method = String(meta.initial_method || 'cash').toLowerCase();
   const total = saleTotal(sale), branchRaw = sale.branch_id || branchOf(req);
   if (!key || !customer || !ObjectId.isValid(String(branchRaw)) || !(initial > 0) ||
-      total <= 0 || initial > total || !['cash','tpe','baridimob'].includes(method)) {
+      total <= 0 || !['cash','tpe','baridimob'].includes(method)) {
     throw new Error('Invalid Versement metadata on the validated sale.');
   }
   const collection = req.db.collection(COLLECTION);
@@ -29,7 +29,7 @@ exports.ensureForSale = async (req, sale) => {
     sale_key: key, sale_object_id: sale._id, branch_id: new ObjectId(String(branchRaw)),
     ...(sale.cashregister_id && ObjectId.isValid(String(sale.cashregister_id)) ? { register_id: new ObjectId(String(sale.cashregister_id)) } : {}),
     customer_name: customer, phone, vendor_name: String(meta.vendor_name || sale.cashier_name || '').trim().slice(0, 80), sale_total: total, initial_amount: initial, initial_method: method,
-    remaining: money(total - initial), status: settled ? 'settled' : 'pending',
+    remaining: money(Math.max(0, total - initial)), status: settled ? 'settled' : 'pending',
     created_at: now, created_by: actor(req), initial_collected_at: now, initial_recorded_amount: initial,
     ...(settled ? { settled_at: now } : {}),
     settlement: settled ? { amount: 0, method: 'none', settled_at: now, recorded_by: actor(req) } : null,
@@ -91,7 +91,7 @@ exports.create = async (req,res) => {
     const recovered = await exports.ensureForSale(req, sale);
     if (recovered) return res.json({ type:'success', message:'Versement déjà enregistré ou récupéré.', data:recovered });
     const total = saleTotal(sale);
-    if (total <= 0 || initial > total) return fail(res,400,'Initial versement must be greater than zero and no more than the sale total.');
+    if (total <= 0) return fail(res,400,'The linked sale total must be greater than zero.');
     const collection = req.db.collection(COLLECTION);
     await collection.createIndex({ sale_key:1 },{ unique:true });
     await collection.createIndex({ versement_number:1 },{ unique:true });
@@ -101,7 +101,7 @@ exports.create = async (req,res) => {
     const now = new Date(), initialMethod = String(req.body?.initial_method || 'cash').toLowerCase();
     if (!['cash','tpe','baridimob'].includes(initialMethod)) return fail(res,400,'Choose Espèces, TPE or BaridiMob.');
     const settled = initial >= total - 0.009;
-    const doc = { versement_number:number, sale_key:saleKey(sale), sale_object_id:sale._id, branch_id:new ObjectId(branch), ...(sale.cashregister_id && ObjectId.isValid(String(sale.cashregister_id)) ? { register_id:new ObjectId(String(sale.cashregister_id)) } : {}), customer_name:customer, phone, sale_total:total, initial_amount:initial, initial_method:initialMethod, remaining:money(total-initial), status:settled?'settled':'pending', created_at:now, created_by:actor(req), initial_collected_at:now, initial_recorded_amount:initial, ...(settled?{settled_at:now}:{}), settlement:settled?{ amount:0, method:'none', settled_at:now, recorded_by:actor(req) }:null, history:[{type:'initial',amount:initial,method:initialMethod,at:now,by:actor(req)}] };
+    const doc = { versement_number:number, sale_key:saleKey(sale), sale_object_id:sale._id, branch_id:new ObjectId(branch), ...(sale.cashregister_id && ObjectId.isValid(String(sale.cashregister_id)) ? { register_id:new ObjectId(String(sale.cashregister_id)) } : {}), customer_name:customer, phone, sale_total:total, initial_amount:initial, initial_method:initialMethod, remaining:money(Math.max(0,total-initial)), status:settled?'settled':'pending', created_at:now, created_by:actor(req), initial_collected_at:now, initial_recorded_amount:initial, ...(settled?{settled_at:now}:{}), settlement:settled?{ amount:0, method:'none', settled_at:now, recorded_by:actor(req) }:null, history:[{type:'initial',amount:initial,method:initialMethod,at:now,by:actor(req)}] };
     const inserted = await collection.insertOne(doc);
     return res.status(201).json({ type:'success', message:'Versement recorded.', data:{...doc,_id:String(inserted.insertedId)} });
   } catch(e) {
