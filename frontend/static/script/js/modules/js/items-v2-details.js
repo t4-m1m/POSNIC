@@ -127,7 +127,7 @@
         }); event.target.value = '';
     }
     function variantFields() {
-        return [['selling_price','Selling price','number'],['available_quantity','Opening stock','number'],['sku_id','SKU','text'],['barcode_id','Barcode','text'],['gtin','GTIN / EAN','text'],['company_price','Cost price','number'],['mrp_price','M.R.P','number'],['position','Item Position','number'],['discount_amount','Discount amount','number'],['discount_percentage','Discount percentage','number']];
+        return [['available_quantity','Stock initial','number'],['barcode_id','Barcode','text']];
     }
     function captureVariants() {
         document.querySelectorAll('#iv2-variant-rows .iv2-variant').forEach(function (card, i) {
@@ -140,11 +140,11 @@
         if (!val('axis1') || names.length < 2 || names.length > 50 || (val('axis2') && !list(val('values2')).length)) {
             report('Enter a variant name and comma-separated values. Create between 2 and 50 combinations.'); return;
         }
-        captureVariants(); var previous = new Map(variants.map(function (r) { return [r.variant_value, r]; }));
+        captureVariants(); var previous = new Map(variants.filter(function(r){return !r._deleted;}).map(function (r) { return [r.variant_value, r]; }));
         variants = names.map(function (name) { return previous.get(name) || { variant_value: name, selling_price: val('price'), available_quantity: '0', company_price: val('cost'), mrp_price: val('mrp'), position: val('position'), discount_amount: val('discount-type') === 'amount' ? val('discount') : '', discount_percentage: val('discount-type') === 'percentage' ? val('discount') : '' }; });
         signature = variantSignature(); var box = el('variant-rows'); box.replaceChildren();
         variants.forEach(function (row, i) {
-            var card = document.createElement('div'); card.className = 'iv2-variant'; var heading = document.createElement('h3'); heading.textContent = row.variant_value; card.appendChild(heading);
+            var card = document.createElement('div'); card.className = 'iv2-variant'; card.dataset.variantIndex=String(i); var heading = document.createElement('h3'); heading.textContent = row.variant_value; card.appendChild(heading);\n            var removeRow=document.createElement('button');removeRow.type='button';removeRow.className='iv2-secondary';removeRow.textContent='Supprimer';removeRow.addEventListener('click',function(){captureVariants();variants[i]._deleted=true;card.remove();notify();});card.appendChild(removeRow);
             var grid = document.createElement('div'); grid.className = 'iv2-grid';
             variantFields().forEach(function (spec) {
                 var wrap = document.createElement('div'), lab = document.createElement('label'), input = document.createElement('input');
@@ -228,7 +228,7 @@
         return out;
     }
     function family(shared) {
-        captureVariants(); return { variant_axis: [val('axis1'),val('axis2')].filter(Boolean).join(' / '), variant_parent_name: shared.name, items: variants.map(function (row) {
+        captureVariants(); return { variant_axis: [val('axis1'),val('axis2')].filter(Boolean).join(' / '), variant_parent_name: shared.name, items: variants.filter(function(row){return !row._deleted;}).map(function (row) {
             var image=photos.find(function (p) {return p.name===row.photo;});
             var r=Object.assign({},shared,row,{name:shared.name+' / '+row.variant_value,barcodes:[],plu_code:'',sku_id:row.sku_id||'',barcode_id:row.barcode_id||'',gtin:row.gtin||'',available_quantity:shared.inventory?Number(row.available_quantity):0});
             var unitOption=Array.from(el('unit').options).find(function(o){return o.value===row.unit_id;});
@@ -239,7 +239,7 @@
         }) };
     }
     function status() {
-        captureVariants(); return { family: isFamily(), openPrice: checked('open-price'), prices: variants.map(function(r){return Number(r.selling_price);}), quantities: variants.map(function(r){return Number(r.available_quantity);}), hsn: caps.tax && !!val('hsn'), tax: Number(val('hsn-rate')), discount: Number(val('discount')), discountType: val('discount-type') };
+        captureVariants(); var active=variants.filter(function(r){return !r._deleted;}); return { family: isFamily(), openPrice: checked('open-price'), prices: active.map(function(r){return Number(r.selling_price);}), quantities: active.map(function(r){return Number(r.available_quantity);}), hsn: caps.tax && !!val('hsn'), tax: Number(val('hsn-rate')), discount: Number(val('discount')), discountType: val('discount-type') };
     }
     function update(capabilities, kind) {
         caps=capabilities;
