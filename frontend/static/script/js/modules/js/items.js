@@ -994,7 +994,7 @@ PosnicPro.items = {
     <footer class="pm-footer"><span class="pm-status">Changes apply to this article only.</span><div><button type="button" class="btn pm-btn pm-back-step" id="posnic_modify_prev" hidden>← Back</button> <button type="button" class="btn pm-btn pm-next" id="posnic_modify_next">Continue to step 2 →</button><button type="submit" class="btn pm-btn pm-save" id="posnic_modify_save" hidden><i class="feather icon-save mr-2"></i>Save changes</button></div></footer>
   </form>
 </div>`;
-        $('#items').hide(); $('#items_v2_mount,#items_modify_page,#items_new').hide(); $('.page-title-box').hide(); $(host).show();
+        $('#items').hide(); $('#items_v2_mount,#items_new').hide(); $('#items_modify_page').show(); $('.page-title-box').hide(); $(host).show();
         self._modifyRecord = null;
         var selectedImage = null, imagePreviewUrl = null;
         function showImage(src) {
