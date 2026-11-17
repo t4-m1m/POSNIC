@@ -1611,10 +1611,46 @@ class SalesController extends BaseController {
     );
   }
 
+
+
+  async cashierDaySummary(req, res) {
+    req.cashierDayClose = true;
+    req.query = Object.assign({}, req.query, { type: 'VIEW' });
+    return this.dailySalesReports(req, res);
+  }
+
+  async cashierDayClose(req, res) {
+    try {
+      if (!this.checkPermission('sales', 'read', req.user)) return this.error(res, ERROR_MESSAGES.UNAUTHORIZED, 403);
+      await this.ensureContext(req);
+      const body = req.body || {};
+      const date = String(body.date || '');
+      const counted = Number(body.counted_cash);
+      const expected = Number(body.expected_cash);
+      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || !Number.isFinite(counted) || counted < 0 || !Number.isFinite(expected)) return this.error(res, 'Enter a valid date and counted cash amount.', 400);
+      const branchId = this.model?.branchId || body.branch;
+      const licenseId = this.model?.licenseId || req.user?.license || req.user?.license_id;
+      if (!branchId || !licenseId) return this.error(res, ERROR_MESSAGES.BRANCH_LICENSE_REQUIRED, 400);
+      const branchObjectId = new mongoose.Types.ObjectId(String(branchId));
+      const difference = roundToTwo(counted - expected);
+      const db = await BaseModel.getDb();
+      const cashierId = String(req.user?._id || req.user?.id || req.user?.username || 'cashier');
+      const record = { license: licenseId, branch_id: branchObjectId, date, cashier_id: cashierId,
+        cashier_name: String(req.user?.name || req.user?.username || 'Cashier'), expected_cash: roundToTwo(expected),
+        counted_cash: roundToTwo(counted), difference, closed_at: new Date(), created_by: cashierId };
+      await db.collection('cashier_day_closures').insertOne(record);
+      return this.success(res, { date, expected_cash: record.expected_cash, counted_cash: record.counted_cash, difference }, difference === 0 ? 'Day closed. Cash is exact.' : 'Day closed. Cash difference recorded.', 200);
+    } catch (error) {
+      if (error && error.code === 11000) return this.error(res, 'This cashier has already closed this day.', 409);
+      console.error('Error in cashierDayClose:', error);
+      return this.error(res, 'Could not save the day closure.', 500, error);
+    }
+  }
+
   async dailySalesReports(req, res) {
     try {
       // ---- Access check (null-safe) ----
-      const hasReportAccess = this.checkPermission('report', 'read', req.user);
+      const hasReportAccess = req.cashierDayClose ? this.checkPermission('sales', 'read', req.user) : this.checkPermission('report', 'read', req.user);
 
       if (!hasReportAccess) {
         return this.error(res, ERROR_MESSAGES.UNAUTHORIZED, 403);
@@ -2148,6 +2184,17 @@ class SalesController extends BaseController {
       }));
 
       responseData.cancellation_summary = cancellationSummary;
+
+      if (req.cashierDayClose) {
+        const isCash = (method) => /^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(method || '').trim());
+        const salesCash = paymentDetails.reduce((sum, row) => sum + (isCash(row.payment_mode) ? Number(row.sale_payment || 0) : 0), 0);
+        const collectedCash = debtPaymentDetails.reduce((sum, row) => sum + (isCash(row.payment_mode) ? Number(row.amount || 0) : 0), 0);
+        const salaryCash = salaryPaymentDetails.reduce((sum, row) => sum + (isCash(row.method) ? Number(row.amount || 0) : 0), 0);
+        const advanceCash = salaryAdvanceDetails.reduce((sum, row) => sum + (isCash(row.method) ? Number(row.amount || 0) : 0), 0);
+        const primeCash = salaryPrimeDetails.reduce((sum, row) => sum + (isCash(row.method) ? Number(row.amount || 0) : 0), 0);
+        const cashExpected = roundToTwo(salesCash + collectedCash - expensesTotal - salaryCash - advanceCash - primeCash);
+        return this.success(res, { date: branchDetails.from_date, cash_expected: cashExpected, currency: 'DA' }, 'Cash expected loaded', 200);
+      }
 
       // ---- Return success response ----
       return this.success(res, responseData, SUCCESS_MESSAGES.GET_SUCCESSFULLY_LOWER, 200);

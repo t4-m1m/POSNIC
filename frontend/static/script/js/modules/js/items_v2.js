@@ -239,9 +239,12 @@
         var form = document.getElementById('iv2-form');
         if (capabilities.tax && !taxReady) { fail('Wait for tax settings to load, or choose Try again above.', 'iv2-tax-error'); return false; }
         var data = Object.assign(payload(f), P.itemsV2Details.data());
-        // Retail item creation intentionally has no tax field. Ignore stale
-        // default-tax/HSN drafts so the old 0.25% value cannot be re-applied.
-        data.tax = 0; data.tax_id = ''; data.tax_name = ''; data.hsn_code = ''; data.hsn_description = ''; data.tax_type = 'inclusive';
+        // Retail item CREATION intentionally has no tax field. During editing,
+        // preserve the selected item's stored tax configuration unless the user
+        // explicitly changes it; clearing these fields here reset saved settings.
+        if (!editing && !capabilities.restaurant) {
+            data.tax = 0; data.tax_id = ''; data.tax_name = ''; data.hsn_code = ''; data.hsn_description = ''; data.tax_type = 'inclusive';
+        }
         if (capabilities.restaurant && f.kind !== 'service') {
             data.diet = value('iv2-diet'); data.daypart_ids = checkedValues('iv2-periods');
             data.modifier_group_ids = checkedValues('iv2-modifiers'); data.show_on_menu = document.getElementById('iv2-menu').checked;

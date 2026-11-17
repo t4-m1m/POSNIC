@@ -575,6 +575,10 @@ router.get('/', bindController(salesController.getAll));
 router.get('/servingPeriods', bindController(salesController.servingPeriodOptions));
 router.get('/historyFilterOptions', bindController(salesController.historyFilterOptions));
 
+// Cashier-only closing summary: sales:read users receive only expected cash.
+router.get('/cashierDaySummary', bindController(salesController.cashierDaySummary));
+router.post('/cashierDayClose', bindController(salesController.cashierDayClose));
+
 // GET /api/sales/dailySalesReports - Legacy daily sales report endpoint
 router.get(
   '/dailySalesReports',
