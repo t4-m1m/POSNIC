@@ -402,12 +402,13 @@
         move('.iv2-purchase-cost',step2);
         var stock=document.createElement('section');stock.id='iv2-stock-card';stock.className='iv2-section iv2-details';
         var stockTitle=document.createElement('h2');stockTitle.className='iv2-subheading';stockTitle.textContent='Current stock quantity';stock.appendChild(stockTitle);
-        move('#iv2-quantity-row',stock);step2.appendChild(stock);
+        move('#iv2-quantity-row',stock);move('#iv2-zero-stock',stock);move('#iv2-stock-note',stock);step2.appendChild(stock);
         move('#iv2-pricing-extra',step2);
         move('#iv2-appearance',step2);
         var panels=fieldsBox.querySelectorAll('.iv2-tab-panel');panels.forEach(function(panel){panel.hidden=true;});
         var tabsButtons=fieldsBox.querySelectorAll('.iv2-tabs [role=tab]');
-        if(tabsButtons.length>=2){tabsButtons[0].textContent='1  Basic information & variants';tabsButtons[1].textContent='2  Stock & pricing';}
+        if(tabsButtons.length>=2){tabsButtons[0].innerHTML='<span class="iv2-step">1</span> Basic information &amp; variants <small id="iv2-summary-step1"></small>';tabsButtons[1].innerHTML='<span class="iv2-step">2</span> Stock &amp; pricing <small id="iv2-summary-step2"></small>';}
+        var style=document.createElement('style');style.id='iv2-owner-step-layout';style.textContent='#items_v2 .iv2-step-content{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}#items_v2 .iv2-step-content[hidden]{display:none!important}#items_v2 .iv2-step-content>*{min-width:0}#items_v2 .iv2-step-content>.iv2-section{margin:0}#items_v2 #iv2-codes,#items_v2 #iv2-variants,#items_v2 #iv2-details-extra,#items_v2 #iv2-appearance,#items_v2 #iv2-stock-card,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-pricing-extra{grid-column:1/-1!important}#items_v2 #iv2-variant-rows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#items_v2 .iv2-variant{min-width:0}#items_v2 .iv2-variant-remove,#items_v2 .iv2-variant-generate{margin-top:6px}#items_v2 #iv2-quantity-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,180px);gap:8px;align-items:center}@media(max-width:760px){#items_v2 .iv2-step-content{grid-template-columns:minmax(0,1fr)}#items_v2 #iv2-variant-rows{grid-template-columns:minmax(0,1fr)}}';if(!document.getElementById(style.id))document.head.appendChild(style);
     }
     function open(initialName) {
         // Editing and creation have separate page mounts while sharing the
