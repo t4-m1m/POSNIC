@@ -1007,8 +1007,8 @@ PosnicPro.sales.view = {
         return true;
     },
 printSale: function (id, name, isKotHistoryPrint, layoutOverride, copies) {
-        var copiesOverride = Number(copies);
-        copiesOverride = Number.isFinite(copiesOverride) && copiesOverride > 0 ? Math.max(1, Math.min(20, Math.floor(copiesOverride))) : 1;
+        var copiesOverride = copies == null ? null : Number(copies);
+        copiesOverride = Number.isFinite(copiesOverride) && copiesOverride > 0 ? Math.max(1, Math.min(20, Math.floor(copiesOverride))) : null;
         PosnicPro.sales.view._layoutOverride =
             (layoutOverride === 'a4' || layoutOverride === 'standard') ? layoutOverride : null;
         /* The PAPER has to follow the same choice. printView resolves the page
@@ -1045,7 +1045,7 @@ printSale: function (id, name, isKotHistoryPrint, layoutOverride, copies) {
                     // otherwise the sample uses the design while real sales fall back to
                     // the built-in POSNIC template on a freshly installed PC.
                     var printWithSavedDesign = function () {
-                        PosnicPro.receiptDesigner.printSale(data, PosnicPro.sales.view._layoutOverride, !!isKotHistoryPrint, { copies: copiesOverride });
+                        PosnicPro.receiptDesigner.printSale(data, PosnicPro.sales.view._layoutOverride, !!isKotHistoryPrint, copiesOverride ? { copies: copiesOverride } : {});
                         PosnicPro._printTypeOverride = null;
                         PosnicPro.sales.view._layoutOverride = null;
                     };
@@ -1083,7 +1083,7 @@ printSale: function (id, name, isKotHistoryPrint, layoutOverride, copies) {
                 var canvas = document.getElementById("canvasTarget");
                 var img = data.receipt_barcode === true ? canvas.toDataURL("image/png") : '';
 
-                for (var legacyCopy = 0; legacyCopy < copiesOverride; legacyCopy++) {
+                for (var legacyCopy = 0; legacyCopy < (copiesOverride || 1); legacyCopy++) {
                     if (legacyCopy === 0) PosnicPro.printView(PosnicPro.sales.view._isA4() ? contentone : contents, img);
                     else window.setTimeout(function () {
                         PosnicPro.printView(PosnicPro.sales.view._isA4() ? contentone : contents, img);
