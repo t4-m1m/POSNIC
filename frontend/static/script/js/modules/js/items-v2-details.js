@@ -162,38 +162,12 @@
         }); event.target.value = '';
     }
     function variantFields() {
-        return [['available_quantity','Stock initial','number'],['barcode_id','Barcode','text']];
+        return [['available_quantity','Opening stock','number'],['barcode_id','Generated barcode','text']];
     }
     function captureVariants() {
         document.querySelectorAll('#iv2-variant-rows .iv2-variant').forEach(function (card, i) {
-            var index=Number(card.dataset.variantIndex);if(!Number.isInteger(index)||!variants[index])index=i;
-            card.querySelectorAll('[data-field]').forEach(function (input) { variants[index][input.dataset.field] = input.value; });
+            card.querySelectorAll('[data-field]').forEach(function (input) { variants[i][input.dataset.field] = input.value; });
         });
-    }
-    function renderVariantRows() {
-        var box=el('variant-rows');box.replaceChildren();
-                variants.forEach(function (row, i) {
-                    var card = document.createElement('div'); card.className = 'iv2-variant'; card.dataset.variantIndex=String(i);
-                    var heading = document.createElement('h3'); heading.textContent = row.variant_value; card.appendChild(heading);
-                    var remove = button('Supprimer', function () { captureVariants(); variants.splice(i,1); renderVariantRows(); notify(); });
-                    remove.classList.add('iv2-variant-remove'); card.appendChild(remove);
-                    var grid = document.createElement('div'); grid.className = 'iv2-grid';
-                    variantFields().forEach(function (spec) {
-                        var wrap = document.createElement('div'), lab = document.createElement('label'), input = document.createElement('input');
-                        input.id = 'iv2-variant-' + i + '-' + spec[0]; lab.htmlFor = input.id; lab.textContent = spec[1]; input.dataset.field = spec[0]; input.type = spec[2];
-                        if (spec[2] === 'number') { input.min = '0'; input.step = 'any'; }
-                        input.value = row[spec[0]] || ''; wrap.append(lab, input);
-                        if (spec[0] === 'barcode_id') {
-                            var gen = button('Générer', function () {
-                                captureVariants();var used=variants.map(function(v){return v.barcode_id;}).concat([val('barcode')]);
-                                row.barcode_id=makeInternalBarcode(used);input.value=row.barcode_id;notify();
-                            });
-                            gen.classList.add('iv2-variant-generate');wrap.appendChild(gen);
-                        }
-                        grid.appendChild(wrap);
-                    });
-                    card.appendChild(grid); box.appendChild(card);
-                }); notify();
     }
     function variantSignature() { return JSON.stringify([val('axis1'),selectedValues('values1'),val('axis2'),selectedValues('values2')]); }
     function generate() {
@@ -214,14 +188,29 @@
             var code = makeInternalBarcode(Array.from(usedCodes)); usedCodes.add(code);
             return { variant_value: name, selling_price: val('price'), available_quantity: '0', company_price: val('cost'), mrp_price: val('mrp'), position: val('position'), barcode_id: code, sku_id: '', gtin: '', discount_amount: val('discount-type') === 'amount' ? val('discount') : '', discount_percentage: val('discount-type') === 'percentage' ? val('discount') : '' };
         });
-        signature = variantSignature(); renderVariantRows();
+        signature = variantSignature(); var box = el('variant-rows'); box.replaceChildren();
+        variants.forEach(function (row, i) {
+            var card = document.createElement('div'); card.className = 'iv2-variant'; var heading = document.createElement('h3'); heading.textContent = row.variant_value; card.appendChild(heading);
+            var grid = document.createElement('div'); grid.className = 'iv2-grid';
+            variantFields().forEach(function (spec) {
+                var wrap = document.createElement('div'), lab = document.createElement('label'), input = document.createElement('input');
+                input.id = 'iv2-variant-' + i + '-' + spec[0]; lab.htmlFor = input.id; lab.textContent = spec[1]; input.dataset.field = spec[0]; input.type = spec[2];
+                if (spec[2] === 'number') { input.min = '0'; input.step = 'any'; }
+                if (spec[0] === 'discount_percentage') input.max = '100';
+                input.value = row[spec[0]] || ''; if (spec[0] === 'barcode_id') input.readOnly = true; wrap.append(lab, input);
+                grid.appendChild(wrap);
+            });
+            card.appendChild(grid); box.appendChild(card);
+        }); notify();
     }
     function isFamily() {
         var kind = document.querySelector('#items_v2 [name="iv2-kind"]:checked');
         if (!kind || kind.value === 'service' || !el('has-variants').checked) return false;
-        /* Once the owner enables variants, saving must use a complete generated
-           combination set; an empty set is not silently treated as standalone. */
-        return true;
+        /* A product is not a variant family merely because it is a product.
+           Only selected variant values opt into family validation and the
+           atomic createFamily endpoint. An untouched/empty variant editor is
+           a valid standalone item. */
+        return selectedValues('values1').length > 0 || selectedValues('values2').length > 0;
     }
     function validate() {
         var invalid = document.querySelector('#iv2-fields input:invalid, #iv2-fields select:invalid, #iv2-fields textarea:invalid');
@@ -232,22 +221,23 @@
         if (val('cost-eur') !== '' && (!Number.isFinite(Number(val('purchase-vat'))) || Number(val('purchase-vat')) < 0)) return error('Extra cost must be zero or greater.', 'purchase-vat');
         // Both alternate prices may be below the standard price. Price 3 may
         // be the lowest, so only enforce the ordering between tiers 2 and 3.
-        var price1=Number(val('price')),price2=val('price-2')===''?price1:Number(val('price-2')),price3=val('price-3')===''?price2:Number(val('price-3'));
-        if (![price1,price2,price3].every(function(n){return Number.isFinite(n)&&n>=0;})) return error('Enter valid selling prices of zero or greater.', 'price');
-        if (price2>price1) return error('Selling price 2 must not exceed selling price 1.', 'price-2');
-        if (price3>price2) return error('Selling price 3 must not exceed selling price 2.', 'price-3');
+        if (val('price-2') !== '' && Number(val('price-2')) < 0) return error('Selling price 2 must be zero or greater.', 'price-2');
+        if (val('price-3') !== '' && Number(val('price-3')) < 0) return error('Selling price 3 must be zero or greater.', 'price-3');
+        if (val('price-2') !== '' && val('price-3') !== '' && Number(val('price-3')) > Number(val('price-2'))) return error('Selling price 3 must not exceed selling price 2.', 'price-3');
         if (val('pack-size') && !(Number(val('pack-size')) > 0)) return error('Units per pack must be greater than zero.', 'pack-size');
         if (val('expiry') && val('mfg') && val('expiry') < val('mfg')) return error('Expiry date must not be earlier than manufacture date.', 'expiry');
         if (!validGtin(val('gtin')) && !isFamily()) return error('Enter a valid GTIN with a matching check digit.', 'gtin');
         if (isFamily()) {
             captureVariants();
             if (variants.length < 1 || variantSignature() !== signature) return error('Generate the variants after choosing their names and values.', 'values1');
-            var codes = new Set([val('barcode')].filter(Boolean));
+            var codes = new Set();
             for (var i=0;i<variants.length;i++) {
-                var row=variants[i],code=String(row.barcode_id||'').trim();
-                if(!code)return error('Enter or generate a barcode for ' + row.variant_value + '.', 'variant-'+i+'-barcode_id');
-                if(codes.has(code))return error('Each variant needs its own unique barcode.', 'variant-'+i+'-barcode_id');
-                codes.add(code);
+                var row=variants[i];
+                if (!validGtin(row.gtin)) return error('Enter a valid GTIN for ' + row.variant_value + '.', 'variant-'+i+'-gtin');
+                for (var code of [row.barcode_id, row.gtin].filter(Boolean)) {
+                    if (codes.has(code)) return error('Each variant needs its own barcode or GTIN.', 'variant-'+i+'-barcode_id');
+                }
+                [row.barcode_id,row.gtin].filter(Boolean).forEach(function (code) { codes.add(code); });
             }
         }
         return null;
@@ -309,12 +299,12 @@
     function update(capabilities, kind) {
         caps=capabilities;
         el('food-extra').hidden=!caps.restaurant || kind==='service'; el('tax-extra').hidden=true;
-        el('service-unit').parentElement.hidden=kind!=='service'; el('variants').hidden=false; el('variant-editor').hidden=kind==='service' || !el('has-variants').checked; el('quantity-row').hidden=kind==='service';
+        el('service-unit').parentElement.hidden=kind!=='service'; el('variants').hidden=false; el('variant-editor').hidden=kind==='service' || !el('has-variants').checked; el('quantity-row').hidden=kind==='service' || isFamily();
         ['food-extra','tax-extra','variants'].forEach(function(id){el(id).querySelectorAll('input,select,textarea,button').forEach(function(input){input.disabled=el(id).hidden;});});
         ['reorder','purchase-unit','pack-size','weight'].forEach(function(id){el(id).closest(id==='weight'?'label':'div').hidden=kind==='service';});
         ['plu','sku','barcode','gtin','alt-barcodes','same-sku'].forEach(function(id){el(id).disabled=isFamily();});
         el('variant-editor').querySelectorAll('input,select,button').forEach(function(input){input.disabled=kind==='service' || el('variant-editor').hidden;});
-        el('quantity').disabled=kind==='service'; el('quantity').readOnly=isFamily(); if(isFamily()){captureVariants();el('quantity').value=variants.reduce(function(sum,row){return sum+Math.max(0,Number(row.available_quantity)||0);},0);}
+        el('quantity').disabled=kind==='service' || isFamily();
         el('weight').closest('label').hidden=!caps.weight || kind==='service';
         el('weight').disabled=!caps.weight || kind==='service';
         el('discount').max=val('discount-type')==='percentage'?'100':'';
@@ -362,7 +352,7 @@
     }
     function currentYYMM() { var d = new Date(); return String(d.getFullYear()).slice(-2) + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
     function syncComposedName() {
-        var type = el('type-name').value.trim(), brand = el('brand-abbr').value.trim().toLowerCase(), ref = el('reference').value.trim(), date = el('reference-date').value || currentYYMM();
+        var type = el('type-name').value.trim(), brand = el('brand-abbr').value.trim(), ref = el('reference').value.trim(), date = el('reference-date').value || currentYYMM();
         var base = [type, brand].filter(Boolean).join(' ');
         var full = base;
         if (ref) full += (full ? '-' : '') + date + '/' + ref;
