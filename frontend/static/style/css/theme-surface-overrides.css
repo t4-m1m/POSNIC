@@ -608,7 +608,16 @@ body[data-theme="warmnight"] #posnic-price-tier-dialog {
 #posnic-price-tier-dialog .posnic-price-tier-option span { color: inherit !important; }
 #posnic-price-tier-dialog .posnic-price-tier-option small { color: var(--theme-text-secondary, #aeb7c4) !important; }
 #posnic-price-tier-dialog .posnic-price-tier-option.is-current { border-color: var(--theme-primary-color, #548de8) !important; background: var(--theme-table-header-bg, #364252) !important; }
-#posnic-price-tier-dialog button[value="cancel"] { background: var(--theme-input-bg, #303744) !important; color: var(--theme-text-primary, #d7dce4) !important; border-color: var(--theme-border-color, #454c58) !important; }
+:root[data-theme="dark"] #posnic-price-tier-dialog button[value="cancel"],
+:root[data-theme="terminal"] #posnic-price-tier-dialog button[value="cancel"],
+:root[data-theme="dosblue"] #posnic-price-tier-dialog button[value="cancel"],
+:root[data-theme="softdark"] #posnic-price-tier-dialog button[value="cancel"],
+:root[data-theme="warmnight"] #posnic-price-tier-dialog button[value="cancel"],
+body[data-theme="dark"] #posnic-price-tier-dialog button[value="cancel"],
+body[data-theme="terminal"] #posnic-price-tier-dialog button[value="cancel"],
+body[data-theme="dosblue"] #posnic-price-tier-dialog button[value="cancel"],
+body[data-theme="softdark"] #posnic-price-tier-dialog button[value="cancel"],
+body[data-theme="warmnight"] #posnic-price-tier-dialog button[value="cancel"] { background: var(--theme-input-bg, #303744) !important; color: var(--theme-text-primary, #d7dce4) !important; border-color: var(--theme-border-color, #454c58) !important; }
 
 
 /* F3 selling-price picker: native dialog follows the active POSNIC palette. */

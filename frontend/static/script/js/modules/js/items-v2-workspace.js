@@ -136,7 +136,6 @@
         if (id && /^[a-zA-Z0-9_-]+$/.test(String(id))) {
             [['', P.i18n.t('lang_iv2_view', 'View item')]].forEach(function (entry) { var a = document.createElement('a'); a.href = '#/items/' + encodeURIComponent(id) + entry[0]; a.textContent = entry[1]; actions.append(a); });
         }
-        if (id && !family) actions.append(button(P.i18n.t('lang_iv2_edit_item', 'Edit item'), callbacks.edit));
         if (newlyCreated && id && !family && data.barcode_id) {
             actions.append(button(P.i18n.t('lang_print_price_labels', 'Print price labels'), function () {
                 var trigger = document.createElement('button');
