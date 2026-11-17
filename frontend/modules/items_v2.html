@@ -131,3 +131,70 @@
 </style>
 
 <style id="iv2-two-step-article-flow">#items_v2 .iv2-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}#items_v2 .iv2-tabs [role="tab"]{text-align:left;min-height:68px}#items_v2 .iv2-tabs .iv2-step{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;margin-right:8px;font-weight:700;background:var(--theme-primary-color,#2563b7);color:white}#items_v2 .iv2-step-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}#items_v2 #iv2-save[hidden],#items_v2 #iv2-next-step[hidden],#items_v2 #iv2-prev-step[hidden]{display:none!important}#items_v2 .iv2-section-picker{display:none!important}</style>
+
+
+<style id="iv2-single-page-catalogue">
+/* One-screen catalogue layout. The legacy controls remain in the DOM and
+   retain their original IDs/data contract; only their presentation changes. */
+#items_v2 .iv2-heading{margin-bottom:10px;align-items:center}
+#items_v2 .iv2-heading p,#items_v2 .iv2-eyebrow span{display:none}
+#items_v2 .iv2-layout{display:block!important}
+#items_v2 .iv2-aside,#items_v2 .iv2-tabs,#items_v2 .iv2-section-picker,
+#items_v2 #iv2-prev-step,#items_v2 #iv2-next-step,#items_v2 #iv2-step-help,
+#items_v2 #iv2-panel-languages{display:none!important}
+#items_v2 #iv2-form{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:10px;align-items:stretch}
+#items_v2 #iv2-fields,#items_v2 .iv2-tab-panel,#items_v2 #iv2-panel-basics>section:first-child{display:contents!important}
+#items_v2 .iv2-tab-panel[hidden],#items_v2 #iv2-panel-basics[hidden],
+#items_v2 #iv2-panel-stock[hidden],#items_v2 #iv2-panel-details[hidden],
+#items_v2 #iv2-panel-more[hidden]{display:contents!important}
+#items_v2 #iv2-panel-basics>section:first-child>.iv2-section-title,
+#items_v2 #iv2-panel-basics>section:nth-child(2),
+#items_v2 #iv2-panel-stock>#iv2-tax-extra,
+#items_v2 #iv2-panel-details>#iv2-item_translation_panel{display:none!important}
+#items_v2 .iv2-name-builder{grid-column:7/span 6;grid-row:2;margin:0;padding:12px;background:var(--theme-card-bg,var(--bs-card-bg,#fff));border:1px solid var(--theme-border-color,#dce3ec);border-radius:12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#items_v2 #iv2-codes{grid-column:1/span 6;grid-row:1;margin:0;padding:12px;background:var(--theme-card-bg,var(--bs-card-bg,#fff));border:1px solid var(--theme-border-color,#dce3ec);border-radius:12px}
+#items_v2 #iv2-variants{grid-column:7/span 6;grid-row:1;margin:0;padding:12px;background:var(--theme-card-bg,var(--bs-card-bg,#fff));border:1px solid var(--theme-border-color,#dce3ec);border-radius:12px}
+#items_v2 #iv2-details-extra{grid-column:1/span 6;grid-row:2;margin:0;padding:12px;background:var(--theme-card-bg,var(--bs-card-bg,#fff));border:1px solid var(--theme-border-color,#dce3ec);border-radius:12px}
+#items_v2 #iv2-appearance{grid-column:1/span 6;grid-row:3;margin:0;padding:12px;background:var(--theme-card-bg,var(--bs-card-bg,#fff));border:1px solid var(--theme-border-color,#dce3ec);border-radius:12px}
+#items_v2 .iv2-purchase-cost{grid-column:7/span 6;grid-row:3;margin:0;padding:12px;background:var(--theme-card-bg,var(--bs-card-bg,#fff));border:1px solid var(--theme-border-color,#dce3ec);border-radius:12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#items_v2 #iv2-pricing-extra{grid-column:1/span 12;grid-row:4;margin:0;padding:12px;background:var(--theme-card-bg,var(--bs-card-bg,#fff));border:1px solid var(--theme-border-color,#dce3ec);border-radius:12px}
+#items_v2 #iv2-pricing-extra .iv2-grid.iv2-pricing{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+#items_v2 .iv2-section-title,#items_v2 .iv2-subheading{margin:0 0 8px;font-size:14px}
+#items_v2 .iv2-section-title p{display:none}
+#items_v2 .iv2-grid{gap:8px}
+#items_v2 label{margin-bottom:4px;font-size:12px}
+#items_v2 input:not([type=checkbox]):not([type=radio]):not([type=file]),
+#items_v2 select{min-height:34px;height:34px;padding:5px 9px;font-size:13px}
+#items_v2 .iv2-money input{height:34px}
+#items_v2 .iv2-note,#items_v2 #iv2-purchase-cost-summary{font-size:10px;line-height:1.3;margin-top:3px}
+#items_v2 #iv2-codes .iv2-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+#items_v2 #iv2-codes .iv2-grid>div:has(#iv2-barcode){grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:end}
+#items_v2 #iv2-codes .iv2-grid>div:has(#iv2-barcode)>label,
+#items_v2 #iv2-codes .iv2-grid>div:has(#iv2-barcode)>#iv2-quantity-row{grid-column:1/-1}
+#items_v2 #iv2-generate-barcode{white-space:nowrap;min-height:34px}
+#items_v2 #iv2-quantity-row{display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:center;margin-top:4px}
+#items_v2 #iv2-quantity-row label{margin:0}
+#items_v2 #iv2-quantity-row .iv2-note{grid-column:1/-1}
+#items_v2 #iv2-variants .iv2-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+#items_v2 #iv2-variant-editor{font-size:12px}
+#items_v2 #iv2-variant-rows{max-height:95px;overflow:auto}
+#items_v2 #iv2-appearance>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#items_v2 #iv2-photos{max-width:100%;font-size:12px}
+#items_v2 .iv2-photo-list{display:flex;gap:6px;flex-wrap:wrap;max-height:54px;overflow:auto}
+#items_v2 .iv2-actions{grid-column:1/-1;grid-row:5;margin:0;padding:9px 12px;position:sticky;bottom:0;z-index:5;background:var(--theme-card-bg,var(--bs-card-bg,#fff));border:1px solid var(--theme-border-color,#dce3ec);border-radius:10px;display:flex;justify-content:flex-end}
+#items_v2 .iv2-actions p{display:none}
+#items_v2 #iv2-save{min-width:180px;min-height:40px;border:0;border-radius:8px;background:var(--theme-primary-color,var(--bs-primary,#2563eb));color:#fff;font-weight:700}
+#items_v2 #iv2-save[hidden]{display:inline-flex!important}
+#items_v2 #iv2-error{grid-column:1/-1}
+#items_v2 #iv2-fields:disabled{opacity:.7}
+@media(max-width:900px){
+ #items_v2 #iv2-form{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #items_v2 .iv2-name-builder,#items_v2 #iv2-codes,#items_v2 #iv2-variants,#items_v2 #iv2-details-extra,#items_v2 #iv2-appearance,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-pricing-extra{grid-column:1/-1;grid-row:auto}
+}
+@media(max-height:760px) and (min-width:901px){
+ #items_v2 .iv2-heading{margin:0 0 5px}
+ #items_v2 #iv2-form{gap:6px}
+ #items_v2 #iv2-codes,#items_v2 #iv2-variants,#items_v2 #iv2-details-extra,#items_v2 #iv2-appearance,#items_v2 .iv2-name-builder,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-pricing-extra{padding:8px}
+ #items_v2 .iv2-grid{gap:5px}
+}
+</style>
