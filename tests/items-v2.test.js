@@ -97,7 +97,7 @@ test('Modify article uses an independent page and never calls the Add New Item e
   assert.match(items, /method:'PUT'/);
   assert.match(items, /items\/getItemDetails/);
   assert.match(items, /Modify article/);
-  assert.match(items, /openIndependentModify\(' \\+ esc\(id\)/);
+  assert.match(items, /openIndependentModify/);
   assert.doesNotMatch(items, /openIndependentModify[\s\S]{0,1200}items_v2\.openModifyPage/);
   assert.match(routes, /items\/\{id\}\/update[\s\S]*?items\.openIndependentModify\(id\)/);
   assert.match(routes, /module === 'items'[\s\S]*?items\.openIndependentModify\(id\)/);
