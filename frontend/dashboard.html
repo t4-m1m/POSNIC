@@ -1026,6 +1026,13 @@
                                     PosnicPro.get('users/getUserAccessDetails', function (response) {
                                         PosnicPro.userACL = response.data;
                                         PosnicPro.ACLApplyForAll();
+                                        // Non-admin operators get the focused till navigation;
+                                        // administrator navigation and permissions are unchanged.
+                                        (function () {
+                                            var role = String(PosnicPro.local.get('usertype') || '').trim().toLowerCase();
+                                            $('body').toggleClass('posnic-cashier-minimal',
+                                                ['admin', 'owner', 'super_admin'].indexOf(role) === -1);
+                                        })();
                                         if (/^#\/dashboard(?:$|[/?])/.test(String(window.location.hash || ''))) {
                                             PosnicPro.dashboard.datePicker();
                                         }
