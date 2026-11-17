@@ -236,7 +236,7 @@ PosnicPro.sales = {
         // Barcode scanners are keyboard wedges: keep the scan field ready
         // whenever the cashier enters the New Sale workspace. The old optional
         // preference could leave the till unfocused and silently miss scans.
-        window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(); }, 80);
+        window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(true); }, 80);
         $('#time-format').addClass('commonDate');
         $('#time-format').removeClass('commonEditDate');
         PosnicPro.commonDate();
@@ -2222,7 +2222,7 @@ PosnicPro.sales = {
             $('#collapseOne').removeClass("show");
             $('#collapseTwo').addClass("show");
             PosnicPro.alert('warning', PosnicPro.i18n.t('lang_add_at_least_one_item', 'Add at least one item.'));
-            $('#sales_new_item_name').focus();
+            PosnicPro.sales.focusBarcodeInput(true);
             return false;
         }
 
@@ -5689,25 +5689,8 @@ PosnicPro.sales.editSale = {
             }, function (xhr) {
                 var response = jQuery.parseJSON(xhr.responseText);
 
-                // A discount added while editing needs a manager: prompt for the
-                // PIN/card, attach the token, and resubmit once.
-                if (xhr.status === 403 && response
-                        && /discount needs manager approval/i.test(response.message || '')
-                        && !PosnicPro.sales._editDiscountRetried) {
-                    PosnicPro.sales._editDiscountRetried = true;
-                    loader.find(".loadingSpinner:first").remove();
-                    PosnicPro.requireManagerApproval('discount_apply',
-                        { prompt: "This discount needs a manager's approval." },
-                        function (approval) {
-                            try {
-                                var d = JSON.parse(paramsEdit.data);
-                                d.approval_token = approval && approval.approval_token;
-                                paramsEdit.data = JSON.stringify(d);
-                            } catch (e) { /* resubmit unchanged; server decides */ }
-                            submitEditSale();
-                        });
-                    return;
-                }
+                // Discount approval is disabled for ordinary remises. Do not
+                // reopen the manager PIN flow on a stale/legacy 403 response.
                 PosnicPro.alert(response.type, response.message);
 
                 // Reset payment-only flags and close tender appropriately on error
@@ -8777,7 +8760,7 @@ PosnicPro.sales.itemsMenu = {
             $("#save_submit").removeClass("disabled");
             let hash = window.location.hash.slice(1);
             if (hash === '/sales/new') {
-                window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(); }, 0);
+                window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(true); }, 0);
             }
             PosnicPro.sales.itemsMenu.clickEffect();
             if (barcodeScanned) {
@@ -8786,7 +8769,7 @@ PosnicPro.sales.itemsMenu = {
                 item._quantityConfirmed = true;
             }
             PosnicPro.sales.addSalesLineItems(item);
-            if (barcodeScanned) window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(); }, 0);
+            if (barcodeScanned) window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(true); }, 0);
         });
     },
     clickEffect: function () {
@@ -11433,7 +11416,7 @@ $(window).resize(function () {
 }).resize();
 /* ONE resolution path for every way a barcode arrives - hardware scanner
    wedge or the camera (L3). Looks the code up, stock-checks, adds the line. */
-PosnicPro.sales.focusBarcodeInput = function () {
+PosnicPro.sales.focusBarcodeInput = function (force) {
     var input = document.getElementById('sales_new_item_name');
     var page = document.getElementById('sales_new');
     if (!input || !page || window.getComputedStyle(page).display === 'none' ||
@@ -11441,8 +11424,8 @@ PosnicPro.sales.focusBarcodeInput = function () {
     // Never steal focus from payment, a modal, or an intentional text editor.
     if ($('#infobar-settings-sidebar-tender-details').hasClass('sidebarview') ||
         $('.modal.show:visible').length ||
-        $(document.activeElement).is('input,textarea,select,[contenteditable="true"]') &&
-        document.activeElement !== input) return false;
+        (!force && $(document.activeElement).is('input,textarea,select,[contenteditable="true"]') &&
+        document.activeElement !== input)) return false;
     try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); }
     return document.activeElement === input;
 };
@@ -11454,7 +11437,7 @@ $(document).off('click.posnicBarcodeReady', '#sales_new').on('click.posnicBarcod
     window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(); }, 25);
 });
 $(window).off('focus.posnicBarcodeReady').on('focus.posnicBarcodeReady', function () {
-    window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(); }, 80);
+    window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(true); }, 80);
 });
 
 PosnicPro.sales.addScannedItem = function (itemData) {
