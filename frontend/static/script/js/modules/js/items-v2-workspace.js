@@ -108,6 +108,15 @@
         var details = document.getElementById('iv2-details-extra');
         var purchase = document.querySelector('#items_v2 .iv2-purchase-cost');
         var pricing = document.getElementById('iv2-pricing-extra'), photos = document.getElementById('iv2-appearance');
+        var barcodeGroup = el('barcode') && el('barcode').parentElement;
+        var variantsToggle = el('has-variants') && el('has-variants').closest('label');
+        var barcodeRow = document.createElement('div');
+        barcodeRow.id = 'iv2-barcode-variant-row'; barcodeRow.className = 'iv2-barcode-variant-row';
+        if (barcodeGroup) barcodeRow.appendChild(barcodeGroup);
+        if (variantsToggle) barcodeRow.appendChild(variantsToggle);
+        var categoryField = el('category') && el('category').closest('div');
+        var brandField = el('brand') && el('brand').closest('div');
+        if (nameBuilder) { if (categoryField) nameBuilder.appendChild(categoryField); if (brandField) nameBuilder.appendChild(brandField); }
         var quantityRow = el('quantity-row'), stockCard = document.createElement('section');
         stockCard.id = 'iv2-stock-card'; stockCard.className = 'iv2-section iv2-stock-card';
         var stockTitle = document.createElement('h2'); stockTitle.className = 'iv2-subheading'; stockTitle.textContent = 'Current stock quantity';
@@ -119,12 +128,19 @@
         if (fields) {
             fields.appendChild(step1); fields.appendChild(step2);
             step1.appendChild(identity);
-            [codes,variants].forEach(function(node){if(node)identity.appendChild(node);});
-            [nameBuilder,details].forEach(function(node){if(node)step1.appendChild(node);});
-            [stockCard,purchase,pricing,photos].forEach(function(node){if(node)step2.appendChild(node);});
+            if (variants) identity.appendChild(variants);
+            if (barcodeRow.children.length) step1.appendChild(barcodeRow);
+            if (nameBuilder) step1.appendChild(nameBuilder);
+            if (details) { details.hidden = true; details.setAttribute('aria-hidden','true'); }
+            [purchase,stockCard,pricing,photos].forEach(function(node){if(node)step2.appendChild(node);});
+            if (codes) { codes.hidden = true; codes.setAttribute('aria-hidden','true'); }
             [el('zero-price'),el('price-hint'),el('tax-error')].forEach(function(node){if(node)step2.appendChild(node);});
         }
         if (form) form.classList.add('iv2-two-step-form');
+        var addHeading = document.querySelector('#items_v2 .iv2-heading h1');
+        if (addHeading) addHeading.textContent = 'Add new article';
+        var addSubtitle = document.querySelector('#items_v2 .iv2-heading p');
+        if (addSubtitle) addSubtitle.textContent = 'Create a new article · two-step editor';
         el('section-select').addEventListener('change', function () { select(this.value); });
         el('next-step').addEventListener('click', function () { select('step2', true); });
         el('prev-step').addEventListener('click', function () { select('step1', true); });
