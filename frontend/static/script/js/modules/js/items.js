@@ -221,14 +221,138 @@ PosnicPro.items = {
             }
         });
     },
+
+    repairLegacyMigration: function () {
+        var $button = $('#legacy_item_migration_repair');
+        if (!$button.length || $button.prop('disabled')) return;
+        $button.prop('disabled', true).text('Repairing…');
+        PosnicPro.post({ url: 'items/legacy-migration/repair', data: JSON.stringify({}) }, function (response) {
+            $button.prop('disabled', false).text('Repair already imported articles');
+            if (response && response.type === 'success' && response.data) {
+                var repaired = Number(response.data.repaired) || 0;
+                PosnicPro.alert('success', response.data.message || (repaired + ' articles repaired.'));
+                if (typeof PosnicPro.items.itemTable === 'function') PosnicPro.items.itemTable();
+                else if (typeof PosnicPro.items.loadTable === 'function') PosnicPro.items.loadTable();
+                return;
+            }
+            PosnicPro.alert('warning', (response && response.message) || 'Could not repair imported articles.');
+        }, function (xhr) {
+            $button.prop('disabled', false).text('Repair already imported articles');
+            var message = 'Could not repair imported articles.';
+            try { var body = JSON.parse(xhr.responseText || '{}'); if (body.message) message = body.message; } catch (_) {}
+            PosnicPro.alert('error', message);
+        });
+    },
+    openLegacyMigration: function () {
+        var $old = $('#legacy_item_migration_modal');
+        if ($old.length) $old.remove();
+        var markup = '<div class="modal fade" id="legacy_item_migration_modal" tabindex="-1" role="dialog" aria-labelledby="legacy_item_migration_title" aria-hidden="true">'
+            + '<div class="modal-dialog modal-lg modal-dialog-centered" role="document"><div class="modal-content">'
+            + '<div class="modal-header"><h5 class="modal-title" id="legacy_item_migration_title"><i class="feather icon-database mr-2"></i>Import legacy Firebird articles</h5><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>'
+            + '<div class="modal-body"><p class="text-muted">Select the JSON exported from EHANOUTE.FDB. This imports standalone articles with positive stock and keeps the original barcode text, including leading zeroes.</p>'
+            + '<div class="form-group"><label for="legacy_item_migration_file">Migration JSON file</label><input id="legacy_item_migration_file" class="form-control" type="file" accept=".json,application/json"></div>'
+            + '<div id="legacy_item_migration_status" class="small text-muted" aria-live="polite">No file selected.</div>'
+            + '<div id="legacy_item_migration_summary" class="mt-3" hidden></div></div>'
+            + '<div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button><button type="button" class="btn btn-outline-primary" id="legacy_item_migration_preview" disabled>Preview import</button><button type="button" class="btn btn-primary" id="legacy_item_migration_apply" disabled>Import new articles</button></div>'
+            + '</div></div></div>';
+        $('body').append(markup);
+        var $modal = $('#legacy_item_migration_modal'), source = null, preview = null, busy = false;
+        function status(message, danger) {
+            $('#legacy_item_migration_status').text(message).toggleClass('text-danger', !!danger).toggleClass('text-muted', !danger);
+        }
+        function post(url, callback) {
+            if (!source || busy) return;
+            busy = true;
+            $('#legacy_item_migration_preview,#legacy_item_migration_apply').prop('disabled', true);
+            PosnicPro.post({ url: url, data: JSON.stringify(source) }, function (response) {
+                busy = false;
+                callback(response);
+            }, function (xhr) {
+                busy = false;
+                var body = {};
+                try { body = JSON.parse(xhr.responseText || '{}'); } catch (e) {}
+                status(body.message || 'The migration request failed. No existing article was changed.', true);
+                $('#legacy_item_migration_preview').prop('disabled', false);
+            });
+        }
+        $('#legacy_item_migration_file').on('change', function () {
+            source = null; preview = null;
+            $('#legacy_item_migration_summary').prop('hidden', true).empty();
+            $('#legacy_item_migration_apply').prop('disabled', true);
+            var file = this.files && this.files[0];
+            if (!file) { status('No file selected.'); $('#legacy_item_migration_preview').prop('disabled', true); return; }
+            if (file.size > 5 * 1024 * 1024) { status('File is too large. Maximum size is 5 MB.', true); $('#legacy_item_migration_preview').prop('disabled', true); return; }
+            var reader = new FileReader();
+            reader.onload = function () {
+                try {
+                    source = JSON.parse(String(reader.result || ''));
+                    if (!source || !source.metadata || !Array.isArray(source.articles)) throw new Error('Expected metadata and articles array.');
+                    status(file.name + ' loaded · ' + source.articles.length + ' article rows.');
+                    $('#legacy_item_migration_preview').prop('disabled', false);
+                } catch (error) {
+                    source = null; status('Invalid JSON: ' + error.message, true);
+                    $('#legacy_item_migration_preview').prop('disabled', true);
+                }
+            };
+            reader.onerror = function () { status('Could not read the selected file.', true); };
+            reader.readAsText(file);
+        });
+        $('#legacy_item_migration_preview').on('click', function () {
+            post('items/legacy-migration/preview', function (response) {
+                if (!response || response.type !== 'success' || !response.data) {
+                    status((response && response.message) || 'Could not preview this file.', true); return;
+                }
+                preview = response.data;
+                var lines = [
+                    '<div class="alert alert-info mb-2"><strong>Preview only — no database changes have been made.</strong></div>',
+                    '<div class="row text-center">',
+                    '<div class="col-4"><strong>' + Number(preview.received_articles || 0) + '</strong><br><small>Rows checked</small></div>',
+                    '<div class="col-4"><strong>' + Number(preview.ready_to_import || 0) + '</strong><br><small>New articles</small></div>',
+                    '<div class="col-4"><strong>' + Number(preview.skipped_existing || 0) + '</strong><br><small>Existing conflicts</small></div></div>'
+                ];
+                if (preview.declared_articles && Number(preview.declared_articles) !== Number(preview.received_articles)) {
+                    lines.push('<p class="text-warning mt-2 mb-1">The file metadata declares ' + Number(preview.declared_articles) + ' articles, but contains ' + Number(preview.received_articles) + ' rows.</p>');
+                }
+                if (preview.missing_categories && preview.missing_categories.length) {
+                    lines.push('<p class="mt-2 mb-1"><strong>Categories to create:</strong> ' + preview.missing_categories.map(function (x) { return $('<div>').text(x).html(); }).join(', ') + '</p>');
+                }
+                if (preview.conflicts && preview.conflicts.length) {
+                    lines.push('<p class="text-warning mt-2 mb-1"><strong>Conflicts (will be skipped):</strong></p><ul class="small mb-0">');
+                    preview.conflicts.slice(0, 12).forEach(function (x) {
+                        lines.push('<li>Row ' + Number(x.row) + ': ' + $('<div>').text(x.name).html() + ' — ' + $('<div>').text(x.reason).html() + '</li>');
+                    });
+                    if (preview.conflicts.length > 12) lines.push('<li>…and ' + (preview.conflicts.length - 12) + ' more.</li>');
+                    lines.push('</ul>');
+                }
+                $('#legacy_item_migration_summary').html(lines.join('')).prop('hidden', false);
+                status('Preview complete. Existing items will never be overwritten.');
+                $('#legacy_item_migration_apply').prop('disabled', !(Number(preview.ready_to_import) > 0));
+                $('#legacy_item_migration_preview').prop('disabled', false);
+            });
+        });
+        $('#legacy_item_migration_apply').on('click', function () {
+            if (!preview || !Number(preview.ready_to_import)) return;
+            var question = 'Import ' + preview.ready_to_import + ' new article(s)? Existing-name/barcode conflicts (' + preview.skipped_existing + ') will be skipped. Missing categories will be created. Existing stock and article records will not be modified.';
+            if (!window.confirm(question)) return;
+            post('items/legacy-migration/import', function (response) {
+                if (!response || response.type !== 'success' || !response.data) {
+                    status((response && response.message) || 'Import failed.', true); return;
+                }
+                var result = response.data;
+                status(result.message || (Number(result.imported || 0) + ' articles imported.'));
+                $('#legacy_item_migration_apply').prop('disabled', true);
+                $('#legacy_item_migration_preview').prop('disabled', false);
+                PosnicPro.alert('success', result.message || 'Legacy articles imported successfully.');
+            });
+        });
+        $modal.modal('show');
+        $modal.on('hidden.bs.modal', function () { $modal.remove(); });
+    },
     showAdd: function () {
         PosnicPro.items_v2.showAdd();
     },
     showClone: function (id) {
         PosnicPro.items_v2.showClone(id);
-    },
-    showEdit: function (id) {
-        PosnicPro.items_v2.showEdit(id);
     },
     showDelete: function (id) {
         PosnicPro.deleteTableRowData(id, 'items');
@@ -538,12 +662,35 @@ PosnicPro.items = {
             ],
             onChange: function () { PosnicPro.items.loadList(1); }
         });
+        if (!$('#items-category-brand-filter').length) {
+            $('#items_filter_panel').append('<div id="items-category-brand-filter" class="items-category-brand-filter"><label>Catégorie<select id="items-category-filter" class="form-control form-control-sm"><option value="">All categories</option></select></label><label>Marque / Brand<select id="items-brand-filter" class="form-control form-control-sm"><option value="">All brands</option></select></label></div>');
+        }
+        $(document).off('change.posnicItemFilters', '#items-category-filter,#items-brand-filter')
+            .on('change.posnicItemFilters', '#items-category-filter,#items-brand-filter', function () {
+                PosnicPro.items._categoryFilter = $('#items-category-filter').val() || '';
+                PosnicPro.items._brandFilter = $('#items-brand-filter').val() || '';
+                PosnicPro.items.loadList(1);
+            });
+        $(document).off('click.posnicItemSort', '#items_list_rows th[data-sort-key]')
+            .on('click.posnicItemSort', '#items_list_rows th[data-sort-key]', function () {
+                var key = String($(this).attr('data-sort-key') || '');
+                if (!key) return;
+                var self = PosnicPro.items;
+                if (self._tableSortKey === key) self._tableSortDirection = self._tableSortDirection === 'asc' ? 'desc' : 'asc';
+                else { self._tableSortKey = key; self._tableSortDirection = 'asc'; }
+                self.loadList(1);
+            });
     },
 
     _page: 1,
     PAGE_SIZE: 25,
     _lastRows: [],
     _openDocId: null,
+    _categoryFilter: '',
+    _brandFilter: '',
+    _tableSortKey: '',
+    _tableSortDirection: 'asc',
+    _filterOptionCache: { categories: [], brands: [] },
     /* The name the OLD table machinery answered to. Save flows (bulk price,
        stock adjust, bulk stock, save-from-receiving) and the shared
        clearListFilters/refresh doors still call <module>Table - without the
@@ -556,18 +703,39 @@ PosnicPro.items = {
         var self = PosnicPro.items;
         if (page) { self._page = page; }
         var filters = PosnicPro.listFilter.legacyFilters('items', { dateKey: 'updated_date' });
+        if (self._categoryFilter) filters.category_name = self._categoryFilter;
+        if (self._brandFilter) filters.brand = self._brandFilter;
         var esc = function (t) { return $('<span>').text(t == null ? '' : t).html(); };
         PosnicPro.listFilter.request('items', {
             url: 'items',
             data: (function () {
                 var d = { page: self._page, limit: self.PAGE_SIZE, filters: JSON.stringify(filters) };
                 var sv = PosnicPro.listSort.value('items');
-                if (sv) { d.sort = sv; }
+                if (sv && !self._tableSortKey) { d.sort = sv; }
                 return d;
             }())
         }, function (response) {
             var data = (response && response.data) || {};
-            var list = data.list || [];
+            var list = (data.list || []).slice();
+            function addOption(kind, value) { value = String(value || '').trim(); if (value && self._filterOptionCache[kind].indexOf(value) < 0) self._filterOptionCache[kind].push(value); }
+            list.forEach(function (r) { addOption('categories', r.category_name); addOption('brands', r.brand || r.marque); });
+            function fillOptions(selector, values, label, selected) { var select = $(selector); if (!select.length) return; select.empty().append($('<option>').val('').text(label)); values.slice().sort(function(a,b){return a.localeCompare(b,undefined,{sensitivity:'base'});}).forEach(function(v){select.append($('<option>').val(v).text(v));}); select.val(selected || ''); }
+            fillOptions('#items-category-filter', self._filterOptionCache.categories, 'All categories', self._categoryFilter);
+            fillOptions('#items-brand-filter', self._filterOptionCache.brands, 'All brands', self._brandFilter);
+            if (self._tableSortKey) {
+                var key = self._tableSortKey, direction = self._tableSortDirection === 'desc' ? -1 : 1;
+                list.sort(function (a, b) {
+                    var av, bv;
+                    if (key === 'name') { av = String(a.name || ''); bv = String(b.name || ''); return av.localeCompare(bv, undefined, {sensitivity:'base'}) * direction; }
+                    if (key === 'category') { av = String(a.category_name || ''); bv = String(b.category_name || ''); return av.localeCompare(bv, undefined, {sensitivity:'base'}) * direction; }
+                    if (key === 'stock') { av = Number(a.available_quantity) || 0; bv = Number(b.available_quantity) || 0; }
+                    if (key === 'cost') { av = Number(a.company_price) || 0; bv = Number(b.company_price) || 0; }
+                    if (key === 'price1') { av = Number(a.selling_price) || 0; bv = Number(b.selling_price) || 0; }
+                    if (key === 'price2') { av = Number(a.selling_price_2 || a.selling_price2) || 0; bv = Number(b.selling_price_2 || b.selling_price2) || 0; }
+                    if (key === 'price3') { av = Number(a.selling_price_3 || a.selling_price3) || 0; bv = Number(b.selling_price_3 || b.selling_price3) || 0; }
+                    return (av - bv) * direction;
+                });
+            }
             self._lastRows = list;
             if (!list.length) {
                 var filtered = PosnicPro.listFilter.activeCount('items') > 0;
@@ -577,18 +745,21 @@ PosnicPro.items = {
                 return;
             }
             var cur = PosnicPro.local.get('currencySign');
-            var html = '<div class="table-responsive"><table class="table table-borderless">'
-                + '<thead><tr><th style="width:44px;"></th><th><lang class="lang_name_title">Name</lang></th><th class="i-col-sku"><lang class="lang_sku_title">SKU</lang></th>'
-                + '<th class="i-col-category"><lang class="lang_newcategory_title">Category</lang></th><th class="i-col-supplier"><lang class="lang_newsupplier_title">Supplier</lang></th>'
-                + '<th class="text-right"><lang class="lang_stock">Stock</lang></th>'
-                + '<th class="text-right i-col-cost"><lang class="lang_companyamount_title">Cost</lang></th>'
-                + '<th class="text-right i-col-price"><lang class="lang_price_title">Price</lang></th>'
-                + '<th class="text-right i-col-margin"><lang class="lang_margin">Margin</lang></th>'
-                + '<th class="text-right i-col-tax"><lang class="lang_module_tax">Tax</lang></th>'
+            var cur = PosnicPro.local.get('currencySign') || 'DA';
+            var sortArrow = function (key) { return self._tableSortKey === key ? (self._tableSortDirection === 'asc' ? ' ▲' : ' ▼') : ''; };
+            var sortHead = function (key, label, align) { return '<th data-sort-key="' + key + '" class="' + (align || '') + '" aria-sort="' + (self._tableSortKey === key ? (self._tableSortDirection === 'asc' ? 'ascending' : 'descending') : 'none') + '">' + label + '<span class="items-sort-indicator">' + sortArrow(key) + '</span></th>'; };
+            var totals = { stock: 0, cost: 0, stockCost: 0, price1: 0, price2: 0, price3: 0 };
+            var html = '<div class="table-responsive items-table-responsive"><table class="table table-borderless items-modern-table">'
+                + '<thead><tr><th class="items-avatar-head" style="width:44px;"></th>'
+                + sortHead('name','Nom') + sortHead('category','Catégorie')
+                + sortHead('stock','Stock qty','text-right')
+                + sortHead('cost','Buying price (DA)','text-right')
+                + sortHead('price1','Selling price 1','text-right')
+                + sortHead('price2','Selling price 2','text-right')
+                + sortHead('price3','Selling price 3','text-right')
                 + '</tr></thead><tbody>';
             list.forEach(function (r) {
-                var unit = r.unit || 'qty';
-                var thumb;
+                var unit = r.unit || 'qty', thumb;
                 var tile = PosnicPro.resolveTile ? PosnicPro.resolveTile(r) : { color: r.tile_color, shape: r.tile_shape };
                 if ((!r.image || r.image === 'item.svg') && tile.color) {
                     var shape = tile.shape === 'circle' ? 'border-radius:50%;' : 'border-radius:6px;';
@@ -597,39 +768,32 @@ PosnicPro.items = {
                         + esc(String(r.name || '?').trim().charAt(0).toUpperCase()) + '</span>';
                 } else {
                     var img = (r.image && r.image !== 'item.svg') ? r.image : 'static/images/default/item.svg';
-                    thumb = '<img loading="lazy" decoding="async" src="' + esc(img) + '" width="32" height="32" style="object-fit:cover;border-radius:6px;"'
-                        + " onerror=\"this.onerror=null;this.src='static/images/default/item.svg';\">";
+                    thumb = '<img loading="lazy" decoding="async" src="' + esc(img) + '" width="32" height="32" style="object-fit:cover;border-radius:6px;">';
                 }
                 var tracked = r.track_inventory === true || r.track_inventory === 'true';
-                var low = tracked && Number(r.available_quantity) <= Number(r.low_stock || 0);
-                var stockCell = tracked
-                    ? (low ? '<span class="rs-pill unpaid">' : '<span>') + esc(r.available_quantity) + ' ' + esc(unit) + (low ? '</span>' : '</span>')
-                    : '<span class="q-muted">-</span>';
-                /* The margin the shop actually keeps on a unit - the number a
-                   retailer scans a catalogue for. Blank when either price is
-                   missing: a made-up 100% is worse than a dash. */
-                var cost = Number(r.company_price) || 0;
-                var sell = Number(r.selling_price) || 0;
-                var marginCell = (cost > 0 && sell > 0)
-                    ? (((sell - cost) / sell) * 100).toFixed(1) + '%'
-                    : '-';
-                var taxCell = (Number(r.tax) > 0) ? Number(r.tax) + '%' : '-';
-                html += '<tr class="md-row items-row highlight-select' + (self._openDocId === String(r._id) ? ' is-active' : '') + '"'
-                    + ' data-id="' + esc(r._id) + '" style="cursor:pointer;">'
-                    + '<td>' + thumb + '</td>'
-                    + '<td>' + esc(r.name) + '</td>'
-                    + '<td class="i-col-sku">' + esc(r.itemid || '-') + '</td>'
-                    + '<td class="i-col-category">' + esc(r.category_name || '-') + '</td>'
-                    + '<td class="i-col-supplier">' + esc(r.supplier_name || '-') + '</td>'
+                var stock = tracked ? (Number(r.available_quantity) || 0) : 0;
+                var cost = Number(r.company_price) || 0, price1 = Number(r.selling_price) || 0;
+                var price2 = Number(r.selling_price_2 || r.selling_price2) || 0, price3 = Number(r.selling_price_3 || r.selling_price3) || 0;
+                totals.stock += stock; totals.cost += cost; totals.stockCost += cost * stock;
+                totals.price1 += price1; totals.price2 += price2; totals.price3 += price3;
+                var low = tracked && stock <= Number(r.low_stock || 0);
+                var stockCell = tracked ? (low ? '<span class="rs-pill unpaid">' : '<span>') + esc(stock) + ' ' + esc(unit) + '</span>' : '<span class="q-muted">-</span>';
+                var moneyCell = function (v) { return cur + '&nbsp;' + Number(v || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); };
+                html += '<tr class="md-row items-row highlight-select' + (self._openDocId === String(r._id) ? ' is-active' : '') + '" data-id="' + esc(r._id) + '" style="cursor:pointer;">'
+                    + '<td class="items-avatar-cell">' + thumb + '</td>'
+                    + '<td class="items-name-cell">' + esc(r.name || '') + '</td>'
+                    + '<td>' + esc(r.category_name || '-') + '</td>'
                     + '<td class="text-right">' + stockCell + '</td>'
-                    + '<td class="text-right i-col-cost q-muted">' + (cost > 0 ? cur + '&nbsp;' + cost.toFixed(2) : '-') + '</td>'
-                    + '<td class="text-right i-col-price">' + cur + '&nbsp;' + sell.toFixed(2) + '</td>'
-                    + '<td class="text-right i-col-margin">' + marginCell + '</td>'
-                    + '<td class="text-right i-col-tax q-muted">' + taxCell + '</td>'
-
-                    + '</tr>';
+                    + '<td class="text-right">' + moneyCell(cost) + '</td>'
+                    + '<td class="text-right">' + moneyCell(price1) + '</td>'
+                    + '<td class="text-right">' + moneyCell(price2) + '</td>'
+                    + '<td class="text-right">' + moneyCell(price3) + '</td></tr>';
             });
-            html += '</tbody></table></div>';
+            var moneyTotal = function (v) { return cur + '&nbsp;' + Number(v || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); };
+            html += '</tbody><tfoot><tr class="items-total-row"><th></th><th>Total · ' + list.length + ' article(s)</th><th>Total</th>'
+                + '<th class="text-right">' + totals.stock.toLocaleString() + '</th>'
+                + '<th class="text-right">' + moneyTotal(totals.cost) + '<small class="items-stock-cost-total">Stock cost: ' + moneyTotal(totals.stockCost) + '</small></th>'
+                + '<th class="text-right">' + moneyTotal(totals.price1) + '</th><th class="text-right">' + moneyTotal(totals.price2) + '</th><th class="text-right">' + moneyTotal(totals.price3) + '</th></tr></tfoot></table></div>';
             $('#items_list_rows').html(html);
             self.renderPager(Number(data.total) || list.length);
         }, function () {
@@ -684,7 +848,7 @@ PosnicPro.items = {
         PosnicPro.listExport.all({
             url: 'items',
             params: function (page, limit) {
-                return (function () { var d = { page: page, limit: limit, filters: JSON.stringify(PosnicPro.listFilter.legacyFilters('items', { dateKey: 'updated_date' })) }; var sv = PosnicPro.listSort.value('items'); if (sv) { d.sort = sv; } return d; }());
+                return (function () { var d = { page: page, limit: limit, filters: JSON.stringify((function(){var f=PosnicPro.listFilter.legacyFilters('items', { dateKey: 'updated_date' });if(PosnicPro.items._categoryFilter)f.category_name=PosnicPro.items._categoryFilter;if(PosnicPro.items._brandFilter)f.brand=PosnicPro.items._brandFilter;return f;})()) }; var sv = PosnicPro.listSort.value('items'); if (sv) { d.sort = sv; } return d; }());
             },
             head: spec.head,
             map: spec.map,
@@ -724,6 +888,195 @@ PosnicPro.items = {
             hasher.setHash('items');
         }
     },
+
+    /* Independent Modify workspace. This page has its own DOM, state and
+       submit handler; it never enters items_v2 or the Add New Item route. */
+    _modifyRecord: null,
+    _modifyStep: 1,
+    openIndependentModify: function (id) {
+        var self = PosnicPro.items;
+        if (!id) return;
+        if (PosnicPro.aclLoaded && PosnicPro.aclLoaded() && !PosnicPro.checkAccess('item','write')) {
+            PosnicPro.alert('error','You do not have permission to modify items.'); return;
+        }
+        var host = document.getElementById('posnic_independent_modify_page');
+        if (!host) {
+            host = document.createElement('section'); host.id = 'posnic_independent_modify_page';
+            host.className = 'page_loader'; document.body.appendChild(host);
+        }
+        host.innerHTML = `
+<style id="posnic-modify-blue-two-step">
+#posnic_independent_modify_page{display:block!important;position:fixed!important;inset:70px 0 0!important;z-index:1060!important;width:100%;height:calc(100vh - 70px)!important;min-height:0!important;max-height:none!important;overflow:auto!important;padding:8px 16px 22px;background:var(--theme-body-bg,#f3f6fb);color:var(--theme-text-primary,#24344d)}
+#posnic_independent_modify_page *{box-sizing:border-box}
+#posnic_independent_modify_page .pm-shell{width:min(1360px,100%);margin:0 auto;background:var(--theme-card-bg,#fff);border:1px solid #d9e5f5;border-radius:12px;box-shadow:0 5px 22px rgba(27,74,137,.09);overflow:visible}
+#posnic_independent_modify_page .pm-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 20px;background:linear-gradient(110deg,#1557a6,#2879d0);color:#fff;border-radius:11px 11px 0 0}
+#posnic_independent_modify_page .pm-head h3{margin:0 0 3px;font-size:20px;font-weight:750;color:#fff}
+#posnic_independent_modify_page .pm-head .pm-sub{font-size:12px;color:rgba(255,255,255,.82)}
+#posnic_independent_modify_page .pm-btn{min-height:38px;padding:8px 16px;border-radius:7px;font-size:13px;font-weight:700}
+#posnic_independent_modify_page .pm-head .pm-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.55);color:#fff}
+#posnic_independent_modify_page .pm-status{font-size:12px;color:var(--theme-text-muted,#6c7c92)}
+#posnic_independent_modify_page .pm-status-line{padding:8px 20px 0}
+#posnic_independent_modify_page .pm-tabs{display:flex;gap:8px;padding:14px 20px 0;border-bottom:1px solid #dce7f5}
+#posnic_independent_modify_page .pm-tab{display:flex;align-items:center;gap:9px;min-height:44px;padding:8px 15px;border:1px solid #d4e1f1;border-bottom:0;border-radius:8px 8px 0 0;background:#edf4fc;color:#315477;font-weight:700;cursor:pointer}
+#posnic_independent_modify_page .pm-tab .pm-step-no{display:inline-flex;align-items:center;justify-content:center;width:25px;height:25px;border-radius:50%;background:#d5e6fa;color:#175aa7;font-weight:800}
+#posnic_independent_modify_page .pm-tab.active{background:#1f68b5;border-color:#1f68b5;color:#fff}
+#posnic_independent_modify_page .pm-tab.active .pm-step-no{background:#fff;color:#1f68b5}
+#posnic_independent_modify_page .pm-panel{padding:18px 20px 20px}
+#posnic_independent_modify_page .pm-panel[hidden]{display:none!important}
+#posnic_independent_modify_page .pm-panel-title{display:flex;align-items:center;gap:10px;margin:0 0 15px;color:#1e5fa8;font-size:15px;font-weight:800}
+#posnic_independent_modify_page .pm-panel-title:before{content:"";width:4px;height:21px;border-radius:3px;background:#2879d0}
+#posnic_independent_modify_page .pm-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 16px;align-items:start}
+#posnic_independent_modify_page .pm-field{min-width:0;margin:0}
+#posnic_independent_modify_page .pm-field label{display:block;margin:0 0 5px;color:var(--theme-text-primary,#34445b);font-size:12px;font-weight:700}
+#posnic_independent_modify_page .pm-field input,#posnic_independent_modify_page .pm-field select{display:block;width:100%;height:40px;min-width:0;padding:8px 11px;border:1px solid #cbd9e9;border-radius:7px;background:var(--theme-input-bg,var(--theme-card-bg,#fff));color:var(--theme-text-primary,#263347);font-size:13px}
+#posnic_independent_modify_page .pm-field input:focus,#posnic_independent_modify_page .pm-field select:focus{outline:0;border-color:#2879d0;box-shadow:0 0 0 3px rgba(40,121,208,.13)}
+#posnic_independent_modify_page .pm-span-6,#posnic_independent_modify_page .pm-price-title{grid-column:1/-1}
+#posnic_independent_modify_page .pm-span-3{grid-column:span 1}
+#posnic_independent_modify_page .pm-span-2{grid-column:span 1}
+#posnic_independent_modify_page .pm-price-title{font-size:14px;font-weight:800;color:#1e5fa8;margin:0 0 -3px}
+#posnic_independent_modify_page .pm-image{display:grid;grid-template-columns:180px minmax(180px,1fr) 190px;align-items:center;gap:14px;margin-top:16px;padding:12px;border:1px solid #d7e5f5;border-radius:9px;background:#f5f9fe}
+#posnic_independent_modify_page .pm-image strong{color:#244d79;font-size:13px}
+#posnic_independent_modify_page .pm-image-preview{height:130px;display:flex;align-items:center;justify-content:center;border:1px dashed #a9c4e2;border-radius:8px;background:#fff;overflow:hidden}
+#posnic_independent_modify_page .pm-image-preview img{max-width:100%;max-height:120px;object-fit:contain}
+#posnic_independent_modify_page .pm-image-preview .pm-empty{font-size:12px;color:#8192a8}
+#posnic_independent_modify_page .pm-upload{display:block;text-align:center;padding:11px 12px;border-radius:7px;background:#e2efff;color:#175da9;font-size:12px;font-weight:800;cursor:pointer}
+#posnic_independent_modify_page .pm-upload input{display:none}
+#posnic_independent_modify_page .pm-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;border-top:1px solid #dce7f5;background:#f7faff;border-radius:0 0 11px 11px}
+#posnic_independent_modify_page .pm-footer .pm-btn{min-width:125px}
+#posnic_independent_modify_page .pm-next,#posnic_independent_modify_page .pm-back-step{background:#e5f0fc;border:1px solid #bfd5ee;color:#175da9}
+#posnic_independent_modify_page .pm-save{background:#1769b5;border-color:#1769b5;color:#fff}
+@media(max-width:850px){#posnic_independent_modify_page .pm-fields{grid-template-columns:repeat(2,minmax(0,1fr))}#posnic_independent_modify_page .pm-image{grid-template-columns:1fr 1fr}#posnic_independent_modify_page .pm-image-preview{grid-column:1/-1;grid-row:2}}
+@media(max-width:560px){#posnic_independent_modify_page{padding:6px!important}#posnic_independent_modify_page .pm-head{padding:12px}#posnic_independent_modify_page .pm-tabs{padding:10px 10px 0}#posnic_independent_modify_page .pm-tab{flex:1;justify-content:center;padding:7px 6px;font-size:11px}#posnic_independent_modify_page .pm-panel{padding:14px 12px}#posnic_independent_modify_page .pm-fields{grid-template-columns:1fr}#posnic_independent_modify_page .pm-span-6,#posnic_independent_modify_page .pm-price-title,#posnic_independent_modify_page .pm-span-3,#posnic_independent_modify_page .pm-span-2{grid-column:1/-1}#posnic_independent_modify_page .pm-image{grid-template-columns:1fr}#posnic_independent_modify_page .pm-image-preview{grid-column:auto;grid-row:auto}#posnic_independent_modify_page .pm-footer{padding:10px 12px}}
+</style>
+<div class="pm-shell">
+  <header class="pm-head"><div><h3>Modify article</h3><div class="pm-sub">Update the selected article · two-step editor</div></div><button type="button" class="btn pm-btn" id="posnic_modify_close"><i class="feather icon-arrow-left mr-2"></i>Back</button></header>
+  <div id="posnic_modify_status" class="pm-status pm-status-line">Loading selected article…</div>
+  <nav class="pm-tabs" aria-label="Modify article in two steps">
+    <button type="button" class="pm-tab active" data-modify-step="1"><span class="pm-step-no">1</span> Basic information</button>
+    <button type="button" class="pm-tab" data-modify-step="2"><span class="pm-step-no">2</span> Prices &amp; image</button>
+  </nav>
+  <form id="posnic_independent_modify_form" autocomplete="off">
+    <section class="pm-panel" data-modify-panel="1">
+      <h4 class="pm-panel-title">Basic information</h4>
+      <div class="pm-fields">
+        <div class="pm-field pm-span-6"><label for="posnic_modify_name">Article name</label><input id="posnic_modify_name" maxlength="200" required></div>
+        <div class="pm-field pm-span-3"><label for="posnic_modify_category">Category</label><select id="posnic_modify_category"><option value="">No category</option></select></div>
+        <div class="pm-field pm-span-3"><label for="posnic_modify_brand">Marque</label><input id="posnic_modify_brand" maxlength="120" placeholder="Brand"></div>
+        <div class="pm-field pm-span-3"><label for="posnic_modify_cost">Buying price</label><input id="posnic_modify_cost" type="number" min="0" step="0.01" required></div>
+        <div class="pm-field pm-span-3"><label for="posnic_modify_stock">Current stock quantity</label><input id="posnic_modify_stock" type="number" min="0" step="0.001" required></div>
+      </div>
+    </section>
+    <section class="pm-panel" data-modify-panel="2" hidden>
+      <h4 class="pm-panel-title">Selling prices &amp; article image</h4>
+      <div class="pm-fields">
+        <div class="pm-price-title">Selling prices</div>
+        <div class="pm-field pm-span-2"><label for="posnic_modify_price">Selling price 1</label><input id="posnic_modify_price" type="number" min="0" step="0.01" required></div>
+        <div class="pm-field pm-span-2"><label for="posnic_modify_price2">Selling price 2</label><input id="posnic_modify_price2" type="number" min="0" step="0.01"></div>
+        <div class="pm-field pm-span-2"><label for="posnic_modify_price3">Selling price 3</label><input id="posnic_modify_price3" type="number" min="0" step="0.01"></div>
+      </div>
+      <aside class="pm-image"><div><strong>Article image</strong><div class="pm-sub">Choose a new product photo</div></div><div class="pm-image-preview" id="posnic_modify_image_preview"><span class="pm-empty">No image selected</span></div><label class="pm-upload"><i class="feather icon-upload-cloud mr-2"></i>Choose image<input id="posnic_modify_image" type="file" accept="image/png,image/jpeg,image/gif,image/bmp"></label></aside>
+    </section>
+    <footer class="pm-footer"><span class="pm-status">Changes apply to this article only.</span><div><button type="button" class="btn pm-btn pm-back-step" id="posnic_modify_prev" hidden>← Back</button> <button type="button" class="btn pm-btn pm-next" id="posnic_modify_next">Continue to step 2 →</button><button type="submit" class="btn pm-btn pm-save" id="posnic_modify_save" hidden><i class="feather icon-save mr-2"></i>Save changes</button></div></footer>
+  </form>
+</div>`;
+        $('#items').hide(); $('#items_v2_mount,#items_modify_page,#items_new').hide(); $('.page-title-box').hide(); $(host).show();
+        self._modifyRecord = null;
+        var selectedImage = null, imagePreviewUrl = null;
+        function showImage(src) {
+            var preview = document.getElementById('posnic_modify_image_preview');
+            preview.innerHTML = '';
+            if (!src) { preview.innerHTML = '<span class="pm-empty">No image selected</span>'; return; }
+            var img = document.createElement('img'); img.src = src; img.alt = 'Article image'; preview.appendChild(img);
+        }
+        function setModifyStep(step) {
+            self._modifyStep = step === 2 ? 2 : 1;
+            $('#posnic_independent_modify_page [data-modify-panel]').prop('hidden', true);
+            $('#posnic_independent_modify_page [data-modify-panel="' + self._modifyStep + '"]').prop('hidden', false);
+            $('#posnic_independent_modify_page [data-modify-step]').removeClass('active');
+            $('#posnic_independent_modify_page [data-modify-step="' + self._modifyStep + '"]').addClass('active');
+            $('#posnic_modify_prev').prop('hidden', self._modifyStep === 1);
+            $('#posnic_modify_next').prop('hidden', self._modifyStep === 2);
+            $('#posnic_modify_save').prop('hidden', self._modifyStep !== 2);
+            if (self._modifyStep === 2) {
+                $('#posnic_independent_modify_page').get(0).scrollIntoView({behavior:'smooth',block:'start'});
+            }
+        }
+        self._modifyStep = 1;
+        $('#posnic_independent_modify_page [data-modify-step]').off('click').on('click',function(){setModifyStep(Number($(this).attr('data-modify-step')));});
+        $('#posnic_modify_next').off('click').on('click',function(){
+            var name=$.trim($('#posnic_modify_name').val());
+            if(!name){PosnicPro.alert('warning','Enter the article name first.');$('#posnic_modify_name').trigger('focus');return;}
+            setModifyStep(2);
+        });
+        $('#posnic_modify_prev').off('click').on('click',function(){setModifyStep(1);});
+        setModifyStep(1);
+        $('#posnic_modify_close').off('click').on('click',function(){ $(host).hide(); $('.page-title-box,#items').show(); });
+        $('#posnic_modify_image').off('change').on('change',function(){
+            var file=this.files&&this.files[0]; selectedImage=null;
+            if(!file){showImage(imagePreviewUrl);return;}
+            if(!/^image\/(png|jpeg|gif|bmp)$/.test(file.type)||file.size>5242880){this.value='';PosnicPro.alert('warning','Choose a PNG, JPG, GIF or BMP image under 5 MB.');return;}
+            var reader=new FileReader();reader.onload=function(){imagePreviewUrl=String(reader.result||'');showImage(imagePreviewUrl);selectedImage={name:file.name,size:file.size,data:imagePreviewUrl.split(',')[1],cover:'yes'};};reader.readAsDataURL(file);
+        });
+        $('#posnic_independent_modify_form').off('submit').on('submit',function(e){
+            e.preventDefault();var record=self._modifyRecord;if(!record||!record._id&&!record.id){PosnicPro.alert('error','The selected article is not loaded.');return;}
+            var values=['#posnic_modify_price','#posnic_modify_price2','#posnic_modify_price3','#posnic_modify_cost','#posnic_modify_stock'];
+            for(var i=0;i<values.length;i++){var raw=$(values[i]).val();if(raw===''||!Number.isFinite(Number(raw))||Number(raw)<0){PosnicPro.alert('warning','Enter valid non-negative prices and stock quantity.');$(values[i]).trigger('focus');return;}}
+            var category=$('#posnic_modify_category option:selected'),data=Object.assign({},record,{
+                name:$.trim($('#posnic_modify_name').val()),brand:$.trim($('#posnic_modify_brand').val()),
+                selling_price:Number($('#posnic_modify_price').val()),selling_price_2:Number($('#posnic_modify_price2').val()),
+                selling_price_3:Number($('#posnic_modify_price3').val()),company_price:Number($('#posnic_modify_cost').val()),
+                available_quantity:Number($('#posnic_modify_stock').val()),category_id:$('#posnic_modify_category').val()||'',
+                category_name:category.data('name')||category.text()||''
+            });
+            ['_id','id','branch_id','branch_access','license','created_date','updated_date'].forEach(function(k){delete data[k];});
+            $('#posnic_modify_save').prop('disabled',true).html('<i class="feather icon-loader mr-2"></i>Saving…');
+            function updateRecord() {
+                PosnicPro.request({url:'items/'+encodeURIComponent(String(record._id||record.id))+'/details',method:'PUT',data:JSON.stringify(data)},function(resp){
+                    $('#posnic_modify_save').prop('disabled',false).html('<i class="feather icon-save mr-2"></i>Save changes');
+                    if(!resp||resp.type!=='success'){PosnicPro.alert('error',(resp&&resp.message)||'Could not update article.');return;}
+                    PosnicPro.alert('success',resp.message||'Article updated.');$(host).hide();$('.page-title-box,#items').show();self.loadList(self._page);self.openDoc(String(record._id||record.id));
+                },function(xhr){$('#posnic_modify_save').prop('disabled',false).html('<i class="feather icon-save mr-2"></i>Save changes');var msg='Could not update article.';try{msg=JSON.parse(xhr.responseText).message||msg;}catch(_){}PosnicPro.alert('error',msg);});
+            }
+            if (!selectedImage) { updateRecord(); return; }
+            // The item API stores uploaded image filenames, not browser data
+            // URLs. Upload first using the same multi-image endpoint as Add Item.
+            PosnicPro.post({url:'items/uploadItemMultiImage',data:JSON.stringify({items_image:[selectedImage]})},function(upload){
+                if(!upload||upload.type!=='success'||!Array.isArray(upload.data)||!upload.data[0]||!upload.data[0].name){
+                    $('#posnic_modify_save').prop('disabled',false).html('<i class="feather icon-save mr-2"></i>Save changes');
+                    PosnicPro.alert('error',(upload&&upload.message)||'Image upload failed. The article was not changed.');return;
+                }
+                var uploaded=upload.data[0];
+                var storedImage={name:uploaded.name,size:uploaded.size||selectedImage.size,cover:'yes'};
+                data.image=[storedImage];data.multi_image=[storedImage];data.cover_image=uploaded.name;data.logo=uploaded.name;
+                updateRecord();
+            },function(){
+                $('#posnic_modify_save').prop('disabled',false).html('<i class="feather icon-save mr-2"></i>Save changes');
+                PosnicPro.alert('error','Image upload failed. The article was not changed.');
+            });
+        });
+        PosnicPro.get({url:'items/getItemDetails',data:{id:id}},function(resp){
+            if(!resp||resp.type!=='success'||!resp.data){$('#posnic_modify_status').text('Could not load this article.');return;}
+            var queue=[resp.data],seen=[],item=null,keys=['name','item_name','selling_price','company_price','itemid','sku_id'];
+            while(queue.length){var x=queue.shift();if(!x||typeof x!=='object'||Array.isArray(x)||seen.indexOf(x)!==-1)continue;seen.push(x);if(keys.some(function(k){return x[k]!=null;}))item=x;['item','data','result','record','details','item_details'].forEach(function(k){if(x[k]&&typeof x[k]==='object')queue.push(x[k]);});}
+            if(!item){$('#posnic_modify_status').text('The server did not return an article record.');return;}
+            self._modifyRecord=Object.assign({},item,{name:item.name||item.item_name||item.title||''});
+            $('#posnic_modify_name').val(self._modifyRecord.name);
+            $('#posnic_modify_price').val(item.selling_price!=null?item.selling_price:item.price||0);
+            $('#posnic_modify_price2').val(item.selling_price_2!=null?item.selling_price_2:(item.selling_price2!=null?item.selling_price2:0));
+            $('#posnic_modify_price3').val(item.selling_price_3!=null?item.selling_price_3:(item.selling_price3!=null?item.selling_price3:0));
+            $('#posnic_modify_cost').val(item.company_price!=null?item.company_price:item.purchase_cost_dzd||0);
+            $('#posnic_modify_stock').val(item.available_quantity!=null?item.available_quantity:item.quantity||0);
+            $('#posnic_modify_brand').val(item.brand||item.marque||'');
+            var image=item.image||item.image_url||'';if(Array.isArray(image)){var cover=image.find(function(x){return x&&x.cover==='yes';})||image[0];image=cover&&(cover.url||cover.path||cover.src)||'';}showImage(typeof image==='string'&&image!=='item.svg'?image:'');imagePreviewUrl=typeof image==='string'?image:'';
+            $('#posnic_modify_status').text('Loaded: '+self._modifyRecord.name);
+            PosnicPro.get({url:'categories/getCategoryAjaxList',data:'query='},function(cats){
+                var sel=document.getElementById('posnic_modify_category');((cats&&cats.suggestions)||[]).forEach(function(c){var o=new Option(c.name,c.id);o.dataset.name=c.name;sel.add(o);});
+                sel.value=String(item.category_id||'');
+                if(sel.value!==String(item.category_id||'')){var opt=new Option(item.category_name||item.category||'Current category',item.category_id||'');opt.dataset.name=item.category_name||item.category||'';sel.add(opt);sel.value=String(item.category_id||'');}
+            });
+        },function(){$('#posnic_modify_status').text('Could not load this article.');});
+    },
+
     renderItemDoc: function (d) {
         var esc = function (t) { return $('<span>').text(t == null ? '' : t).html(); };
         var real = function (v) { return v && v !== 'null' && v !== 'undefined' ? v : ''; };
@@ -738,8 +1091,10 @@ PosnicPro.items = {
             + '<button type="button" class="btn btn-sm btn-light" title="Show or hide the list" data-t-title="lang_show_or_hide_the_list" aria-label="Show or hide the list" data-t-aria-label="lang_show_or_hide_the_list" onclick="PosnicPro.masterDetail.toggleRail(\'#items_split\');"><i class="feather icon-sidebar"></i></button>'
             + '<span class="p-doc-title">' + esc(d.name) + '</span>'
             + (low ? '<span class="rs-pill unpaid"><lang class="lang_low_stock">Low stock</lang></span>' : '')
+            + '<button type="button" class="btn btn-sm btn-primary" data-module="item" data-access="write" onclick="PosnicPro.items.openIndependentModify(\'' + esc(id) + '\');"><i class="feather icon-edit-2 mr-1"></i>Modify article</button>'
             + '<span class="ml-auto"></span>'
-            + '<button type="button" class="btn btn-sm btn-light" data-module="item" data-access="write" onclick="hasher.setHash(\'items/' + esc(id) + '/edit\');"><i class="feather icon-edit-2 mr-1"></i>Edit</button>'
+
+            + (real(d.barcode_id) ? '<button type="button" class="btn btn-sm btn-light" title="Quick print price labels" aria-label="Quick print price labels" onclick="PosnicPro.items.quickPrintLabels(\'' + esc(id) + '\');"><i class="feather icon-printer mr-1"></i>Price labels</button>' : '')
             + '<div class="btn-group">'
             + '<button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><lang class="lang_tab_more">More</lang></button>'
             + '<div class="dropdown-menu dropdown-menu-right">'
@@ -1023,6 +1378,18 @@ PosnicPro.items = {
      * rolls back if a row fails mid-way - a network blip can no longer
      * leave half a family behind.
      */
+    _newSixDigitVariantBarcode: function (used) {
+        used = used || {};
+        var code;
+        var attempts = 0;
+        do {
+            code = String(Math.floor(1000000 + Math.random() * 9000000));
+            attempts++;
+        } while (used[code] && attempts < 1000);
+        if (used[code]) throw new Error('Could not allocate a unique seven-digit variant barcode. Please retry.');
+        used[code] = true;
+        return code;
+    },
     saveVariantFamily: function (loader) {
         var itemName = $('#items_name').val();
         /* The same ordered list loadVariant built the inputs from. Walking it
@@ -1034,6 +1401,7 @@ PosnicPro.items = {
         var shared = PosnicPro.items._sharedItemFields();
         var axis = PosnicPro.items.variantAxisLabel();
         var rows = [];
+        var usedVariantBarcodes = Object.create(null);
         /* Did somebody actually PICK a tile, or is it the automatic one?
            _sharedItemFields already resolved the fallback against the parent
            name, so by the time it is spread onto a row there is no way left to
@@ -1113,7 +1481,7 @@ PosnicPro.items = {
                 translations: (shared.translations || []).map(function (entry) { return Object.assign({}, entry, { name: entry.name ? entry.name + " / " + variantName : "" }); }),
                 variant_value: variantName,
                 sku_id: $('#items_itemid_' + key + '').val(),
-                barcode_id: $('#items_barcodeid_' + key + '').val(),
+                barcode_id: '', // Server allocates a branch-unique seven-digit numeric Code 128 value.
                 mrp_price: $('#items_mrp_price_' + key + '').val(),
                 company_price: $('#items_company_price_' + key + '').val(),
                 selling_price: $('#items_selling_price_' + key + '').val(),
@@ -1184,23 +1552,25 @@ PosnicPro.items = {
 
             /* CREATE with variants: the atomic family path. Edits and
                plain items keep the legacy flow below untouched. */
-            if (PosnicPro.action === 'add' && $('#product_with_variant').is(':checked')
-                && ($('#item_variant_list').val() || []).length > 0) {
+            /* A checked variant-mode toggle alone is not a variant family.
+               Only selected variant values create variants; otherwise use the
+               ordinary item path and persist the standalone opening quantity. */
+            var variant_list = $('#item_variant_list').val() || [];
+            var hasVariants = $('#product_with_variant').is(':checked') && variant_list.length > 0;
+            if (PosnicPro.action === 'add' && hasVariants) {
                 PosnicPro.items.saveVariantFamily(loader);
                 return;
             }
 
-            var variant_list = $('#item_variant_list').val();
-            var variant_array = ["variant"];
-            var variant_value = (variant_list.length > 0) ? $('#item_variant_list').val() : variant_array;
-            Array.from(variant_value || []).forEach(function (variantName, key) {
+            var variant_value = hasVariants ? variant_list : ["variant"];
+            Array.from(variant_value).forEach(function (variantName, key) {
                 var itemName = $("#items_name").val();
                 var unitDetail = $("#items_unit").select2("data");
                 let unitVariantDetail = $('#items_unit_' + key + '');
                 let unitVariantValue = unitVariantDetail.find(':selected').attr('data-unit-value');
                 let unitVariantId = unitVariantDetail.find(':selected').attr('data-unit-id');
 
-                if ($("#product_without_variant").is(":checked")) {
+                if (!hasVariants) {
                     var name = itemName;
                     var param_fields = {
                         sku_id: $('#items_itemid').val(),
@@ -1208,7 +1578,7 @@ PosnicPro.items = {
                         mrp_price: $('#items_mrp_price').val(),
                         company_price: $('#items_company_price').val(),
                         selling_price: $('#items_selling_price').val(),
-                        available_quantity: $('#items_available_quantity').val(),
+                        available_quantity: Math.max(0, Number($('#items_available_quantity').val()) || 0),
                         position: $('#items_sort').val(),
                         items_mfg_date: $('#items_mfg_date').val(),
                         items_expiry_date: $('#items_expiry_date').val(),
@@ -1734,9 +2104,6 @@ PosnicPro.items = {
         });
     },
     /*Edit item dsetails*/
-    editItem: function (id) {
-        return PosnicPro.items_v2.showEdit(id);
-    },
     _legacyEditItem: function (id) {
         var loader = $(".loader-item");
         $("<div class='loadingSpinner'></div>").appendTo(loader);
@@ -1918,9 +2285,6 @@ PosnicPro.items = {
         });
     },
 
-    resetEditButton: function (id) {
-        PosnicPro.items.editItem(id);
-    },
     addItemButton: function () {
         var loader = $(".loader-item");
         loader.find(".loadingSpinner:first").remove();
@@ -2809,6 +3173,58 @@ PosnicPro.items = {
                 }
             });
         }
+    },
+
+    quickPrintLabels: function (id) {
+        id = String(id || '');
+        if (!id || !window.PosnicShelfLabels || typeof window.PosnicShelfLabels.quickPrint !== 'function') return;
+        var modalId = 'quick_price_label_modal';
+        if (!$('#' + modalId).length) {
+            $('body').append(
+                '<div class="modal fade" id="' + modalId + '" tabindex="-1" role="dialog" aria-labelledby="quick_price_label_title" aria-hidden="true">' +
+                '<div class="modal-dialog modal-sm modal-dialog-centered" role="document"><div class="modal-content">' +
+                '<div class="modal-header"><h5 class="modal-title" id="quick_price_label_title"><i class="feather icon-printer mr-2"></i>Print price labels</h5>' +
+                '<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>' +
+                '<div class="modal-body"><div class="form-group mb-0"><label for="quick_price_label_copies">Number of copies</label>' +
+                '<input type="number" class="form-control" id="quick_price_label_copies" min="1" max="999" step="1" value="1" inputmode="numeric" autocomplete="off">' +
+                '<small class="form-text text-danger" id="quick_price_label_error" role="alert" style="display:none"></small></div></div>' +
+                '<div class="modal-footer"><button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>' +
+                '<button type="button" class="btn btn-primary" id="quick_price_label_confirm"><i class="feather icon-printer mr-1"></i>Print</button></div>' +
+                '</div></div></div>'
+            );
+            $('#quick_price_label_modal').on('shown.bs.modal', function () {
+                $('#quick_price_label_copies').trigger('focus').trigger('select');
+            });
+            $('#quick_price_label_modal').on('hidden.bs.modal', function () {
+                $('#quick_price_label_confirm').prop('disabled', false).html('<i class="feather icon-printer mr-1"></i>Print');
+                $('#quick_price_label_error').hide().text('');
+            });
+            $('#quick_price_label_copies').on('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); $('#quick_price_label_confirm').trigger('click'); }
+            });
+            $('#quick_price_label_confirm').on('click', function () {
+                var copies = Number($('#quick_price_label_copies').val());
+                if (!Number.isInteger(copies) || copies < 1 || copies > 999) {
+                    $('#quick_price_label_error').text('Enter a whole number between 1 and 999.').show();
+                    $('#quick_price_label_copies').trigger('focus').trigger('select');
+                    return;
+                }
+                var selectedId = String($('#quick_price_label_modal').data('item-id') || '');
+                if (!selectedId) return;
+                $('#quick_price_label_error').hide().text('');
+                $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span>Printing…');
+                Promise.resolve(window.PosnicShelfLabels.quickPrint(selectedId, copies)).then(function () {
+                    $('#quick_price_label_modal').modal('hide');
+                }).catch(function (error) {
+                    $('#quick_price_label_error').text(error && error.message ? error.message : 'Could not print labels.').show();
+                    $('#quick_price_label_confirm').prop('disabled', false).html('<i class="feather icon-printer mr-1"></i>Print');
+                });
+            });
+        }
+        $('#quick_price_label_modal').data('item-id', id);
+        $('#quick_price_label_copies').val(1);
+        $('#quick_price_label_error').hide().text('');
+        $('#quick_price_label_modal').modal('show');
     },
 
     printLableView: function (id) {
@@ -4443,7 +4859,15 @@ $(function () {
     });
     $(window).on('hashchange', function () {
         if (/items\/(new|[^/]+\/(edit|clone))/.test(window.location.hash)) {
-            setTimeout(syncVariantLink, 400);
+            setTimeout(function () {
+                syncVariantLink();
+                // Every new article starts on step one; do not change the
+                // selected tab for an existing-item edit or a clone.
+                if (/^#\/items\/new(?:$|[/?])/.test(window.location.hash)
+                    && PosnicPro.items && typeof PosnicPro.items.goToTab === 'function') {
+                    PosnicPro.items.goToTab('item_tab_main');
+                }
+            }, 400);
         }
     });
     $("#product_without_variant, #product_with_variant").change(function () {
@@ -4494,7 +4918,7 @@ $(document).ready(function () {
     $('#items_discount_percentage').attr('disabled', 'disabled').val('0').hide();
     $('#items_discount_amount').removeAttr('disabled', 'disabled').val('0').show();
     jQuery.validator.addMethod("alphanumeric", function (value, element) {
-        if ((/[*|\":<>[\]{}`\\';@&#!]/.test(value))) {
+        if ((/[*|\":<>[\]{}`\';@&#!]/.test(value))) {
             return false;
         }
         return true;
@@ -4633,10 +5057,16 @@ $(document).ready(function () {
                 maxlength: 1000
             },
             items_variant: {
-                required: true
+                required: function () {
+                    return $('#product_with_variant').is(':checked')
+                        && (($('#item_variant_list').val() || []).length > 0);
+                }
             },
             item_variant_list: {
-                required: true
+                required: function () {
+                    return $('#product_with_variant').is(':checked')
+                        && (($('#item_variant_list').val() || []).length > 0);
+                }
             },
             items_mfg_date: {
                 dateISO: true
@@ -4646,15 +5076,6 @@ $(document).ready(function () {
                 greaterThanMfgDate: "#items_mfg_date",
                 expiryGreaterThanCurrentDate: true
             },
-            // Validated only when HSN tax mode shows it (hidden fields are
-            // ignored) - it is the tax source in that mode, so it must be a
-            // real HSN: 4-8 digits.
-            items_hsncode: {
-                digits: true,
-                minlength: 4,
-                maxlength: 8
-            }
-
         },
         messages: {
             items_name: {
@@ -4714,11 +5135,6 @@ $(document).ready(function () {
             items_description: {
                 minlength: "This field must consist of at least 100 characters",
                 maxlength: "This field should not be more than 10000 characters"
-            },
-            items_hsncode: {
-                digits: "HSN code is digits only",
-                minlength: "HSN code is 4 to 8 digits",
-                maxlength: "HSN code is 4 to 8 digits"
             },
             items_mfg_date: {
                 dateISO: "Use the date format YYYY-MM-DD",
@@ -4833,9 +5249,50 @@ $(document).ready(function () {
     });
     $("#item_image_upload_form").submit(function (event) {
         event.preventDefault();
-        if (PosnicPro.items._saving || !PosnicPro.itemTranslations.ready()) return;
-        if ($('#item_image_upload_form').valid()) {            // checks form for validity
-            if ($("#product_with_variant").is(":checked") && $("#load_price_fields").html() === '') {
+        if (PosnicPro.items._saving) return;
+        // Translations are optional metadata. A slow or failed translation
+        // bootstrap must never block saving the core item record.
+        var $itemForm = $('#item_image_upload_form');
+        /* Some installations load jQuery Validate and some load only the base
+           form helpers. Do not let a missing .valid() plugin silently abort
+           the Save action. Validate visible controls only: the form is tabbed,
+           so required controls in inactive panes must not block submission. */
+        var formIsValid = true;
+        var formElement = $itemForm[0];
+        /* Always validate the controls the cashier can actually see. The
+           jQuery Validate plugin's form-wide check can reject hidden required
+           controls in inactive item tabs / variant templates, leaving Save
+           looking dead even though the visible fields are complete. */
+        if (formElement) {
+            formIsValid = Array.prototype.every.call(formElement.elements, function (field) {
+                if (!field.willValidate || field.disabled) return true;
+                var $field = $(field);
+                var visible = $field.is(':visible') ||
+                    ($field.hasClass('select2-hidden-accessible') && $field.next('.select2-container').is(':visible'));
+                return !visible || field.checkValidity();
+            });
+        }
+        if (!formIsValid) {
+            var $invalid = $itemForm.find(':input').filter(function () {
+                if (!this.willValidate || this.disabled) return false;
+                var $field = $(this);
+                var visible = $field.is(':visible') ||
+                    ($field.hasClass('select2-hidden-accessible') && $field.next('.select2-container').is(':visible'));
+                return visible && !this.checkValidity();
+            }).first();
+            if ($invalid.length) {
+                var $pane = $invalid.closest('.tab-pane');
+                if ($pane.length && !$pane.hasClass('active')) {
+                    var paneId = $pane.attr('id');
+                    $('#item_form_tabs a[href="#' + paneId + '"]').tab('show');
+                }
+                $invalid.trigger('focus');
+            }
+            PosnicPro.alert('warning', 'Please complete the required item fields before saving.');
+            return;
+        }
+        if (formIsValid) {
+            if ($("#product_with_variant").is(":checked") && !$("#load_price_fields").children().length) {
                 PosnicPro.items.loadVariant();
                 PosnicPro.alert('info', 'Review each variant\'s price below, then Save');
             } else {
