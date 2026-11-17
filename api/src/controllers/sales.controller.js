@@ -816,8 +816,12 @@ class SalesController extends BaseController {
       if (payload.versement_checkout) {
         const meta = payload.versement_checkout, total = Number(payload.sales_total || payload.total || 0);
         const initial = Number(meta.initial_amount), method = String(meta.initial_method || 'cash').toLowerCase();
+        // F6 is a dedicated advance-payment flow, not an ordinary partial
+        // payment. The advance is recorded independently and may cover or exceed
+        // the discounted sale total; never reject a valid sale because the
+        // entered advance is greater than the final payable after remise.
         if (!String(meta.customer_name || '').trim() || !(initial > 0) || !(total > 0) ||
-            initial > total || !['cash','tpe','baridimob'].includes(method)) {
+            !Number.isFinite(initial) || !['cash','tpe','baridimob'].includes(method)) {
           return this.error(res, 'Versement client name, amount and payment method are required.', 400);
         }
         payload.payment_mode = 'Versement';
