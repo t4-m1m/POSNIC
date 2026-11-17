@@ -2123,14 +2123,25 @@ PosnicPro.sales = {
             $('#touch_row_' + id).remove();
             db.customerDisplay.where('id').equals(id).delete();
             delete PosnicPro.sales.SaleTableLineItems[id];
+            // Rebuild the cart totals and line cache from the rows that are
+            // actually still on screen; never trust a stale pre-delete count.
             PosnicPro.sales.calculation.salesTableRowCart();
             PosnicPro.sales.customerViewDisplay();
-            var lineItemLength = PosnicPro.sales.addLineTable.length;
+            var lineItemLength = $('#sales_new_items_table tbody tr[id^="touch_row_"]').length;
             if (lineItemLength === 0) {
                 $("#save_submit,#check_button").attr("disabled", true);
                 PosnicPro.sales.setDefaults();
+            } else {
+                $("#save_submit,#check_button").prop("disabled", false);
             }
             PosnicPro.sales.deleteConfirmation = false;
+            // Barcode scanners are keyboard wedges. Removing a row must return
+            // focus to the search field once the row and totals have settled.
+            window.setTimeout(function () {
+                if (PosnicPro.sales && PosnicPro.sales.focusBarcodeInput) {
+                    PosnicPro.sales.focusBarcodeInput(true);
+                }
+            }, 0);
         } else {
             PosnicPro.sales.callbackRegistry = {
                 name: 'removeAddsalesLineRowItems',
@@ -2243,7 +2254,8 @@ PosnicPro.sales = {
         }
 
         // In payment-only mode from Unpaid list, skip normal validations
-        if (!PosnicPro.sales.paymentOnlyMode && ($('#sales_new_items_table tbody tr').find(':nth-child(8)').text() === '' || customer_name === '')) {
+        var liveSaleItemCount = $('#sales_new_items_table tbody tr[id^="touch_row_"]').length;
+        if (!PosnicPro.sales.paymentOnlyMode && (liveSaleItemCount === 0 || customer_name === '')) {
             if (customer_name === '') {
                 $('.toggle-customer-user').css({ display: 'block' });
                 $("#sales_new_customer_name").focus();
