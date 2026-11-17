@@ -415,9 +415,13 @@
             // The legacy details endpoint normally returns the item directly,
             // but tolerate the wrapped shapes used by newer API adapters too.
             var item = r.data.item || r.data.item_details || r.data.data || r.data;
-            if (!item || typeof item !== 'object' || (!item.name && !item.itemid && !item._id && !item.id)) {
+            if (!item || typeof item !== 'object' || (!item.name && !item.item_name && !item.title && !item.itemid && !item._id && !item.id)) {
                 return failed('The item details response did not contain a usable item record. No changes were made.');
             }
+            // Older catalogue records can use item_name/title rather than
+            // name. Normalize only the display field; keep the original
+            // record intact for the edit merge and same-ID PUT update.
+            item = Object.assign({}, item, { name: item.name || item.item_name || item.title || '' });
             existingItem = item;
             function set(id,v){var e=document.getElementById('iv2-'+id);if(e)e.value=v==null?'':v;}
             function choice(name,v){document.querySelectorAll('#items_v2 [name="iv2-'+name+'"]').forEach(function(e){e.checked=e.value===v;});}
