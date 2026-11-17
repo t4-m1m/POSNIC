@@ -5,29 +5,32 @@
     function el(id) { return document.getElementById('iv2-' + id); }
     function scope() { var user = P.local.get('username'), branch = P.local.get('branch_id_set'); return user && branch ? 'posnic.item-v2.draft:' + JSON.stringify([user, branch]) : null; }
     function tabs() { return Array.from(document.querySelectorAll('#items_v2 [role="tab"]')); }
+    // The catalogue editor is now a single static workspace. Keep the
+    // legacy section API for callers, but never hide a required field or ask
+    // the user to navigate between steps.
     function select(id, focus) {
-        id = id === 'step2' || id === 'details' || id === 'more' || id === 'languages' ? 'step2' : 'step1';
-        var tab = el('tab-' + id);
-        active = id;
+        active = 'step2';
         tabs().forEach(function (b) {
-            var yes = b.dataset.section === id;
-            b.setAttribute('aria-selected', String(yes)); b.tabIndex = yes ? 0 : -1;
+            b.setAttribute('aria-selected', 'false'); b.tabIndex = -1;
         });
-        ['basics','stock','details','more','languages'].forEach(function (panel) {
+        ['basics','stock','details','more'].forEach(function (panel) {
             var node = el('panel-' + panel);
-            if (node) node.hidden = id === 'step1' ? !['basics','stock'].includes(panel) : !['details','more'].includes(panel);
+            if (node) node.hidden = false;
         });
+        var restaurant = el('panel-restaurant');
+        if (restaurant && !restaurant.querySelector('#iv2-restaurant:not([hidden])')) restaurant.hidden = true;
         var picker = el('section-select'), previous = el('prev-step'), next = el('next-step'), saveButton = el('save'), help = el('step-help');
-        if (picker) picker.value = id;
-        if (previous) previous.hidden = id !== 'step2';
-        if (next) next.hidden = id !== 'step1';
-        if (saveButton) saveButton.hidden = id !== 'step2';
-        if (help) help.textContent = id === 'step1'
-            ? 'Step 1 of 2 · Enter the article information and all selling prices.'
-            : 'Step 2 of 2 · Choose variants, generate unique barcodes, add photos and describe the article.';
-        if (focus && tab) tab.focus();
+        if (picker) picker.hidden = true;
+        if (previous) previous.hidden = true;
+        if (next) next.hidden = true;
+        if (saveButton) saveButton.hidden = false;
+        if (help) help.textContent = 'Complete the article details below, then save.';
     }
-    function reveal(node) { var panel = node && node.closest('.iv2-tab-panel'); if (panel) select(['iv2-panel-details','iv2-panel-more'].includes(panel.id) ? 'step2' : 'step1'); }
+    function reveal(node) {
+        if (!node) return;
+        var panel = node.closest('.iv2-tab-panel');
+        if (panel) panel.hidden = false;
+    }
     function update(caps) {
         // Restaurant controls are optional and may not be present in the retail editor.
         var restaurantTab = el('tab-restaurant');
