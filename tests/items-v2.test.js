@@ -87,22 +87,18 @@ test('edit saves remain PUT updates against the selected item ID', () => {
 
 
 
-test('dedicated item update page mounts separately and loads the record before enabling edits', () => {
-  const editor = require('node:fs').readFileSync('frontend/static/script/js/modules/js/items_v2.js', 'utf8');
-  const html = require('node:fs').readFileSync('frontend/modules/items_v2.html', 'utf8');
-  const routes = require('node:fs').readFileSync('frontend/static/script/js/routes.js', 'utf8');
+
+test('Modify article uses an independent page and never calls the Add New Item editor', () => {
   const items = require('node:fs').readFileSync('frontend/static/script/js/modules/js/items.js', 'utf8');
-  assert.match(html, /id="items_v2_mount"/);
-  assert.match(html, /id="items_modify_page"/);
-  assert.match(editor, /function mountEditor\(mode\)/);
-  assert.match(editor, /function openModifyPage\(id, duplicate\)/);
-  assert.match(editor, /P\.itemsV2Details\.load\(item\)/);
-  assert.match(editor, /method: editing \? 'PUT' : 'POST'/);
-  assert.match(editor, /items_modify_page/);
-  assert.match(routes, /items\/\{id\}\/update[\s\S]*?openModifyPage\(id\)/);
-  assert.doesNotMatch(routes, /items\/\{id\}\/modify/);
-  assert.doesNotMatch(items, /modifyItem: function/);
-  assert.doesNotMatch(items, /showModify: function/);
-  assert.match(items, /Edit article/);
-  assert.match(items, /items\/' \+ esc\(id\) \+ '\/update/);
+  const routes = require('node:fs').readFileSync('frontend/static/script/js/routes.js', 'utf8');
+  assert.match(items, /openIndependentModify: function \(id\)/);
+  assert.match(items, /posnic_independent_modify_page/);
+  assert.match(items, /posnic_independent_modify_form/);
+  assert.match(items, /method:'PUT'/);
+  assert.match(items, /items\/getItemDetails/);
+  assert.match(items, /Modify article/);
+  assert.match(items, /openIndependentModify\(' \\+ esc\(id\)/);
+  assert.doesNotMatch(items, /openIndependentModify[\s\S]{0,1200}items_v2\.openModifyPage/);
+  assert.match(routes, /items\/\{id\}\/update[\s\S]*?items\.openIndependentModify\(id\)/);
+  assert.match(routes, /module === 'items'[\s\S]*?items\.openIndependentModify\(id\)/);
 });
