@@ -41,8 +41,8 @@ class CustomerModel extends BaseModel {
       phone: {
         type: 'String',
         select: true,
-        required: true,
-        unique: true,
+        // Phone is optional for quick-created customers. Duplicate non-empty
+        // numbers are still checked in CustomerService before insertion.
       },
       alternatePhone: { type: 'String', select: true },
 

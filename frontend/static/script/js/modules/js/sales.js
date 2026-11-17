@@ -12052,7 +12052,7 @@ PosnicPro.sales.openVersementCheckout = function () {
     if (!$('#sales_new_items_table tbody tr').filter(function(){return $(this).find('input[name="addSalesLineItemQty"]').length>0;}).length) { PosnicPro.alert('warning','Ajoutez au moins un article avant de créer un versement.'); return; }
     if (PosnicPro.sales.calculation && typeof PosnicPro.sales.calculation.salesTableRowCart === 'function') { try { PosnicPro.sales.calculation.salesTableRowCart(); } catch (_) {} }
     // Recompute the active remise before presenting or persisting the F6 amount.
-    if (PosnicPro.sales.calculation && typeof PosnicPro.sales.calculation.extraDiscoundCalculation === 'function') { try { PosnicPro.sales.calculation.extraDiscoundCalculation(); } catch (_) {} }
+    if (typeof PosnicPro.sales.extraDiscountCalculation === 'function') { try { PosnicPro.sales.extraDiscountCalculation(); } catch (_) {} }
     var total=PosnicPro.sales.getVersementPayableTotal();
     if(!(total>0)){PosnicPro.alert('warning','Le total de la vente est invalide.');return;}
     if(!$('#posnic-versement-checkout').length){

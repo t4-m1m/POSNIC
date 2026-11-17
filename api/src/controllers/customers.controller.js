@@ -217,7 +217,10 @@ class CustomerController extends BaseController {
       tags: req.body.tags || [],
       balance: req.body.balance || DEFAULTS.BALANCE,
       partial_balance: normalizeBoolean(req.body.partial_balance),
+      price_tier: Math.max(1, Math.min(3, Number(req.body.price_tier) || 1)),
     };
+    // Do not persist an empty string for an omitted phone number.
+    if (!customerData.phone) delete customerData.phone;
 
     // Add loyalty if requested (old structure has loyalty field)
     if (req.body.enableLoyalty || req.body.loyalty) {
