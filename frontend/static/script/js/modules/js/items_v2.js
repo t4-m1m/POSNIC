@@ -384,6 +384,31 @@
         var host = document.getElementById(editorMode === 'modify' ? 'items_modify_page' : 'items_v2_mount');
         if (editor && host && editor.parentNode !== host) host.appendChild(editor);
     }
+    function arrangeOwnerSteps() {
+        var fieldsBox=document.getElementById('iv2-fields');
+        if(!fieldsBox || fieldsBox.dataset.posnicOwnerSteps==='1')return;
+        fieldsBox.dataset.posnicOwnerSteps='1';
+        var tabs=fieldsBox.querySelector('.iv2-tabs');
+        var step1=document.createElement('div'),step2=document.createElement('div');
+        step1.id='iv2-step1-content';step1.className='iv2-step-content';
+        step2.id='iv2-step2-content';step2.className='iv2-step-content';
+        fieldsBox.insertBefore(step1,tabs?tabs.nextSibling:fieldsBox.firstChild);
+        fieldsBox.insertBefore(step2,step1.nextSibling);
+        function move(selector,target){var node=fieldsBox.querySelector(selector);if(node)target.appendChild(node);return node;}
+        move('.iv2-name-builder',step1);
+        move('#iv2-details-extra',step1);
+        move('#iv2-codes',step1);
+        move('#iv2-variants',step1);
+        move('.iv2-purchase-cost',step2);
+        var stock=document.createElement('section');stock.id='iv2-stock-card';stock.className='iv2-section iv2-details';
+        var stockTitle=document.createElement('h2');stockTitle.className='iv2-subheading';stockTitle.textContent='Current stock quantity';stock.appendChild(stockTitle);
+        move('#iv2-quantity-row',stock);step2.appendChild(stock);
+        move('#iv2-pricing-extra',step2);
+        move('#iv2-appearance',step2);
+        var panels=fieldsBox.querySelectorAll('.iv2-tab-panel');panels.forEach(function(panel){panel.hidden=true;});
+        var tabsButtons=fieldsBox.querySelectorAll('.iv2-tabs [role=tab]');
+        if(tabsButtons.length>=2){tabsButtons[0].textContent='1  Basic information & variants';tabsButtons[1].textContent='2  Stock & pricing';}
+    }
     function open(initialName) {
         // Editing and creation have separate page mounts while sharing the
         // same two-step editor controls and data model.
@@ -394,6 +419,7 @@
         $('#items_v2').show();
         capabilities = readCapabilities();
         P.itemsV2Details.init();
+        arrangeOwnerSteps();
         P.itemsV2Workspace.init({refresh:render,reset:showAdd,edit:function () {
             if (!savedItemId || savedBranch !== P.local.get('branch_id_set')) return;
             editing = true; saved = false; attempted = false;
