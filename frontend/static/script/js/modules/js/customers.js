@@ -19,11 +19,12 @@ PosnicPro.customers = {
         var phone = String($('#posnic_quick_customer_phone').val() || '').trim();
         var email = String($('#posnic_quick_customer_email').val() || '').trim();
         var tier = Math.max(1, Math.min(3, Number($('#posnic_quick_customer_price_tier').val()) || 1));
+        var creditLimit = Math.max(0, Number($('#posnic_quick_customer_credit_limit').val()) || 0);
         var $save = $('#posnic_quick_customer_save'), $error = $('#posnic_quick_customer_error');
         if (name.length < 3) { $error.text('Saisissez un nom de 3 caractères minimum.').show(); $('#posnic_quick_customer_name').trigger('focus'); return false; }
         if (email && !PosnicPro.validateEmail(email)) { $error.text('Adresse email invalide.').show(); $('#posnic_quick_customer_email').trigger('focus'); return false; }
         $save.prop('disabled', true); $error.hide().text('');
-        PosnicPro.request({ method:'POST', url:'customers', data:JSON.stringify({name:name,phone:phone,email:email,price_tier:tier,partial_balance:false}) }, function (response) {
+        PosnicPro.request({ method:'POST', url:'customers', data:JSON.stringify({name:name,phone:phone,email:email,price_tier:tier,creditLimit:creditLimit,partial_balance:false}) }, function (response) {
             $save.prop('disabled', false);
             if (!response || response.type !== 'success') { $error.text((response && response.message) || 'Impossible de créer le client.').show(); return; }
             var data=response.data||{}, id=data.customer_id||data.id||data._id;
@@ -1562,3 +1563,22 @@ $(document).on('click', '#customers_filter_btn', function () {
 
 $(document).off('submit.posnicSalesQuickCustomer','#posnic-sales-quick-customer-form')
  .on('submit.posnicSalesQuickCustomer','#posnic-sales-quick-customer-form',function(event){event.preventDefault();PosnicPro.customers.saveSalesQuickCreate();return false;});
+
+// The global Add > Customer action should use the compact sales dialog while
+// a sale is open; capture the click before the legacy route/sidebar handlers.
+(function bindSalesAddCustomerQuickCreate() {
+    if (document.__posnicSalesAddCustomerQuickCreateBound) return;
+    document.__posnicSalesAddCustomerQuickCreateBound = true;
+    document.addEventListener('click', function (event) {
+        var link = event.target && event.target.closest
+            ? event.target.closest('a.customer_new_shortcut') : null;
+        if (!link || !window.jQuery || !jQuery('#sales_new').length || !jQuery('#sales_new').is(':visible')) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+        if (jQuery.fn.dropdown) jQuery('#dropdownMenuButton').dropdown('hide');
+        if (window.PosnicPro && PosnicPro.customers && PosnicPro.customers.openSalesQuickCreate) {
+            PosnicPro.customers.openSalesQuickCreate();
+        }
+    }, true);
+})();
