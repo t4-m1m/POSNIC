@@ -1885,8 +1885,10 @@ PosnicPro.items = {
             PosnicPro.alert('error', 'The Modify item screen is unavailable. Please reload POSNIC.');
             return false;
         }
-        hasher.setHash('items/' + encodeURIComponent(String(id)) + '/modify');
-        PosnicPro.items_v2.showModify(String(id));
+        var targetHash = 'items/' + encodeURIComponent(String(id)) + '/modify';
+        var currentHash = String(hasher.getHash ? hasher.getHash() : '').replace(/^\\//, '');
+        if (currentHash === targetHash) PosnicPro.items_v2.showModify(String(id));
+        else hasher.setHash(targetHash);
         return false;
     },
     _legacyEditItem: function (id) {
