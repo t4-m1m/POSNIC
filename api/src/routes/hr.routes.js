@@ -182,6 +182,24 @@ router.post('/transactions', async (req,res) => {
     res.status(201).json({status:true,data:{...doc,_id:String(result.insertedId),worker_id:String(workerId)},message:'Transaction recorded.'});
   } catch(e) { sendError(res,e); }
 });
+router.post('/transactions/:id/delete', async (req,res) => {
+  try {
+    if (!ObjectId.isValid(req.params.id)) return res.status(400).json({status:false,message:'Invalid transaction ID.'});
+    const col=await collection('hr_transactions');
+    const result=await col.deleteOne({
+      _id:new ObjectId(req.params.id),
+      license:req.hrContext.license,
+      type:{$in:['salary_payment','advance']}
+    });
+    if (!result.deletedCount) {
+      const existing=await col.findOne({_id:new ObjectId(req.params.id),license:req.hrContext.license});
+      if (!existing) return res.status(404).json({status:false,message:'Payroll transaction not found.'});
+      return res.status(400).json({status:false,message:'Only salary payments and advances can be deleted here.'});
+    }
+    res.json({status:true,message:'Payroll transaction deleted. Payroll and cash closing totals are recalculated from the remaining records.'});
+  } catch(e) { sendError(res,e); }
+});
+
 router.post('/transactions/:id/cancel', async (req,res) => {
   try {
     if (!ObjectId.isValid(req.params.id)) return res.status(400).json({status:false,message:'Invalid transaction ID.'});

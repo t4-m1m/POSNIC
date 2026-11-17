@@ -84,7 +84,7 @@
         var cancelled=!!(t.cancelled_at||t.is_cancelled);
         var typeLabel=labels[t.type]||t.type;
         if(cancelled)typeLabel+=' (annulé)';
-        var action=t.type==='salary_payment'&&!cancelled?'<button class="btn btn-sm btn-outline-danger" onclick="PosnicPro.hr.cancelSalaryPayment(\''+esc(t._id)+'\')">Annuler</button>':(t.type==='salary_payment'&&cancelled?'<span class="badge badge-secondary">Annulé</span>':'—');
+        var action=(t.type==='salary_payment'||t.type==='advance')?'<button class="btn btn-sm btn-outline-danger" onclick="PosnicPro.hr.deleteTransaction(\''+esc(t._id)+'\',\''+esc(t.type)+'\')">Supprimer</button>':'—';
         return '<tr><td>'+esc(String(t.date||'').slice(0,10))+'</td><td>'+esc(t.worker_name)+'</td><td>'+esc(typeLabel)+'</td><td>'+esc(t.period)+'</td><td>'+money(t.amount)+'</td><td>'+esc([t.hours?String(t.hours)+' h':'',t.method||'',t.reference||'',t.notes||'',t.cancellation_note||''].filter(Boolean).join(' · ')||'—')+'</td><td>'+action+'</td></tr>';
       }).join('');
       $('#hr_transactions_rows').html(rows||'<tr><td colspan="7">Aucun mouvement pour ces filtres.</td></tr>');
@@ -117,11 +117,14 @@
         });
       }
     },
-    cancelSalaryPayment:function(id){
-      if(!id||!window.confirm('Annuler ce paiement de salaire ? Il restera visible dans l’historique avec le statut annulé et sera retiré des calculs de paie et de clôture.'))return;
-      var reason=window.prompt('Motif de l’annulation (facultatif) :','');
-      if(reason===null)return;
-      request('POST','hr/transactions/'+encodeURIComponent(id)+'/cancel',{reason:reason},function(){notice('Paiement annulé. Les totaux de paie et de clôture seront recalculés.','success');loadPayroll();loadTransactions();loadSummary();});
+    deleteTransaction:function(id,type){
+      if(!id||!['salary_payment','advance'].includes(type))return;
+      var label=type==='advance'?'cet acompte':'ce paiement de salaire';
+      if(!window.confirm('Supprimer définitivement '+label+' ? La ligne sera retirée de l’historique, de la paie et des totaux de clôture.'))return;
+      request('POST','hr/transactions/'+encodeURIComponent(id)+'/delete',{},function(){
+        notice('Mouvement supprimé. Les totaux de paie et de clôture ont été recalculés.','success');
+        loadPayroll();loadTransactions();loadSummary();
+      });
     },
     loadPayroll:loadPayroll,
     loadTransactions:loadTransactions
