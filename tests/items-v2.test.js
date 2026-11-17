@@ -91,3 +91,18 @@ test('edit saves remain PUT updates against the selected item ID', () => {
   assert.match(editor, /method: editing \? 'PUT' : 'POST'/);
   assert.match(editor, /if \(editing && \(!savedItemId \|\| !existingItem\)\)/);
 });
+
+
+test('item dossier opens the dedicated Modify screen instead of the old Edit action', () => {
+  const source = require('node:fs').readFileSync('frontend/static/script/js/modules/js/items.js', 'utf8');
+  assert.match(source, /Modify item/);
+  assert.match(source, /PosnicPro\\.items\\.modifyItem/);
+  assert.match(source, /modifyItem: function \\(id\\)[\\s\\S]*?showModify\\(String\\(id\\)\\)/);
+  assert.doesNotMatch(source, /icon-edit-2 mr-1"><\\/i>Edit<\\/button>/);
+});
+
+test('direct Modify and legacy item edit routes both use the record-bound Modify editor', () => {
+  const routes = require('node:fs').readFileSync('frontend/static/script/js/routes.js', 'utf8');
+  assert.match(routes, /items\\/\\{id\\}\\/modify[\\s\\S]*?showModify\\(id\\)/);
+  assert.match(routes, /module === 'items'[\\s\\S]*?showModify\\(id\\)/);
+});
