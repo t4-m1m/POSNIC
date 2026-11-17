@@ -891,6 +891,19 @@ PosnicPro.items = {
 
     /* Independent Modify workspace. This page has its own DOM, state and
        submit handler; it never enters items_v2 or the Add New Item route. */
+    closeIndependentModify: function () {
+        var host = document.getElementById('posnic_independent_modify_page');
+        if (!host) return;
+        $(document).off('keydown.posnicModifyPage');
+        $(host).hide();
+        if (window.hasher && typeof window.hasher.setHash === 'function' && window.location.hash !== '#/items') {
+            window.hasher.setHash('items');
+        }
+        PosnicPro.items._chrome();
+        PosnicPro.items.mountFilters();
+        PosnicPro.items.closeDoc();
+        PosnicPro.items.loadList(1);
+    },
     _modifyRecord: null,
     _modifyStep: 1,
     openIndependentModify: function (id) {
@@ -1010,7 +1023,12 @@ PosnicPro.items = {
         });
         $('#posnic_modify_prev').off('click').on('click',function(){setModifyStep(1);});
         setModifyStep(1);
-        $('#posnic_modify_close').off('click').on('click',function(){ $(host).hide(); $('.page-title-box,#items').show(); });
+        $('#posnic_modify_close').off('click').on('click',function(){ self.closeIndependentModify(); });
+        $(document).off('keydown.posnicModifyPage').on('keydown.posnicModifyPage',function(event){
+            if(event.key==='Escape' && $('#posnic_independent_modify_page').is(':visible')) {
+                event.preventDefault(); self.closeIndependentModify();
+            }
+        });
         $('#posnic_modify_image').off('change').on('change',function(){
             var file=this.files&&this.files[0]; selectedImage=null;
             if(!file){showImage(imagePreviewUrl);return;}
