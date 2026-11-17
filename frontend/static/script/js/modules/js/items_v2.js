@@ -192,6 +192,7 @@
     }
     function save(event) {
         if (event) event.preventDefault();
+        if (!editing) { var stepOne=document.getElementById('iv2-owner-step1'),next=document.getElementById('iv2-owner-next'); if(stepOne&&stepOne.classList.contains('active')&&next){next.click();return false;} }
         if (busy || saved) return false;
         if (P.aclLoaded && P.aclLoaded() && !P.checkAccess('item', 'write')) { fail('You don’t have permission to create items.'); return false; }
         if (editing && savedBranch !== P.local.get('branch_id_set')) { fail(P.i18n.t('lang_iv2_edit_branch_changed', 'The active branch changed. Open the item again before editing.')); return false; }
@@ -335,7 +336,7 @@
         var now=new Date(),yy=String(now.getFullYear()).slice(-2),mm=String(now.getMonth()+1).padStart(2,'0');refDate.value=yy+'-'+mm;
         var tracked=document.querySelector('#items_v2 input[name=iv2-stock][value=tracked]');if(tracked)tracked.checked=true;
         var oldPanels=document.querySelectorAll('#items_v2 .iv2-tab-panel');oldPanels.forEach(function(x){x.hidden=true;});var oldTypes=document.querySelector('#items_v2 .iv2-types');if(oldTypes)oldTypes.hidden=true;
-        var form=document.getElementById('iv2-form');form.insertBefore(root,fieldsBox.firstChild);
+        fieldsBox.insertBefore(root,fieldsBox.firstChild);
         updateName();updateCost();
     }
     function open(initialName) {
