@@ -48,14 +48,13 @@ test('optional GTIN validates length and check digit', () => {
   assert.equal(validGtin('SOAP-123'), false);
 });
 
-test('all standard item edit and duplicate entry points use the new editor', () => {
+test('clone entry points stay on the duplicate-create flow', () => {
     const source = require('node:fs').readFileSync('frontend/static/script/js/modules/js/items.js', 'utf8');
-    for (const method of ['showEdit', 'editItem']) {
-        assert.match(source, new RegExp(method + ': function \\(id\\) \\{\\s*(?:return )?PosnicPro.items_v2.showEdit\\(id\\)'));
-    }
     for (const method of ['showClone', 'cloneItem']) {
-        assert.match(source, new RegExp(method + ': function \\(id\\) \\{\\s*(?:return )?PosnicPro.items_v2.showClone\\(id\\)'));
+        assert.match(source, new RegExp(method + ': function \\(id\\) \\{[\\s\\S]*?items_v2\\.showClone\\(id\\)'));
     }
+    assert.doesNotMatch(source, /modifyItem: function/);
+    assert.doesNotMatch(source, /editItem: function/);
 });
 
 test('the simplified item editor hides the requested advanced fields without removing the primary barcode or variant controls', () => {
