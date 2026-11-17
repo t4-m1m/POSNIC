@@ -273,13 +273,24 @@
                 ? Math.max(0, standaloneQuantity) : 0;
         }
         var requestData = Object.assign({}, data);
-        if (editing && existingItem && editBaseline) {
-            var changes = {};
-            Object.keys(requestData).forEach(function(k){if(JSON.stringify(requestData[k]) !== JSON.stringify(editBaseline[k])) changes[k]=requestData[k];});
-            // Preserve stored fields that are hidden or not represented in this editor.
-            requestData = Object.assign({}, existingItem, {sku_id:existingItem.itemid, inventory:existingItem.track_inventory,
-                hsn_code:existingItem.hsncode, hsn_description:existingItem.hsndescription, position:existingItem.sort_order,
-                cover_image:existingItem.image, image:existingItem.multi_image || []}, changes);
+        if (editing && existingItem) {
+            // Start with the complete stored record, then overlay every value
+            // represented by the editor. Do not rely on a field-by-field
+            // baseline diff: legacy aliases, ObjectIds and image metadata can
+            // compare unequal even when unchanged, while a missed alias can
+            // prevent a deliberate name/category/price/photo edit from being
+            // included. The server owns stock quantities on this details route.
+            requestData = Object.assign({}, existingItem, {
+                sku_id: existingItem.itemid || existingItem.sku_id,
+                inventory: existingItem.track_inventory != null ? existingItem.track_inventory : existingItem.inventory,
+                hsn_code: existingItem.hsncode != null ? existingItem.hsncode : existingItem.hsn_code,
+                hsn_description: existingItem.hsndescription || existingItem.hsn_description,
+                position: existingItem.sort_order != null ? existingItem.sort_order : existingItem.position,
+                cover_image: existingItem.image || existingItem.cover_image,
+                image: Array.isArray(existingItem.multi_image) ? existingItem.multi_image : (Array.isArray(existingItem.image) ? existingItem.image : [])
+            }, requestData);
+            // Explicit editor fields always win, including name, category,
+            // all selling-price tiers and the selected/replaced cover photo.
             ['_id','id','branch_id','branch_access','license','created_date','updated_date'].forEach(function(k){delete requestData[k];});
         }
         P.request({ url: editing ? 'items/' + encodeURIComponent(savedItemId) + '/details' : f.family ? 'items/createFamily' : 'items', method: editing ? 'PUT' : 'POST', data: JSON.stringify(f.family ? P.itemsV2Details.family(requestData) : requestData) }, function (r) {
