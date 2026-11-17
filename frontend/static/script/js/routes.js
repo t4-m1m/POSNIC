@@ -59,16 +59,15 @@ $(document).ready(function () {
         }
         withModule(module, function () { PosnicPro[module].view.returnPage(module, id); });
     });
-    // Dedicated Modify item page. It shares the modern two-step form with
-    // creation, but enters an explicit edit-only state and never POSTs a new item.
-    crossroads.addRoute('items/{id}/modify', function (id) {
+    // Independent item update page; load the record before enabling editing.
+    crossroads.addRoute('items/{id}/update', function (id) {
         RECORD_ID = id;
-        withModule('items', function () { PosnicPro.items.showModify(id); });
+        withModule('items', function () { PosnicPro.items_v2.openModifyPage(id); });
     });
     crossroads.addRoute('{module}/{id}/edit', function (module, id) {
         RECORD_ID = id;
         withModule(module, function () {
-            if (module === 'items') { PosnicPro.items.showModify(id); return; }
+            if (module === 'items') { PosnicPro.items_v2.openModifyPage(id); return; }
             PosnicPro[module].showEdit(id);
         });
     });
