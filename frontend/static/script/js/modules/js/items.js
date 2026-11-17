@@ -1022,7 +1022,7 @@ PosnicPro.items = {
         });
         $('#posnic_modify_prev').off('click').on('click',function(){setModifyStep(1);});
         setModifyStep(1);
-        $('#posnic_modify_close').off('click').on('click',function(){ $(host).hide(); $('.page-title-box,#items').show(); });
+        $('#posnic_modify_close').off('click').on('click',function(){ $(host).hide(); $('#items_modify_page').hide(); $('.page-title-box,#items').show(); });
         $('#posnic_modify_image').off('change').on('change',function(){
             var file=this.files&&this.files[0]; selectedImage=null;
             if(!file){showImage(imagePreviewUrl);return;}
@@ -1046,7 +1046,7 @@ PosnicPro.items = {
                 PosnicPro.request({url:'items/'+encodeURIComponent(String(record._id||record.id))+'/details',method:'PUT',data:JSON.stringify(data)},function(resp){
                     $('#posnic_modify_save').prop('disabled',false).html('<i class="feather icon-save mr-2"></i>Save changes');
                     if(!resp||resp.type!=='success'){PosnicPro.alert('error',(resp&&resp.message)||'Could not update article.');return;}
-                    PosnicPro.alert('success',resp.message||'Article updated.');$(host).hide();$('.page-title-box,#items').show();self.loadList(self._page);self.openDoc(String(record._id||record.id));
+                    PosnicPro.alert('success',resp.message||'Article updated.');$(host).hide();$('#items_modify_page').hide();$('.page-title-box,#items').show();self.loadList(self._page);self.openDoc(String(record._id||record.id));
                 },function(xhr){$('#posnic_modify_save').prop('disabled',false).html('<i class="feather icon-save mr-2"></i>Save changes');var msg='Could not update article.';try{msg=JSON.parse(xhr.responseText).message||msg;}catch(_){}PosnicPro.alert('error',msg);});
             }
             if (!selectedImage) { updateRecord(); return; }
