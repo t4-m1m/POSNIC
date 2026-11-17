@@ -868,7 +868,7 @@ PosnicPro.items = {
             + '<span class="p-doc-title">' + esc(d.name) + '</span>'
             + (low ? '<span class="rs-pill unpaid"><lang class="lang_low_stock">Low stock</lang></span>' : '')
             + '<span class="ml-auto"></span>'
-            + '<button type="button" class="btn btn-sm btn-light" data-module="item" data-access="write" onclick="PosnicPro.items.editItem(\'' + esc(id) + '\');"><i class="feather icon-edit-2 mr-1"></i>Edit</button>'
+            + '<button type="button" class="btn btn-sm btn-light" data-module="item" data-access="write" onclick="PosnicPro.items.modifyItem(\\'' + esc(id) + '\\');"><i class="feather icon-edit-2 mr-1"></i>Modify item</button>'
             + (real(d.barcode_id) ? '<button type="button" class="btn btn-sm btn-light" title="Quick print price labels" aria-label="Quick print price labels" onclick="PosnicPro.items.quickPrintLabels(\'' + esc(id) + '\');"><i class="feather icon-printer mr-1"></i>Price labels</button>' : '')
             + '<div class="btn-group">'
             + '<button type="button" class="btn btn-sm btn-light dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><lang class="lang_tab_more">More</lang></button>'
@@ -1879,9 +1879,15 @@ PosnicPro.items = {
         });
     },
     /*Edit item dsetails*/
-    editItem: function (id) {
-        // Always enter the dedicated Modify item route from the item dossier.
-        hasher.setHash('items/' + encodeURIComponent(id) + '/modify');
+    editItem: function (id) { return PosnicPro.items.modifyItem(id); },
+    modifyItem: function (id) {
+        if (!id || !PosnicPro.items_v2 || typeof PosnicPro.items_v2.showModify !== 'function') {
+            PosnicPro.alert('error', 'The Modify item screen is unavailable. Please reload POSNIC.');
+            return false;
+        }
+        hasher.setHash('items/' + encodeURIComponent(String(id)) + '/modify');
+        PosnicPro.items_v2.showModify(String(id));
+        return false;
     },
     _legacyEditItem: function (id) {
         var loader = $(".loader-item");
