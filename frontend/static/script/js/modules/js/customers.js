@@ -380,8 +380,8 @@ PosnicPro.customers = {
     deleteConfirm: function (id) {
         PosnicPro.request({
             method: 'DELETE',
-            url: 'customers',
-            data: JSON.stringify({ data: [id] })
+            url: 'customers/' + encodeURIComponent(String(id)),
+            data: JSON.stringify({})
         }, function (r) {
             PosnicPro.alert(r.type || 'success', r.message || 'Customer deleted');
             PosnicPro.customers.closeDoc();
@@ -413,7 +413,8 @@ PosnicPro.customers = {
     },
     //This Customer Function Used To Add & Edit
     customer: function () {
-        if ($('#customer_name').val() !== '' && PosnicPro.validateEmail($('#customer_email').val())) {
+        var customerEmail = String($('#customer_email').val() || '').trim();
+        if (String($('#customer_name').val() || '').trim() !== '' && (!customerEmail || PosnicPro.validateEmail(customerEmail))) {
             var loader = $(".loader-customer");
             $("<div class='loadingSpinner'></div>").appendTo(loader);
             var method = 'POST';
@@ -470,6 +471,8 @@ PosnicPro.customers = {
                         $('#sales_new_customer_country').val(data.country);
                         $('#sales_new_customer_gst_type').val(data.gst_type);
                         $('#sales_new_customer_gst_number').val(data.gst_number);
+                        if (PosnicPro.sales && PosnicPro.sales.updateCustomerChip) PosnicPro.sales.updateCustomerChip();
+                        if (PosnicPro.sales && PosnicPro.sales.syncCustomerHeader) PosnicPro.sales.syncCustomerHeader();
                         if (PosnicPro.sales && PosnicPro.sales.multiBasket && PosnicPro.sales.multiBasket.updateActiveLabel) PosnicPro.sales.multiBasket.updateActiveLabel(data.name || '');
                         $(".infobar-settings-sidebar-overlay").css({"background": "transparent", "position": "initial", "pointerEvents": "none"});
                         $("#infobar-settings-sidebar-customer").removeClass("sidebarshow");

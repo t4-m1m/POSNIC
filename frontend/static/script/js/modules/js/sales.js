@@ -11469,19 +11469,46 @@ $(window).resize(function () {
 }).resize();
 /* ONE resolution path for every way a barcode arrives - hardware scanner
    wedge or the camera (L3). Looks the code up, stock-checks, adds the line. */
+PosnicPro.sales.syncBarcodeReady = function (ready) {
+    var badge = document.getElementById('sales_barcode_ready');
+    var page = document.getElementById('sales_new');
+    var input = document.getElementById('sales_new_item_name');
+    var available = !!ready && !!page && !!input && page.getClientRects().length > 0 &&
+        !input.disabled && !$('#infobar-settings-sidebar-tender-details').hasClass('sidebarview') &&
+        !$('.modal.show:visible,.swal2-container:visible,.sweet-alert:visible').length;
+    if (badge) {
+        badge.classList.toggle('is-ready', available);
+        badge.classList.toggle('is-paused', !available);
+        badge.setAttribute('aria-label', available ? 'READY TO SCAN' : 'Scanner paused');
+    }
+    return available;
+};
 PosnicPro.sales.focusBarcodeInput = function (force) {
     var input = document.getElementById('sales_new_item_name');
     var page = document.getElementById('sales_new');
     if (!input || !page || window.getComputedStyle(page).display === 'none' ||
-        !input.offsetWidth || !input.offsetHeight || input.disabled) return false;
-    // Never steal focus from payment, a modal, or an intentional text editor.
+        !input.offsetWidth || !input.offsetHeight || input.disabled) {
+        PosnicPro.sales.syncBarcodeReady(false); return false;
+    }
     if ($('#infobar-settings-sidebar-tender-details').hasClass('sidebarview') ||
-        $('.modal.show:visible').length ||
+        $('.modal.show:visible,.swal2-container:visible,.sweet-alert:visible').length ||
         (!force && $(document.activeElement).is('input,textarea,select,[contenteditable="true"]') &&
-        document.activeElement !== input)) return false;
+        document.activeElement !== input)) {
+        PosnicPro.sales.syncBarcodeReady(false); return false;
+    }
     try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); }
-    return document.activeElement === input;
+    return PosnicPro.sales.syncBarcodeReady(document.activeElement === input);
 };
+$(document).off('focusin.posnicBarcodeReady', '#sales_new_item_name').on('focusin.posnicBarcodeReady', '#sales_new_item_name', function () { PosnicPro.sales.syncBarcodeReady(true); });
+$(document).off('focusout.posnicBarcodeReady', '#sales_new_item_name').on('focusout.posnicBarcodeReady', '#sales_new_item_name', function () {
+    window.setTimeout(function () { PosnicPro.sales.syncBarcodeReady(document.activeElement === document.getElementById('sales_new_item_name')); }, 30);
+});
+$(function () {
+    window.setTimeout(function () {
+        if ($('#sales_new').is(':visible')) PosnicPro.sales.focusBarcodeInput(true);
+        else PosnicPro.sales.syncBarcodeReady(false);
+    }, 120);
+});
 
 // Clicking the unused sales workspace or returning to the app restores the
 // scanner target. Editable fields and checkout controls keep their own focus.
@@ -11529,6 +11556,12 @@ PosnicPro.sales.addScannedItem = function (itemData) {
         itemData._quantityConfirmed = true;
         PosnicPro.sales.addSalesLineItems(itemData);
     }
+    window.setTimeout(function () {
+        if (!$('#sales_new').is(':visible') || $('#infobar-settings-sidebar-tender-details').hasClass('sidebarview')) return;
+        if ($('.modal.show:visible,.swal2-container:visible,.sweet-alert:visible').length) return;
+        $('#sales_new_item_name').val('');
+        PosnicPro.sales.focusBarcodeInput(true);
+    }, 350);
 };
 PosnicPro.sales.chooseBarcodeItem = function (items) {
     if ($('#sharedBarcodePicker').length) { return; }
@@ -11993,15 +12026,21 @@ $(document).on('click.posnicCreditRules', '#save_btn', function (event) {
 /* The on-screen function keys deliberately invoke the exact same handlers as the physical keys. */
 PosnicPro.sales.runFunctionShortcut = function (key) {
     if (!['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F8'].includes(key)) return;
+    if (key === 'F6') {
+        if (typeof PosnicPro.sales.openVersementCheckout === 'function') return PosnicPro.sales.openVersementCheckout();
+        return false;
+    }
     var event = new KeyboardEvent('keydown', { key: key, bubbles: true, cancelable: true });
     document.dispatchEvent(event);
 };
 
 /* F6 — advance payment, separate from customer credit. */
 PosnicPro.sales.getVersementPayableTotal = function () {
-    var grand = Number(String($('#grand_total').val() || '').replace(/,/g, '').trim());
+    // sale_new_tot is the final amount after item discounts and remises.
+    // grand_total is only a fallback because it may briefly contain the old total.
     var computed = Number(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot);
-    var amount = Number.isFinite(grand) && grand > 0 ? grand : computed;
+    var grand = Number(String($('#grand_total').val() || '').replace(/,/g, '').trim());
+    var amount = Number.isFinite(computed) && computed >= 0 ? computed : grand;
     return Math.round(Math.max(0, Number.isFinite(amount) ? amount : 0) * 100) / 100;
 };
 PosnicPro.sales.openVersementCheckout = function () {

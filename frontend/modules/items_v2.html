@@ -312,6 +312,23 @@
 @media(max-height:820px) and (min-width:901px){#items_v2 .iv2-workspace{padding:3px 8px;gap:2px}#items_v2 #iv2-form{gap:3px}#items_v2 #iv2-codes,#items_v2 #iv2-variants,#items_v2 #iv2-details-extra,#items_v2 #iv2-appearance,#items_v2 .iv2-name-builder,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-pricing-extra,#items_v2 #iv2-stock-card{padding:4px}#items_v2 .iv2-grid{gap:3px}#items_v2 input:not([type=checkbox]):not([type=radio]):not([type=file]),#items_v2 select{height:25px;min-height:25px;padding:2px 5px;font-size:10px}}
 </style>
 
+<style id="iv2-dynamic-no-overlap-layout">
+#items_v2_mount,#items_v2{height:auto!important;min-height:calc(100vh - 70px)!important;overflow:visible!important}
+#items_v2 .iv2-workspace{height:auto!important;min-height:calc(100vh - 70px)!important;padding:12px 16px!important;gap:12px!important}
+#items_v2 .iv2-layout{height:auto!important;min-height:0!important;overflow:visible!important}
+#items_v2 #iv2-form{height:auto!important;min-height:0!important;overflow:visible!important;grid-template-columns:repeat(12,minmax(0,1fr))!important;grid-template-rows:none!important;grid-auto-rows:min-content!important;align-content:start!important;gap:12px!important}
+#items_v2 #iv2-codes,#items_v2 #iv2-variants,#items_v2 .iv2-name-builder,#items_v2 #iv2-details-extra,#items_v2 #iv2-appearance,#items_v2 #iv2-stock-card,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-pricing-extra{grid-column:span 6!important;grid-row:auto!important;min-width:0!important;min-height:0!important;overflow:visible!important;padding:12px!important}
+#items_v2 #iv2-pricing-extra .iv2-grid.iv2-pricing,#items_v2 .iv2-name-builder,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-codes .iv2-grid,#items_v2 #iv2-variants .iv2-grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))!important;gap:10px!important}
+#items_v2 .iv2-grid{min-width:0;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))!important;gap:10px!important}
+#items_v2 #iv2-variant-rows{max-height:none!important;overflow:visible!important;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))!important}
+#items_v2 .iv2-photo-list{max-height:none!important;overflow:visible!important}
+#items_v2 .iv2-actions{grid-column:1/-1!important;grid-row:auto!important;position:static!important;min-width:0!important;flex-wrap:wrap!important}
+#items_v2 .iv2-step-actions{flex-wrap:wrap!important}
+#items_v2 input:not([type=checkbox]):not([type=radio]):not([type=file]),#items_v2 select{max-width:100%!important;min-width:0!important}
+@media(max-width:1150px){#items_v2 #iv2-codes,#items_v2 #iv2-variants,#items_v2 .iv2-name-builder,#items_v2 #iv2-details-extra,#items_v2 #iv2-appearance,#items_v2 #iv2-stock-card,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-pricing-extra{grid-column:1/-1!important}}
+@media(max-width:700px){#items_v2 .iv2-workspace{padding:10px!important}#items_v2 #iv2-form{grid-template-columns:minmax(0,1fr)!important;gap:10px!important}#items_v2 #iv2-codes .iv2-grid,#items_v2 #iv2-variants .iv2-grid,#items_v2 .iv2-name-builder,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-pricing-extra .iv2-grid.iv2-pricing{grid-template-columns:minmax(0,1fr)!important}#items_v2 #iv2-quantity-row{grid-template-columns:minmax(0,1fr) 110px!important}}
+</style>
+
 <style id="iv2-action-buttons-no-overlap">
 @media(min-width:901px){#items_v2 .iv2-actions{display:flex!important;align-items:center!important;justify-content:flex-end!important;min-width:0!important;overflow:visible!important}#items_v2 .iv2-step-actions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:7px!important;flex-wrap:nowrap!important;min-width:0!important}#items_v2 .iv2-step-actions button{position:static!important;float:none!important;transform:none!important;flex:0 0 auto!important;max-width:100%!important;margin:0!important;white-space:nowrap!important}#items_v2 #iv2-save{min-width:150px!important;width:auto!important}}
 @media(max-width:900px){#items_v2 .iv2-actions{display:flex!important;justify-content:stretch!important}#items_v2 .iv2-step-actions{display:flex!important;gap:7px!important;flex-wrap:wrap!important;width:100%!important}#items_v2 .iv2-step-actions button{position:static!important;float:none!important;transform:none!important;flex:1 1 130px!important;margin:0!important}}
