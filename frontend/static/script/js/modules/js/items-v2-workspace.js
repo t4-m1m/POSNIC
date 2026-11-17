@@ -94,6 +94,18 @@
     function init(actions) {
         callbacks = actions; if (bound) return; bound = true;
         document.querySelector('#items_v2 .iv2-layout').id = 'iv2-layout';
+        // Give opening stock its own visible card in the one-page sequence.
+        // The input keeps its original ID and remains part of the same form/API.
+        var quantityRow = el('quantity-row');
+        var form = el('form');
+        if (quantityRow && form && !document.getElementById('iv2-stock-card')) {
+            var stockCard = document.createElement('section');
+            stockCard.id = 'iv2-stock-card'; stockCard.className = 'iv2-section iv2-details';
+            var stockTitle = document.createElement('h2');
+            stockTitle.className = 'iv2-subheading'; stockTitle.textContent = 'Opening stock';
+            stockCard.appendChild(stockTitle); stockCard.appendChild(quantityRow);
+            form.insertBefore(stockCard, el('save').parentElement);
+        }
         el('section-select').addEventListener('change', function () { select(this.value); });
         el('next-step').addEventListener('click', function () { select('step2', true); });
         el('prev-step').addEventListener('click', function () { select('step1', true); });
