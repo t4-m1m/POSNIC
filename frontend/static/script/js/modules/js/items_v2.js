@@ -123,7 +123,7 @@
         show('iv2-copy-notice', !!copySource && !saved);
         text('iv2-copy-notice', P.i18n.t('lang_iv2_copy_notice', 'Copy of {name}. This is a new, unsaved item. The original item will not change.').replace('{name}', copySource));
         var noun = f.kind === 'dish' ? 'dish' : f.kind === 'service' ? 'service' : 'item';
-        text('iv2-title', copySource ? P.i18n.t('lang_iv2_create_copy', 'Create a copy') : (editing ? PosnicPro.i18n.t('lang_edit_title', 'Edit') : PosnicPro.i18n.t('lang_po_create', 'Create')).trim() + ' ' + noun); text('iv2-name-label', noun.charAt(0).toUpperCase() + noun.slice(1) + ' name');
+        text('iv2-title', copySource ? P.i18n.t('lang_iv2_create_copy', 'Create a copy') : (editing ? P.i18n.t('lang_iv2_modify_item', 'Modify item') : PosnicPro.i18n.t('lang_po_create', 'Create').trim() + ' ' + noun)); text('iv2-name-label', noun.charAt(0).toUpperCase() + noun.slice(1) + ' name');
         document.querySelector('#items_v2 .iv2-heading p').textContent = editing ? P.i18n.t('lang_iv2_edit_hint', 'Add details to your saved item, then save your changes.') : P.i18n.t('lang_start_with_a_name_we_ll_help_you_get_it_re', 'Start with a name. We’ll help you get it ready to sell.');
         document.getElementById('iv2-name').placeholder = f.kind === 'dish' ? 'e.g. Tea, Chicken biryani, Butter naan' : f.kind === 'service' ? 'e.g. Haircut, Delivery, Repair' : 'e.g. Mineral water, Blue shirt';
         if (!busy && !saved) text('iv2-save', copySource ? P.i18n.t('lang_iv2_save_copy', 'Save as new item') + ' →' : editing ? P.i18n.t('lang_iv2_save_changes', 'Save changes') + ' →' : 'Save ' + noun + ' →');
@@ -412,9 +412,27 @@
         P.get({url:'items/getItemDetails',data:{id:id}}, function(r) {
             if(sequence!==editSequence || branch!==P.local.get('branch_id_set'))return;
             if(!r || r.type!=='success' || !r.data)return failed(r&&r.message);
-            // The legacy details endpoint normally returns the item directly,
-            // but tolerate the wrapped shapes used by newer API adapters too.
-            var item = r.data.item || r.data.item_details || r.data.data || r.data;
+            // The legacy details endpoint returns a record directly, while
+            // API adapters may wrap it more than once (data.item, data.data.item,
+            // result.item, etc.). Select the deepest object that actually carries
+            // article fields; accepting a wrapper with only an id produced a
+            // blank editor while appearing to have loaded successfully.
+            function unwrapItem(response) {
+                var queue = [{ value: response, depth: 0 }], seen = [], best = null, bestScore = 0;
+                var keys = ['name','item_name','title','itemid','sku_id','barcode_id','selling_price','price','company_price','available_quantity','article_type','brand_abbreviation','model_reference','multi_image'];
+                while (queue.length) {
+                    var entry = queue.shift(), value = entry.value;
+                    if (!value || typeof value !== 'object' || Array.isArray(value) || seen.indexOf(value) !== -1 || entry.depth > 5) continue;
+                    seen.push(value);
+                    var score = keys.reduce(function(total, key) { return total + (value[key] != null && value[key] !== '' ? 1 : 0); }, 0);
+                    if (score > bestScore) { best = value; bestScore = score; }
+                    ['item','item_details','record','result','data','details'].forEach(function(key) {
+                        if (value[key] && typeof value[key] === 'object') queue.push({ value: value[key], depth: entry.depth + 1 });
+                    });
+                }
+                return best;
+            }
+            var item = unwrapItem(r.data);
             if (!item || typeof item !== 'object' || (!item.name && !item.item_name && !item.title && !item.itemid && !item._id && !item.id)) {
                 return failed('The item details response did not contain a usable item record. No changes were made.');
             }
