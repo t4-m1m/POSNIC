@@ -15,7 +15,7 @@ test('thermal receipt media stays continuous and never receives a calculated pag
         const printableWidth = ({ '58': 48, '80': 72, '112': 104 })[format];
         assert.equal(fitted.width, printableWidth * 1000);
         assert.equal(fitted.height, undefined);
-        assert.match(doc.querySelector('#rd-fitted-paper').textContent, new RegExp('@page\\{size:' + printableWidth + 'mm auto;margin:0;'));
+        assert.match(doc.querySelector('#rd-fitted-paper').textContent, /@page\\{size:auto;margin:0;/);
         height = 200;
         assert.equal(fitDocument(doc).height, undefined);
         assert.equal(doc.querySelectorAll('#rd-fitted-paper').length, 1);
@@ -61,7 +61,7 @@ test('fitted paper overrides receipt styles in the body, including after refitti
     fitDocument(doc);
     assert.equal(doc.body.lastElementChild.id, 'rd-fitted-paper');
     const styles = Array.from(doc.querySelectorAll('style'));
-    assert.match(styles[styles.length - 1].textContent, /@page\{size:72mm auto/);
+    assert.match(styles[styles.length - 1].textContent, /@page\\{size:auto/);
     assert.equal(doc.querySelectorAll('#rd-fitted-paper').length, 1);
     dom.window.close();
 });

@@ -25,7 +25,7 @@
     }
     // Thermal rolls use automatic continuous length. Keep only the printable
     // head width; never synthesize a short custom page that can split a long bill.
-    var pageSize = options && options.usePrinterPaper ? 'auto' : width + 'mm auto';
+    var pageSize = 'auto';
     style.textContent = '@page{size:' + pageSize + ';margin:0;}' +
       '@media print{html,body{width:' + width + 'mm!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;margin:0!important;padding:0!important;}.rd-document{height:auto!important;max-height:none!important;overflow:visible!important;margin:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}}';
     // Rendered receipts carry their base style in the body. Keep the fitted
