@@ -425,20 +425,49 @@
             existingItem = item;
             function set(id,v){var e=document.getElementById('iv2-'+id);if(e)e.value=v==null?'':v;}
             function choice(name,v){document.querySelectorAll('#items_v2 [name="iv2-'+name+'"]').forEach(function(e){e.checked=e.value===v;});}
+            function select(id,v,name,rate){var e=document.getElementById('iv2-'+id);if(!e)return;v=v==null?'':String(v);var o=Array.from(e.options).find(function(x){return x.value===v;});if(!o){o=new Option(name||v,v);o.dataset.name=name||'';o.dataset.rate=rate||0;e.add(o);}else{if(name)o.dataset.name=name;o.dataset.rate=rate||o.dataset.rate||0;}e.value=v;}
             var tracked = item.track_inventory != null ? item.track_inventory : item.inventory;
             choice('kind',item.item_kind==='service' || item.kind==='service'?'service':'product');
             choice('stock',tracked === false ? 'untracked' : 'tracked');
             choice('zero-stock',item.negative_stock?'negative':'later');
-            set('name',item.name || item.item_name);set('price',item.selling_price);set('cost',item.company_price);set('quantity',Math.max(0,Number(item.available_quantity)||0));set('sku',item.itemid);set('barcode',item.barcode_id);set('description',item.description);set('tax-type',item.tax_type||'inclusive');set('diet',item.diet);
+            // Load the existing record into both pages, including fields that
+            // older catalogue records stored under legacy aliases.
+            set('name',item.name || item.item_name || item.title);
+            set('price',item.selling_price != null ? item.selling_price : item.price);
+            set('cost',item.company_price != null ? item.company_price : item.purchase_cost_dzd);
+            set('quantity',Math.max(0,Number(item.available_quantity != null ? item.available_quantity : item.quantity)||0));
+            set('sku',item.itemid || item.sku_id || item.sku);
+            set('barcode',item.barcode_id || item.barcode);
+            set('description',item.description);
+            set('tax-type',item.tax_type||'inclusive');
+            set('diet',item.diet);set('plu',item.plu_code);set('gtin',item.gtin);
             document.getElementById('iv2-confirm-zero').checked=Number(item.selling_price)===0;
-            document.getElementById('iv2-orderable').checked=!!item.ecommerce;document.getElementById('iv2-menu').checked=item.show_on_menu!==false;
-            function select(id,v,name,rate){var e=document.getElementById('iv2-'+id),o=new Option(name||'',String(v||''));o.dataset.name=name||'';o.dataset.rate=rate||0;e.add(o);e.value=String(v||'');}
-            select('category',item.category_id,item.category_name);select('tax',item.tax_id,item.tax_name,item.tax);
-            ['periods','modifiers'].forEach(function(key){var box=document.getElementById('iv2-'+key),values=item[key==='periods'?'daypart_ids':'modifier_group_ids']||[];values.forEach(function(v){if(!Array.from(box.querySelectorAll('input')).some(function(e){return e.value===v;})){var label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.value=v;label.append(input,document.createTextNode(v));box.append(label);}});box.querySelectorAll('input').forEach(function(e){e.checked=values.includes(e.value);});});
+            document.getElementById('iv2-orderable').checked=!!item.ecommerce;
+            document.getElementById('iv2-menu').checked=item.show_on_menu!==false;
+            select('category',item.category_id,item.category_name || item.category || '');
+            select('tax',item.tax_id,item.tax_name,item.tax);
+            select('unit',item.unit_id || item.unit || 'qty',item.unit || 'Quantity');
+            select('supplier',item.supplier_id,item.supplier_name || item.supplier || '');
+            ['periods','modifiers'].forEach(function(key){var box=document.getElementById('iv2-'+key),values=item[key==='periods'?'daypart_ids':'modifier_group_ids']||[];values=values.map(String);values.forEach(function(v){if(!Array.from(box.querySelectorAll('input')).some(function(e){return e.value===v;})){var label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.value=v;label.append(input,document.createTextNode(v));box.append(label);}});box.querySelectorAll('input').forEach(function(e){e.checked=values.includes(e.value);});});
             P.itemsV2Details.load(item);busy=false;document.getElementById('iv2-fields').disabled=false;document.getElementById('iv2-save').disabled=false;render();
             var f=fields();editBaseline=Object.assign(payload(f),P.itemsV2Details.data());
             if(capabilities.restaurant){editBaseline.diet=value('iv2-diet');editBaseline.daypart_ids=checkedValues('iv2-periods');editBaseline.modifier_group_ids=checkedValues('iv2-modifiers');editBaseline.show_on_menu=document.getElementById('iv2-menu').checked;}
             if(capabilities.online)editBaseline.ecommerce=document.getElementById('iv2-orderable').checked;
+            // Align baseline aliases with the actual update payload. Without
+            // this, a one-field edit looked like changes to every legacy key.
+            editBaseline.sku_id=item.itemid || item.sku_id || item.sku || '';
+            editBaseline.inventory=tracked !== false;
+            editBaseline.hsn_code=item.hsncode != null ? item.hsncode : (item.hsn_code || '');
+            editBaseline.hsn_description=item.hsndescription || item.hsn_description || '';
+            editBaseline.position=item.sort_order != null ? item.sort_order : (item.position || 0);
+            editBaseline.cover_image=item.image || item.cover_image || 'item.svg';
+            editBaseline.image=Array.isArray(item.multi_image) ? item.multi_image : (Array.isArray(item.image) ? item.image : []);
+            editBaseline.tax_id=item.tax_id || '';editBaseline.tax_name=item.tax_name || '';editBaseline.tax=Number(item.tax)||0;
+            editBaseline.tax_type=item.tax_type || 'inclusive';
+            editBaseline.category_name=item.category_name || item.category || '';
+            editBaseline.ecommerce=!!item.ecommerce;
+            editBaseline.open_price=!!item.open_price;
+            editBaseline.item_weight_machine_based=!!item.item_weight_machine_based;
             document.getElementById('iv2-tab-step1').click();document.getElementById('iv2-name').focus();
             if (duplicate) prepareCopy();
         },function(){failed();});
