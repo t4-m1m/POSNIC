@@ -355,7 +355,10 @@ PosnicPro.items = {
         PosnicPro.items_v2.showClone(id);
     },
     showEdit: function (id) {
-        PosnicPro.items_v2.showEdit(id);
+        // Existing articles must open in the complete editor. It loads every
+        // stored field (including brand, prices and image gallery) and saves
+        // through PUT /items/:id, preserving the existing record.
+        return PosnicPro.items._legacyEditItem(id);
     },
     showDelete: function (id) {
         PosnicPro.deleteTableRowData(id, 'items');
@@ -1878,7 +1881,7 @@ PosnicPro.items = {
     },
     /*Edit item dsetails*/
     editItem: function (id) {
-        return PosnicPro.items_v2.showEdit(id);
+        return PosnicPro.items._legacyEditItem(id);
     },
     _legacyEditItem: function (id) {
         var loader = $(".loader-item");
