@@ -168,14 +168,8 @@
                 }
                 grid.appendChild(wrap);
             });
-            var unitWrap=document.createElement('div'), unitLabel=document.createElement('label'), unitPick=el('unit').cloneNode(true);
-            unitPick.id='iv2-variant-'+i+'-unit';unitPick.dataset.field='unit_id';unitPick.disabled=false;unitPick.value=row.unit_id||val('unit');unitLabel.htmlFor=unitPick.id;unitLabel.textContent=label('lang_item_units','Item Units');unitWrap.append(unitLabel,unitPick);grid.appendChild(unitWrap);
-            var photoWrap=document.createElement('div');
-            var lab = document.createElement('label'); lab.textContent = label('lang_photos', 'Photos');
-            var pick = document.createElement('select'); pick.dataset.field = 'photo'; pick.id = 'iv2-variant-' + i + '-photo'; lab.htmlFor = pick.id; photoWrap.append(lab,pick);grid.appendChild(photoWrap);
             card.appendChild(grid); box.appendChild(card);
-        }); photoPicker();
-        document.querySelectorAll('#iv2-variant-rows [data-field="photo"]').forEach(function(pick,i){pick.value=variants[i].photo||'';}); notify();
+        }); notify();
     }
     function isFamily() { return checked('has-variants') && document.querySelector('#items_v2 [name="iv2-kind"]:checked').value !== 'service'; }
     function validate() {
