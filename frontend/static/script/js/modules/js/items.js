@@ -1880,7 +1880,8 @@ PosnicPro.items = {
     },
     /*Edit item dsetails*/
     editItem: function (id) {
-        return PosnicPro.items_v2.showEdit(id);
+        // Always enter the dedicated Modify item route from the item dossier.
+        hasher.setHash('items/' + encodeURIComponent(id) + '/modify');
     },
     _legacyEditItem: function (id) {
         var loader = $(".loader-item");
