@@ -198,3 +198,21 @@
  #items_v2 .iv2-grid{gap:5px}
 }
 </style>
+
+
+<style id="iv2-single-page-field-order">
+#items_v2 .iv2-name-builder{grid-column:1/span 6;grid-row:2}
+#items_v2 #iv2-details-extra{grid-column:7/span 6;grid-row:2}
+#items_v2 #iv2-appearance{grid-column:1/span 6;grid-row:3}
+#items_v2 #iv2-stock-card{grid-column:7/span 6;grid-row:3;margin:0;padding:12px;background:var(--theme-card-bg,var(--bs-card-bg,#fff));border:1px solid var(--theme-border-color,#dce3ec);border-radius:12px}
+#items_v2 #iv2-stock-card:has(#iv2-quantity-row[hidden]){display:none}
+#items_v2 .iv2-purchase-cost{grid-column:1/span 6;grid-row:4}
+#items_v2 #iv2-pricing-extra{grid-column:7/span 6;grid-row:4}
+#items_v2 #iv2-codes .iv2-grid>div:has(#iv2-barcode){grid-template-columns:minmax(0,1fr) auto}
+#items_v2 #iv2-stock-card #iv2-quantity-row{display:grid;grid-template-columns:minmax(0,1fr) 130px;gap:8px;align-items:center;margin:0}
+#items_v2 #iv2-stock-card #iv2-quantity-row label{margin:0}
+#items_v2 #iv2-stock-card #iv2-quantity-row .iv2-note{grid-column:1/-1}
+@media(max-width:900px){
+ #items_v2 .iv2-name-builder,#items_v2 #iv2-details-extra,#items_v2 #iv2-appearance,#items_v2 #iv2-stock-card,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-pricing-extra{grid-column:1/-1;grid-row:auto}
+}
+</style>
