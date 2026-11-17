@@ -14,12 +14,10 @@
     function payload(f) {
         var a = assess(f);
         if (a.error) throw new Error(a.error);
-        var tier2 = f.price2 === '' ? a.price : Number(f.price2), tier3 = f.price3 === '' ? tier2 : Number(f.price3);
-        return { name: f.name.trim(), selling_price: a.price, selling_price_2: tier2, selling_price_3: tier3, company_price: Number(f.cost), available_quantity: a.quantity,
+        return { name: f.name.trim(), selling_price: a.price, company_price: Number(f.cost), available_quantity: a.quantity,
             inventory: a.tracked, negative_stock: a.negative, item_kind: f.kind === 'service' ? 'service' : 'product', service_unit: 'fixed',
             tax_id: f.taxId || '', tax_name: f.taxName || '', tax: Number(f.taxRate) || 0, tax_type: f.taxType,
             category_id: f.categoryId || '', category_name: f.categoryName || '', barcode_id: f.barcode.trim(), sku_id: f.sku.trim(),
-            brand_abbreviation: f.brandAbbreviation || '', reference_date: f.referenceDate || '',
             description: f.description.trim(), unit: 'qty', ecommerce: false, open_price: false, item_weight_machine_based: false };
     }
     if (typeof module === 'object' && module.exports) { module.exports = { assess: assess, payload: payload }; return; }
@@ -68,9 +66,7 @@
         var tax = document.getElementById('iv2-tax').selectedOptions[0];
         var category = document.getElementById('iv2-category').selectedOptions[0];
         var details = P.itemsV2Details.status();
-        var quantities = details.quantities.filter(function(n){return Number.isFinite(Number(n));});
-        return { name: value('iv2-name'), price: details.family && details.prices.length ? Number(value('iv2-price')) : value('iv2-price'), price2: value('iv2-price2'), price3: value('iv2-price3'), cost: value('iv2-cost'), quantity: details.family ? quantities.reduce(function(sum,n){return sum+Number(n||0);},0) : value('iv2-quantity'), kind: selected('iv2-kind'), stock: selected('iv2-stock'), zeroStock: selected('iv2-zero-stock'), confirmZero: document.getElementById('iv2-confirm-zero').checked, openPrice: details.openPrice, family: details.family,
-            brandAbbreviation: value('iv2-brand-abbr'), referenceDate: value('iv2-reference-date'),
+        return { name: value('iv2-name'), price: details.family && details.prices.length ? Math.min.apply(null, details.prices) : value('iv2-price'), cost: value('iv2-cost'), quantity: details.family && details.quantities.length ? Math.min.apply(null, details.quantities) : value('iv2-quantity'), kind: selected('iv2-kind'), stock: selected('iv2-stock'), zeroStock: selected('iv2-zero-stock'), confirmZero: document.getElementById('iv2-confirm-zero').checked, openPrice: details.openPrice, family: details.family,
             taxId: taxReady && capabilities.tax ? value('iv2-tax') : '', taxName: capabilities.tax && tax && tax.dataset.name || '', taxRate: capabilities.tax && tax && tax.dataset.rate || 0, taxType: value('iv2-tax-type'), categoryId: value('iv2-category'), categoryName: category && category.dataset.name || '', barcode: value('iv2-barcode'), sku: value('iv2-sku'), description: value('iv2-description') };
     }
     function money(n) { return (P.local.get('currencySign') || '') + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -123,10 +119,8 @@
         if (details.hsn) f.taxRate = details.tax;
         var price = Number(f.price);
         show('iv2-zero-price', (attempted || touched.has('iv2-price')) && price === 0 && !f.openPrice);
-        show('iv2-quantity-row', tracked);
-        document.getElementById('iv2-quantity').readOnly = !!f.family;
-        document.getElementById('iv2-quantity').disabled = editing || !tracked;
-        if (f.family) document.getElementById('iv2-quantity').value = f.quantity;
+        show('iv2-quantity-row', tracked && !f.family);
+        document.getElementById('iv2-quantity').disabled = editing || !tracked || f.family;
         document.getElementById('iv2-has-variants').disabled = editing;
         if (editing) show('iv2-quantity-row', false);
         show('iv2-zero-stock', (attempted || touched.has('iv2-quantity')) && tracked && Number(f.quantity) === 0);
@@ -180,19 +174,10 @@
         document.getElementById('iv2-tax-type').value = P.local.get('tax_type') === 'exclusive' ? 'exclusive' : 'inclusive';
         var def = P.local.get('default_tax_id');
         if (def && Array.from(document.getElementById('iv2-tax').options).some(function (o) { return o.value === String(def); })) document.getElementById('iv2-tax').value = def;
-        var now=new Date(), yy=String(now.getFullYear()).slice(-2), mm=String(now.getMonth()+1).padStart(2,'0');
-        var dateField=document.getElementById('iv2-reference-date');if(dateField)dateField.value=yy+'-'+mm;
-        ['iv2-article-type','iv2-brand-abbr','iv2-model-reference','iv2-price2','iv2-price3','iv2-price-eur','iv2-extra-cost'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
-        var rateField=document.getElementById('iv2-exchange-rate');if(rateField)rateField.value='280';
-        var costField=document.getElementById('iv2-cost');if(costField)costField.value='0.00';
-        var generatedName=document.getElementById('iv2-name');if(generatedName)generatedName.value='';
-        var stepOne=document.getElementById('iv2-owner-step1'),stepTwo=document.getElementById('iv2-owner-step2');
-        if(stepOne&&stepTwo){stepOne.classList.add('active');stepTwo.classList.remove('active');var ownerTabs=document.querySelectorAll('#iv2-owner-steps .iv2-owner-tabs button');if(ownerTabs.length){ownerTabs[0].classList.add('active');ownerTabs[1].classList.remove('active');}}
         render(); document.getElementById('iv2-name').focus();
     }
     function save(event) {
         if (event) event.preventDefault();
-        if (!editing) { var stepOne=document.getElementById('iv2-owner-step1'),next=document.querySelector('#iv2-owner-step1 .iv2-owner-primary'); if(stepOne&&stepOne.classList.contains('active')&&next){next.click();return false;} }
         if (busy || saved) return false;
         if (P.aclLoaded && P.aclLoaded() && !P.checkAccess('item', 'write')) { fail('You don’t have permission to create items.'); return false; }
         if (editing && savedBranch !== P.local.get('branch_id_set')) { fail(P.i18n.t('lang_iv2_edit_branch_changed', 'The active branch changed. Open the item again before editing.')); return false; }
@@ -200,10 +185,6 @@
         if (!P.itemsV2Workspace.ready()) { fail(P.i18n.t('lang_iv2_draft_lists', 'Some draft selections are unavailable. Reload to retry, or discard the draft before saving.')); return false; }
         var f = fields(), a = assess(f);
         if (a.error) { fail(a.error, a.field); return false; }
-        var tier1=Number(f.price), tier2=f.price2===''?tier1:Number(f.price2), tier3=f.price3===''?tier2:Number(f.price3);
-        if (![tier1,tier2,tier3].every(function(n){return Number.isFinite(n)&&n>=0;}) || tier2>tier1 || tier3>tier2) {
-            fail('Selling prices must follow: Price 3 ≤ Price 2 ≤ Price 1.','iv2-price2'); return false;
-        }
         var advancedError = P.itemsV2Details.validate();
         if (advancedError) { fail(advancedError.error, advancedError.field); return false; }
         var form = document.getElementById('iv2-form');
@@ -295,200 +276,12 @@
             var nameInput = document.getElementById('iv2-name'); nameInput.focus(); nameInput.select();
             nameInput.dispatchEvent(new Event('input', { bubbles: true }));
     }
-    function prepareCustomCreateLayout() {
-        var form=document.getElementById('iv2-form'), fieldsBox=document.getElementById('iv2-fields');
-        if(!form || fieldsBox.dataset.posnicTwoStep==='1') return;
-        fieldsBox.dataset.posnicTwoStep='1';
-        var style=document.createElement('style');
-        style.textContent=`
-#items_v2 .iv2-layout{display:block!important}#items_v2 .iv2-aside{display:none!important}
-#items_v2 .iv2-section-picker,#items_v2 .iv2-tabs{display:none!important}
-#items_v2 .iv2-owner-tabs{display:flex;gap:10px;border-bottom:1px solid #dce7f5;margin:0 0 18px;padding:0 0 10px}
-#items_v2 .iv2-owner-tabs button{border:1px solid #d5e1f0;background:#f6f9fd;color:#34506f;border-radius:8px;padding:11px 18px;font-weight:700}
-#items_v2 .iv2-owner-tabs button.active{background:#e8f1ff;border-color:#2672c9;color:#1557a6}
-#items_v2 .iv2-owner-panel{display:none}#items_v2 .iv2-owner-panel.active{display:block}
-#items_v2 .iv2-owner-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px}
-#items_v2 .iv2-owner-field{min-width:0;display:flex;flex-direction:column;gap:6px}
-#items_v2 .iv2-owner-field label{font-size:13px;font-weight:700;color:var(--theme-text-primary,#24344d)}
-#items_v2 .iv2-owner-field input,#items_v2 .iv2-owner-field select{min-height:40px;border:1px solid var(--theme-border-color,#d5deea);border-radius:8px;padding:8px 11px;width:100%;background:var(--theme-input-bg,#fff);color:var(--theme-text-primary,#24344d)}
-#items_v2 .iv2-owner-panel .iv2-section{margin:14px 0;padding:18px;border:1px solid #e2eaf4;border-radius:10px;background:var(--theme-card-bg,#fff)}
-#items_v2 .iv2-owner-panel .iv2-section-title{margin-bottom:12px}
-#items_v2 .iv2-owner-nav{display:flex;justify-content:space-between;gap:10px;margin:18px 0 6px}
-#items_v2 .iv2-owner-nav button{min-height:42px;padding:9px 18px;border-radius:8px;font-weight:700}
-#items_v2 .iv2-owner-primary{background:#1768bd;color:#fff;border:1px solid #1768bd}
-#items_v2 .iv2-owner-secondary{background:#fff;color:#334155;border:1px solid #cbd5e1}
-#items_v2 #iv2-codes #iv2-plu,#items_v2 #iv2-codes #iv2-sku,#items_v2 #iv2-codes #iv2-gtin,#items_v2 #iv2-codes #iv2-same-sku,#items_v2 #iv2-codes #iv2-alt-barcodes,#items_v2 #iv2-codes #iv2-purchase-unit,#items_v2 #iv2-codes #iv2-pack-size{display:none!important}
-#items_v2 #iv2-codes label[for="iv2-plu"],#items_v2 #iv2-codes label[for="iv2-sku"],#items_v2 #iv2-codes label[for="iv2-gtin"],#items_v2 #iv2-codes label[for="iv2-alt-barcodes"],#items_v2 #iv2-codes label[for="iv2-purchase-unit"],#items_v2 #iv2-codes label[for="iv2-pack-size"]{display:none!important}
-#items_v2 #iv2-stock-intro,#items_v2 .iv2-stock-modes,#items_v2 #iv2-zero-stock,#items_v2 #iv2-tax-extra,#items_v2 #iv2-tax-field,#items_v2 .iv2-tax-row,#items_v2 #iv2-zero-price{display:none!important}
-#items_v2 .iv2-owner-generated input{background:#f4f7fb;font-weight:700}
-#items_v2 .iv2-owner-price-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-@media(max-width:760px){#items_v2 .iv2-owner-fields,#items_v2 .iv2-owner-price-grid{grid-template-columns:1fr}}
-`;
-        document.head.appendChild(style);
-        var root=document.createElement('div');root.id='iv2-owner-steps';
-        var tabs=document.createElement('nav');tabs.className='iv2-owner-tabs';tabs.setAttribute('aria-label','Add item steps');
-        var t1=document.createElement('button');t1.type='button';t1.textContent='1  Basic information';t1.className='active';
-        var t2=document.createElement('button');t2.type='button';t2.textContent='2  Stock & pricing';
-        tabs.append(t1,t2);root.appendChild(tabs);
-        var p1=document.createElement('section');p1.className='iv2-owner-panel active';p1.id='iv2-owner-step1';
-        var p2=document.createElement('section');p2.className='iv2-owner-panel';p2.id='iv2-owner-step2';
-        root.append(p1,p2);
-        var intro=document.createElement('div');intro.className='iv2-section';intro.innerHTML='<h2>Basic information</h2><p class="iv2-note">Build the article name and choose its category, brand and barcode.</p>';
-        var grid=document.createElement('div');grid.className='iv2-owner-fields';
-        function addField(labelText,id,type,required,valueText){
-            var wrap=document.createElement('div');wrap.className='iv2-owner-field';
-            var label=document.createElement('label');label.htmlFor=id;label.textContent=labelText;
-            var input=document.createElement('input');input.id=id;input.type=type||'text';input.required=!!required;if(valueText!==undefined)input.value=valueText;
-            wrap.append(label,input);grid.appendChild(wrap);return input;
-        }
-        var articleType=addField('Article Type / Name','iv2-article-type','text',true);
-        articleType.placeholder='e.g. dress, robe, sneakers, pull';
-        var brandAbbr=addField('Brand Abbreviation','iv2-brand-abbr','text',true);
-        brandAbbr.placeholder='e.g. mqn, stl, hdd';brandAbbr.maxLength=20;
-        var refDate=addField('Reference Date (YY-MM)','iv2-reference-date','text',true);
-        refDate.pattern='^\\d{2}-\\d{2}
-        if (editing) reset();
-        if (P.HideSideBarModal) P.HideSideBarModal();
-        $('.page_loader,#osk-container').hide(); $('#items_v2').show();
-        capabilities = readCapabilities();
-        P.itemsV2Details.init();
-        prepareCustomCreateLayout();
-        P.itemsV2Workspace.init({refresh:render,reset:reset,edit:function () {
-            if (!savedItemId || savedBranch !== P.local.get('branch_id_set')) return;
-            editing = true; saved = false; attempted = false;
-            document.getElementById('iv2-copy-source').value = '';
-            document.getElementById('iv2-fields').disabled = false; document.getElementById('iv2-save').disabled = false;
-            P.itemsV2Workspace.edit(); render();
-        },duplicate:prepareCopy        });
-        show('iv2-tax-field', capabilities.tax); document.getElementById('iv2-tax-type').hidden = !capabilities.tax;
-        if (!bound) applyBusinessContext();
-        if (capabilities.restaurant) loadRestaurantOptions();
-        bind(); document.querySelectorAll('#items_v2 .iv2-currency').forEach(function (el) { el.textContent = P.local.get('currencySign') || ''; });
-        if (!taxReady) { document.getElementById('iv2-tax-type').value = P.local.get('tax_type') === 'exclusive' ? 'exclusive' : 'inclusive'; loadTax(); }
-        P.get({ url: 'categories/getCategoryAjaxList', data: 'query=' }, function (r) {
-            var select = document.getElementById('iv2-category'), previous = select.value, previousOption = select.selectedOptions[0] && select.selectedOptions[0].cloneNode(true);
-            select.replaceChildren(new Option('No category', ''));
-            ((r && r.suggestions) || []).forEach(function (c) { var option = new Option(c.name, c.id); option.dataset.name = c.name; select.add(option); }); if(previousOption && !Array.from(select.options).some(function(o){return o.value===previous;})) select.add(previousOption); select.value = previous;
-        }, function () { /* category is optional */ });
-        if (typeof initialName === 'string') {
-            reset();
-            document.getElementById('iv2-name').value = initialName;
-            document.getElementById('iv2-name').dispatchEvent(new Event('input', { bubbles: true }));
-        }
-        render(); document.getElementById('iv2-name').focus();
-    }
-    function showEdit(id, duplicate) {
-        open(); reset();
-        var sequence = ++editSequence, branch = P.local.get('branch_id_set');
-        editing = true; savedItemId = String(id); savedBranch = branch; busy = true;
-        P.itemsV2Workspace.edit(); render();
-        document.getElementById('iv2-fields').disabled = true; document.getElementById('iv2-save').disabled = true; text('iv2-save', 'Loading…');
-        function failed(message) { if(sequence!==editSequence)return; busy=true; fail(message || 'Could not load this item. Open it again to retry.'); document.getElementById('iv2-fields').disabled=true; document.getElementById('iv2-save').disabled=true; }
-        P.get({url:'items/getItemDetails',data:{id:id}}, function(r) {
-            if(sequence!==editSequence || branch!==P.local.get('branch_id_set'))return;
-            if(!r || r.type!=='success' || !r.data)return failed(r&&r.message);
-            var item = r.data; existingItem = item;
-            function set(id,v){var e=document.getElementById('iv2-'+id);if(e)e.value=v==null?'':v;}
-            function choice(name,v){document.querySelectorAll('#items_v2 [name="iv2-'+name+'"]').forEach(function(e){e.checked=e.value===v;});}
-            choice('kind',item.item_kind==='service'?'service':'product');choice('stock',item.track_inventory?'tracked':'untracked');choice('zero-stock',item.negative_stock?'negative':'later');
-            set('name',item.name);set('price',item.selling_price);set('cost',item.company_price);set('quantity',Math.max(0,Number(item.available_quantity)||0));set('sku',item.itemid);set('barcode',item.barcode_id);set('description',item.description);set('tax-type',item.tax_type||'inclusive');set('diet',item.diet);
-            document.getElementById('iv2-confirm-zero').checked=Number(item.selling_price)===0;
-            document.getElementById('iv2-orderable').checked=!!item.ecommerce;document.getElementById('iv2-menu').checked=item.show_on_menu!==false;
-            function select(id,v,name,rate){var e=document.getElementById('iv2-'+id),o=new Option(name||'',String(v||''));o.dataset.name=name||'';o.dataset.rate=rate||0;e.add(o);e.value=String(v||'');}
-            select('category',item.category_id,item.category_name);select('tax',item.tax_id,item.tax_name,item.tax);
-            ['periods','modifiers'].forEach(function(key){var box=document.getElementById('iv2-'+key),values=item[key==='periods'?'daypart_ids':'modifier_group_ids']||[];values.forEach(function(v){if(!Array.from(box.querySelectorAll('input')).some(function(e){return e.value===v;})){var label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.value=v;label.append(input,document.createTextNode(v));box.append(label);}});box.querySelectorAll('input').forEach(function(e){e.checked=values.includes(e.value);});});
-            P.itemsV2Details.load(item);busy=false;document.getElementById('iv2-fields').disabled=false;document.getElementById('iv2-save').disabled=false;render();
-            var f=fields();editBaseline=Object.assign(payload(f),P.itemsV2Details.data());
-            if(capabilities.restaurant){editBaseline.diet=value('iv2-diet');editBaseline.daypart_ids=checkedValues('iv2-periods');editBaseline.modifier_group_ids=checkedValues('iv2-modifiers');editBaseline.show_on_menu=document.getElementById('iv2-menu').checked;}
-            if(capabilities.online)editBaseline.ecommerce=document.getElementById('iv2-orderable').checked;
-            document.getElementById('iv2-tab-basics').click();document.getElementById('iv2-name').focus();
-            if (duplicate) prepareCopy();
-        },function(){failed();});
-    }
-    P.items_v2 = { showEdit: showEdit, showClone: function(id){showEdit(id,true);}, showAdd: open, showDataTablePage: open, setBusinessContext: function (category) {
-        businessContext = ['restaurant', 'retail', 'service'].includes(category) ? category : null;
-        if (bound) { capabilities = readCapabilities(); reset(); if (capabilities.restaurant) loadRestaurantOptions(); }
-    } };
-}(typeof window === 'undefined' ? globalThis : window));
-;refDate.placeholder='YY-MM';
-        var modelRef=addField('Model Reference','iv2-model-reference','text',true);
-        modelRef.placeholder='e.g. 133, 048';
-        intro.appendChild(grid);
-        var nameLabel=document.querySelector('label[for="iv2-name"]'), nameInput=document.getElementById('iv2-name');
-        var generated=document.createElement('div');generated.className='iv2-owner-field iv2-owner-generated';generated.style.marginTop='14px';
-        nameLabel.textContent='Generated article name';nameInput.readOnly=true;nameInput.required=true;
-        generated.append(nameLabel,nameInput);intro.appendChild(generated);
-        p1.appendChild(intro);
-        function move(selector,target){var node=document.querySelector(selector);if(node)target.appendChild(node);}
-        move('#iv2-details-extra',p1);move('#iv2-codes',p1);move('#iv2-variants',p1);
-        var step1Nav=document.createElement('div');step1Nav.className='iv2-owner-nav';
-        var continueBtn=document.createElement('button');continueBtn.type='button';continueBtn.className='iv2-owner-primary';continueBtn.textContent='Continue to step 2 →';
-        step1Nav.appendChild(continueBtn);p1.appendChild(step1Nav);
-        var stock=document.querySelector('#iv2-panel-basics section:nth-of-type(2)');
-        if(stock){stock.querySelector('.iv2-stock-modes')?.remove();var zero=stock.querySelector('#iv2-zero-stock');if(zero)zero.remove();move('#iv2-quantity-row',stock);p2.appendChild(stock);}
-        var priceLabel=document.querySelector('label[for="iv2-price"]'),priceInput=document.getElementById('iv2-price');
-        var priceWrap=document.createElement('section');priceWrap.className='iv2-section';
-        var priceHeading=document.createElement('h2');priceHeading.textContent='Selling prices (DA)';priceWrap.appendChild(priceHeading);
-        var priceGrid=document.createElement('div');priceGrid.className='iv2-owner-price-grid';
-        function movePrice(label,input){var wrap=document.createElement('div');wrap.className='iv2-owner-field';label.textContent=label.textContent.replace(/Selling price/i,'Selling Price 1 (DA)');input.required=true;wrap.append(label,input);priceGrid.appendChild(wrap);}
-        movePrice(priceLabel,priceInput);
-        function tier(id,labelText){var wrap=document.createElement('div');wrap.className='iv2-owner-field';var lab=document.createElement('label');lab.htmlFor=id;lab.textContent=labelText;var input=document.createElement('input');input.id=id;input.type='number';input.min='0';input.step='any';wrap.append(lab,input);priceGrid.appendChild(wrap);}
-        tier('iv2-price2','Selling Price 2 (DA)');tier('iv2-price3','Selling Price 3 (Minimum - DA)');
-        priceWrap.appendChild(priceGrid);p2.appendChild(priceWrap);
-        move('#iv2-pricing-extra',p2);
-        var costLabel=document.querySelector('label[for="iv2-cost"]'),costInput=document.getElementById('iv2-cost');
-        if(costLabel)costLabel.textContent='Calculated Purchase Price (DA)';
-        if(costInput){costInput.readOnly=true;costInput.required=false;}
-        var exchangeWrap=document.createElement('section');exchangeWrap.className='iv2-section';
-        exchangeWrap.innerHTML='<h2>Purchase cost calculation</h2>';
-        var exchangeGrid=document.createElement('div');exchangeGrid.className='iv2-owner-fields';
-        function numericField(id,labelText,initial){var wrap=document.createElement('div');wrap.className='iv2-owner-field';var lab=document.createElement('label');lab.htmlFor=id;lab.textContent=labelText;var input=document.createElement('input');input.id=id;input.type='number';input.min='0';input.step='any';input.value=String(initial);wrap.append(lab,input);exchangeGrid.appendChild(wrap);return input;}
-        var eur=numericField('iv2-price-eur','Price (EUR)',0),rate=numericField('iv2-exchange-rate','Taux d’échange (DA / EUR)',280),extra=numericField('iv2-extra-cost','Extra Cost (DA)',0);
-        exchangeWrap.appendChild(exchangeGrid);p2.appendChild(exchangeWrap);
-        move('#iv2-appearance',p2);
-        var error=document.getElementById('iv2-error'),actions=document.querySelector('.iv2-actions');
-        if(error)p2.appendChild(error);if(actions){actions.querySelector('p')?.remove();var save=document.getElementById('iv2-save');if(save){save.textContent='Enregistrer et Valider →';}p2.appendChild(actions);}
-        var back=document.createElement('button');back.type='button';back.className='iv2-owner-secondary';back.textContent='← Back to step 1';
-        var step2Nav=document.createElement('div');step2Nav.className='iv2-owner-nav';step2Nav.appendChild(back);p2.insertBefore(step2Nav,p2.firstChild);
-        function setStep(n){var second=n===2;p1.classList.toggle('active',!second);p2.classList.toggle('active',second);t1.classList.toggle('active',!second);t2.classList.toggle('active',second);if(second)root.scrollIntoView({behavior:'smooth',block:'start'});}
-        t1.addEventListener('click',function(){setStep(1);});t2.addEventListener('click',function(){continueBtn.click();});back.addEventListener('click',function(){setStep(1);});
-        continueBtn.addEventListener('click',function(){
-            [articleType,brandAbbr,refDate,modelRef].forEach(function(x){x.value=x.value.trim();});
-            if(!articleType.reportValidity()||!brandAbbr.reportValidity()||!refDate.reportValidity()||!modelRef.reportValidity())return;
-            if(!/^\\d{2}-\\d{2}$/.test(refDate.value)){refDate.setCustomValidity('Use YY-MM, for example 26-11.');refDate.reportValidity();refDate.setCustomValidity('');return;}
-            if(!modelRef.value.trim())return;
-            updateName();setStep(2);
-        });
-        function updateName(){
-            var name=[articleType.value.trim(),brandAbbr.value.trim().toLowerCase()+'-'+refDate.value.trim()+'/'+modelRef.value.trim()].filter(Boolean).join(' ');
-            nameInput.value=name;nameInput.dispatchEvent(new Event('input',{bubbles:true}));
-        }
-        [articleType,brandAbbr,refDate,modelRef].forEach(function(x){x.addEventListener('input',updateName);});
-        var now=new Date(),yy=String(now.getFullYear()).slice(-2),mm=String(now.getMonth()+1).padStart(2,'0');
-        if(!refDate.value)refDate.value=yy+'-'+mm;
-        function updateCost(){var total=(Number(eur.value)||0)*(Number(rate.value)||0)+(Number(extra.value)||0);costInput.value=total.toFixed(2);costInput.dispatchEvent(new Event('input',{bubbles:true}));}
-        [eur,rate,extra].forEach(function(x){x.addEventListener('input',updateCost);});
-        var p1Input=document.getElementById('iv2-price2'),p2Input=document.getElementById('iv2-price3');
-        [priceInput,p1Input,p2Input].forEach(function(x){x.addEventListener('input',function(){render();});});
-        var quantity=document.getElementById('iv2-quantity');
-        if(quantity){quantity.readOnly=false;}
-        var tracked=document.querySelector('#items_v2 input[name="iv2-stock"][value="tracked"]');if(tracked)tracked.checked=true;
-        updateName();updateCost();
-        root.insertBefore(document.createElement('div'),root.firstChild);
-        fieldsBox.insertBefore(root,fieldsBox.firstChild);
-        var oldPanels=document.querySelectorAll('#items_v2 .iv2-tab-panel');oldPanels.forEach(function(x){x.hidden=true;});
-        var oldTabs=document.querySelector('#items_v2 .iv2-tabs');if(oldTabs)oldTabs.hidden=true;
-        var picker=document.querySelector('#items_v2 .iv2-section-picker');if(picker)picker.hidden=true;
-        var oldTypes=document.querySelector('#items_v2 .iv2-types');if(oldTypes)oldTypes.hidden=true;
-        var layout=document.querySelector('#items_v2 .iv2-layout');if(layout)layout.classList.add('iv2-owner-layout');
-    }
     function open(initialName) {
         if (editing) reset();
         if (P.HideSideBarModal) P.HideSideBarModal();
         $('.page_loader,#osk-container').hide(); $('#items_v2').show();
         capabilities = readCapabilities();
         P.itemsV2Details.init();
-        prepareCustomCreateLayout();
         P.itemsV2Workspace.init({refresh:render,reset:reset,edit:function () {
             if (!savedItemId || savedBranch !== P.local.get('branch_id_set')) return;
             editing = true; saved = false; attempted = false;
