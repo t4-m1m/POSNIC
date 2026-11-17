@@ -146,7 +146,8 @@
         variants = names.map(function (name) { return previous.get(name) || { variant_value: name, selling_price: val('price'), available_quantity: '0', company_price: val('cost'), mrp_price: val('mrp'), position: val('position'), discount_amount: val('discount-type') === 'amount' ? val('discount') : '', discount_percentage: val('discount-type') === 'percentage' ? val('discount') : '' }; });
         signature = variantSignature(); var box = el('variant-rows'); box.replaceChildren();
         variants.forEach(function (row, i) {
-            var card = document.createElement('div'); card.className = 'iv2-variant'; card.dataset.variantIndex=String(i); var heading = document.createElement('h3'); heading.textContent = row.variant_value; card.appendChild(heading);\n            var removeRow=document.createElement('button');removeRow.type='button';removeRow.className='iv2-secondary';removeRow.textContent='Supprimer';removeRow.addEventListener('click',function(){captureVariants();variants[i]._deleted=true;card.remove();notify();});card.appendChild(removeRow);
+            var card = document.createElement('div'); card.className = 'iv2-variant'; card.dataset.variantIndex=String(i); var heading = document.createElement('h3'); heading.textContent = row.variant_value; card.appendChild(heading);
+            var removeRow=document.createElement('button');removeRow.type='button';removeRow.className='iv2-secondary';removeRow.textContent='Supprimer';removeRow.addEventListener('click',function(){captureVariants();variants[i]._deleted=true;card.remove();notify();});card.appendChild(removeRow);
             var grid = document.createElement('div'); grid.className = 'iv2-grid';
             variantFields().forEach(function (spec) {
                 var wrap = document.createElement('div'), lab = document.createElement('label'), input = document.createElement('input');
@@ -178,7 +179,7 @@
     }
     function isFamily() { return checked('has-variants') && document.querySelector('#items_v2 [name="iv2-kind"]:checked').value !== 'service'; }
     function validate() {
-        if (caps.tax && val('hsn') && !/^\\d{4,8}$/.test(val('hsn'))) return error(P.i18n.t('lang_iv2_hsn_code_invalid', 'Choose an HSN / SAC code from the suggestions, or enter a 4 to 8 digit code.'), 'hsn');
+        if (caps.tax && val('hsn') && !/^[0-9]{4,8}$/.test(val('hsn'))) return error(P.i18n.t('lang_iv2_hsn_code_invalid', 'Choose an HSN / SAC code from the suggestions, or enter a 4 to 8 digit code.'), 'hsn');
         if (caps.tax && val('hsn') && val('hsn-rate') === '') return error(P.i18n.t('lang_iv2_hsn_rate_required', 'Enter the applicable tax rate for this code. Enter 0 for a zero-rated item.'), 'hsn-rate');
         var invalid = document.querySelector('#iv2-fields input:invalid, #iv2-fields select:invalid, #iv2-fields textarea:invalid');
         if (invalid) return error(invalid.validationMessage, invalid.id);
