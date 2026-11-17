@@ -403,6 +403,9 @@
         render(); document.getElementById('iv2-name').focus();
     }
     function showEdit(id, duplicate) {
+        // The modify route is a dedicated editor state, not the create route.
+        // Hide the catalogue and legacy form before mounting the shared two-step layout.
+        $('#items').hide(); $('#items_new').hide(); $('#items_v2').show();
         open(); reset();
         var sequence = ++editSequence, branch = P.local.get('branch_id_set');
         editing = true; savedItemId = String(id); savedBranch = branch; busy = true;
@@ -467,10 +470,18 @@
             select('unit',item.unit_id || item.unit || 'qty',item.unit || 'Quantity');
             select('supplier',item.supplier_id,item.supplier_name || item.supplier || '');
             ['periods','modifiers'].forEach(function(key){var box=document.getElementById('iv2-'+key),values=item[key==='periods'?'daypart_ids':'modifier_group_ids']||[];values=values.map(String);values.forEach(function(v){if(!Array.from(box.querySelectorAll('input')).some(function(e){return e.value===v;})){var label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.value=v;label.append(input,document.createTextNode(v));box.append(label);}});box.querySelectorAll('input').forEach(function(e){e.checked=values.includes(e.value);});});
-            P.itemsV2Details.load(item);busy=false;document.getElementById('iv2-fields').disabled=false;document.getElementById('iv2-save').disabled=false;render();
+            P.itemsV2Details.load(item);
+            // Keep identity fields immutable in Modify mode. The original SKU and
+            // barcode remain in the request merge even though these controls are read-only.
+            ['iv2-sku','iv2-barcode'].forEach(function(id){var field=document.getElementById(id);if(field)field.disabled=true;});
             var f=fields();editBaseline=Object.assign(payload(f),P.itemsV2Details.data());
             if(capabilities.restaurant){editBaseline.diet=value('iv2-diet');editBaseline.daypart_ids=checkedValues('iv2-periods');editBaseline.modifier_group_ids=checkedValues('iv2-modifiers');editBaseline.show_on_menu=document.getElementById('iv2-menu').checked;}
             if(capabilities.online)editBaseline.ecommerce=document.getElementById('iv2-orderable').checked;
+            // The complete record and baseline are now ready; only now permit edits.
+            busy=false;
+            document.getElementById('iv2-fields').disabled=false;
+            document.getElementById('iv2-save').disabled=false;
+            render();
             // Align baseline aliases with the actual update payload. Without
             // this, a one-field edit looked like changes to every legacy key.
             editBaseline.sku_id=item.itemid || item.sku_id || item.sku || '';
@@ -503,7 +514,7 @@
         P.itemsV2Workspace.goToStep('step1');
         return false;
     }
-    P.items_v2 = { showEdit: showEdit, showClone: function(id){showEdit(id,true);}, showAdd: showAdd, showDataTablePage: open, setBusinessContext: function (category) {
+    P.items_v2 = { showModify: showEdit, showEdit: showEdit, showClone: function(id){showEdit(id,true);}, showAdd: showAdd, showDataTablePage: open, setBusinessContext: function (category) {
         businessContext = ['restaurant', 'retail', 'service'].includes(category) ? category : null;
         if (bound) { capabilities = readCapabilities(); reset(); if (capabilities.restaurant) loadRestaurantOptions(); }
     } };
