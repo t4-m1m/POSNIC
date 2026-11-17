@@ -525,7 +525,8 @@
         P.itemsV2Workspace.goToStep('step1');
         return false;
     }
-    P.items_v2 = { showModify: showModify, showEdit: showModify, showClone: function(id){showModify(id,true);}, showAdd: showAdd, showDataTablePage: open, setBusinessContext: function (category) {
+    var showEdit = showModify;
+    P.items_v2 = { showModify: showEdit, showEdit: showEdit, showClone: function(id){showEdit(id,true);}, showAdd: showAdd, showDataTablePage: open, setBusinessContext: function (category) {
         businessContext = ['restaurant', 'retail', 'service'].includes(category) ? category : null;
         if (bound) { capabilities = readCapabilities(); reset(); if (capabilities.restaurant) loadRestaurantOptions(); }
     } };
