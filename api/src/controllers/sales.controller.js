@@ -1626,7 +1626,7 @@ class SalesController extends BaseController {
 
   async cashierDayClose(req, res) {
     try {
-      if (!this.checkPermission('sales', 'read', req.user)) return this.error(res, ERROR_MESSAGES.UNAUTHORIZED, 403);
+      if (!(this.checkPermission('sales', 'read', req.user) || this.checkPermission('sales', 'write', req.user))) return this.error(res, ERROR_MESSAGES.UNAUTHORIZED, 403);
       await this.ensureContext(req);
       const body = req.body || {};
       const date = String(body.date || '');
@@ -1676,7 +1676,9 @@ class SalesController extends BaseController {
   async dailySalesReports(req, res) {
     try {
       // ---- Access check (null-safe) ----
-      const hasReportAccess = req.cashierDayClose ? this.checkPermission('sales', 'read', req.user) : this.checkPermission('report', 'read', req.user);
+      const hasReportAccess = req.cashierDayClose
+        ? (this.checkPermission('sales', 'read', req.user) || this.checkPermission('sales', 'write', req.user))
+        : this.checkPermission('report', 'read', req.user);
 
       if (!hasReportAccess) {
         return this.error(res, ERROR_MESSAGES.UNAUTHORIZED, 403);
