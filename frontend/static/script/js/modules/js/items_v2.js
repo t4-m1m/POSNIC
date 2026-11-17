@@ -23,7 +23,7 @@
     if (typeof module === 'object' && module.exports) { module.exports = { assess: assess, payload: payload }; return; }
     var P = root.PosnicPro, $ = root.jQuery;
     var businessContext = null, capabilities = {}, savedItemId = null, editing = false, savedBranch = null;
-    var existingItem = null, editBaseline = null, editSequence = 0;
+    var existingItem = null, editBaseline = null, editSequence = 0, editorMode = 'create';
     function readCapabilities() {
         var settings = {};
         try { settings = JSON.parse(P.local.get('general_settings') || '{}'); } catch (_) {}
@@ -378,11 +378,20 @@
             var nameInput = document.getElementById('iv2-name'); nameInput.focus(); nameInput.select();
             nameInput.dispatchEvent(new Event('input', { bubbles: true }));
     }
+    function mountEditor(mode) {
+        editorMode = mode === 'modify' ? 'modify' : 'create';
+        var editor = document.getElementById('items_v2');
+        var host = document.getElementById(editorMode === 'modify' ? 'items_modify_page' : 'items_v2_mount');
+        if (editor && host && editor.parentNode !== host) host.appendChild(editor);
+    }
     function open(initialName) {
-        // Opening only reveals and initializes the editor. Draft reset belongs
-        // to the explicit new-item entry point, after workspace initialization.
+        // Editing and creation have separate page mounts while sharing the
+        // same two-step editor controls and data model.
         if (P.HideSideBarModal) P.HideSideBarModal();
-        $('.page_loader,#osk-container').hide(); $('#items_v2').show();
+        $('.page_loader,#osk-container').hide();
+        var host = document.getElementById(editorMode === 'modify' ? 'items_modify_page' : 'items_v2_mount');
+        if (host) $(host).show();
+        $('#items_v2').show();
         capabilities = readCapabilities();
         P.itemsV2Details.init();
         P.itemsV2Workspace.init({refresh:render,reset:showAdd,edit:function () {
@@ -413,10 +422,12 @@
         P.itemsV2Workspace.goToStep('step1');
         render(); document.getElementById('iv2-name').focus();
     }
-    function showModify(id, duplicate) {
-        // The modify route is a dedicated editor state, not the create route.
-        // Hide the catalogue and legacy form before mounting the shared two-step layout.
-        $('#items').hide(); $('#items_new').hide(); $('#items_v2').show();
+    function openModifyPage(id, duplicate) {
+        if (!id) { P.alert('error', 'Choose an item before opening its editor.'); return false; }
+        // Only this route mounts the editor inside the dedicated Modify page.
+        // Clone remains a create operation and stays in the creation mount.
+        mountEditor(duplicate ? 'create' : 'modify');
+        $('#items').hide(); $('#items_new').hide();
         open(); reset();
         var sequence = ++editSequence, branch = P.local.get('branch_id_set');
         editing = true; savedItemId = String(id); savedBranch = branch; busy = true;
@@ -513,9 +524,8 @@
         },function(){failed();});
     }
     function showAdd() {
-        // One deterministic entry path for the dropdown, router and
-        // "Create another" action. Initialize/reveal first, then clear the
-        // previous saved/locked state exactly once.
+        // Always restore the creation editor to its own page mount.
+        mountEditor('create');
         $('#items').hide();
         open();
         reset();
@@ -525,8 +535,7 @@
         P.itemsV2Workspace.goToStep('step1');
         return false;
     }
-    var showEdit = showModify;
-    P.items_v2 = { showModify: showEdit, showEdit: showEdit, showClone: function(id){showEdit(id,true);}, showAdd: showAdd, showDataTablePage: open, setBusinessContext: function (category) {
+    P.items_v2 = { openModifyPage: openModifyPage, showClone: function(id){openModifyPage(id,true);}, showAdd: showAdd, showDataTablePage: open, setBusinessContext: function (category) {
         businessContext = ['restaurant', 'retail', 'service'].includes(category) ? category : null;
         if (bound) { capabilities = readCapabilities(); reset(); if (capabilities.restaurant) loadRestaurantOptions(); }
     } };
