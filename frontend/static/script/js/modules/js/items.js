@@ -859,44 +859,62 @@ PosnicPro.items = {
         if (PosnicPro.aclLoaded && PosnicPro.aclLoaded() && !PosnicPro.checkAccess('item','write')) {
             PosnicPro.alert('error','You do not have permission to modify items.'); return;
         }
-        var esc = function(v){return $('<span>').text(v == null ? '' : v).html();};
         var host = document.getElementById('posnic_independent_modify_page');
         if (!host) {
             host = document.createElement('section'); host.id = 'posnic_independent_modify_page';
-            host.className = 'page_loader'; host.style.cssText = 'display:none;padding:22px;min-height:70vh;';
-            document.body.appendChild(host);
+            host.className = 'page_loader'; document.body.appendChild(host);
         }
-        host.innerHTML = '<div class="card" style="max-width:1120px;margin:0 auto;"><div class="card-header d-flex align-items-center justify-content-between"><div><h4 class="mb-1">Modify article</h4><small class="text-muted">Independent article editor · existing record only</small></div><button type="button" class="btn btn-light" id="posnic_modify_close">Back to article</button></div><div class="card-body"><div class="d-flex flex-wrap mb-4" style="gap:10px"><span class="badge badge-primary p-2">1 · Article details</span><span class="badge badge-light p-2">2 · Pricing and information</span></div><div id="posnic_modify_status" class="text-muted mb-3">Loading selected article…</div><form id="posnic_independent_modify_form" autocomplete="off"><div id="posnic_modify_step1"><div class="form-row"><div class="form-group col-md-8"><label for="posnic_modify_name">Article name</label><input id="posnic_modify_name" class="form-control" maxlength="200" required></div><div class="form-group col-md-4"><label for="posnic_modify_category">Category</label><select id="posnic_modify_category" class="form-control"><option value="">No category</option></select></div></div><div class="form-row"><div class="form-group col-md-6"><label for="posnic_modify_barcode">Barcode (read only)</label><input id="posnic_modify_barcode" class="form-control" readonly></div><div class="form-group col-md-6"><label for="posnic_modify_sku">SKU (read only)</label><input id="posnic_modify_sku" class="form-control" readonly></div></div></div><div id="posnic_modify_step2" hidden><div class="form-row"><div class="form-group col-md-4"><label for="posnic_modify_price">Selling price</label><input id="posnic_modify_price" class="form-control" type="number" min="0" step="0.01" required></div><div class="form-group col-md-4"><label for="posnic_modify_cost">Purchase cost</label><input id="posnic_modify_cost" class="form-control" type="number" min="0" step="0.01"></div><div class="form-group col-md-4"><label>Current stock (unchanged)</label><input id="posnic_modify_stock" class="form-control" readonly></div></div><div class="form-group"><label for="posnic_modify_description">Description</label><textarea id="posnic_modify_description" class="form-control" rows="4" maxlength="2000"></textarea></div></div><div class="d-flex justify-content-between mt-4"><button type="button" class="btn btn-outline-secondary" id="posnic_modify_prev" disabled>← Back</button><div><button type="button" class="btn btn-primary" id="posnic_modify_next">Continue →</button><button type="submit" class="btn btn-success" id="posnic_modify_save" hidden>Save changes</button></div></div></form></div></div>';
+        host.innerHTML = '<style id="posnic-modify-style">#posnic_independent_modify_page{padding:12px 18px;min-height:calc(100vh - 70px);height:calc(100vh - 70px);overflow:hidden;background:var(--theme-body-bg,#f4f6fa);color:var(--theme-text-primary,#263347)}#posnic_independent_modify_page *{box-sizing:border-box}#posnic_independent_modify_page .pm-shell{width:min(1480px,100%);height:100%;margin:auto;display:flex;flex-direction:column;background:var(--theme-card-bg,#fff);border:1px solid var(--theme-border-color,#dce3ec);border-radius:18px;box-shadow:0 12px 38px rgba(24,39,75,.09);overflow:hidden}#posnic_independent_modify_page .pm-head{padding:20px 26px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--theme-border-color,#e3e8f0);background:var(--theme-card-bg,#fff)}#posnic_independent_modify_page .pm-head h3{font-size:23px;font-weight:750;margin:0 0 4px;color:var(--theme-text-primary,#263347)}#posnic_independent_modify_page .pm-sub{font-size:13px;color:var(--theme-text-muted,#748197)}#posnic_independent_modify_page .pm-body{padding:22px 26px;flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.65fr) minmax(260px,.75fr);gap:22px;align-content:start}#posnic_independent_modify_page .pm-fields{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px;align-content:start}#posnic_independent_modify_page .pm-field{min-width:0;margin:0}#posnic_independent_modify_page .pm-field label{display:block;font-size:13px;font-weight:650;margin:0 0 7px;color:var(--theme-text-primary,#344054)}#posnic_independent_modify_page .pm-field input,#posnic_independent_modify_page .pm-field select{width:100%;height:48px;padding:10px 13px;border:1px solid var(--theme-border-color,#d5dce7);border-radius:10px;background:var(--theme-input-bg,var(--theme-card-bg,#fff));color:var(--theme-text-primary,#263347);font-size:15px;box-shadow:none}#posnic_independent_modify_page .pm-field input:focus,#posnic_independent_modify_page .pm-field select:focus{outline:0;border-color:var(--theme-primary-color,#4267d5);box-shadow:0 0 0 3px color-mix(in srgb,var(--theme-primary-color,#4267d5) 15%,transparent)}#posnic_independent_modify_page .pm-span-6{grid-column:span 6}#posnic_independent_modify_page .pm-span-3{grid-column:span 3}#posnic_independent_modify_page .pm-span-2{grid-column:span 2}#posnic_independent_modify_page .pm-price-title{grid-column:span 6;font-size:14px;font-weight:750;margin:8px 0 -5px;color:var(--theme-text-primary,#263347)}#posnic_independent_modify_page .pm-image{border:1px solid var(--theme-border-color,#e0e5ed);border-radius:15px;background:var(--theme-body-bg,#f7f9fc);padding:18px;display:flex;flex-direction:column;min-height:100%;gap:14px}#posnic_independent_modify_page .pm-image-preview{flex:1;min-height:220px;display:flex;align-items:center;justify-content:center;border:1px dashed var(--theme-border-color,#cbd4e1);border-radius:12px;background:var(--theme-card-bg,#fff);overflow:hidden}#posnic_independent_modify_page .pm-image-preview img{max-width:100%;max-height:300px;object-fit:contain}#posnic_independent_modify_page .pm-image-preview .pm-empty{color:var(--theme-text-muted,#8994a7);text-align:center;font-size:13px}#posnic_independent_modify_page .pm-upload{display:block;text-align:center;padding:13px;border-radius:10px;background:var(--theme-table-row-hover,#edf2ff);color:var(--theme-primary-color,#4267d5);font-weight:700;cursor:pointer}#posnic_independent_modify_page .pm-upload input{display:none}#posnic_independent_modify_page .pm-footer{padding:16px 26px;display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid var(--theme-border-color,#e3e8f0);background:var(--theme-card-bg,#fff)}#posnic_independent_modify_page .pm-btn{min-height:46px;padding:10px 20px;border-radius:10px;font-size:14px;font-weight:700}#posnic_independent_modify_page .pm-status{font-size:13px;color:var(--theme-text-muted,#748197)}@media(max-width:1050px){#posnic_independent_modify_page{height:auto;min-height:calc(100vh - 70px);overflow:auto}#posnic_independent_modify_page .pm-shell{height:auto;min-height:calc(100vh - 95px)}#posnic_independent_modify_page .pm-body{grid-template-columns:1fr}#posnic_independent_modify_page .pm-image{min-height:250px}#posnic_independent_modify_page .pm-image-preview{min-height:150px}}@media(max-width:650px){#posnic_independent_modify_page .pm-head,#posnic_independent_modify_page .pm-body,#posnic_independent_modify_page .pm-footer{padding:14px}#posnic_independent_modify_page .pm-fields{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}#posnic_independent_modify_page .pm-span-6,#posnic_independent_modify_page .pm-price-title{grid-column:span 2}#posnic_independent_modify_page .pm-span-3,#posnic_independent_modify_page .pm-span-2{grid-column:span 1}}</style>'
+        + '<div class="pm-shell"><header class="pm-head"><div><h3>Modify article</h3><div class="pm-sub">Update the selected article · one-page editor</div></div><button type="button" class="btn btn-outline-secondary pm-btn" id="posnic_modify_close"><i class="feather icon-arrow-left mr-2"></i>Back</button></header>'
+        + '<div id="posnic_modify_status" class="pm-status" style="padding:10px 26px 0">Loading selected article…</div>'
+        + '<form id="posnic_independent_modify_form" autocomplete="off" class="pm-body"><div class="pm-fields">'
+        + '<div class="pm-field pm-span-6"><label for="posnic_modify_name">Article name</label><input id="posnic_modify_name" maxlength="200" required></div>'
+        + '<div class="pm-field pm-span-3"><label for="posnic_modify_category">Category</label><select id="posnic_modify_category"><option value="">No category</option></select></div>'
+        + '<div class="pm-field pm-span-3"><label for="posnic_modify_brand">Marque</label><input id="posnic_modify_brand" maxlength="120" placeholder="Brand"></div>'
+        + '<div class="pm-field pm-span-3"><label for="posnic_modify_cost">Buying price</label><input id="posnic_modify_cost" type="number" min="0" step="0.01" required></div>'
+        + '<div class="pm-field pm-span-3"><label for="posnic_modify_stock">Current stock quantity</label><input id="posnic_modify_stock" type="number" min="0" step="0.001" required></div>'
+        + '<div class="pm-price-title">Selling prices</div>'
+        + '<div class="pm-field pm-span-2"><label for="posnic_modify_price">Selling price 1</label><input id="posnic_modify_price" type="number" min="0" step="0.01" required></div>'
+        + '<div class="pm-field pm-span-2"><label for="posnic_modify_price2">Selling price 2</label><input id="posnic_modify_price2" type="number" min="0" step="0.01"></div>'
+        + '<div class="pm-field pm-span-2"><label for="posnic_modify_price3">Selling price 3</label><input id="posnic_modify_price3" type="number" min="0" step="0.01"></div>'
+        + '</div><aside class="pm-image"><div><strong>Article image</strong><div class="pm-sub">Choose a new product photo</div></div><div class="pm-image-preview" id="posnic_modify_image_preview"><span class="pm-empty">No image selected</span></div><label class="pm-upload"><i class="feather icon-upload-cloud mr-2"></i>Choose image<input id="posnic_modify_image" type="file" accept="image/png,image/jpeg,image/gif,image/bmp"></label></aside></form>'
+        + '<footer class="pm-footer"><span class="pm-status">Changes apply to this article only.</span><button type="submit" form="posnic_independent_modify_form" class="btn btn-primary pm-btn" id="posnic_modify_save"><i class="feather icon-save mr-2"></i>Save changes</button></footer></div>';
         $('#items').hide(); $('#items_v2_mount,#items_modify_page,#items_new').hide(); $('.page-title-box').hide(); $(host).show();
-        self._modifyRecord = null; self._modifyStep = 1;
-        function step(n) {
-            self._modifyStep=n; $('#posnic_modify_step1').prop('hidden',n!==1); $('#posnic_modify_step2').prop('hidden',n!==2);
-            $('#posnic_modify_prev').prop('disabled',n===1); $('#posnic_modify_next').prop('hidden',n===2); $('#posnic_modify_save').prop('hidden',n!==2);
-            host.querySelectorAll('.badge').forEach(function(b,i){b.className='badge p-2 '+(i===n-1?'badge-primary':'badge-light');});
+        self._modifyRecord = null;
+        var selectedImage = null, imagePreviewUrl = null;
+        function showImage(src) {
+            var preview = document.getElementById('posnic_modify_image_preview');
+            preview.innerHTML = '';
+            if (!src) { preview.innerHTML = '<span class="pm-empty">No image selected</span>'; return; }
+            var img = document.createElement('img'); img.src = src; img.alt = 'Article image'; preview.appendChild(img);
         }
         $('#posnic_modify_close').off('click').on('click',function(){ $(host).hide(); $('.page-title-box,#items').show(); });
-        $('#posnic_modify_next').off('click').on('click',function(){var name=$.trim($('#posnic_modify_name').val());if(!name){$('#posnic_modify_name').trigger('focus');return;}step(2);});
-        $('#posnic_modify_prev').off('click').on('click',function(){step(1);});
-        $('#posnic_independent_modify_form').off('submit').on('submit',function(e){
-            e.preventDefault(); var record=self._modifyRecord; if(!record || !record._id && !record.id){PosnicPro.alert('error','The selected article is not loaded.');return;}
-            var price=Number($('#posnic_modify_price').val()),cost=Number($('#posnic_modify_cost').val());
-            if(!Number.isFinite(price)||price<0||!Number.isFinite(cost)||cost<0){PosnicPro.alert('warning','Enter valid non-negative prices.');return;}
-            var category=$('#posnic_modify_category option:selected');
-            var data=Object.assign({},record,{
-                name:$.trim($('#posnic_modify_name').val()), selling_price:price, company_price:cost,
-                description:$('#posnic_modify_description').val(),
-                category_id:$('#posnic_modify_category').val()||'', category_name:category.data('name')||category.text()||''
-            });
-            ['_id','id','branch_id','branch_access','license','created_date','updated_date'].forEach(function(k){delete data[k];});
-            $('#posnic_modify_save').prop('disabled',true).text('Saving…');
-            PosnicPro.request({url:'items/'+encodeURIComponent(String(record._id||record.id))+'/details',method:'PUT',data:JSON.stringify(data)},function(resp){
-                $('#posnic_modify_save').prop('disabled',false).text('Save changes');
-                if(!resp||resp.type!=='success'){PosnicPro.alert('error',(resp&&resp.message)||'Could not update article.');return;}
-                PosnicPro.alert('success',resp.message||'Article updated.');
-                $(host).hide();$('.page-title-box,#items').show();self.loadList(self._page);self.openDoc(String(record._id||record.id));
-            },function(xhr){$('#posnic_modify_save').prop('disabled',false).text('Save changes');var msg='Could not update article.';try{msg=JSON.parse(xhr.responseText).message||msg;}catch(_){}PosnicPro.alert('error',msg);});
+        $('#posnic_modify_image').off('change').on('change',function(){
+            var file=this.files&&this.files[0]; selectedImage=null;
+            if(!file){showImage(imagePreviewUrl);return;}
+            if(!/^image\/(png|jpeg|gif|bmp)$/.test(file.type)||file.size>5242880){this.value='';PosnicPro.alert('warning','Choose a PNG, JPG, GIF or BMP image under 5 MB.');return;}
+            var reader=new FileReader();reader.onload=function(){imagePreviewUrl=String(reader.result||'');showImage(imagePreviewUrl);selectedImage={name:file.name,size:file.size,data:imagePreviewUrl.split(',')[1],cover:'yes'};};reader.readAsDataURL(file);
         });
-        step(1);
+        $('#posnic_independent_modify_form').off('submit').on('submit',function(e){
+            e.preventDefault();var record=self._modifyRecord;if(!record||!record._id&&!record.id){PosnicPro.alert('error','The selected article is not loaded.');return;}
+            var values=['#posnic_modify_price','#posnic_modify_price2','#posnic_modify_price3','#posnic_modify_cost','#posnic_modify_stock'];
+            for(var i=0;i<values.length;i++){var raw=$(values[i]).val();if(raw===''||!Number.isFinite(Number(raw))||Number(raw)<0){PosnicPro.alert('warning','Enter valid non-negative prices and stock quantity.');$(values[i]).trigger('focus');return;}}
+            var category=$('#posnic_modify_category option:selected'),data=Object.assign({},record,{
+                name:$.trim($('#posnic_modify_name').val()),brand:$.trim($('#posnic_modify_brand').val()),
+                selling_price:Number($('#posnic_modify_price').val()),selling_price_2:Number($('#posnic_modify_price2').val()),
+                selling_price_3:Number($('#posnic_modify_price3').val()),company_price:Number($('#posnic_modify_cost').val()),
+                available_quantity:Number($('#posnic_modify_stock').val()),category_id:$('#posnic_modify_category').val()||'',
+                category_name:category.data('name')||category.text()||''
+            });
+            if(selectedImage){data.image=[selectedImage];data.logo=selectedImage.name;}
+            ['_id','id','branch_id','branch_access','license','created_date','updated_date'].forEach(function(k){delete data[k];});
+            $('#posnic_modify_save').prop('disabled',true).html('<i class="feather icon-loader mr-2"></i>Saving…');
+            PosnicPro.request({url:'items/'+encodeURIComponent(String(record._id||record.id))+'/details',method:'PUT',data:JSON.stringify(data)},function(resp){
+                $('#posnic_modify_save').prop('disabled',false).html('<i class="feather icon-save mr-2"></i>Save changes');
+                if(!resp||resp.type!=='success'){PosnicPro.alert('error',(resp&&resp.message)||'Could not update article.');return;}
+                PosnicPro.alert('success',resp.message||'Article updated.');$(host).hide();$('.page-title-box,#items').show();self.loadList(self._page);self.openDoc(String(record._id||record.id));
+            },function(xhr){$('#posnic_modify_save').prop('disabled',false).html('<i class="feather icon-save mr-2"></i>Save changes');var msg='Could not update article.';try{msg=JSON.parse(xhr.responseText).message||msg;}catch(_){}PosnicPro.alert('error',msg);});
+        });
         PosnicPro.get({url:'items/getItemDetails',data:{id:id}},function(resp){
             if(!resp||resp.type!=='success'||!resp.data){$('#posnic_modify_status').text('Could not load this article.');return;}
             var queue=[resp.data],seen=[],item=null,keys=['name','item_name','selling_price','company_price','itemid','sku_id'];
@@ -904,20 +922,21 @@ PosnicPro.items = {
             if(!item){$('#posnic_modify_status').text('The server did not return an article record.');return;}
             self._modifyRecord=Object.assign({},item,{name:item.name||item.item_name||item.title||''});
             $('#posnic_modify_name').val(self._modifyRecord.name);
-            $('#posnic_modify_barcode').val(item.barcode_id||item.barcode||'');
-            $('#posnic_modify_sku').val(item.itemid||item.sku_id||'');
             $('#posnic_modify_price').val(item.selling_price!=null?item.selling_price:item.price||0);
+            $('#posnic_modify_price2').val(item.selling_price_2!=null?item.selling_price_2:(item.selling_price2!=null?item.selling_price2:0));
+            $('#posnic_modify_price3').val(item.selling_price_3!=null?item.selling_price_3:(item.selling_price3!=null?item.selling_price3:0));
             $('#posnic_modify_cost').val(item.company_price!=null?item.company_price:item.purchase_cost_dzd||0);
             $('#posnic_modify_stock').val(item.available_quantity!=null?item.available_quantity:item.quantity||0);
-            $('#posnic_modify_description').val(item.description||'');
-            $('#posnic_modify_status').text('Loaded: '+self._modifyRecord.name+' · changes will update this article only.');
+            $('#posnic_modify_brand').val(item.brand||item.marque||'');
+            var image=item.image||item.image_url||'';if(Array.isArray(image)){var cover=image.find(function(x){return x&&x.cover==='yes';})||image[0];image=cover&&(cover.url||cover.path||cover.src)||'';}showImage(typeof image==='string'&&image!=='item.svg'?image:'');imagePreviewUrl=typeof image==='string'?image:'';
+            $('#posnic_modify_status').text('Loaded: '+self._modifyRecord.name);
             PosnicPro.get({url:'categories/getCategoryAjaxList',data:'query='},function(cats){
                 var sel=document.getElementById('posnic_modify_category');((cats&&cats.suggestions)||[]).forEach(function(c){var o=new Option(c.name,c.id);o.dataset.name=c.name;sel.add(o);});
                 sel.value=String(item.category_id||'');
                 if(sel.value!==String(item.category_id||'')){var opt=new Option(item.category_name||item.category||'Current category',item.category_id||'');opt.dataset.name=item.category_name||item.category||'';sel.add(opt);sel.value=String(item.category_id||'');}
             });
         },function(){$('#posnic_modify_status').text('Could not load this article.');});
-    },
+    },,
 
     renderItemDoc: function (d) {
         var esc = function (t) { return $('<span>').text(t == null ? '' : t).html(); };
