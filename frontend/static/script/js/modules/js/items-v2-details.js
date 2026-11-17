@@ -205,7 +205,7 @@
         variants=names.map(function(name){
             if(previous.has(name)){
                 var prior=previous.get(name);
-                if(!/^\\d{7}$/.test(String(prior.barcode_id||''))||usedCodes.has(prior.barcode_id))prior.barcode_id=makeInternalBarcode(Array.from(usedCodes));
+                if(!/^[0-9]{7}$/.test(String(prior.barcode_id||''))||usedCodes.has(prior.barcode_id))prior.barcode_id=makeInternalBarcode(Array.from(usedCodes));
                 usedCodes.add(prior.barcode_id);return prior;
             }
             var code=makeInternalBarcode(Array.from(usedCodes));usedCodes.add(code);
