@@ -1614,9 +1614,14 @@ class SalesController extends BaseController {
 
 
   async cashierDaySummary(req, res) {
+    const previousDayCloseFlag = req.cashierDayClose;
     req.cashierDayClose = true;
-    req.query = Object.assign({}, req.query, { type: 'VIEW' });
-    return this.dailySalesReports(req, res);
+    try {
+      return await this.dailySalesReports(req, res);
+    } finally {
+      if (previousDayCloseFlag === undefined) delete req.cashierDayClose;
+      else req.cashierDayClose = previousDayCloseFlag;
+    }
   }
 
   async cashierDayClose(req, res) {
@@ -1635,23 +1640,20 @@ class SalesController extends BaseController {
       // Recalculate on the server at confirmation time. Never trust the
       // expected amount sent by the browser: sales, refunds or cash payouts
       // may have changed while the cashier was counting the drawer.
-      const previousQuery = req.query;
-      const previousDayCloseFlag = req.cashierDayClose;
       let summaryResponse = null;
-      req.query = { branch: String(branchId), starting_date: date, ending_date: date, type: 'VIEW' };
-      req.cashierDayClose = true;
+      const summaryReq = Object.create(req);
+      Object.defineProperty(summaryReq, 'query', {
+        value: { branch: String(branchId), starting_date: date, ending_date: date, type: 'VIEW' },
+        enumerable: true,
+        configurable: true,
+      });
+      summaryReq.cashierDayClose = true;
       const captureResponse = {
         statusCode: 200,
         status(code) { this.statusCode = code; return this; },
         json(payload) { summaryResponse = payload; return this; },
       };
-      try {
-        await this.dailySalesReports(req, captureResponse);
-      } finally {
-        req.query = previousQuery;
-        if (previousDayCloseFlag === undefined) delete req.cashierDayClose;
-        else req.cashierDayClose = previousDayCloseFlag;
-      }
+      await this.dailySalesReports(summaryReq, captureResponse);
       const expected = Number(summaryResponse && summaryResponse.data && summaryResponse.data.cash_expected);
       if (!summaryResponse || summaryResponse.type !== 'success' || !Number.isFinite(expected)) {
         return this.error(res, summaryResponse && summaryResponse.message || 'Could not calculate expected cash for this day.', captureResponse.statusCode || 500);
