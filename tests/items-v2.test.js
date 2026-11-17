@@ -74,16 +74,7 @@ test('the simplified item editor hides the requested advanced fields without rem
 });
 
 
-test('the item dossier opens the record-bound Modify editor directly and hydrates before enabling fields', () => {
-  const items = require('node:fs').readFileSync('frontend/static/script/js/modules/js/items.js', 'utf8');
-  const editor = require('node:fs').readFileSync('frontend/static/script/js/modules/js/items_v2.js', 'utf8');
-  const routes = require('node:fs').readFileSync('frontend/static/script/js/routes.js', 'utf8');
-  assert.match(items, /modifyItem: function \\(id\\)[\\s\\S]*?showModify\\(String\\(id\\)\\)/);
-  assert.match(routes, /items\\/\\{id\\}\\/modify/);
-  assert.match(editor, /showModify: showEdit/);
-  assert.ok(editor.indexOf('P.itemsV2Details.load(item)') < editor.indexOf('document.getElementById(\'iv2-fields\').disabled=false'));
-  assert.match(editor, /\['iv2-sku','iv2-barcode'\].*disabled=true/);
-});
+
 
 test('edit saves remain PUT updates against the selected item ID', () => {
   const editor = require('node:fs').readFileSync('frontend/static/script/js/modules/js/items_v2.js', 'utf8');
@@ -93,16 +84,26 @@ test('edit saves remain PUT updates against the selected item ID', () => {
 });
 
 
-test('item dossier opens the dedicated Modify screen instead of the old Edit action', () => {
-  const source = require('node:fs').readFileSync('frontend/static/script/js/modules/js/items.js', 'utf8');
-  assert.match(source, /Modify item/);
-  assert.match(source, /PosnicPro\\.items\\.modifyItem/);
-  assert.match(source, /modifyItem: function \\(id\\)[\\s\\S]*?showModify\\(String\\(id\\)\\)/);
-  assert.doesNotMatch(source, /icon-edit-2 mr-1"><\\/i>Edit<\\/button>/);
-});
 
-test('direct Modify and legacy item edit routes both use the record-bound Modify editor', () => {
+
+
+
+test('dedicated item update page mounts separately and loads the record before enabling edits', () => {
+  const editor = require('node:fs').readFileSync('frontend/static/script/js/modules/js/items_v2.js', 'utf8');
+  const html = require('node:fs').readFileSync('frontend/modules/items_v2.html', 'utf8');
   const routes = require('node:fs').readFileSync('frontend/static/script/js/routes.js', 'utf8');
-  assert.match(routes, /items\\/\\{id\\}\\/modify[\\s\\S]*?showModify\\(id\\)/);
-  assert.match(routes, /module === 'items'[\\s\\S]*?showModify\\(id\\)/);
+  const items = require('node:fs').readFileSync('frontend/static/script/js/modules/js/items.js', 'utf8');
+  assert.match(html, /id="items_v2_mount"/);
+  assert.match(html, /id="items_modify_page"/);
+  assert.match(editor, /function mountEditor\(mode\)/);
+  assert.match(editor, /function openModifyPage\(id, duplicate\)/);
+  assert.match(editor, /P\.itemsV2Details\.load\(item\)/);
+  assert.match(editor, /method: editing \? 'PUT' : 'POST'/);
+  assert.match(editor, /items_modify_page/);
+  assert.match(routes, /items\/\{id\}\/update[\s\S]*?openModifyPage\(id\)/);
+  assert.doesNotMatch(routes, /items\/\{id\}\/modify/);
+  assert.doesNotMatch(items, /modifyItem: function/);
+  assert.doesNotMatch(items, /showModify: function/);
+  assert.match(items, /Edit article/);
+  assert.match(items, /items\/' \+ esc\(id\) \+ '\/update/);
 });
