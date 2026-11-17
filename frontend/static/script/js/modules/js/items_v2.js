@@ -180,10 +180,19 @@
         document.getElementById('iv2-tax-type').value = P.local.get('tax_type') === 'exclusive' ? 'exclusive' : 'inclusive';
         var def = P.local.get('default_tax_id');
         if (def && Array.from(document.getElementById('iv2-tax').options).some(function (o) { return o.value === String(def); })) document.getElementById('iv2-tax').value = def;
+        var now=new Date(), yy=String(now.getFullYear()).slice(-2), mm=String(now.getMonth()+1).padStart(2,'0');
+        var dateField=document.getElementById('iv2-reference-date');if(dateField)dateField.value=yy+'-'+mm;
+        ['iv2-article-type','iv2-brand-abbr','iv2-model-reference','iv2-price2','iv2-price3','iv2-price-eur','iv2-extra-cost'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+        var rateField=document.getElementById('iv2-exchange-rate');if(rateField)rateField.value='280';
+        var costField=document.getElementById('iv2-cost');if(costField)costField.value='0.00';
+        var generatedName=document.getElementById('iv2-name');if(generatedName)generatedName.value='';
+        var stepOne=document.getElementById('iv2-owner-step1'),stepTwo=document.getElementById('iv2-owner-step2');
+        if(stepOne&&stepTwo){stepOne.classList.add('active');stepTwo.classList.remove('active');var ownerTabs=document.querySelectorAll('#iv2-owner-steps .iv2-owner-tabs button');if(ownerTabs.length){ownerTabs[0].classList.add('active');ownerTabs[1].classList.remove('active');}}
         render(); document.getElementById('iv2-name').focus();
     }
     function save(event) {
         if (event) event.preventDefault();
+        if (!editing) { var stepOne=document.getElementById('iv2-owner-step1'),next=document.querySelector('#iv2-owner-step1 .iv2-owner-primary'); if(stepOne&&stepOne.classList.contains('active')&&next){next.click();return false;} }
         if (busy || saved) return false;
         if (P.aclLoaded && P.aclLoaded() && !P.checkAccess('item', 'write')) { fail('You don’t have permission to create items.'); return false; }
         if (editing && savedBranch !== P.local.get('branch_id_set')) { fail(P.i18n.t('lang_iv2_edit_branch_changed', 'The active branch changed. Open the item again before editing.')); return false; }
@@ -442,7 +451,7 @@
         var back=document.createElement('button');back.type='button';back.className='iv2-owner-secondary';back.textContent='← Back to step 1';
         var step2Nav=document.createElement('div');step2Nav.className='iv2-owner-nav';step2Nav.appendChild(back);p2.insertBefore(step2Nav,p2.firstChild);
         function setStep(n){var second=n===2;p1.classList.toggle('active',!second);p2.classList.toggle('active',second);t1.classList.toggle('active',!second);t2.classList.toggle('active',second);if(second)root.scrollIntoView({behavior:'smooth',block:'start'});}
-        t1.addEventListener('click',function(){setStep(1);});t2.addEventListener('click',function(){setStep(2);});back.addEventListener('click',function(){setStep(1);});
+        t1.addEventListener('click',function(){setStep(1);});t2.addEventListener('click',function(){continueBtn.click();});back.addEventListener('click',function(){setStep(1);});
         continueBtn.addEventListener('click',function(){
             [articleType,brandAbbr,refDate,modelRef].forEach(function(x){x.value=x.value.trim();});
             if(!articleType.reportValidity()||!brandAbbr.reportValidity()||!refDate.reportValidity()||!modelRef.reportValidity())return;
