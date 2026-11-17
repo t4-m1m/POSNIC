@@ -66,6 +66,19 @@ PosnicPro.sales = {
         var sub = value1 - value2;
         return sub;
     },
+    focusBarcodeInput: function (force) {
+        var page = document.getElementById('sales_new');
+        var input = document.getElementById('sales_new_item_name');
+        if (!page || !input || !page.getClientRects().length || input.disabled || input.readOnly) return false;
+        if (!force) {
+            var active = document.activeElement;
+            if (active && active !== document.body && active !== document.documentElement &&
+                active !== input && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)) return false;
+            if ($('.modal.show:visible, .swal2-container:visible, .sweet-alert:visible').length) return false;
+        }
+        try { input.focus({ preventScroll: true }); } catch (_) { input.focus(); }
+        return document.activeElement === input;
+    },
     pinFunctionToolbar: function () {
         var toolbar = document.getElementById('sales-function-shortcuts');
         var salesPage = document.getElementById('sales_new');
@@ -3255,17 +3268,13 @@ PosnicPro.sales = {
                 PosnicPro.sales.initPaymentValidation();
                 return;
             }
-            // A second tender receives only the outstanding remainder.
-            // Keep the amount already entered in Cash (or another method), then
-            // fill the clicked method with total minus every other allocation.
-            var allocatedElsewhere = 0;
-            $('.payment-amount-input').not($input).each(function () {
-                allocatedElsewhere += Math.max(0, Number(String($(this).val() || '0').replace(/,/g, '')) || 0);
-            });
-            var remainder = Math.max(0, billTotal - allocatedElsewhere);
+            // Selecting a tender means the cashier wants this method to receive
+            // the complete payable amount. Clear the other cash methods first;
+            // subsequent partial edits rebalance the remainder into Cash below.
+            $('.payment-amount-input').not($input).val('0.00');
             $('.payment-amount-input').prop('disabled', false);
             $('.payment_mode').prop('checked', false);
-            $input.val(remainder.toFixed(2));
+            $input.val(billTotal.toFixed(2));
             $button.closest('.payment-method-card').find('.payment_mode').prop('checked', true);
             $('.btn-payment-method').removeClass('active').css({
                 'background': 'transparent', 'color': '#495057', 'border': '2px solid #dee2e6'
@@ -3285,13 +3294,29 @@ PosnicPro.sales = {
         $(document).off('input.posnicPaymentAmounts change.posnicPaymentAmounts', '.payment-amount-input')
             .on('input.posnicPaymentAmounts change.posnicPaymentAmounts', '.payment-amount-input', function () {
                 var received = 0, credit = 0;
+                var total = Number(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot) || 0;
+                var $edited = $(this);
+                var editedMethod = String($edited.closest('.payment-method-card').find('.payment_mode').attr('id') || '').trim().toLowerCase();
+                // TPE, BaridiMob and other non-cash tenders take priority when
+                // a cashier types a partial amount: Cash automatically becomes
+                // the exact remainder, never a duplicate of the original total.
+                if (editedMethod !== 'cash' && editedMethod !== 'credit') {
+                    var nonCash = 0;
+                    $('.payment-amount-input').each(function () {
+                        var method = String($(this).closest('.payment-method-card').find('.payment_mode').attr('id') || '').trim().toLowerCase();
+                        if (method !== 'cash' && method !== 'credit') nonCash += Math.max(0, Number(String($(this).val() || '0').replace(/,/g, '')) || 0);
+                    });
+                    var $cash = $('.payment-method-card').filter(function () {
+                        return String($(this).find('.payment_mode').attr('id') || '').trim().toLowerCase() === 'cash';
+                    }).find('.payment-amount-input');
+                    if ($cash.length) $cash.val(Math.max(0, total - nonCash).toFixed(2));
+                }
                 $('.payment-amount-input').each(function () {
                     var method = String($(this).closest('.payment-method-card').find('.payment_mode').attr('id') || '').trim().toLowerCase();
-                    var value = Math.max(0, Number($(this).val()) || 0);
+                    var value = Math.max(0, Number(String($(this).val() || '0').replace(/,/g, '')) || 0);
                     if (method === 'credit') credit += value;
                     else received += value;
                 });
-                var total = Number(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot) || 0;
                 $('#Partial_amount').val(received.toFixed(2));
                 $('.balanceDue').text(Math.max(0, total - received).toFixed(2));
                 if (credit > 0.009) $('#unpaid_payment_toggle').prop('checked', true);
@@ -4955,6 +4980,15 @@ PosnicPro.sales.addSale = {
                         $('#customer_current_balance').val(response.data.customer_balance);
                     }
                     PosnicPro.alert(response.type, response.message);
+                    // After a completed sale the cashier is back at the blank
+                    // basket. Restore the scanner wedge focus after alerts and
+                    // receipt UI have had a chance to finish closing.
+                    if (PosnicPro.sales.SaleAction === 'add' && !PosnicPro.sales.editSaleId &&
+                        PosnicPro.sales.saleProcess !== 'KOT') {
+                        window.setTimeout(function () {
+                            if (PosnicPro.sales && PosnicPro.sales.focusBarcodeInput) PosnicPro.sales.focusBarcodeInput(true);
+                        }, 220);
+                    }
                     if (PosnicPro.sales.saleProcess === 'KOT' &&
                         !(PosnicPro.kotorder && PosnicPro.kotorder.editSaleId)) {
                         // Refresh KOT data to show updated table list

@@ -906,14 +906,31 @@ PosnicPro.items = {
                 available_quantity:Number($('#posnic_modify_stock').val()),category_id:$('#posnic_modify_category').val()||'',
                 category_name:category.data('name')||category.text()||''
             });
-            if(selectedImage){data.image=[selectedImage];data.logo=selectedImage.name;}
             ['_id','id','branch_id','branch_access','license','created_date','updated_date'].forEach(function(k){delete data[k];});
             $('#posnic_modify_save').prop('disabled',true).html('<i class="feather icon-loader mr-2"></i>Saving…');
-            PosnicPro.request({url:'items/'+encodeURIComponent(String(record._id||record.id))+'/details',method:'PUT',data:JSON.stringify(data)},function(resp){
+            function updateRecord() {
+                PosnicPro.request({url:'items/'+encodeURIComponent(String(record._id||record.id))+'/details',method:'PUT',data:JSON.stringify(data)},function(resp){
+                    $('#posnic_modify_save').prop('disabled',false).html('<i class="feather icon-save mr-2"></i>Save changes');
+                    if(!resp||resp.type!=='success'){PosnicPro.alert('error',(resp&&resp.message)||'Could not update article.');return;}
+                    PosnicPro.alert('success',resp.message||'Article updated.');$(host).hide();$('.page-title-box,#items').show();self.loadList(self._page);self.openDoc(String(record._id||record.id));
+                },function(xhr){$('#posnic_modify_save').prop('disabled',false).html('<i class="feather icon-save mr-2"></i>Save changes');var msg='Could not update article.';try{msg=JSON.parse(xhr.responseText).message||msg;}catch(_){}PosnicPro.alert('error',msg);});
+            }
+            if (!selectedImage) { updateRecord(); return; }
+            // The item API stores uploaded image filenames, not browser data
+            // URLs. Upload first using the same multi-image endpoint as Add Item.
+            PosnicPro.post({url:'items/uploadItemMultiImage',data:JSON.stringify({items_image:[selectedImage]})},function(upload){
+                if(!upload||upload.type!=='success'||!Array.isArray(upload.data)||!upload.data[0]||!upload.data[0].name){
+                    $('#posnic_modify_save').prop('disabled',false).html('<i class="feather icon-save mr-2"></i>Save changes');
+                    PosnicPro.alert('error',(upload&&upload.message)||'Image upload failed. The article was not changed.');return;
+                }
+                var uploaded=upload.data[0];
+                var storedImage={name:uploaded.name,size:uploaded.size||selectedImage.size,cover:'yes'};
+                data.image=[storedImage];data.multi_image=[storedImage];data.cover_image=uploaded.name;data.logo=uploaded.name;
+                updateRecord();
+            },function(){
                 $('#posnic_modify_save').prop('disabled',false).html('<i class="feather icon-save mr-2"></i>Save changes');
-                if(!resp||resp.type!=='success'){PosnicPro.alert('error',(resp&&resp.message)||'Could not update article.');return;}
-                PosnicPro.alert('success',resp.message||'Article updated.');$(host).hide();$('.page-title-box,#items').show();self.loadList(self._page);self.openDoc(String(record._id||record.id));
-            },function(xhr){$('#posnic_modify_save').prop('disabled',false).html('<i class="feather icon-save mr-2"></i>Save changes');var msg='Could not update article.';try{msg=JSON.parse(xhr.responseText).message||msg;}catch(_){}PosnicPro.alert('error',msg);});
+                PosnicPro.alert('error','Image upload failed. The article was not changed.');
+            });
         });
         PosnicPro.get({url:'items/getItemDetails',data:{id:id}},function(resp){
             if(!resp||resp.type!=='success'||!resp.data){$('#posnic_modify_status').text('Could not load this article.');return;}
