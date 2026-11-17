@@ -457,20 +457,57 @@ PosnicPro.stockHealthReport = (function () {
         var labels=$('<div class="d-flex justify-content-between sh-muted small">').append($('<span>').text(data[0].date),$('<span>').text(data[Math.floor(data.length/2)].date),$('<span>').text(data[data.length-1].date));holder.append(labels);
         var total=data.reduce((s,p)=>s+(Number(p.quantity)||0),0);holder.append($('<div class="mt-2 small sh-muted">').text('Total vendu sur 30 jours : '+total.toLocaleString()));
     }
-    function renderBreakdowns(data) {
-        var rows=Array.isArray(data.rows)?data.rows:[],groups={};rows.forEach(function(r){var k=String(r.category||'Sans catégorie');groups[k]=(groups[k]||0)+(Number(r.stock_value)||0);});
-        var cats=Object.keys(groups).map(function(k){return{name:k,value:groups[k]};}).sort(function(a,b){return b.value-a.value;}).slice(0,7),host=$('#stock-health-category-chart').empty(),max=Math.max(1,...cats.map(function(x){return x.value;}));
-        if(!cats.length)host.text('Aucune donnée disponible.').addClass('sh-muted');
-        cats.forEach(function(x){var line=$('<div class="mb-3">'),head=$('<div class="d-flex justify-content-between small mb-1">').append($('<strong>').text(x.name),$('<span class="sh-muted">').text(currency(x.value))),bar=$('<div style="height:9px;border-radius:9px;background:var(--sh-border);overflow:hidden">').append($('<div>').css({height:'100%',width:(x.value/max*100)+'%',background:'var(--sh-accent)',borderRadius:'9px'}));line.append(head,bar);host.append(line);});
-        var critical=(data.critical||[]).length,dormant=(data.dormant||[]).length,never=(data.never_sold||[]).length,active=Math.max(0,rows.length-critical-dormant-never),vals=[['En rotation',active],['Stock critique',critical],['Dormants',dormant],['Jamais vendus',never]],total=Math.max(1,vals.reduce(function(s,x){return s+x[1];},0)),status=$('#stock-health-status-chart').empty();
-        var colors=['#16a34a','#dc2626','#d97706','#64748b'],radius=42,circ=2*Math.PI*radius,offset=0;
-        var svg=$('<svg viewBox="0 0 120 120" role="img" aria-label="Répartition réelle des stocks" style="width:118px;height:118px;flex:0 0 118px"></svg>');
-        vals.forEach(function(x,i){var len=circ*x[1]/total;svg.append($('<circle cx="60" cy="60" r="42" fill="none" stroke-width="12" stroke-linecap="butt">').attr({stroke:colors[i], 'stroke-dasharray':len+' '+(circ-len),'stroke-dashoffset':-offset,transform:'rotate(-90 60 60)'}));offset+=len;});
-        svg.append($('<text x="60" y="57" text-anchor="middle" font-size="17" font-weight="700" fill="currentColor">').text(rows.length));
-        svg.append($('<text x="60" y="71" text-anchor="middle" font-size="7" fill="currentColor">').text('PRODUITS'));
-        var legend=$('<div style="flex:1;min-width:145px">');
-        vals.forEach(function(x,i){var row=$('<div class="d-flex align-items-center justify-content-between small mb-2">').append($('<span>').text(x[0]),$('<strong>').text(x[1]));row.prepend($('<span style="width:8px;height:8px;border-radius:50%;margin-right:7px;display:inline-block">').css('background',colors[i]));legend.append(row);});
-        status.append($('<div class="d-flex flex-wrap align-items-center" style="gap:18px">').append(svg,legend));
+    function renderCategoryComparison(rows) {
+        var groups = {};
+        (rows || []).forEach(function (r) {
+            var key = String(r.category || 'Sans catégorie');
+            if (!groups[key]) groups[key] = { name: key, cost: 0, retail: 0 };
+            groups[key].cost += Number(r.stock_value) || 0;
+            groups[key].retail += (Number(r.stock) || 0) * (Number(r.selling_price) || 0);
+        });
+        var cats = Object.keys(groups).map(function (k) { return groups[k]; }).sort(function (a, b) { return b.retail - a.retail; }).slice(0, 7);
+        var host = $('#stock-health-category-value-chart').empty(), max = Math.max(1, ...cats.map(function (x) { return Math.max(x.cost, x.retail); }));
+        if (!cats.length) { host.text('Aucune donnée disponible.').addClass('sh-muted'); return; }
+        cats.forEach(function (x) {
+            var row = $('<div class="mb-3">');
+            var label = $('<div class="d-flex justify-content-between small mb-1">').append($('<strong>').text(x.name), $('<span class="sh-muted">').text(currency(x.cost) + ' / ' + currency(x.retail)));
+            var cost = $('<div style="height:8px;border-radius:9px;background:var(--sh-border);overflow:hidden;margin-bottom:4px">').append($('<div>').css({height:'100%',width:(x.cost/max*100)+'%',background:'#0d9488',borderRadius:'9px'}));
+            var retail = $('<div style="height:8px;border-radius:9px;background:var(--sh-border);overflow:hidden">').append($('<div>').css({height:'100%',width:(x.retail/max*100)+'%',background:'#2563eb',borderRadius:'9px'}));
+            row.append(label,cost,retail); host.append(row);
+        });
+        host.append($('<div class="sh-muted small mt-2">').html('<span style="color:#0d9488">■</span> Coût <span class="ml-3" style="color:#2563eb">■</span> Valeur de vente'));
+    }
+    function renderStockLevels(rows) {
+        var host = $('#stock-health-stock-levels-chart').empty(), list = (rows || []).slice();
+        if (!list.length) { host.text('Aucun article en stock.').addClass('sh-muted'); return; }
+        var top = list.slice().sort(function (a,b) { return Number(b.stock)-Number(a.stock); }).slice(0,5);
+        var low = list.slice().sort(function (a,b) { return Number(a.stock)-Number(b.stock); }).slice(0,5);
+        function section(title, values, color) {
+            host.append($('<div class="small font-weight-bold mb-2 mt-2">').text(title));
+            var max = Math.max(1,...values.map(function(r){return Number(r.stock)||0;}));
+            values.forEach(function (r) {
+                var row = $('<div class="mb-2">');
+                var head = $('<div class="d-flex justify-content-between small mb-1">').append($('<span class="text-truncate pr-2">').text(r.name), $('<strong>').text(Number(r.stock).toLocaleString()));
+                var bar = $('<div style="height:7px;border-radius:8px;background:var(--sh-border);overflow:hidden">').append($('<div>').css({height:'100%',width:(Math.max(0,Number(r.stock)||0)/max*100)+'%',background:color,borderRadius:'8px'}));
+                row.append(head,bar); host.append(row);
+            });
+        }
+        section('Top stock',top,'#2563eb'); section('Stock faible',low,'#f59e0b');
+    }
+    function renderCategoryDonut(rows) {
+        var groups = {};
+        (rows || []).forEach(function (r) { var key = String(r.category || 'Sans catégorie'); groups[key] = (groups[key] || 0) + (Number(r.stock_value) || 0); });
+        var vals = Object.keys(groups).map(function (k) { return {name:k,value:groups[k]}; }).sort(function(a,b){return b.value-a.value;}).slice(0,6);
+        var total = vals.reduce(function(s,x){return s+x.value;},0), host = $('#stock-health-category-donut').empty();
+        if (!vals.length || total <= 0) { host.text('Aucune donnée disponible.').addClass('sh-muted'); return; }
+        var colors = ['#2563eb','#0d9488','#f59e0b','#16a34a','#8b5cf6','#ec4899'], radius=43, circumference=2*Math.PI*radius, offset=0;
+        var svg = $('<svg viewBox="0 0 120 120" role="img" aria-label="Répartition de la valeur du stock par catégorie" style="width:126px;height:126px;display:block;margin:auto"></svg>');
+        vals.forEach(function(x,i){var length=circumference*x.value/total;svg.append($('<circle cx="60" cy="60" r="43" fill="none" stroke-width="12">').attr({stroke:colors[i], 'stroke-dasharray':length+' '+(circumference-length),'stroke-dashoffset':-offset,transform:'rotate(-90 60 60)'}));offset+=length;});
+        svg.append($('<text x="60" y="58" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">').text(vals.length));
+        svg.append($('<text x="60" y="70" text-anchor="middle" font-size="7" fill="currentColor">').text('CATÉGORIES'));
+        var legend=$('<div class="mt-2">');
+        vals.forEach(function(x,i){var marker=$('<i style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px">').css('background',colors[i]);legend.append($('<div class="d-flex justify-content-between align-items-center small mb-1">').append($('<span class="text-truncate pr-2">').text(x.name).prepend(marker),$('<strong>').text((x.value/total*100).toFixed(1)+'%')));});
+        host.append(svg,legend);
     }
     function renderTop(rows) {
         var holder=$('#stock-health-top-products').empty(), max=Math.max(1,...(rows||[]).map(r=>Number(r.sold_quantity)||0));
@@ -479,10 +516,11 @@ PosnicPro.stockHealthReport = (function () {
     }
     function fillSelect(selector, values, label) { var el=$(selector), prior=el.val();el.empty().append($('<option>').val('').text(label));(values||[]).forEach(v=>el.append($('<option>').val(v).text(v)));if(prior)el.val(prior); }
     function render(data) {
-        snapshot=data; var t=data.totals||{}, kpis=[['Valeur du stock',currency(t.stock_value),'Capital immobilisé'],['Produits disponibles',t.products||0,'Références actives'],['Unités en stock',Number(t.stock_units||0).toLocaleString(),'Quantité physique'],['Stock critique',t.critical||0,'À réapprovisionner'],['Produits dormants',t.dormant||0,'Sans rotation récente'],['Jamais vendus',t.never_sold||0,'À examiner en priorité']];
-        var holder=$('#stock-health-kpis').empty();kpis.forEach(function(k,i){holder.append($('<div class="col-6 col-md-4 col-xl-2 mb-3">').append($('<div class="sh-kpi">').append($('<small>').text(k[2]),$('<strong>').text(k[1]),$('<div class="sh-muted small mt-1">').text(k[0]))));});
+        snapshot=data; var t=data.totals||{}, rows=Array.isArray(data.rows)?data.rows:[], retailValue=rows.reduce(function(s,r){return s+(Number(r.stock)||0)*(Number(r.selling_price)||0);},0);
+        var kpis=[['Unités en stock',Number(t.stock_units||0).toLocaleString(),'Quantité physique','sh-blue'],['Valeur d’achat',currency(t.stock_value),'Coût total immobilisé','sh-teal'],['Valeur de vente potentielle',currency(retailValue),'Au prix de vente 1','sh-amber'],['Stock faible (≤ 5)',Number(t.critical||0).toLocaleString(),'Articles à réapprovisionner','sh-green']];
+        var holder=$('#stock-health-kpis').empty();kpis.forEach(function(k){holder.append($('<div class="col-6 col-md-3 mb-3">').append($('<div class="sh-kpi '+k[3]+'">').append($('<small>').text(k[2]),$('<strong>').text(k[1]),$('<div class="small mt-1">').text(k[0]))));});
         fillSelect('#stock-health-category',data.categories,'Toutes les catégories');fillSelect('#stock-health-brand',data.brands,'Toutes les marques');
-        renderTrend(data.trend);renderTop(data.best_by_quantity);renderBreakdowns(data);
+        renderTrend(data.trend);renderTop(data.best_by_quantity);renderCategoryComparison(rows);renderStockLevels(rows);renderCategoryDonut(rows);
         filtered=filterRows(data.rows);drawRows('#stock-health-critical-rows',filterRows(data.critical),'critical');drawRows('#stock-health-dormant-rows',filterRows(data.dormant),'dormant');drawRows('#stock-health-never-rows',filterRows(data.never_sold),'never');drawRows('#stock-health-all-rows',filtered,'all');
         $('#stock-health-dormant-days').val(data.dormant_days||90);$('#stock-health-error').hide().text('');
     }

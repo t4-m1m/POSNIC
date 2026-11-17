@@ -714,6 +714,34 @@ PosnicPro.dashboard = {
 
     renderAnalytics: function (data) {
         var totals = data.totals || {};
+        var kpis = data.kpis || {}, profit = data.profit || {}, lowStock = data.lowStock || {};
+        $('#dashboard-kpi-sales').text(PosnicPro.dashboard.money(kpis.total_sales != null ? kpis.total_sales : totals.sales_amount));
+        $('#dashboard-kpi-profit').text(PosnicPro.dashboard.money(profit.net_profit));
+        $('#dashboard-kpi-orders').text(Number(totals.sales_count || 0).toLocaleString());
+        $('#dashboard-kpi-lowstock').text(Number(lowStock.count || 0).toLocaleString());
+        var financeRows = [
+            { label: 'Revenue', value: Number(profit.revenue) || 0, color: '#2563eb' },
+            { label: 'Cost of goods', value: Number(profit.cogs) || 0, color: '#0d9488' },
+            { label: 'Expenses', value: Number(profit.expenses) || 0, color: '#f59e0b' },
+            { label: 'Net profit', value: Number(profit.net_profit) || 0, color: '#16a34a' }
+        ];
+        var financeHost = $('#dashboard-profit-bars').empty(), financeMax = Math.max(1, ...financeRows.map(function (x) { return Math.abs(x.value); }));
+        financeRows.forEach(function (x) {
+            var row = $('<div class="da-bar-row"></div>').append($('<strong>').text(x.label));
+            row.append($('<div class="da-bar-track"><div class="da-bar-fill"></div></div>').find('.da-bar-fill').css({ width: (Math.abs(x.value) / financeMax * 100) + '%', background: x.color }).end());
+            row.append($('<span class="text-right"></span>').text(PosnicPro.dashboard.money(x.value)));
+            financeHost.append(row);
+        });
+        var topHost = $('#dashboard-top-products-chart').empty(), topItems = Array.isArray(data.topItems) ? data.topItems.slice(0, 7) : [];
+        var topMax = Math.max(1, ...topItems.map(function (x) { return Number(x.total_amount) || 0; }));
+        if (!topItems.length) topHost.html('<div class="text-muted text-center py-4">No product sales in this period yet.</div>');
+        topItems.forEach(function (item, index) {
+            var amount = Number(item.total_amount) || 0, row = $('<div class="da-bar-row"></div>');
+            row.append($('<strong class="text-truncate"></strong>').text((index + 1) + '. ' + (item.item_name || 'Item')));
+            row.append($('<div class="da-bar-track"><div class="da-bar-fill"></div></div>').find('.da-bar-fill').css('width', (amount / topMax * 100) + '%').end());
+            row.append($('<span class="text-right"></span>').text(PosnicPro.dashboard.money(amount)));
+            topHost.append(row);
+        });
         var days = Array.isArray(totals.sales_days) ? totals.sales_days : [];
         var values = (Array.isArray(totals.sales_amounts) ? totals.sales_amounts : []).map(function (value) { return Number(value) || 0; });
         var host = $('#dashboard-sales-trend').empty();
@@ -738,6 +766,13 @@ PosnicPro.dashboard = {
             svg.append($('<path>').attr({ d: areaPath, fill: 'url(#posnicSalesArea)' }));
             if (points.length > 1) {
                 svg.append($('<path>').attr({ d: linePath, fill: 'none', stroke: 'url(#posnicSalesLine)', 'stroke-width': 4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+                var averages = values.map(function (_, i) { var slice = values.slice(Math.max(0, i - 2), i + 1); return slice.reduce(function (a, b) { return a + b; }, 0) / slice.length; });
+                var averagePath = averages.map(function (value, index) {
+                    var x = left + (averages.length === 1 ? plotWidth / 2 : index * plotWidth / (averages.length - 1));
+                    var y = top + plotHeight - (value / max) * plotHeight;
+                    return (index ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+                }).join(' ');
+                svg.append($('<path>').attr({ d: averagePath, fill: 'none', stroke: '#f59e0b', 'stroke-width': 2.5, 'stroke-dasharray': '7 5', 'stroke-linecap': 'round' }));
             } else {
                 var singleBar = $('<rect>').attr({ x: points[0].x - 16, y: points[0].y, width: 32, height: Math.max(5, top + plotHeight - points[0].y), rx: 7, fill: 'url(#posnicSalesLine)' });
                 svg.append(singleBar);
@@ -749,7 +784,7 @@ PosnicPro.dashboard = {
             });
             var labels = $('<div class="d-flex justify-content-between text-muted small mt-1"></div>');
             labels.append($('<span>').text(days[0] || ''), $('<span>').text(days[Math.floor(days.length / 2)] || ''), $('<span>').text(days[days.length - 1] || ''));
-            host.append(svg, labels);
+            host.append(svg, labels, $('<div class="da-legend mt-2"><span><i class="da-dot" style="background:#2563eb"></i>Daily sales</span><span><i class="da-dot" style="background:#f59e0b"></i>3-period moving average</span></div>'));
         }
 
         var mix = Array.isArray(data.paymentMix) ? data.paymentMix : [];

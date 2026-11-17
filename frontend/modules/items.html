@@ -132,6 +132,21 @@
 <link rel="stylesheet" href="script/vendor/print-js/print.min.css">
 
 <style>
+#items-category-brand-filter{display:flex;gap:10px;align-items:end;flex-wrap:wrap;padding:10px 0 2px}
+#items-category-brand-filter label{display:flex;flex-direction:column;gap:4px;margin:0;min-width:170px;color:var(--theme-text-muted,#64748b);font-size:11px;font-weight:700}
+#items-category-brand-filter select{min-width:170px;max-width:240px;background:var(--theme-input-bg,var(--theme-card-bg,#fff));color:var(--theme-text-primary,#263347);border:1px solid var(--theme-border-color,#dce3ec);border-radius:7px}
+#items_list_rows .items-modern-table{width:100%;min-width:920px;border-collapse:separate;border-spacing:0}
+#items_list_rows .items-modern-table thead th{position:sticky;top:0;z-index:2;background:var(--theme-table-header-bg,#f7f9fc);color:var(--theme-text-muted,#64748b);font-size:11px;font-weight:800;white-space:nowrap;padding:13px 12px;border-bottom:1px solid var(--theme-border-color,#e5eaf1)}
+#items_list_rows .items-modern-table thead th[data-sort-key]{cursor:pointer;user-select:none}
+#items_list_rows .items-modern-table thead th[data-sort-key]:hover{color:var(--theme-primary-color,#2563eb);background:var(--theme-table-row-hover,#f0f6ff)}
+#items_list_rows .items-sort-indicator{color:var(--theme-primary-color,#2563eb);font-weight:900;margin-left:5px}
+#items_list_rows .items-modern-table tbody td{padding:12px;border-bottom:1px solid var(--theme-border-color,#edf0f4);vertical-align:middle}
+#items_list_rows .items-modern-table tbody tr:hover{background:var(--theme-table-row-hover,#f7faff)}
+#items_list_rows .items-modern-table .items-name-cell{font-weight:700;color:var(--theme-text-primary,#263347)}
+#items_list_rows .items-total-row{position:sticky;bottom:0;z-index:1;background:var(--theme-table-header-bg,#f4f7fb);font-weight:800;box-shadow:0 -2px 8px rgba(20,40,70,.06)}
+#items_list_rows .items-total-row th{padding:12px;border-top:2px solid var(--theme-border-color,#dce3ec);white-space:nowrap}
+#items_list_rows .items-stock-cost-total{display:block;font-size:10px;font-weight:600;color:var(--theme-text-muted,#64748b);white-space:normal}
+@media(max-width:700px){#items-category-brand-filter label,#items-category-brand-filter select{min-width:135px;width:100%}}
 #view_print_lable .modal-dialog{width:calc(100% - 32px);max-width:1080px;margin:24px auto}
 #view_print_lable .sl-wizard{font:14px/1.5 var(--theme-font-family, system-ui),sans-serif;color:var(--theme-text-primary, #263347);background:var(--theme-body-bg, #f5f7fb);border-radius:10px;overflow:hidden;border:1px solid var(--theme-border-color, #dce3ec);display:flex;flex-direction:column;max-height:calc(100vh - 48px)}
 #view_print_lable .sl-wizard *{box-sizing:border-box}

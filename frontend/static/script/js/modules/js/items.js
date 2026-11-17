@@ -662,12 +662,35 @@ PosnicPro.items = {
             ],
             onChange: function () { PosnicPro.items.loadList(1); }
         });
+        if (!$('#items-category-brand-filter').length) {
+            $('#items_filter_panel').append('<div id="items-category-brand-filter" class="items-category-brand-filter"><label>Catégorie<select id="items-category-filter" class="form-control form-control-sm"><option value="">All categories</option></select></label><label>Marque / Brand<select id="items-brand-filter" class="form-control form-control-sm"><option value="">All brands</option></select></label></div>');
+        }
+        $(document).off('change.posnicItemFilters', '#items-category-filter,#items-brand-filter')
+            .on('change.posnicItemFilters', '#items-category-filter,#items-brand-filter', function () {
+                PosnicPro.items._categoryFilter = $('#items-category-filter').val() || '';
+                PosnicPro.items._brandFilter = $('#items-brand-filter').val() || '';
+                PosnicPro.items.loadList(1);
+            });
+        $(document).off('click.posnicItemSort', '#items_list_rows th[data-sort-key]')
+            .on('click.posnicItemSort', '#items_list_rows th[data-sort-key]', function () {
+                var key = String($(this).attr('data-sort-key') || '');
+                if (!key) return;
+                var self = PosnicPro.items;
+                if (self._tableSortKey === key) self._tableSortDirection = self._tableSortDirection === 'asc' ? 'desc' : 'asc';
+                else { self._tableSortKey = key; self._tableSortDirection = 'asc'; }
+                self.loadList(1);
+            });
     },
 
     _page: 1,
     PAGE_SIZE: 25,
     _lastRows: [],
     _openDocId: null,
+    _categoryFilter: '',
+    _brandFilter: '',
+    _tableSortKey: '',
+    _tableSortDirection: 'asc',
+    _filterOptionCache: { categories: [], brands: [] },
     /* The name the OLD table machinery answered to. Save flows (bulk price,
        stock adjust, bulk stock, save-from-receiving) and the shared
        clearListFilters/refresh doors still call <module>Table - without the
@@ -680,18 +703,39 @@ PosnicPro.items = {
         var self = PosnicPro.items;
         if (page) { self._page = page; }
         var filters = PosnicPro.listFilter.legacyFilters('items', { dateKey: 'updated_date' });
+        if (self._categoryFilter) filters.category_name = self._categoryFilter;
+        if (self._brandFilter) filters.brand = self._brandFilter;
         var esc = function (t) { return $('<span>').text(t == null ? '' : t).html(); };
         PosnicPro.listFilter.request('items', {
             url: 'items',
             data: (function () {
                 var d = { page: self._page, limit: self.PAGE_SIZE, filters: JSON.stringify(filters) };
                 var sv = PosnicPro.listSort.value('items');
-                if (sv) { d.sort = sv; }
+                if (sv && !self._tableSortKey) { d.sort = sv; }
                 return d;
             }())
         }, function (response) {
             var data = (response && response.data) || {};
-            var list = data.list || [];
+            var list = (data.list || []).slice();
+            function addOption(kind, value) { value = String(value || '').trim(); if (value && self._filterOptionCache[kind].indexOf(value) < 0) self._filterOptionCache[kind].push(value); }
+            list.forEach(function (r) { addOption('categories', r.category_name); addOption('brands', r.brand || r.marque); });
+            function fillOptions(selector, values, label, selected) { var select = $(selector); if (!select.length) return; select.empty().append($('<option>').val('').text(label)); values.slice().sort(function(a,b){return a.localeCompare(b,undefined,{sensitivity:'base'});}).forEach(function(v){select.append($('<option>').val(v).text(v));}); select.val(selected || ''); }
+            fillOptions('#items-category-filter', self._filterOptionCache.categories, 'All categories', self._categoryFilter);
+            fillOptions('#items-brand-filter', self._filterOptionCache.brands, 'All brands', self._brandFilter);
+            if (self._tableSortKey) {
+                var key = self._tableSortKey, direction = self._tableSortDirection === 'desc' ? -1 : 1;
+                list.sort(function (a, b) {
+                    var av, bv;
+                    if (key === 'name') { av = String(a.name || ''); bv = String(b.name || ''); return av.localeCompare(bv, undefined, {sensitivity:'base'}) * direction; }
+                    if (key === 'category') { av = String(a.category_name || ''); bv = String(b.category_name || ''); return av.localeCompare(bv, undefined, {sensitivity:'base'}) * direction; }
+                    if (key === 'stock') { av = Number(a.available_quantity) || 0; bv = Number(b.available_quantity) || 0; }
+                    if (key === 'cost') { av = Number(a.company_price) || 0; bv = Number(b.company_price) || 0; }
+                    if (key === 'price1') { av = Number(a.selling_price) || 0; bv = Number(b.selling_price) || 0; }
+                    if (key === 'price2') { av = Number(a.selling_price_2 || a.selling_price2) || 0; bv = Number(b.selling_price_2 || b.selling_price2) || 0; }
+                    if (key === 'price3') { av = Number(a.selling_price_3 || a.selling_price3) || 0; bv = Number(b.selling_price_3 || b.selling_price3) || 0; }
+                    return (av - bv) * direction;
+                });
+            }
             self._lastRows = list;
             if (!list.length) {
                 var filtered = PosnicPro.listFilter.activeCount('items') > 0;
@@ -701,18 +745,21 @@ PosnicPro.items = {
                 return;
             }
             var cur = PosnicPro.local.get('currencySign');
-            var html = '<div class="table-responsive"><table class="table table-borderless">'
-                + '<thead><tr><th style="width:44px;"></th><th><lang class="lang_name_title">Name</lang></th><th class="i-col-sku"><lang class="lang_sku_title">SKU</lang></th>'
-                + '<th class="i-col-category"><lang class="lang_newcategory_title">Category</lang></th><th class="i-col-supplier"><lang class="lang_newsupplier_title">Supplier</lang></th>'
-                + '<th class="text-right"><lang class="lang_stock">Stock</lang></th>'
-                + '<th class="text-right i-col-cost"><lang class="lang_companyamount_title">Cost</lang></th>'
-                + '<th class="text-right i-col-price"><lang class="lang_price_title">Price</lang></th>'
-                + '<th class="text-right i-col-margin"><lang class="lang_margin">Margin</lang></th>'
-                + '<th class="text-right i-col-tax"><lang class="lang_module_tax">Tax</lang></th>'
+            var cur = PosnicPro.local.get('currencySign') || 'DA';
+            var sortArrow = function (key) { return self._tableSortKey === key ? (self._tableSortDirection === 'asc' ? ' ▲' : ' ▼') : ''; };
+            var sortHead = function (key, label, align) { return '<th data-sort-key="' + key + '" class="' + (align || '') + '" aria-sort="' + (self._tableSortKey === key ? (self._tableSortDirection === 'asc' ? 'ascending' : 'descending') : 'none') + '">' + label + '<span class="items-sort-indicator">' + sortArrow(key) + '</span></th>'; };
+            var totals = { stock: 0, cost: 0, stockCost: 0, price1: 0, price2: 0, price3: 0 };
+            var html = '<div class="table-responsive items-table-responsive"><table class="table table-borderless items-modern-table">'
+                + '<thead><tr><th class="items-avatar-head" style="width:44px;"></th>'
+                + sortHead('name','Nom') + sortHead('category','Catégorie')
+                + sortHead('stock','Stock qty','text-right')
+                + sortHead('cost','Buying price (DA)','text-right')
+                + sortHead('price1','Selling price 1','text-right')
+                + sortHead('price2','Selling price 2','text-right')
+                + sortHead('price3','Selling price 3','text-right')
                 + '</tr></thead><tbody>';
             list.forEach(function (r) {
-                var unit = r.unit || 'qty';
-                var thumb;
+                var unit = r.unit || 'qty', thumb;
                 var tile = PosnicPro.resolveTile ? PosnicPro.resolveTile(r) : { color: r.tile_color, shape: r.tile_shape };
                 if ((!r.image || r.image === 'item.svg') && tile.color) {
                     var shape = tile.shape === 'circle' ? 'border-radius:50%;' : 'border-radius:6px;';
@@ -721,39 +768,32 @@ PosnicPro.items = {
                         + esc(String(r.name || '?').trim().charAt(0).toUpperCase()) + '</span>';
                 } else {
                     var img = (r.image && r.image !== 'item.svg') ? r.image : 'static/images/default/item.svg';
-                    thumb = '<img loading="lazy" decoding="async" src="' + esc(img) + '" width="32" height="32" style="object-fit:cover;border-radius:6px;"'
-                        + " onerror=\"this.onerror=null;this.src='static/images/default/item.svg';\">";
+                    thumb = '<img loading="lazy" decoding="async" src="' + esc(img) + '" width="32" height="32" style="object-fit:cover;border-radius:6px;">';
                 }
                 var tracked = r.track_inventory === true || r.track_inventory === 'true';
-                var low = tracked && Number(r.available_quantity) <= Number(r.low_stock || 0);
-                var stockCell = tracked
-                    ? (low ? '<span class="rs-pill unpaid">' : '<span>') + esc(r.available_quantity) + ' ' + esc(unit) + (low ? '</span>' : '</span>')
-                    : '<span class="q-muted">-</span>';
-                /* The margin the shop actually keeps on a unit - the number a
-                   retailer scans a catalogue for. Blank when either price is
-                   missing: a made-up 100% is worse than a dash. */
-                var cost = Number(r.company_price) || 0;
-                var sell = Number(r.selling_price) || 0;
-                var marginCell = (cost > 0 && sell > 0)
-                    ? (((sell - cost) / sell) * 100).toFixed(1) + '%'
-                    : '-';
-                var taxCell = (Number(r.tax) > 0) ? Number(r.tax) + '%' : '-';
-                html += '<tr class="md-row items-row highlight-select' + (self._openDocId === String(r._id) ? ' is-active' : '') + '"'
-                    + ' data-id="' + esc(r._id) + '" style="cursor:pointer;">'
-                    + '<td>' + thumb + '</td>'
-                    + '<td>' + esc(r.name) + '</td>'
-                    + '<td class="i-col-sku">' + esc(r.itemid || '-') + '</td>'
-                    + '<td class="i-col-category">' + esc(r.category_name || '-') + '</td>'
-                    + '<td class="i-col-supplier">' + esc(r.supplier_name || '-') + '</td>'
+                var stock = tracked ? (Number(r.available_quantity) || 0) : 0;
+                var cost = Number(r.company_price) || 0, price1 = Number(r.selling_price) || 0;
+                var price2 = Number(r.selling_price_2 || r.selling_price2) || 0, price3 = Number(r.selling_price_3 || r.selling_price3) || 0;
+                totals.stock += stock; totals.cost += cost; totals.stockCost += cost * stock;
+                totals.price1 += price1; totals.price2 += price2; totals.price3 += price3;
+                var low = tracked && stock <= Number(r.low_stock || 0);
+                var stockCell = tracked ? (low ? '<span class="rs-pill unpaid">' : '<span>') + esc(stock) + ' ' + esc(unit) + '</span>' : '<span class="q-muted">-</span>';
+                var moneyCell = function (v) { return cur + '&nbsp;' + Number(v || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); };
+                html += '<tr class="md-row items-row highlight-select' + (self._openDocId === String(r._id) ? ' is-active' : '') + '" data-id="' + esc(r._id) + '" style="cursor:pointer;">'
+                    + '<td class="items-avatar-cell">' + thumb + '</td>'
+                    + '<td class="items-name-cell">' + esc(r.name || '') + '</td>'
+                    + '<td>' + esc(r.category_name || '-') + '</td>'
                     + '<td class="text-right">' + stockCell + '</td>'
-                    + '<td class="text-right i-col-cost q-muted">' + (cost > 0 ? cur + '&nbsp;' + cost.toFixed(2) : '-') + '</td>'
-                    + '<td class="text-right i-col-price">' + cur + '&nbsp;' + sell.toFixed(2) + '</td>'
-                    + '<td class="text-right i-col-margin">' + marginCell + '</td>'
-                    + '<td class="text-right i-col-tax q-muted">' + taxCell + '</td>'
-
-                    + '</tr>';
+                    + '<td class="text-right">' + moneyCell(cost) + '</td>'
+                    + '<td class="text-right">' + moneyCell(price1) + '</td>'
+                    + '<td class="text-right">' + moneyCell(price2) + '</td>'
+                    + '<td class="text-right">' + moneyCell(price3) + '</td></tr>';
             });
-            html += '</tbody></table></div>';
+            var moneyTotal = function (v) { return cur + '&nbsp;' + Number(v || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); };
+            html += '</tbody><tfoot><tr class="items-total-row"><th></th><th>Total · ' + list.length + ' article(s)</th><th>Total</th>'
+                + '<th class="text-right">' + totals.stock.toLocaleString() + '</th>'
+                + '<th class="text-right">' + moneyTotal(totals.cost) + '<small class="items-stock-cost-total">Stock cost: ' + moneyTotal(totals.stockCost) + '</small></th>'
+                + '<th class="text-right">' + moneyTotal(totals.price1) + '</th><th class="text-right">' + moneyTotal(totals.price2) + '</th><th class="text-right">' + moneyTotal(totals.price3) + '</th></tr></tfoot></table></div>';
             $('#items_list_rows').html(html);
             self.renderPager(Number(data.total) || list.length);
         }, function () {
@@ -808,7 +848,7 @@ PosnicPro.items = {
         PosnicPro.listExport.all({
             url: 'items',
             params: function (page, limit) {
-                return (function () { var d = { page: page, limit: limit, filters: JSON.stringify(PosnicPro.listFilter.legacyFilters('items', { dateKey: 'updated_date' })) }; var sv = PosnicPro.listSort.value('items'); if (sv) { d.sort = sv; } return d; }());
+                return (function () { var d = { page: page, limit: limit, filters: JSON.stringify((function(){var f=PosnicPro.listFilter.legacyFilters('items', { dateKey: 'updated_date' });if(PosnicPro.items._categoryFilter)f.category_name=PosnicPro.items._categoryFilter;if(PosnicPro.items._brandFilter)f.brand=PosnicPro.items._brandFilter;return f;})()) }; var sv = PosnicPro.listSort.value('items'); if (sv) { d.sort = sv; } return d; }());
             },
             head: spec.head,
             map: spec.map,
@@ -866,7 +906,7 @@ PosnicPro.items = {
         }
         host.innerHTML = `
 <style id="posnic-modify-blue-two-step">
-#posnic_independent_modify_page{display:block!important;width:100%;height:auto!important;min-height:calc(100vh - 70px);max-height:none!important;overflow:visible!important;padding:8px 16px 22px;background:var(--theme-body-bg,#f3f6fb);color:var(--theme-text-primary,#24344d)}
+#posnic_independent_modify_page{display:block!important;position:fixed!important;inset:70px 0 0!important;z-index:1060!important;width:100%;height:calc(100vh - 70px)!important;min-height:0!important;max-height:none!important;overflow:auto!important;padding:8px 16px 22px;background:var(--theme-body-bg,#f3f6fb);color:var(--theme-text-primary,#24344d)}
 #posnic_independent_modify_page *{box-sizing:border-box}
 #posnic_independent_modify_page .pm-shell{width:min(1360px,100%);margin:0 auto;background:var(--theme-card-bg,#fff);border:1px solid #d9e5f5;border-radius:12px;box-shadow:0 5px 22px rgba(27,74,137,.09);overflow:visible}
 #posnic_independent_modify_page .pm-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 20px;background:linear-gradient(110deg,#1557a6,#2879d0);color:#fff;border-radius:11px 11px 0 0}
