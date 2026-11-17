@@ -126,7 +126,7 @@
         text('iv2-title', copySource ? P.i18n.t('lang_iv2_create_copy', 'Create a copy') : (editing ? P.i18n.t('lang_iv2_modify_item', 'Modify item') : PosnicPro.i18n.t('lang_po_create', 'Create').trim() + ' ' + noun)); text('iv2-name-label', noun.charAt(0).toUpperCase() + noun.slice(1) + ' name');
         document.querySelector('#items_v2 .iv2-heading p').textContent = editing ? P.i18n.t('lang_iv2_edit_hint', 'Add details to your saved item, then save your changes.') : P.i18n.t('lang_start_with_a_name_we_ll_help_you_get_it_re', 'Start with a name. We’ll help you get it ready to sell.');
         document.getElementById('iv2-name').placeholder = f.kind === 'dish' ? 'e.g. Tea, Chicken biryani, Butter naan' : f.kind === 'service' ? 'e.g. Haircut, Delivery, Repair' : 'e.g. Mineral water, Blue shirt';
-        if (!busy && !saved) text('iv2-save', copySource ? P.i18n.t('lang_iv2_save_copy', 'Save as new item') + ' →' : editing ? P.i18n.t('lang_iv2_save_changes', 'Save changes') + ' →' : 'Save ' + noun + ' →');
+        if (!busy && !saved) text('iv2-save', copySource ? P.i18n.t('lang_iv2_save_copy', 'Save as new item') + ' →' : editing ? P.i18n.t('lang_iv2_save_changes', 'Save changes') + ' →' : 'Enregistrer et Valider →');
         var details = P.itemsV2Details.status();
         if (details.hsn) f.taxRate = details.tax;
         var price = Number(f.price);
@@ -198,7 +198,7 @@
         // form.reset() does not restore disabled properties.
         document.getElementById('iv2-fields').disabled = false;
         document.getElementById('iv2-save').disabled = false;
-        text('iv2-save', 'Save item →');
+        text('iv2-save', 'Enregistrer et Valider →');
         show('iv2-success', false);
         show('iv2-error', false);
 
