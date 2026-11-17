@@ -5,29 +5,30 @@
     function el(id) { return document.getElementById('iv2-' + id); }
     function scope() { var user = P.local.get('username'), branch = P.local.get('branch_id_set'); return user && branch ? 'posnic.item-v2.draft:' + JSON.stringify([user, branch]) : null; }
     function tabs() { return Array.from(document.querySelectorAll('#items_v2 [role="tab"]')); }
-    // The catalogue editor is now a single static workspace. Keep the
-    // legacy section API for callers, but never hide a required field or ask
-    // the user to navigate between steps.
+    // Add and Modify share the same two-step editor.
     function select(id, focus) {
-        active = 'step2';
-        tabs().forEach(function (b) {
-            b.setAttribute('aria-selected', 'false'); b.tabIndex = -1;
+        active = (id === 'step2' || id === 'stock' || id === 'details' || id === 'more' || id === 'restaurant') ? 'step2' : 'step1';
+        var one = document.getElementById('iv2-step1-content'), two = document.getElementById('iv2-step2-content');
+        if (one) one.hidden = active !== 'step1';
+        if (two) two.hidden = active !== 'step2';
+        tabs().forEach(function (tab) {
+            var selected = tab.dataset.section === active;
+            tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+            tab.tabIndex = selected ? 0 : -1;
         });
-        ['basics','stock','details','more'].forEach(function (panel) {
-            var node = el('panel-' + panel);
-            if (node) node.hidden = false;
-        });
-        var restaurant = el('panel-restaurant');
-        if (restaurant && !restaurant.querySelector('#iv2-restaurant:not([hidden])')) restaurant.hidden = true;
-        var picker = el('section-select'), previous = el('prev-step'), next = el('next-step'), saveButton = el('save'), help = el('step-help');
-        if (picker) picker.hidden = true;
-        if (previous) previous.hidden = true;
-        if (next) next.hidden = true;
-        if (saveButton) saveButton.hidden = false;
-        if (help) help.textContent = 'Complete the article details below, then save.';
+        var previous = el('prev-step'), next = el('next-step'), saveButton = el('save'), help = el('step-help');
+        if (previous) previous.hidden = active === 'step1';
+        if (next) next.hidden = active === 'step2';
+        if (saveButton) saveButton.hidden = active !== 'step2';
+        if (help) help.textContent = active === 'step1' ? 'Step 1 of 2 · Basic information' : 'Step 2 of 2 · Stock and pricing';
+        var root = document.getElementById('items_v2');
+        if (root) root.setAttribute('data-active-step', active);
+        if (focus) { var tab = document.getElementById(active === 'step1' ? 'iv2-tab-step1' : 'iv2-tab-step2'); if (tab) tab.focus(); }
     }
     function reveal(node) {
         if (!node) return;
+        var step = node.closest('.iv2-step-content');
+        if (step) select(step.id === 'iv2-step2-content' ? 'step2' : 'step1', true);
         var panel = node.closest('.iv2-tab-panel');
         if (panel) panel.hidden = false;
     }
@@ -94,18 +95,36 @@
     function init(actions) {
         callbacks = actions; if (bound) return; bound = true;
         document.querySelector('#items_v2 .iv2-layout').id = 'iv2-layout';
-        // Give opening stock its own visible card in the one-page sequence.
-        // The input keeps its original ID and remains part of the same form/API.
-        var quantityRow = el('quantity-row');
-        var form = el('form');
-        if (quantityRow && form && !document.getElementById('iv2-stock-card')) {
-            var stockCard = document.createElement('section');
-            stockCard.id = 'iv2-stock-card'; stockCard.className = 'iv2-section iv2-details';
-            var stockTitle = document.createElement('h2');
-            stockTitle.className = 'iv2-subheading'; stockTitle.textContent = 'Opening stock';
-            stockCard.appendChild(stockTitle); stockCard.appendChild(quantityRow);
-            form.insertBefore(stockCard, el('save').closest('.iv2-actions'));
+        // Reuse and move the original controls into two visual panels. IDs,
+        // event listeners, calculations, validation and API payloads stay intact.
+        var form = el('form'), fields = el('fields');
+        var step1 = document.createElement('div'), step2 = document.createElement('div');
+        step1.id = 'iv2-step1-content'; step1.className = 'iv2-step-content';
+        step2.id = 'iv2-step2-content'; step2.className = 'iv2-step-content';
+        var identity = document.createElement('section');
+        identity.id = 'iv2-identification-card'; identity.className = 'iv2-identification-card';
+        var codes = document.getElementById('iv2-codes'), variants = document.getElementById('iv2-variants');
+        var nameBuilder = document.querySelector('#items_v2 .iv2-name-builder');
+        var details = document.getElementById('iv2-details-extra');
+        var purchase = document.querySelector('#items_v2 .iv2-purchase-cost');
+        var pricing = document.getElementById('iv2-pricing-extra'), photos = document.getElementById('iv2-appearance');
+        var quantityRow = el('quantity-row'), stockCard = document.createElement('section');
+        stockCard.id = 'iv2-stock-card'; stockCard.className = 'iv2-section iv2-stock-card';
+        var stockTitle = document.createElement('h2'); stockTitle.className = 'iv2-subheading'; stockTitle.textContent = 'Current stock quantity';
+        stockCard.appendChild(stockTitle);
+        if (quantityRow) stockCard.appendChild(quantityRow);
+        [el('stock-note'),el('zero-stock')].forEach(function(node){if(node)stockCard.appendChild(node);});
+        var hiddenName = el('name'), nameLabel = document.getElementById('iv2-name-label');
+        if (nameBuilder) { if(nameLabel)nameBuilder.appendChild(nameLabel); if(hiddenName)nameBuilder.appendChild(hiddenName); }
+        if (fields) {
+            fields.appendChild(step1); fields.appendChild(step2);
+            step1.appendChild(identity);
+            [codes,variants].forEach(function(node){if(node)identity.appendChild(node);});
+            [nameBuilder,details].forEach(function(node){if(node)step1.appendChild(node);});
+            [stockCard,purchase,pricing,photos].forEach(function(node){if(node)step2.appendChild(node);});
+            [el('zero-price'),el('price-hint'),el('tax-error')].forEach(function(node){if(node)step2.appendChild(node);});
         }
+        if (form) form.classList.add('iv2-two-step-form');
         el('section-select').addEventListener('change', function () { select(this.value); });
         el('next-step').addEventListener('click', function () { select('step2', true); });
         el('prev-step').addEventListener('click', function () { select('step1', true); });
@@ -131,7 +150,7 @@
                 notice.append(button(P.i18n.t('lang_iv2_restore', 'Restore draft'), function () {
                     restoring = true; pending = draft.controls.filter(function (row) { return !apply(row); });
                     P.itemTranslationsV2.reset(draft.translations); pendingVariants = Array.isArray(draft.variants) ? draft.variants : null; restoreVariants();
-                    restoring = false; locked = false; notice.hidden = true; callbacks.refresh(); select('basics');
+                    restoring = false; locked = false; notice.hidden = true; callbacks.refresh(); select('step1');
                 }), button(P.i18n.t('lang_iv2_discard', 'Discard draft'), function () { clear(); locked = false; notice.hidden = true; }));
             }
         } catch (_) { /* Unavailable or invalid storage never blocks creating an item. */ }

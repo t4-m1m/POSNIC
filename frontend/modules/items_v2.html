@@ -1,7 +1,7 @@
 <div id="items_v2_mount" class="page_loader" style="display:none">
 <div id="items_v2" class="vertical-layout page_loader" style="display:none">
   <div class="iv2-workspace">
-    <header class="iv2-heading"><div><div class="iv2-eyebrow"><lang class="lang_your_catalogue">YOUR CATALOGUE</lang> <span><lang class="lang_new_experience">New experience</lang></span></div><h1 id="iv2-title"><lang class="lang_create_item">Create item</lang></h1><p><lang class="lang_start_with_a_name_we_ll_help_you_get_it_re">Start with a name. We’ll help you get it ready to sell.</lang></p></div><a href="#/items" class="iv2-back"><lang class="lang_back_to_items">Back to items</lang> <span aria-hidden="true">↗</span></a></header>
+    <header class="iv2-heading"><div><div class="iv2-eyebrow"><lang class="lang_your_catalogue">YOUR CATALOGUE</lang> <span><lang class="lang_new_experience">New experience</lang></span></div><h1 id="iv2-title"><lang class="lang_create_item">Create item</lang></h1><p>Two-step editor · Basic information, stock and pricing</p></div><a href="#/items" class="iv2-back">← Back</a></header>
     <div id="iv2-copy-notice" class="iv2-draft-notice" role="status" hidden=""></div>
     <div id="iv2-success" class="iv2-success" role="status" hidden=""></div>
     <div class="iv2-layout">
@@ -351,4 +351,79 @@
 #items_v2 .iv2-step-actions button{position:static!important;float:none!important;transform:none!important;max-width:100%!important}
 #items_v2 input:not([type=checkbox]):not([type=radio]):not([type=file]),#items_v2 select{max-width:100%!important;min-width:0!important;height:38px!important;min-height:38px!important;font-size:13px!important}
 @media(max-width:900px){#items_v2{padding:8px!important}#items_v2 #iv2-form{grid-template-columns:minmax(0,1fr)!important}#items_v2 #iv2-codes,#items_v2 #iv2-variants,#items_v2 .iv2-name-builder,#items_v2 #iv2-details-extra,#items_v2 #iv2-appearance,#items_v2 #iv2-stock-card,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-pricing-extra{grid-column:1/-1!important}}
+</style>
+
+
+<style id="iv2-shared-two-step-card-layout">
+#items_v2_mount,#items_modify_page,#items_v2{box-sizing:border-box!important;height:calc(100vh - 70px)!important;min-height:0!important;max-height:calc(100vh - 70px)!important;overflow:hidden!important}
+#items_v2{padding:16px 20px!important;background:var(--theme-body-bg,#f3f6fb)!important;color:var(--theme-text-primary,#243247)!important}
+#items_v2 .iv2-workspace{width:min(100%,1180px)!important;height:100%!important;min-height:0!important;max-height:100%!important;margin:0 auto!important;padding:0!important;display:flex!important;flex-direction:column!important;gap:0!important;background:var(--theme-card-bg,#fff)!important;border:1px solid var(--theme-border-color,#dce3ec)!important;border-radius:14px!important;box-shadow:0 8px 28px rgba(20,42,75,.10)!important;overflow:hidden!important}
+#items_v2 .iv2-heading{flex:0 0 auto!important;min-height:82px!important;margin:0!important;padding:14px 22px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:16px!important;background:#1565C0!important;color:#fff!important;border:0!important;border-radius:0!important}
+#items_v2 .iv2-heading h1{margin:0!important;color:#fff!important;font-size:21px!important;font-weight:750!important;line-height:1.2!important}
+#items_v2 .iv2-heading p{display:block!important;margin:4px 0 0!important;color:rgba(255,255,255,.88)!important;font-size:12px!important}
+#items_v2 .iv2-eyebrow{color:rgba(255,255,255,.78)!important;font-size:10px!important;letter-spacing:.1em!important}
+#items_v2 .iv2-eyebrow span{display:inline!important;color:#fff!important}
+#items_v2 .iv2-back{flex:0 0 auto!important;padding:8px 12px!important;border:1px solid rgba(255,255,255,.55)!important;border-radius:8px!important;color:#fff!important;background:rgba(255,255,255,.10)!important;text-decoration:none!important;font-size:12px!important;font-weight:650!important}
+#items_v2 .iv2-layout{flex:1 1 auto!important;min-height:0!important;height:auto!important;overflow:hidden!important;display:block!important;padding:0 18px!important}
+#items_v2 .iv2-aside{display:none!important}
+#items_v2 #iv2-form{height:100%!important;min-height:0!important;max-height:100%!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;gap:0!important}
+#items_v2 #iv2-fields{display:flex!important;flex:1 1 auto!important;min-height:0!important;max-height:100%!important;overflow:hidden!important;flex-direction:column!important;border:0!important;margin:0!important;padding:0!important}
+#items_v2 .iv2-section-picker{display:none!important}
+#items_v2 .iv2-tabs{display:grid!important;flex:0 0 auto!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin:12px 0!important;padding:0!important}
+#items_v2 .iv2-tabs [role=tab]{display:flex!important;align-items:center!important;gap:9px!important;min-height:42px!important;padding:7px 12px!important;border:1px solid var(--theme-border-color,#dce3ec)!important;border-radius:999px!important;background:var(--theme-body-bg,#f6f8fc)!important;color:var(--theme-text-primary,#243247)!important;text-align:left!important;font-size:12px!important;font-weight:700!important}
+#items_v2 .iv2-tabs [role=tab][aria-selected=true]{background:#e8f1ff!important;border-color:#1976D2!important;color:#1257a6!important;box-shadow:0 2px 7px rgba(21,101,192,.10)!important}
+#items_v2 .iv2-tabs .iv2-step{display:inline-flex!important;align-items:center!important;justify-content:center!important;flex:0 0 25px!important;width:25px!important;height:25px!important;margin:0!important;border-radius:50%!important;background:#1565C0!important;color:#fff!important}
+#items_v2 .iv2-tabs small{margin-left:auto!important;color:inherit!important;font-size:10px!important;font-weight:500!important}
+#items_v2 .iv2-step-content{flex:1 1 auto!important;min-height:0!important;max-height:100%!important;overflow:hidden!important;display:grid!important;align-content:start!important;gap:10px!important}
+#items_v2 .iv2-step-content[hidden]{display:none!important}
+#items_v2 #iv2-step1-content{grid-template-columns:minmax(0,1.08fr) minmax(0,1fr) minmax(0,1fr)!important}
+#items_v2 #iv2-step2-content{grid-template-columns:minmax(150px,.75fr) minmax(0,1.1fr) minmax(0,1.5fr)!important;grid-template-rows:auto min-content!important}
+#items_v2 .iv2-identification-card{grid-column:1!important;grid-row:1!important;display:flex!important;flex-direction:column!important;gap:8px!important;min-width:0!important;min-height:0!important}
+#items_v2 .iv2-step-content>.iv2-name-builder{grid-column:2!important;grid-row:1!important}
+#items_v2 .iv2-step-content>#iv2-details-extra{grid-column:3!important;grid-row:1!important}
+#items_v2 .iv2-identification-card>#iv2-codes,#items_v2 .iv2-identification-card>#iv2-variants,#items_v2 .iv2-step-content>.iv2-name-builder,#items_v2 .iv2-step-content>#iv2-details-extra,#items_v2 .iv2-step-content>.iv2-purchase-cost,#items_v2 .iv2-step-content>#iv2-pricing-extra,#items_v2 .iv2-step-content>#iv2-stock-card,#items_v2 .iv2-step-content>#iv2-appearance{box-sizing:border-box!important;min-width:0!important;min-height:0!important;margin:0!important;padding:10px 11px!important;border:1px solid var(--theme-border-color,#dce3ec)!important;border-radius:10px!important;background:var(--theme-card-bg,#fff)!important;box-shadow:0 2px 8px rgba(20,42,75,.045)!important;overflow:hidden!important}
+#items_v2 #iv2-codes .iv2-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
+#items_v2 #iv2-codes .iv2-grid>div:has(#iv2-barcode){grid-column:1/-1!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:5px!important;align-items:end!important}
+#items_v2 #iv2-codes .iv2-grid>div:has(#iv2-barcode)>label,#items_v2 #iv2-codes .iv2-grid>div:has(#iv2-barcode)>#iv2-quantity-row{grid-column:1/-1!important}
+#items_v2 #iv2-generate-barcode{white-space:nowrap!important;min-height:30px!important}
+#items_v2 #iv2-variants .iv2-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important}
+#items_v2 #iv2-variant-rows{max-height:100px!important;overflow:auto!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:5px!important}
+#items_v2 #iv2-variant-rows .iv2-variant{padding:5px!important}
+#items_v2 #iv2-variant-rows .iv2-variant h3{font-size:11px!important;margin:0 0 3px!important}
+#items_v2 #iv2-variant-rows input{height:27px!important;min-height:27px!important}
+#items_v2 .iv2-name-builder{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;align-content:start!important}
+#items_v2 #iv2-details-extra .iv2-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
+#items_v2 .iv2-step-content>.iv2-stock-card{grid-column:1!important;grid-row:1!important}
+#items_v2 .iv2-step-content>.iv2-purchase-cost{grid-column:2!important;grid-row:1!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
+#items_v2 .iv2-step-content>#iv2-pricing-extra{grid-column:3!important;grid-row:1!important}
+#items_v2 #iv2-pricing-extra .iv2-grid.iv2-pricing{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important}
+#items_v2 .iv2-step-content>#iv2-appearance{grid-column:1/-1!important;grid-row:2!important;display:flex!important;align-items:center!important;gap:8px!important;padding:7px 10px!important}
+#items_v2 #iv2-appearance>div{display:flex!important;align-items:center!important;gap:8px!important}
+#items_v2 .iv2-photo-list{display:flex!important;flex-wrap:nowrap!important;max-height:38px!important;overflow:hidden!important}
+#items_v2 .iv2-section-title,#items_v2 .iv2-subheading{position:relative!important;margin:0 0 8px!important;padding-left:9px!important;border-left:3px solid #1976D2!important;font-size:12px!important;line-height:1.25!important;font-weight:750!important}
+#items_v2 .iv2-section-title p{display:none!important}
+#items_v2 label{display:block!important;margin:0 0 3px!important;font-size:10px!important;line-height:1.2!important;font-weight:650!important}
+#items_v2 .iv2-check{display:flex!important;align-items:center!important;gap:6px!important;font-size:10px!important}
+#items_v2 input:not([type=checkbox]):not([type=radio]):not([type=file]),#items_v2 select,#items_v2 textarea{box-sizing:border-box!important;width:100%!important;min-width:0!important;height:31px!important;min-height:31px!important;padding:4px 7px!important;border-radius:6px!important;font-size:11px!important}
+#items_v2 textarea{height:50px!important;min-height:50px!important}
+#items_v2 .iv2-grid{gap:7px!important}
+#items_v2 .iv2-money input{height:31px!important}
+#items_v2 .iv2-note,#items_v2 #iv2-purchase-cost-summary{font-size:9px!important;line-height:1.2!important;margin-top:2px!important}
+#items_v2 #iv2-quantity-row{display:grid!important;grid-template-columns:minmax(0,1fr) 76px!important;gap:5px!important;align-items:center!important;margin:0!important}
+#items_v2 #iv2-quantity-row label{margin:0!important}
+#items_v2 #iv2-quantity-row .iv2-note{grid-column:1/-1!important}
+#items_v2 #iv2-stock-card .iv2-subheading{margin-bottom:9px!important}
+#items_v2 .iv2-actions{flex:0 0 auto!important;position:static!important;z-index:2!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;margin:10px 0 0!important;padding:8px 0 12px!important;border:0!important;border-top:1px solid var(--theme-border-color,#e1e7f0)!important;border-radius:0!important;background:transparent!important}
+#items_v2 .iv2-actions p{display:block!important;margin:0!important;color:var(--theme-text-muted,#6b778a)!important;font-size:10px!important}
+#items_v2 .iv2-step-actions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important}
+#items_v2 .iv2-step-actions button{min-height:34px!important;padding:6px 13px!important;border-radius:7px!important;font-size:11px!important;font-weight:700!important}
+#items_v2 #iv2-save{min-width:140px!important;height:36px!important;min-height:36px!important;background:#1565C0!important;border:1px solid #1565C0!important;color:#fff!important}
+#items_v2 #iv2-next-step{background:#1565C0!important;border:1px solid #1565C0!important;color:#fff!important}
+#items_v2 #iv2-prev-step{background:#fff!important;border:1px solid #cbd5e1!important;color:#334155!important}
+#items_v2 #iv2-error{flex:0 0 auto!important;margin:4px 0!important}
+#items_v2 .iv2-tab-panel{display:none!important}
+#items_v2 #iv2-zero-price,#items_v2 #iv2-zero-stock,#items_v2 #iv2-tax-error{grid-column:1/-1!important}
+@media(max-width:1050px){#items_v2 #iv2-step1-content{grid-template-columns:repeat(2,minmax(0,1fr))!important}#items_v2 .iv2-step-content>#iv2-details-extra{grid-column:1/-1!important}#items_v2 #iv2-step2-content{grid-template-columns:repeat(2,minmax(0,1fr))!important}#items_v2 .iv2-step-content>#iv2-pricing-extra{grid-column:1/-1!important;grid-row:2!important}#items_v2 .iv2-step-content>#iv2-appearance{grid-row:3!important}}
+@media(max-height:760px) and (min-width:901px){#items_v2 .iv2-heading{min-height:70px!important;padding:10px 18px!important}#items_v2 .iv2-tabs{margin:7px 0!important}#items_v2 .iv2-step-content{gap:6px!important}#items_v2 .iv2-identification-card>#iv2-codes,#items_v2 .iv2-identification-card>#iv2-variants,#items_v2 .iv2-step-content>.iv2-name-builder,#items_v2 .iv2-step-content>#iv2-details-extra,#items_v2 .iv2-step-content>.iv2-purchase-cost,#items_v2 .iv2-step-content>#iv2-pricing-extra,#items_v2 .iv2-step-content>#iv2-stock-card{padding:6px 8px!important}#items_v2 input:not([type=checkbox]):not([type=radio]):not([type=file]),#items_v2 select{height:27px!important;min-height:27px!important}}
+@media(max-width:700px){#items_v2_mount,#items_modify_page,#items_v2{height:auto!important;min-height:calc(100vh - 70px)!important;max-height:none!important;overflow:visible!important}#items_v2 .iv2-workspace{height:auto!important;min-height:calc(100vh - 100px)!important;overflow:visible!important}#items_v2 .iv2-layout,#items_v2 #iv2-form,#items_v2 #iv2-fields{height:auto!important;max-height:none!important;overflow:visible!important}#items_v2 .iv2-step-content{overflow:visible!important}#items_v2 #iv2-step1-content,#items_v2 #iv2-step2-content{grid-template-columns:minmax(0,1fr)!important}#items_v2 .iv2-identification-card,#items_v2 .iv2-step-content>.iv2-name-builder,#items_v2 .iv2-step-content>#iv2-details-extra,#items_v2 .iv2-step-content>.iv2-stock-card,#items_v2 .iv2-step-content>.iv2-purchase-cost,#items_v2 .iv2-step-content>#iv2-pricing-extra,#items_v2 .iv2-step-content>#iv2-appearance{grid-column:1!important;grid-row:auto!important}}
 </style>
