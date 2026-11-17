@@ -936,7 +936,7 @@ PosnicPro.items = {
                 if(sel.value!==String(item.category_id||'')){var opt=new Option(item.category_name||item.category||'Current category',item.category_id||'');opt.dataset.name=item.category_name||item.category||'';sel.add(opt);sel.value=String(item.category_id||'');}
             });
         },function(){$('#posnic_modify_status').text('Could not load this article.');});
-    },,
+    },
 
     renderItemDoc: function (d) {
         var esc = function (t) { return $('<span>').text(t == null ? '' : t).html(); };
