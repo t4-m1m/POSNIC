@@ -23,11 +23,8 @@
       style = doc.createElement('style');
       style.id = 'rd-fitted-paper';
     }
-    // A browser cannot set the driver's selected media. Chromium centres a
-    // custom short CSS page on that larger sheet (e.g. an 80 x 297 mm form),
-    // adding blank paper above the receipt and room for browser headers.
-    // Use the selected paper in browser dialogs; only Electron also sends
-    // the measured dimensions to the driver and can fit the physical page.
+    // Thermal rolls use automatic continuous length. Keep only the printable
+    // head width; never synthesize a short custom page that can split a long bill.
     var pageSize = options && options.usePrinterPaper ? 'auto' : width + 'mm auto';
     style.textContent = '@page{size:' + pageSize + ';margin:0;}' +
       '@media print{html,body{width:' + width + 'mm!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;margin:0!important;padding:0!important;}.rd-document{height:auto!important;max-height:none!important;overflow:visible!important;margin:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}}';
