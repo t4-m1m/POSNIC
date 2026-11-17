@@ -19,7 +19,8 @@
             inventory: a.tracked, negative_stock: a.negative, item_kind: f.kind === 'service' ? 'service' : 'product', service_unit: 'fixed',
             tax_id: f.taxId || '', tax_name: f.taxName || '', tax: Number(f.taxRate) || 0, tax_type: f.taxType,
             category_id: f.categoryId || '', category_name: f.categoryName || '', barcode_id: f.barcode.trim(), sku_id: f.sku.trim(),
-            brand_abbreviation: f.brandAbbreviation || '', reference_date: f.referenceDate || '',
+            article_type: f.articleType || '', brand_abbreviation: f.brandAbbreviation || '', reference_date: f.referenceDate || '', model_reference: f.modelReference || '',
+            purchase_price_eur: Number(f.purchasePriceEur) || 0, purchase_exchange_rate: Number(f.exchangeRate) || 280, purchase_extra_cost_dzd: Number(f.extraCost) || 0,
             description: f.description.trim(), unit: 'qty', ecommerce: false, open_price: false, item_weight_machine_based: false };
     }
     if (typeof module === 'object' && module.exports) { module.exports = { assess: assess, payload: payload }; return; }
@@ -70,7 +71,8 @@
         var details = P.itemsV2Details.status();
         var quantities=details.quantities.filter(function(n){return Number.isFinite(Number(n));});
         return { name: value('iv2-name'), price: value('iv2-price'), price2: value('iv2-price2'), price3: value('iv2-price3'), cost: value('iv2-cost'), quantity: details.family ? quantities.reduce(function(sum,n){return sum+Number(n||0);},0) : value('iv2-quantity'), kind: selected('iv2-kind'), stock: selected('iv2-stock'), zeroStock: selected('iv2-zero-stock'), confirmZero: document.getElementById('iv2-confirm-zero').checked, openPrice: details.openPrice, family: details.family,
-            brandAbbreviation: value('iv2-brand-abbr'), referenceDate: value('iv2-reference-date'),
+            articleType: value('iv2-article-type'), brandAbbreviation: value('iv2-brand-abbr'), referenceDate: value('iv2-reference-date'), modelReference: value('iv2-model-reference'),
+            purchasePriceEur: value('iv2-price-eur'), exchangeRate: value('iv2-exchange-rate'), extraCost: value('iv2-extra-cost'),
             taxId: taxReady && capabilities.tax ? value('iv2-tax') : '', taxName: capabilities.tax && tax && tax.dataset.name || '', taxRate: capabilities.tax && tax && tax.dataset.rate || 0, taxType: value('iv2-tax-type'), categoryId: value('iv2-category'), categoryName: category && category.dataset.name || '', barcode: value('iv2-barcode'), sku: value('iv2-sku'), description: value('iv2-description') };
     }
     function money(n) { return (P.local.get('currencySign') || '') + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
