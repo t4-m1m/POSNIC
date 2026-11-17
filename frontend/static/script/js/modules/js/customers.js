@@ -6,6 +6,49 @@ PosnicPro.customers = {
         if (input) input.setNumber(number || '');
         else $('#customer_phone').val(number || '');
     },
+    openSalesQuickCreate: function () {
+        if (!$('#sales_new').length || !$('#sales_new').is(':visible')) return;
+        $('#posnic-sales-quick-customer-form')[0].reset();
+        $('#posnic_quick_customer_price_tier').val('1');
+        $('#posnic_quick_customer_error').hide().text('');
+        $('#posnic-sales-quick-customer').modal('show');
+        window.setTimeout(function () { $('#posnic_quick_customer_name').trigger('focus'); }, 180);
+    },
+    saveSalesQuickCreate: function () {
+        var name = String($('#posnic_quick_customer_name').val() || '').trim();
+        var phone = String($('#posnic_quick_customer_phone').val() || '').trim();
+        var email = String($('#posnic_quick_customer_email').val() || '').trim();
+        var tier = Math.max(1, Math.min(3, Number($('#posnic_quick_customer_price_tier').val()) || 1));
+        var $save = $('#posnic_quick_customer_save'), $error = $('#posnic_quick_customer_error');
+        if (name.length < 3) { $error.text('Saisissez un nom de 3 caractères minimum.').show(); $('#posnic_quick_customer_name').trigger('focus'); return false; }
+        if (email && !PosnicPro.validateEmail(email)) { $error.text('Adresse email invalide.').show(); $('#posnic_quick_customer_email').trigger('focus'); return false; }
+        $save.prop('disabled', true); $error.hide().text('');
+        PosnicPro.request({ method:'POST', url:'customers', data:JSON.stringify({name:name,phone:phone,email:email,price_tier:tier,partial_balance:false}) }, function (response) {
+            $save.prop('disabled', false);
+            if (!response || response.type !== 'success') { $error.text((response && response.message) || 'Impossible de créer le client.').show(); return; }
+            var data=response.data||{}, id=data.customer_id||data.id||data._id;
+            if (id && typeof id==='object' && id.toString) id=id.toString();
+            if (!id) { $error.text('Le client a été créé, mais son identifiant est manquant.').show(); return; }
+            $('#sales_new_customer_id').val(String(id));
+            $('#sales_new_customer_name').val(data.name||name);
+            $('#sales_new_customer_phone').val(data.phone||phone);
+            $('#sales_new_customer_email').val(data.email||email);
+            $('#sales_new_customer_partial_balance').val(data.partial_balance===true?'true':'false');
+            $('#customer_current_balance').val('0');
+            PosnicPro.sales._customerPriceTier=Number(data.price_tier||tier)||1;
+            if (PosnicPro.sales.updateCustomerChip) PosnicPro.sales.updateCustomerChip();
+            if (PosnicPro.sales.syncCustomerHeader) PosnicPro.sales.syncCustomerHeader();
+            if (PosnicPro.sales.multiBasket && PosnicPro.sales.multiBasket.updateActiveLabel) PosnicPro.sales.multiBasket.updateActiveLabel(data.name||name);
+            $('#posnic-sales-quick-customer').modal('hide');
+            if (PosnicPro.alert) PosnicPro.alert('success','Client créé et sélectionné.');
+        }, function (xhr) {
+            $save.prop('disabled', false);
+            var message='Impossible de créer le client.';
+            try { var body=JSON.parse(xhr.responseText||'{}'); message=body.message||message; } catch (_) {}
+            $error.text(message).show();
+        });
+        return false;
+    },
     showAdd: function () {
         var salesQuickCreate = /^#\/sales\/customers\/new(?:[/?]|$)/.test(String(window.location.hash || ''));
         $('#infobar-settings-sidebar-customer').toggleClass('posnic-sales-quick-create', salesQuickCreate);
@@ -1516,3 +1559,6 @@ $(document).on('click', '#customers_filter_btn', function () {
     PosnicPro.customers.mountFilters(true);
     PosnicPro.listFilter.toggle('customers');
 });
+
+$(document).off('submit.posnicSalesQuickCustomer','#posnic-sales-quick-customer-form')
+ .on('submit.posnicSalesQuickCustomer','#posnic-sales-quick-customer-form',function(event){event.preventDefault();PosnicPro.customers.saveSalesQuickCreate();return false;});

@@ -12036,17 +12036,23 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
 
 /* F6 — advance payment, separate from customer credit. */
 PosnicPro.sales.getVersementPayableTotal = function () {
-    // sale_new_tot is the final amount after item discounts and remises.
-    // grand_total is only a fallback because it may briefly contain the old total.
-    var computed = Number(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot);
-    var grand = Number(String($('#grand_total').val() || '').replace(/,/g, '').trim());
-    var amount = Number.isFinite(computed) && computed >= 0 ? computed : grand;
-    return Math.round(Math.max(0, Number.isFinite(amount) ? amount : 0) * 100) / 100;
+    // Read the final total rendered by the remise calculator before trusting
+    // cached cart values, which can lag one calculation behind.
+    var visible = Number(String($('#sales_new_grand_total').text() || '').replace(/[^0-9,.-]/g, '').replace(/,/g, '').trim());
+    var cached = Number(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot);
+    var input = Number(String($('#grand_total').val() || '').replace(/,/g, '').trim());
+    var amount = Number.isFinite(visible) && visible > 0 ? visible : (Number.isFinite(cached) && cached > 0 ? cached : input);
+    amount = Math.round(Math.max(0, Number.isFinite(amount) ? amount : 0) * 100) / 100;
+    if (!PosnicPro.sales.extraDiscount || typeof PosnicPro.sales.extraDiscount !== 'object') PosnicPro.sales.extraDiscount = {};
+    if (amount > 0) PosnicPro.sales.extraDiscount.sale_new_tot = amount;
+    return amount;
 };
 PosnicPro.sales.openVersementCheckout = function () {
     if (!$('#sales_new').is(':visible') || PosnicPro.sales.SaleAction !== 'add' || PosnicPro.sales.paymentOnlyMode === true || PosnicPro.sales.saleProcess === 'KOT') return;
     if (!$('#sales_new_items_table tbody tr').filter(function(){return $(this).find('input[name="addSalesLineItemQty"]').length>0;}).length) { PosnicPro.alert('warning','Ajoutez au moins un article avant de créer un versement.'); return; }
     if (PosnicPro.sales.calculation && typeof PosnicPro.sales.calculation.salesTableRowCart === 'function') { try { PosnicPro.sales.calculation.salesTableRowCart(); } catch (_) {} }
+    // Recompute the active remise before presenting or persisting the F6 amount.
+    if (typeof PosnicPro.sales.extraDiscountCalculation === 'function') { try { PosnicPro.sales.extraDiscountCalculation(); } catch (_) {} }
     var total=PosnicPro.sales.getVersementPayableTotal();
     if(!(total>0)){PosnicPro.alert('warning','Le total de la vente est invalide.');return;}
     if(!$('#posnic-versement-checkout').length){

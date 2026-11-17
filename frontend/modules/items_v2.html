@@ -333,3 +333,22 @@
 @media(min-width:901px){#items_v2 .iv2-actions{display:flex!important;align-items:center!important;justify-content:flex-end!important;min-width:0!important;overflow:visible!important}#items_v2 .iv2-step-actions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:7px!important;flex-wrap:nowrap!important;min-width:0!important}#items_v2 .iv2-step-actions button{position:static!important;float:none!important;transform:none!important;flex:0 0 auto!important;max-width:100%!important;margin:0!important;white-space:nowrap!important}#items_v2 #iv2-save{min-width:150px!important;width:auto!important}}
 @media(max-width:900px){#items_v2 .iv2-actions{display:flex!important;justify-content:stretch!important}#items_v2 .iv2-step-actions{display:flex!important;gap:7px!important;flex-wrap:wrap!important;width:100%!important}#items_v2 .iv2-step-actions button{position:static!important;float:none!important;transform:none!important;flex:1 1 130px!important;margin:0!important}}
 </style>
+
+<style id="iv2-natural-full-page-layout">
+#items_v2_mount,#items_v2{display:block!important;height:auto!important;min-height:calc(100vh - 70px)!important;max-height:none!important;overflow:visible!important}
+#items_v2{padding:12px 18px!important}
+#items_v2 .iv2-workspace{display:flex!important;flex-direction:column!important;height:auto!important;min-height:calc(100vh - 90px)!important;max-height:none!important;overflow:visible!important;padding:8px 4px 24px!important;gap:14px!important}
+#items_v2 .iv2-layout{display:block!important;flex:0 0 auto!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important}
+#items_v2 #iv2-form{display:grid!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;grid-template-columns:repeat(12,minmax(0,1fr))!important;grid-template-rows:none!important;grid-auto-rows:min-content!important;align-content:start!important;gap:14px!important}
+#items_v2 #iv2-fields{display:contents!important}
+#items_v2 #iv2-codes,#items_v2 #iv2-variants,#items_v2 .iv2-name-builder,#items_v2 #iv2-details-extra,#items_v2 #iv2-appearance,#items_v2 #iv2-stock-card,#items_v2 .iv2-purchase-cost{grid-column:span 6!important;grid-row:auto!important;align-self:start!important;min-width:0!important;min-height:0!important;height:auto!important;max-height:none!important;overflow:visible!important;padding:14px!important}
+#items_v2 #iv2-pricing-extra{grid-column:1/-1!important;grid-row:auto!important;min-width:0!important;min-height:0!important;height:auto!important;max-height:none!important;overflow:visible!important;padding:14px!important}
+#items_v2 .iv2-grid,#items_v2 #iv2-codes .iv2-grid,#items_v2 #iv2-variants .iv2-grid,#items_v2 .iv2-name-builder,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-pricing-extra .iv2-grid.iv2-pricing{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))!important;gap:12px!important}
+#items_v2 #iv2-variant-rows{max-height:none!important;overflow:visible!important;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))!important}
+#items_v2 .iv2-photo-list{max-height:none!important;overflow:visible!important}
+#items_v2 .iv2-actions{grid-column:1/-1!important;grid-row:auto!important;position:static!important;display:flex!important;align-items:center!important;justify-content:space-between!important;min-height:56px!important;height:auto!important;max-height:none!important;overflow:visible!important;flex-wrap:wrap!important;padding:12px 14px!important;margin:0!important}
+#items_v2 .iv2-step-actions{display:flex!important;align-items:center!important;gap:10px!important;flex-wrap:wrap!important}
+#items_v2 .iv2-step-actions button{position:static!important;float:none!important;transform:none!important;max-width:100%!important}
+#items_v2 input:not([type=checkbox]):not([type=radio]):not([type=file]),#items_v2 select{max-width:100%!important;min-width:0!important;height:38px!important;min-height:38px!important;font-size:13px!important}
+@media(max-width:900px){#items_v2{padding:8px!important}#items_v2 #iv2-form{grid-template-columns:minmax(0,1fr)!important}#items_v2 #iv2-codes,#items_v2 #iv2-variants,#items_v2 .iv2-name-builder,#items_v2 #iv2-details-extra,#items_v2 #iv2-appearance,#items_v2 #iv2-stock-card,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-pricing-extra{grid-column:1/-1!important}}
+</style>

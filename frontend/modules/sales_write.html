@@ -187,7 +187,7 @@
                                 <!-- Recency (owner feedback): the last 10 customers picked
                                      on this till, rendered from a localStorage LRU. -->
                                 <div id="sales_recent_customers" style="display:none; max-height:220px; overflow-y:auto;"></div>
-                                <a data-module="customer" data-access="write" href="#/sales/customers/new"
+                                <a href="javascript:void(0)" onclick="PosnicPro.customers.openSalesQuickCreate();return false;"
                                     class="sales-customer-pop-action" id="sales_customer_add_new">
                                     <i class="feather icon-user-plus mr-2"></i><lang class="lang_add_new_customer">Add new customer</lang>
                                 </a>
@@ -1742,3 +1742,22 @@ body[data-theme="warmnight"]{color-scheme:dark}
   $(function(){renderSplit();var host=document.getElementById('payment_id');if(host&&window.MutationObserver)new MutationObserver(function(){window.setTimeout(renderSplit,0);}).observe(host,{childList:true,subtree:true});});
 })(window.jQuery);
 </script>
+
+<!-- Compact customer creation from the sales customer dropdown. -->
+<div class="modal fade" id="posnic-sales-quick-customer" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document" style="max-width:460px;width:calc(100% - 28px)">
+    <div class="modal-content" style="border:1px solid var(--theme-border-color,#dce3ec);border-radius:16px;overflow:hidden;background:var(--theme-card-bg,#fff);color:var(--theme-text-primary,#263347)">
+      <div class="modal-header" style="padding:17px 20px"><div><small class="text-primary font-weight-bold">POSNIC · CLIENT</small><h5 class="modal-title mb-0">Ajouter un client</h5></div><button type="button" class="close" data-dismiss="modal" aria-label="Close"><span>&times;</span></button></div>
+      <form id="posnic-sales-quick-customer-form" autocomplete="off">
+        <div class="modal-body" style="padding:18px 20px">
+          <div class="form-group"><label for="posnic_quick_customer_name">Nom du client <span class="text-danger">*</span></label><input id="posnic_quick_customer_name" class="form-control" maxlength="250" required></div>
+          <div class="form-group"><label for="posnic_quick_customer_phone">Numéro <small class="text-muted">(facultatif)</small></label><input id="posnic_quick_customer_phone" class="form-control" type="tel" maxlength="40"></div>
+          <div class="form-group"><label for="posnic_quick_customer_email">Email <small class="text-muted">(facultatif)</small></label><input id="posnic_quick_customer_email" class="form-control" type="email" maxlength="250"></div>
+          <div class="form-group mb-0"><label for="posnic_quick_customer_price_tier">Price priority</label><select id="posnic_quick_customer_price_tier" class="form-control"><option value="1">Price 1 · Standard</option><option value="2">Price 2 · Alternative</option><option value="3">Price 3 · Lowest</option></select></div>
+          <div id="posnic_quick_customer_error" class="text-danger small mt-2" role="alert" style="display:none"></div>
+        </div>
+        <div class="modal-footer" style="padding:13px 20px"><button type="button" class="btn btn-light" data-dismiss="modal">Annuler</button><button type="submit" class="btn btn-primary" id="posnic_quick_customer_save"><i class="feather icon-save mr-2"></i>Enregistrer</button></div>
+      </form>
+    </div>
+  </div>
+</div>
