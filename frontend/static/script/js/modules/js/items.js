@@ -920,7 +920,7 @@ PosnicPro.items = {
             ? '<div class="i-doc-photo"><img loading="lazy" decoding="async" src="' + esc(img) + '" alt="' + esc(d.name) + '" onerror="this.style.display=\'none\';"></div>'
             : '';
         var body = '<div class="s-doc-body"><div class="i-doc-edit-action" style="display:flex;justify-content:flex-end;margin:0 0 14px;">'
-            + '<button type="button" class="btn btn-primary" data-module="item" data-access="write" onclick="hasher.setHash(\'items/' + esc(id) + '/update\');"><i class="feather icon-edit-2 mr-2"></i>Edit article</button>'
+            + '<button type="button" class="btn btn-primary" data-module="item" data-access="write" onclick="if (window.PosnicPro && PosnicPro.items_v2 && typeof PosnicPro.items_v2.openModifyPage === \\'function\\') { PosnicPro.items_v2.openModifyPage(\\\\' + esc(id) + '\\\\'); } else { alert(\\'The item editor is not ready. Please reload POSNIC.\\'); }"><i class="feather icon-edit-2 mr-2"></i>Edit article</button>'
             + '</div><div class="q-sheet s-sheet">'
             + '<div class="i-doc-top">' + '<div class="i-doc-main">' + stats
             + '<div class="s-doc-grid">' + identity + pricing + record + '</div>'
