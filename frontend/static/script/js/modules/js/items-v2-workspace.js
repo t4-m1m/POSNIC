@@ -104,7 +104,7 @@
             var stockTitle = document.createElement('h2');
             stockTitle.className = 'iv2-subheading'; stockTitle.textContent = 'Opening stock';
             stockCard.appendChild(stockTitle); stockCard.appendChild(quantityRow);
-            form.insertBefore(stockCard, el('save').parentElement);
+            form.insertBefore(stockCard, el('save').closest('.iv2-actions'));
         }
         el('section-select').addEventListener('change', function () { select(this.value); });
         el('next-step').addEventListener('click', function () { select('step2', true); });
