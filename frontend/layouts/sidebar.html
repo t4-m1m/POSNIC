@@ -4,10 +4,11 @@ body.posnic-cashier-minimal .vertical-menu-detail { display:none !important; }
 body.posnic-cashier-minimal .navigationbar { width:76px !important; min-width:76px !important; }
 body.posnic-cashier-minimal .vertical-menu-icon { width:76px !important; min-width:76px !important; }
 body.posnic-cashier-minimal .vertical-menu-icon .nav { align-items:center; }
-body.posnic-cashier-minimal .vertical-menu-icon .nav > a:not(#posnic-new-sale-quicklink):not(#posnic-cashier-history-quicklink) { display:none !important; }
+body.posnic-cashier-minimal .vertical-menu-icon .nav > a:not(#posnic-new-sale-quicklink):not(#posnic-cashier-history-quicklink):not(#posnic-cashier-versements-quicklink) { display:none !important; }
 body.posnic-cashier-minimal .vertical-menu-icon .logobar { display:none !important; }
 body.posnic-cashier-minimal .vertical-menu-icon #posnic-new-sale-quicklink,
-body.posnic-cashier-minimal .vertical-menu-icon #posnic-cashier-history-quicklink {
+body.posnic-cashier-minimal .vertical-menu-icon #posnic-cashier-history-quicklink,
+body.posnic-cashier-minimal .vertical-menu-icon #posnic-cashier-versements-quicklink {
  display:flex !important; align-items:center; justify-content:center; width:48px; height:48px;
  margin:12px auto; border-radius:12px; font-size:22px;
 }
@@ -36,6 +37,12 @@ body:not(.posnic-cashier-minimal) #posnic-cashier-history-quicklink { display:no
                         href="#/sales" role="button" aria-label="Historique des ventes"
                         title="Historique des ventes" data-toggle="tooltip" data-placement="right">
                         <i class="feather icon-clock" aria-hidden="true"></i>
+                    </a>
+                    <a class="posnic-cashier-versements-quicklink" id="posnic-cashier-versements-quicklink"
+                        href="#/itemreport" role="button" aria-label="Versements"
+                        title="Versements" data-toggle="tooltip" data-placement="right"
+                        onclick="window.__posnicOpenVersements=true;window.__posnicOpenStockHealth=false;if((window.location.hash||'').toLowerCase().indexOf('itemreport')!==-1&&PosnicPro.itemreport&&PosnicPro.itemreport.activateCustomPanel)PosnicPro.itemreport.activateCustomPanel('versements');">
+                        <i class="feather icon-credit-card" aria-hidden="true"></i>
                     </a>
                     <a class="nav-link nav-link-active" id="v-pills-dashboard-tab" data-toggle="pill"
                         href="#v-pills-dashboard" role="tab" aria-controls="v-pills-dashboard"
