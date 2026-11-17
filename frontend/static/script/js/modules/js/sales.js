@@ -334,6 +334,12 @@ PosnicPro.sales = {
             $('#sales_save_button').show();
         }
         PosnicPro.sales.view.showSalesEditPage(id);
+        if (PosnicPro.sales.paymentOnlyMode !== true && PosnicPro.sales.saleProcess === 'edit') {
+            $('.addDisc-hide-show').show(); $('#sale_add_discount').show();
+            $('#closeSaleButton').show().attr('aria-label', 'Annuler la modification');
+            $('#closeSaleButton').find('lang').text('Annuler la modification');
+            $('.changeSalesBtnText').text('Confirmer la modification');
+        }
 
         $("#time-format").attr('readOnly', 'true');
         $("#time-format").prop('disabled', true);
@@ -1852,6 +1858,9 @@ PosnicPro.sales = {
         }
 
         var inlinePrice = '';
+        if (PosnicPro.sales.saleProcess === 'edit' && PosnicPro.sales.paymentOnlyMode !== true && PosnicPro.sales.SaleAction !== 'return') {
+            inlinePrice = '&nbsp;<i class="feather icon-edit-1 text-primary sales-edit-line-price" onclick="return PosnicPro.sales.editItemPricingSale(this);" data-id="' + id + '" title="Modifier le prix" style="cursor:pointer;font-size:12px"></i>';
+        }
         var inlineDiscount = '';
         //var inlineTax = '';
         /* pencils removed - double-click quick edit replaced them */
@@ -4491,7 +4500,7 @@ PosnicPro.sales.addSale = {
         let payments = PosnicPro.sales.getPaymentObject();
         var versementDraft = window.__posnicVersementDraft || null;
         if (versementDraft) {
-            var versementTotal = Math.max(0, Number(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot) || 0);
+            var versementTotal = PosnicPro.sales.getVersementPayableTotal();
             payments = { Versement: Math.round(versementTotal * 100) / 100 };
             partial = versementTotal.toFixed(2);
             partial_check = 'false';
@@ -11988,15 +11997,23 @@ PosnicPro.sales.runFunctionShortcut = function (key) {
 };
 
 /* F6 — advance payment, separate from customer credit. */
+PosnicPro.sales.getVersementPayableTotal = function () {
+    var grand = Number(String($('#grand_total').val() || '').replace(/,/g, '').trim());
+    var computed = Number(PosnicPro.sales.extraDiscount && PosnicPro.sales.extraDiscount.sale_new_tot);
+    var amount = Number.isFinite(grand) && grand > 0 ? grand : computed;
+    return Math.round(Math.max(0, Number.isFinite(amount) ? amount : 0) * 100) / 100;
+};
 PosnicPro.sales.openVersementCheckout = function () {
     if (!$('#sales_new').is(':visible') || PosnicPro.sales.SaleAction !== 'add' || PosnicPro.sales.paymentOnlyMode === true || PosnicPro.sales.saleProcess === 'KOT') return;
     if (!$('#sales_new_items_table tbody tr').filter(function(){return $(this).find('input[name="addSalesLineItemQty"]').length>0;}).length) { PosnicPro.alert('warning','Ajoutez au moins un article avant de créer un versement.'); return; }
-    var total=Math.round((Number(PosnicPro.sales.extraDiscount&&PosnicPro.sales.extraDiscount.sale_new_tot)||Number(String($('#grand_total').val()||'0').replace(/,/g,''))||0)*100)/100;
+    if (PosnicPro.sales.calculation && typeof PosnicPro.sales.calculation.salesTableRowCart === 'function') { try { PosnicPro.sales.calculation.salesTableRowCart(); } catch (_) {} }
+    var total=PosnicPro.sales.getVersementPayableTotal();
     if(!(total>0)){PosnicPro.alert('warning','Le total de la vente est invalide.');return;}
     if(!$('#posnic-versement-checkout').length){
         $('body').append('<div class="modal fade" id="posnic-versement-checkout" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content" style="background:var(--theme-card-bg,#fff);color:var(--theme-text-primary,#1e293b);border:1px solid var(--theme-border-color,#e2e8f0);border-radius:16px"><div class="modal-header"><div><small class="text-primary font-weight-bold">POSNIC · NOUVEAU VERSEMENT</small><h5 class="modal-title mb-0">VERSEMENT</h5></div><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div><div class="modal-body"><div class="p-3 mb-3 rounded" style="background:var(--theme-body-bg,#f8fafc);border:1px solid var(--theme-border-color,#e2e8f0)"><small class="text-muted">Total de la vente</small><div class="h3 mb-0" id="posnic-versement-total">0.00 DA</div></div><div class="form-group"><label>Nom du client</label><input id="posnic-versement-customer" class="form-control" maxlength="200" placeholder="Client enregistré ou non"></div><div class="form-group"><label>Téléphone (facultatif)</label><input id="posnic-versement-phone" class="form-control" maxlength="40"></div><div class="form-group"><label>Nom du vendeur</label><input id="posnic-versement-vendor" class="form-control" maxlength="80" placeholder="Nom du vendeur"></div><div class="form-group"><label>Montant versé</label><input id="posnic-versement-amount" class="form-control form-control-lg" type="number" min="0.01" step="0.01"></div><div class="p-3 mb-3 rounded" style="background:var(--theme-body-bg,#f8fafc);border:1px solid var(--theme-border-color,#e2e8f0)"><small class="text-muted">Reste à payer</small><div class="h4 mb-0" id="posnic-versement-remaining">0.00 DA</div></div><div class="form-group mb-0"><label>Mode de paiement de l’avance</label><select id="posnic-versement-method" class="form-control"><option value="cash">Espèces</option><option value="tpe">TPE</option><option value="baridimob">BaridiMob</option></select></div><small class="text-muted d-block mt-3">Le solde sera suivi dans Versements, sans créer de crédit client.</small></div><div class="modal-footer"><button type="button" class="btn btn-light" data-dismiss="modal">Annuler</button><button type="button" class="btn btn-primary" id="posnic-versement-confirm">Valider le versement</button></div></div></div></div>');
         $('#posnic-versement-confirm').on('click',function(){
-            var customer=String($('#posnic-versement-customer').val()||'').trim(),phone=String($('#posnic-versement-phone').val()||'').trim(),vendor=String($('#posnic-versement-vendor').val()||'').trim(),amount=Number($('#posnic-versement-amount').val()),method=String($('#posnic-versement-method').val()||'cash'),saleTotal=Number($('#posnic-versement-checkout').data('total'))||0;
+            var customer=String($('#posnic-versement-customer').val()||'').trim(),phone=String($('#posnic-versement-phone').val()||'').trim(),vendor=String($('#posnic-versement-vendor').val()||'').trim(),amount=Number($('#posnic-versement-amount').val()),method=String($('#posnic-versement-method').val()||'cash'),saleTotal=PosnicPro.sales.getVersementPayableTotal();
+            $('#posnic-versement-checkout').data('total',saleTotal);
             if(!customer||!vendor||!(amount>0)||amount>saleTotal+0.009||!['cash','tpe','baridimob'].includes(method)){PosnicPro.alert('warning','Renseignez le client, le vendeur et un montant compris entre 0 et le total de la vente.');return;}
             window.__posnicVersementDraft={customer_name:customer,phone:phone,vendor_name:vendor,initial_amount:Math.round(amount*100)/100,initial_method:method};
             $('#Partial_amount').val(saleTotal.toFixed(2));$('#sales_new_customer_partial_balance').val('false');$('#unpaid_payment_toggle').prop('checked',true).trigger('change');
@@ -14798,7 +14815,7 @@ $(document).ready(function () {
         'selectedTable', 'selectedPerson', 'currentItemNoteId', 'dineType',
         'defaultCustomer', 'SaleAction', 'salesExchange', '_selectedPriceTierLineId',
         'editSaleId', 'paymentOnlyMode', 'originalSaleData', 'kotPaymentMode',
-        'refundSaleAction', 'recentSaleAction'
+        'refundSaleAction', 'recentSaleAction', 'addSalesItemChars', 'EditRecentSaleParams', '_lineModifiers', '_orderRequestId'
     ];
     function clone(value) {
         if (value === undefined) return undefined;
@@ -14835,15 +14852,14 @@ $(document).ready(function () {
             stateKeys.forEach(function (key) {
                 if (Object.prototype.hasOwnProperty.call(PosnicPro.sales, key)) values[key] = clone(PosnicPro.sales[key]);
             });
-            return { controls: controls, leaves: leaves, cartHtml: body ? body.innerHTML : null, values: values };
+            return { controls: controls, leaves: leaves, cartHtml: body ? body.innerHTML : null, values: values, windowState: { versementDraft: clone(window.__posnicVersementDraft), fastPayPending: clone(window.__posnicFastPayPending) } };
         },
         restore: function (snapshot) {
             if (!snapshot) return;
             var root = currentSalesRoot();
             if (!root) return;
-            Object.keys(snapshot.values || {}).forEach(function (key) {
-                PosnicPro.sales[key] = clone(snapshot.values[key]);
-            });
+            Object.keys(snapshot.values || {}).forEach(function (key) { PosnicPro.sales[key] = clone(snapshot.values[key]); });
+            if (snapshot.windowState) { window.__posnicVersementDraft = clone(snapshot.windowState.versementDraft); window.__posnicFastPayPending = clone(snapshot.windowState.fastPayPending); }
             var body = root.querySelector('#sales_new_items_table tbody');
             if (body && snapshot.cartHtml !== null) body.innerHTML = snapshot.cartHtml;
             var allControls = Array.prototype.slice.call(root.querySelectorAll('input,select,textarea'));
@@ -14870,7 +14886,8 @@ $(document).ready(function () {
             if (!bar) return;
             var self = this;
             bar.innerHTML = '';
-            this.sessions.forEach(function (session) {
+            this.sessions.forEach(function (session, index) {
+                session.label = session.customerName || ('Client ' + (index + 1));
                 var tab = document.createElement('div');
                 tab.className = 'posnic-basket-tab-wrap' + (session.id === self.activeId ? ' is-active' : '');
                 var button = document.createElement('button');
@@ -14910,7 +14927,7 @@ $(document).ready(function () {
             bar.id = 'posnic-multi-baskets';
             bar.setAttribute('aria-label', 'Paniers clients simultanés');
             toolbar.parentNode.insertBefore(bar, toolbar);
-            this.sessions = [{ id: 1, label: 'Client 1', snapshot: null }];
+            this.sessions = [{ id: 1, label: 'Client 1', customerName: '', snapshot: null }];
             this.activeId = 1;
             this.nextId = 2;
             this.initialized = true;
@@ -14931,7 +14948,7 @@ $(document).ready(function () {
                 return;
             }
             var current = this.sessions.find(function (item) { return item.id === this.activeId; }, this);
-            if (current) current.snapshot = this.snapshot();
+            if (current) { current.snapshot = this.snapshot(); current.customerName = String($('#sales_new_customer_name').val() || '').trim(); }
             var next = this.sessions.find(function (item) { return item.id === id; });
             if (!next) return;
             this.activeId = id;
@@ -14963,6 +14980,12 @@ $(document).ready(function () {
             }
             this.render();
         },
+        updateActiveLabel: function (name) {
+            var active = this.sessions.find(function (item) { return item.id === this.activeId; }, this);
+            if (!active) return;
+            active.customerName = String(name || '').trim();
+            this.render();
+        },
         create: function () {
             if (this.sessions.length >= 8) {
                 PosnicPro.alert('warning', 'Maximum 8 paniers clients simultanés.');
@@ -14971,12 +14994,12 @@ $(document).ready(function () {
             var current = this.sessions.find(function (item) { return item.id === this.activeId; }, this);
             if (current) current.snapshot = this.snapshot();
             var id = this.nextId++;
-            var session = { id: id, label: 'Client ' + id, snapshot: null };
+            var session = { id: id, label: 'Client ' + (this.sessions.length + 1), customerName: '', snapshot: null };
             this.sessions.push(session);
             // Start with a genuinely empty sale using the existing POS reset logic.
-            if (PosnicPro.sales.clear && PosnicPro.sales.clear.cartItems) {
-                PosnicPro.sales.clear.cartItems(false);
-            }
+            if (PosnicPro.sales.clear && PosnicPro.sales.clear.cartItems) PosnicPro.sales.clear.cartItems(false);
+            PosnicPro.sales.addSalesItemChars = []; PosnicPro.sales.EditRecentSaleParams = []; PosnicPro.sales._lineModifiers = {};
+            if (PosnicPro.sales.resetOrderRequest) PosnicPro.sales.resetOrderRequest();
             // Each simultaneous basket owns its own customer context. The legacy
             // cart reset intentionally keeps customer details in some workflows,
             // so explicitly start a new tab as walk-in and let snapshot/restore

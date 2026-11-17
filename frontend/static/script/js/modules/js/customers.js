@@ -8,6 +8,7 @@ PosnicPro.customers = {
     },
     showAdd: function () {
         var salesQuickCreate = /^#\/sales\/customers\/new(?:[/?]|$)/.test(String(window.location.hash || ''));
+        $('#infobar-settings-sidebar-customer').toggleClass('posnic-sales-quick-create', salesQuickCreate);
         PosnicPro.customers.loadSelectCustomerState(PosnicPro.local.get('countryid'), 'add');
         if (!salesQuickCreate) {
             $(".infobar-settings-sidebar-overlay").css({"background": "transparent", "position": "initial"});
@@ -32,6 +33,7 @@ PosnicPro.customers = {
         PosnicPro.customers.customerAction = 'add';
     },
     showEdit: function (id) {
+        $('#infobar-settings-sidebar-customer').removeClass('posnic-sales-quick-create');
         var loader = $(".loader-customer");
         loader.find(".loadingSpinner:first").remove();
         PosnicPro.showEditModal('customers');
@@ -468,6 +470,7 @@ PosnicPro.customers = {
                         $('#sales_new_customer_country').val(data.country);
                         $('#sales_new_customer_gst_type').val(data.gst_type);
                         $('#sales_new_customer_gst_number').val(data.gst_number);
+                        if (PosnicPro.sales && PosnicPro.sales.multiBasket && PosnicPro.sales.multiBasket.updateActiveLabel) PosnicPro.sales.multiBasket.updateActiveLabel(data.name || '');
                         $(".infobar-settings-sidebar-overlay").css({"background": "transparent", "position": "initial", "pointerEvents": "none"});
                         $("#infobar-settings-sidebar-customer").removeClass("sidebarshow");
                         hasher.changed.active = true;
@@ -488,6 +491,13 @@ PosnicPro.customers = {
                         hasher.setHash('customers');
                     }
                     $('.customer-trigger').val('');
+                    if (createdFromSales) {
+                        $('#customers_new').modal && $('#customers_new').modal('hide');
+                        $('#infobar-settings-sidebar-customer').removeClass('sidebarshow posnic-sales-quick-create');
+                        $('.infobar-settings-sidebar-overlay').css({ background: 'transparent', position: 'initial', pointerEvents: 'none' }).hide();
+                        hasher.changed.active = false; hasher.replaceHash('sales/new'); hasher.changed.active = true;
+                        $('.page_loader').not('#sales_new').hide(); $('.page-title-box,#sales_new').show();
+                    }
                     loader.find(".loadingSpinner:first").remove();
                     /*This function call for updating customername.json,getcustomers.json file */
                     PosnicPro.alert(response.type, response.message);
