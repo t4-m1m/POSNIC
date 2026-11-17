@@ -162,7 +162,7 @@
         }); event.target.value = '';
     }
     function variantFields() {
-        return [['available_quantity','Opening stock','number'],['barcode_id','Generated barcode','text']];
+        return [['available_quantity','Stock initial','number'],['barcode_id','Barcode','text']];
     }
     function captureVariants() {
         document.querySelectorAll('#iv2-variant-rows .iv2-variant').forEach(function (card, i) {
@@ -219,10 +219,8 @@
     function isFamily() {
         var kind = document.querySelector('#items_v2 [name="iv2-kind"]:checked');
         if (!kind || kind.value === 'service' || !el('has-variants').checked) return false;
-        /* A product is not a variant family merely because it is a product.
-           Only selected variant values opt into family validation and the
-           atomic createFamily endpoint. An untouched/empty variant editor is
-           a valid standalone item. */
+        /* Once the owner enables variants, saving must use a complete generated
+           combination set; an empty set is not silently treated as standalone. */
         return true;
     }
     function validate() {
