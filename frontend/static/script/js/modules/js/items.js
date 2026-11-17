@@ -944,7 +944,7 @@ PosnicPro.items = {
 #posnic_independent_modify_page .pm-price-title{font-size:14px;font-weight:800;color:#1e5fa8;margin:0 0 -3px}
 #posnic_independent_modify_page .pm-image{display:grid;grid-template-columns:180px minmax(180px,1fr) 190px;align-items:center;gap:14px;margin-top:12px;padding:0;border:0;border-radius:0;background:transparent}
 #posnic_independent_modify_page .pm-image strong{color:#244d79;font-size:13px}
-#posnic_independent_modify_page .pm-image-preview{height:130px;display:flex;align-items:center;justify-content:center;border:1px dashed #a9c4e2;border-radius:8px;background:#fff;overflow:hidden}
+#posnic_independent_modify_page .pm-image-preview{height:110px;display:flex;align-items:center;justify-content:center;border:0;border-radius:0;background:transparent;overflow:hidden}
 #posnic_independent_modify_page .pm-image-preview img{max-width:100%;max-height:120px;object-fit:contain}
 #posnic_independent_modify_page .pm-image-preview .pm-empty{font-size:12px;color:#8192a8}
 #posnic_independent_modify_page .pm-upload{display:block;text-align:center;padding:11px 12px;border-radius:7px;background:#e2efff;color:#175da9;font-size:12px;font-weight:800;cursor:pointer}
