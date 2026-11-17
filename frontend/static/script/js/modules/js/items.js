@@ -899,14 +899,21 @@ PosnicPro.items = {
         if (PosnicPro.aclLoaded && PosnicPro.aclLoaded() && !PosnicPro.checkAccess('item','write')) {
             PosnicPro.alert('error','You do not have permission to modify items.'); return;
         }
+        var routeHost = document.getElementById('items_modify_page');
+        if (!routeHost) {
+            PosnicPro.alert('error', 'The Modify article route container is unavailable. Reopen the Articles page and try again.');
+            return;
+        }
         var host = document.getElementById('posnic_independent_modify_page');
         if (!host) {
-            host = document.createElement('section'); host.id = 'posnic_independent_modify_page';
-            host.className = 'page_loader'; document.body.appendChild(host);
+            host = document.createElement('section');
+            host.id = 'posnic_independent_modify_page';
+            host.className = 'posnic-article-editor-page';
+            routeHost.appendChild(host);
         }
         host.innerHTML = `
 <style id="posnic-modify-blue-two-step">
-#posnic_independent_modify_page{display:flex!important;flex-direction:column!important;justify-content:flex-start!important;align-items:center!important;box-sizing:border-box!important;position:fixed!important;inset:70px 0 0!important;z-index:1060!important;width:100%!important;height:calc(100vh - 70px)!important;min-height:0!important;max-height:none!important;overflow:auto!important;padding:20px 16px 8px!important;background:var(--theme-body-bg,#f3f6fb);color:var(--theme-text-primary,#24344d)}
+#posnic_independent_modify_page{display:flex!important;flex-direction:column!important;justify-content:flex-start!important;align-items:center!important;box-sizing:border-box!important;position:static!important;inset:auto!important;z-index:auto!important;width:100%!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;margin:0!important;padding:16px 24px!important;background:var(--theme-body-bg,#f3f6fb);color:var(--theme-text-primary,#24344d)}
 #posnic_independent_modify_page *{box-sizing:border-box}
 #posnic_independent_modify_page .pm-shell{width:min(1150px,100%);max-width:1150px;margin:0 auto;background:var(--theme-card-bg,#fff);border:1px solid #d9e5f5;border-radius:12px;box-shadow:0 5px 22px rgba(27,74,137,.09);overflow:visible}
 #posnic_independent_modify_page .pm-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 20px;background:linear-gradient(110deg,#1557a6,#2879d0);color:#fff;border-radius:11px 11px 0 0}
@@ -928,7 +935,7 @@ PosnicPro.items = {
 #posnic_independent_modify_page .pm-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 16px;align-items:start}
 #posnic_independent_modify_page .pm-field{min-width:0;margin:0}
 #posnic_independent_modify_page .pm-field label{display:block;margin:0 0 5px;color:var(--theme-text-primary,#34445b);font-size:12px;font-weight:700}
-#posnic_independent_modify_page .pm-field input,#posnic_independent_modify_page .pm-field select{display:block;width:100%;height:43px;min-height:43px;min-width:0;padding:8px 11px;border:1px solid #d1d5db;border-radius:8px;background:var(--theme-input-bg,var(--theme-card-bg,#fff));color:var(--theme-text-primary,#263347);font-size:14px}
+#posnic_independent_modify_page .pm-field input,#posnic_independent_modify_page .pm-field select{display:block;width:100%;height:40px;min-height:40px;min-width:0;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;background:var(--theme-input-bg,var(--theme-card-bg,#fff));color:var(--theme-text-primary,#263347);font-size:14px}
 #posnic_independent_modify_page .pm-field input:focus,#posnic_independent_modify_page .pm-field select:focus{outline:0;border-color:#2879d0;box-shadow:0 0 0 3px rgba(40,121,208,.13)}
 #posnic_independent_modify_page .pm-span-6,#posnic_independent_modify_page .pm-price-title{grid-column:1/-1}
 #posnic_independent_modify_page .pm-span-3{grid-column:span 1}
@@ -949,12 +956,12 @@ PosnicPro.items = {
 @media(max-width:560px){#posnic_independent_modify_page{padding:6px!important}#posnic_independent_modify_page .pm-head{padding:12px}#posnic_independent_modify_page .pm-tabs{padding:10px 10px 0}#posnic_independent_modify_page .pm-tab{flex:1;justify-content:center;padding:7px 6px;font-size:11px}#posnic_independent_modify_page .pm-panel{padding:14px 12px}#posnic_independent_modify_page .pm-fields{grid-template-columns:1fr}#posnic_independent_modify_page .pm-span-6,#posnic_independent_modify_page .pm-price-title,#posnic_independent_modify_page .pm-span-3,#posnic_independent_modify_page .pm-span-2{grid-column:1/-1}#posnic_independent_modify_page .pm-image{grid-template-columns:1fr}#posnic_independent_modify_page .pm-image-preview{grid-column:auto;grid-row:auto}#posnic_independent_modify_page .pm-footer{padding:10px 12px}}
 </style>
 <style id="posnic-modify-top-alignment-final">
-#posnic_independent_modify_page{display:flex!important;flex-direction:column!important;justify-content:flex-start!important;align-items:center!important;padding-top:20px!important;overflow-y:auto!important}
+#posnic_independent_modify_page{display:flex!important;flex-direction:column!important;justify-content:flex-start!important;align-items:center!important;padding-top:0!important;overflow:visible!important}
 #posnic_independent_modify_page .pm-shell{width:min(1150px,100%)!important;max-width:1150px!important;margin:0 auto!important;align-self:center!important;flex:0 0 auto!important}
 #posnic_independent_modify_page .pm-head{background:#1565C0!important}
 #posnic_independent_modify_page .pm-fields{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px 16px!important}
 #posnic_independent_modify_page .pm-field label{font-size:13px!important;font-weight:700!important}
-#posnic_independent_modify_page .pm-field input,#posnic_independent_modify_page .pm-field select{height:43px!important;min-height:43px!important;border:1px solid #d1d5db!important;border-radius:8px!important;font-size:14px!important}
+#posnic_independent_modify_page .pm-field input,#posnic_independent_modify_page .pm-field select{height:40px!important;min-height:40px!important;padding:8px 12px!important;border:1px solid #d1d5db!important;border-radius:8px!important;font-size:14px!important}
 </style>
 <div class="pm-shell">
   <header class="pm-head"><div><h3>Modify article</h3><div class="pm-sub">Update the selected article · two-step editor</div></div><button type="button" class="btn pm-btn" id="posnic_modify_close"><i class="feather icon-arrow-left mr-2"></i>Back</button></header>
@@ -1005,9 +1012,6 @@ PosnicPro.items = {
             $('#posnic_modify_prev').prop('hidden', self._modifyStep === 1);
             $('#posnic_modify_next').prop('hidden', self._modifyStep === 2);
             $('#posnic_modify_save').prop('hidden', self._modifyStep !== 2);
-            if (self._modifyStep === 2) {
-                $('#posnic_independent_modify_page').get(0).scrollIntoView({behavior:'smooth',block:'start'});
-            }
         }
         self._modifyStep = 1;
         $('#posnic_independent_modify_page [data-modify-step]').off('click').on('click',function(){setModifyStep(Number($(this).attr('data-modify-step')));});
