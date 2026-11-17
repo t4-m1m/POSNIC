@@ -59,15 +59,16 @@ $(document).ready(function () {
         }
         withModule(module, function () { PosnicPro[module].view.returnPage(module, id); });
     });
-    // Independent item update page; load the record before enabling editing.
+    // The catalogue's independent Modify page is owned by the items module,
+    // not by the Add New Item editor or its route lifecycle.
     crossroads.addRoute('items/{id}/update', function (id) {
         RECORD_ID = id;
-        withModule('items', function () { PosnicPro.items_v2.openModifyPage(id); });
+        withModule('items', function () { PosnicPro.items.openIndependentModify(id); });
     });
     crossroads.addRoute('{module}/{id}/edit', function (module, id) {
         RECORD_ID = id;
         withModule(module, function () {
-            if (module === 'items') { PosnicPro.items_v2.openModifyPage(id); return; }
+            if (module === 'items') { PosnicPro.items.openIndependentModify(id); return; }
             PosnicPro[module].showEdit(id);
         });
     });
