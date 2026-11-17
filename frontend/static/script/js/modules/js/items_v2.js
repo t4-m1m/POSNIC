@@ -70,7 +70,7 @@
         var category = document.getElementById('iv2-category').selectedOptions[0];
         var details = P.itemsV2Details.status();
         var quantities=details.quantities.filter(function(n){return Number.isFinite(Number(n));});
-        return { name: value('iv2-name'), price: value('iv2-price'), price2: value('iv2-price2'), price3: value('iv2-price3'), cost: value('iv2-cost'), quantity: details.family ? quantities.reduce(function(sum,n){return sum+Number(n||0);},0) : value('iv2-quantity'), kind: selected('iv2-kind'), stock: selected('iv2-stock'), zeroStock: selected('iv2-zero-stock'), confirmZero: document.getElementById('iv2-confirm-zero').checked, openPrice: details.openPrice, family: details.family,
+        return { name: value('iv2-name'), price: value('iv2-price'), price2: value('iv2-price2'), price3: value('iv2-price3'), cost: value('iv2-cost'), quantity: details.family ? quantities.reduce(function(sum,n){return sum+Number(n||0);},0) : value('iv2-quantity'), kind: selected('iv2-kind'), stock: selected('iv2-stock'), zeroStock: selected('iv2-zero-stock') || 'later', confirmZero: document.getElementById('iv2-confirm-zero').checked, openPrice: details.openPrice, family: details.family,
             articleType: value('iv2-article-type'), brandAbbreviation: value('iv2-brand-abbr'), referenceDate: value('iv2-reference-date'), modelReference: value('iv2-model-reference'),
             purchasePriceEur: value('iv2-price-eur'), exchangeRate: value('iv2-exchange-rate'), extraCost: value('iv2-extra-cost'),
             taxId: taxReady && capabilities.tax ? value('iv2-tax') : '', taxName: capabilities.tax && tax && tax.dataset.name || '', taxRate: capabilities.tax && tax && tax.dataset.rate || 0, taxType: value('iv2-tax-type'), categoryId: value('iv2-category'), categoryName: category && category.dataset.name || '', barcode: value('iv2-barcode'), sku: value('iv2-sku'), description: value('iv2-description') };
@@ -315,7 +315,7 @@
         function move(selector,target){var node=document.querySelector(selector);if(node)target.appendChild(node);return node;}
         move('#iv2-details-extra',p1);move('#iv2-codes',p1);move('#iv2-variants',p1);
         var stockSection=document.querySelector('#iv2-panel-basics section:nth-of-type(2)');
-        if(stockSection){var modes=stockSection.querySelector('.iv2-stock-modes');if(modes)modes.remove();var zero=stockSection.querySelector('#iv2-zero-stock');if(zero)zero.remove();var stockTitle=stockSection.querySelector('.iv2-section-title');if(stockTitle)stockTitle.remove();move('#iv2-quantity-row',stockSection);p2.appendChild(stockSection);}
+        if(stockSection){var stockTitle=stockSection.querySelector('.iv2-section-title');if(stockTitle)stockTitle.remove();move('#iv2-quantity-row',stockSection);p2.appendChild(stockSection);}
         var priceLabel=document.querySelector('label[for=iv2-price]'),priceInput=document.getElementById('iv2-price');
         var priceSection=document.createElement('section');priceSection.className='iv2-section';priceSection.innerHTML='<h2>Selling prices (DA)</h2><div class="iv2-owner-price-grid" id="iv2-owner-price-grid"></div>';
         var priceGrid=priceSection.querySelector('#iv2-owner-price-grid'),priceWrap=document.createElement('div');priceWrap.className='iv2-owner-field';priceLabel.textContent='Selling Price 1 (DA)';priceInput.required=true;priceWrap.append(priceLabel,priceInput);priceGrid.appendChild(priceWrap);
