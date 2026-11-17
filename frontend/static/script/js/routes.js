@@ -59,6 +59,11 @@ $(document).ready(function () {
         }
         withModule(module, function () { PosnicPro[module].view.returnPage(module, id); });
     });
+    // Dedicated Modify item page. It shares the modern two-step form with
+    // creation, but enters an explicit edit-only state and never POSTs a new item.
+    crossroads.addRoute('items/{id}/modify', function (id) {
+        withModule('items', function () { PosnicPro.items_v2.showModify(id); });
+    });
     crossroads.addRoute('{module}/{id}/edit', function (module, id) {
         RECORD_ID = id;
         withModule(module, function () { PosnicPro[module].showEdit(id); });
