@@ -210,7 +210,7 @@
            Only selected variant values opt into family validation and the
            atomic createFamily endpoint. An untouched/empty variant editor is
            a valid standalone item. */
-        return selectedValues('values1').length > 0 || selectedValues('values2').length > 0;
+        return true;
     }
     function validate() {
         var invalid = document.querySelector('#iv2-fields input:invalid, #iv2-fields select:invalid, #iv2-fields textarea:invalid');
