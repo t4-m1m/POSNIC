@@ -354,9 +354,6 @@ PosnicPro.items = {
     showClone: function (id) {
         PosnicPro.items_v2.showClone(id);
     },
-    showEdit: function (id) {
-        return PosnicPro.items_v2.showEdit(id);
-    },
     showDelete: function (id) {
         PosnicPro.deleteTableRowData(id, 'items');
     },
@@ -923,7 +920,7 @@ PosnicPro.items = {
             ? '<div class="i-doc-photo"><img loading="lazy" decoding="async" src="' + esc(img) + '" alt="' + esc(d.name) + '" onerror="this.style.display=\'none\';"></div>'
             : '';
         var body = '<div class="s-doc-body"><div class="i-doc-edit-action" style="display:flex;justify-content:flex-end;margin:0 0 14px;">'
-            + '<button type="button" class="btn btn-primary" data-module="item" data-access="write" onclick="hasher.setHash(\\'items/' + esc(id) + '/update\\');"><i class="feather icon-edit-2 mr-2"></i>Edit article</button>'
+            + '<button type="button" class="btn btn-primary" data-module="item" data-access="write" onclick="hasher.setHash(\'items/' + esc(id) + '/update\');"><i class="feather icon-edit-2 mr-2"></i>Edit article</button>'
             + '</div><div class="q-sheet s-sheet">'
             + '<div class="i-doc-top">' + '<div class="i-doc-main">' + stats
             + '<div class="s-doc-grid">' + identity + pricing + record + '</div>'
@@ -4693,7 +4690,7 @@ $(document).ready(function () {
     $('#items_discount_percentage').attr('disabled', 'disabled').val('0').hide();
     $('#items_discount_amount').removeAttr('disabled', 'disabled').val('0').show();
     jQuery.validator.addMethod("alphanumeric", function (value, element) {
-        if ((/[*|\":<>[\]{}`\\';@&#!]/.test(value))) {
+        if ((/[*|\":<>[\]{}`\';@&#!]/.test(value))) {
             return false;
         }
         return true;
