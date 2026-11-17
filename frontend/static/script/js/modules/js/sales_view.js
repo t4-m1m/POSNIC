@@ -541,12 +541,16 @@ PosnicPro.sales.view = {
         }
     },
     showSalesEditPage: function (id) {
+        var paymentRequestAtLoad = PosnicPro.sales._pendingPaymentRequest && String(PosnicPro.sales._pendingPaymentRequest.saleId) === String(id)
+            ? PosnicPro.sales._pendingPaymentRequest : null;
         var loader = $(".loader-edit-sale");
         $("<div class='loadingSpinner'></div>").appendTo(loader);
         PosnicPro.get('sales/' + id, function (response) {
             if (response.type === 'success') {
-                var pendingPayment = PosnicPro.sales._pendingPaymentRequest;
-                if (pendingPayment && String(pendingPayment.saleId) === String(id)) {
+                var pendingPayment = paymentRequestAtLoad;
+                if (pendingPayment) {
+                    var currentRequest = PosnicPro.sales._pendingPaymentRequest;
+                    if (!currentRequest || currentRequest.token !== pendingPayment.token) return;
                     var baskets = PosnicPro.sales.multiBasket;
                     if (baskets && baskets.initialized && baskets.activeId !== pendingPayment.sessionId) {
                         var owner = baskets.sessions.find(function (session) { return session.id === pendingPayment.sessionId; });

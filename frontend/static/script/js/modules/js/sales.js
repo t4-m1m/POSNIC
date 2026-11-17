@@ -284,6 +284,10 @@ PosnicPro.sales = {
         loader.find(".loadingSpinner:first").remove(); 
     },
     showEdit: function (id) {
+        var pendingPaymentRequest = PosnicPro.sales._pendingPaymentRequest;
+        if (pendingPaymentRequest && String(pendingPaymentRequest.saleId) !== String(id)) {
+            PosnicPro.sales._pendingPaymentRequest = null;
+        }
         // ✅ Reset submission flag when opening edit sale
         PosnicPro.sales.submissionInProgress = false;
         $("#save_btn").prop('disabled', false);
