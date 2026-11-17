@@ -453,11 +453,11 @@
         reset();
         var itemName = String(item.name || '');
         var parsedName = itemName.match(/^(.*?)-([0-9]{2}-[0-9]{2})\/([^/]+)$/);
-        if (item.article_type || item.brand_abbreviation || item.model_reference) {
-            el('type-name').value = item.article_type || '';
-            el('brand-abbr').value = item.brand_abbreviation || '';
+        if (item.article_type || item.brand_abbreviation || item.model_reference || item.reference_date) {
+            el('type-name').value = item.article_type || item.type_name || (parsedName && parsedName[1].trim()) || itemName;
+            el('brand-abbr').value = item.brand_abbreviation || item.brand_abbr || '';
             el('reference-date').value = item.reference_date || (parsedName && parsedName[2]) || '';
-            el('reference').value = item.model_reference || (parsedName && parsedName[3]) || '';
+            el('reference').value = item.model_reference || item.model_ref || (parsedName && parsedName[3]) || '';
         } else if (parsedName) {
             var nameParts = parsedName[1].trim().split(/\s+/);
             el('type-name').value = nameParts.shift() || '';
