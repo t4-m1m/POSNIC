@@ -895,7 +895,7 @@ PosnicPro.items = {
         var host = document.getElementById('posnic_independent_modify_page');
         if (!host) return;
         $(document).off('keydown.posnicModifyPage');
-        $(host).hide();
+        host.style.setProperty('display','none','important');
         if (window.hasher && typeof window.hasher.setHash === 'function' && window.location.hash !== '#/items') {
             window.hasher.setHash('items');
         }
@@ -919,7 +919,7 @@ PosnicPro.items = {
         }
         host.innerHTML = `
 <style id="posnic-modify-blue-two-step">
-#posnic_independent_modify_page{display:block!important;position:fixed!important;inset:70px 0 0!important;z-index:1060!important;width:100%;height:calc(100vh - 70px)!important;min-height:0!important;max-height:none!important;overflow:auto!important;padding:8px 16px 22px;background:var(--theme-body-bg,#f3f6fb);color:var(--theme-text-primary,#24344d)}
+#posnic_independent_modify_page{display:block;position:fixed!important;inset:70px 0 0!important;z-index:1060!important;width:100%;height:calc(100vh - 70px)!important;min-height:0!important;max-height:none!important;overflow:auto!important;padding:8px 16px 22px;background:var(--theme-body-bg,#f3f6fb);color:var(--theme-text-primary,#24344d)}
 #posnic_independent_modify_page *{box-sizing:border-box}
 #posnic_independent_modify_page .pm-shell{width:min(1360px,100%);margin:0 auto;background:var(--theme-card-bg,#fff);border:1px solid #d9e5f5;border-radius:12px;box-shadow:0 5px 22px rgba(27,74,137,.09);overflow:visible}
 #posnic_independent_modify_page .pm-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 20px;background:linear-gradient(110deg,#1557a6,#2879d0);color:#fff;border-radius:11px 11px 0 0}
