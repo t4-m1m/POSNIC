@@ -4,7 +4,7 @@
     function assess(f) {
         var tracked = f.kind !== 'service' && f.stock === 'tracked';
         var price = Number(f.price), quantity = Number(f.quantity), cost = Number(f.cost);
-        if (!String(f.name || '').trim()) return { error: 'Enter the article type, brand abbreviation and model reference.', field: 'iv2-type-name' };
+        if (!String(f.name || '').trim()) return { error: 'Give your item a name.', field: 'iv2-name' };
         if (![price, cost].every(function (n) { return Number.isFinite(n) && n >= 0; })) return { error: 'Enter a valid price of zero or more.', field: 'iv2-price' };
         if (tracked && (!Number.isFinite(quantity) || quantity < 0)) return { error: 'Enter an opening stock quantity of zero or more.', field: 'iv2-quantity' };
         if (!price && !f.confirmZero && !f.openPrice) return { error: 'Add a selling price, or confirm that you want to save it at zero.', field: 'iv2-confirm-zero' };
@@ -23,11 +23,11 @@
     if (typeof module === 'object' && module.exports) { module.exports = { assess: assess, payload: payload }; return; }
     var P = root.PosnicPro, $ = root.jQuery;
     var businessContext = null, capabilities = {}, savedItemId = null, editing = false, savedBranch = null;
-    var existingItem = null, editBaseline = null, editSequence = 0, editorMode = 'create';
+    var existingItem = null, editBaseline = null, editSequence = 0;
     function readCapabilities() {
         var settings = {};
         try { settings = JSON.parse(P.local.get('general_settings') || '{}'); } catch (_) {}
-        return { restaurant: false, tax: false, weight: settings.hardware_weight_machine_enable === true, online: settings.module_online_ordering_enable !== false };
+        return { restaurant: businessContext === 'restaurant' || (businessContext === null && P.local.get('table_options') === 'enable'), tax: settings.module_tax_enable !== false, weight: settings.hardware_weight_machine_enable === true, online: settings.module_online_ordering_enable !== false };
     }
     function loadRestaurantOptions() {
         function fill(id, rows, empty) {
@@ -50,16 +50,8 @@
     }
     function checkedValues(id) { return Array.from(document.querySelectorAll('#' + id + ' input:checked')).map(function (el) { return el.value; }); }
     function applyBusinessContext() {
-        var restaurant = false;
-        var kind = businessContext === 'service' ? 'service' : 'product';
-        var restaurantTab = document.getElementById('iv2-tab-restaurant');
-        var restaurantPanel = document.getElementById('iv2-panel-restaurant');
-        if (restaurantTab) restaurantTab.hidden = true;
-        if (restaurantPanel) restaurantPanel.hidden = true;
-        var restaurantOption = document.querySelector('#iv2-section-select option[value="restaurant"]');
-        if (restaurantOption) { restaurantOption.hidden = true; restaurantOption.disabled = true; }
-        ['iv2-tax-field', 'iv2-tax-extra', 'iv2-tax-error'].forEach(function (id) { var node = document.getElementById(id); if (node) node.hidden = true; });
-        document.querySelectorAll('#items_v2 .iv2-tax-row').forEach(function (node) { node.hidden = true; });
+        var restaurant = businessContext === 'restaurant' || (businessContext === null && P.local.get('table_options') === 'enable');
+        var kind = restaurant ? 'dish' : businessContext === 'service' ? 'service' : 'product';
         document.querySelector('#items_v2 input[name="iv2-kind"][value="' + kind + '"]').checked = true;
         document.querySelector('#items_v2 input[name="iv2-stock"][value="' + (kind === 'product' ? 'tracked' : 'untracked') + '"]').checked = true;
         text('iv2-product-label', restaurant ? PosnicPro.i18n.t('lang_packaged_product', 'Packaged product') : PosnicPro.i18n.t('lang_retail_product', 'Retail product'));
@@ -68,14 +60,14 @@
     var bound = false, taxReady = false, taxLoading = false, busy = false, saved = false, attempted = false;
     function value(id) { return document.getElementById(id).value; }
     function selected(name) { var el = document.querySelector('#items_v2 input[name="' + name + '"]:checked'); return el ? el.value : ''; }
-    function show(id, yes) { var node = document.getElementById(id); if (node) node.hidden = !yes; }
+    function show(id, yes) { document.getElementById(id).hidden = !yes; }
     function text(id, message) { document.getElementById(id).textContent = message; }
     function fields() {
         var tax = document.getElementById('iv2-tax').selectedOptions[0];
         var category = document.getElementById('iv2-category').selectedOptions[0];
         var details = P.itemsV2Details.status();
         return { name: value('iv2-name'), price: details.family && details.prices.length ? Math.min.apply(null, details.prices) : value('iv2-price'), cost: value('iv2-cost'), quantity: details.family && details.quantities.length ? Math.min.apply(null, details.quantities) : value('iv2-quantity'), kind: selected('iv2-kind'), stock: selected('iv2-stock'), zeroStock: selected('iv2-zero-stock'), confirmZero: document.getElementById('iv2-confirm-zero').checked, openPrice: details.openPrice, family: details.family,
-            taxId: '', taxName: '', taxRate: 0, taxType: 'inclusive', categoryId: value('iv2-category'), categoryName: category && category.dataset.name || '', barcode: value('iv2-barcode'), sku: value('iv2-sku'), description: value('iv2-description') };
+            taxId: taxReady && capabilities.tax ? value('iv2-tax') : '', taxName: capabilities.tax && tax && tax.dataset.name || '', taxRate: capabilities.tax && tax && tax.dataset.rate || 0, taxType: value('iv2-tax-type'), categoryId: value('iv2-category'), categoryName: category && category.dataset.name || '', barcode: value('iv2-barcode'), sku: value('iv2-sku'), description: value('iv2-description') };
     }
     function money(n) { return (P.local.get('currencySign') || '') + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
     var previewTimer, previewKey = '', previewSequence = 0;
@@ -105,14 +97,10 @@
     }
     function render() {
         var dishChoice = document.querySelector('#items_v2 input[name="iv2-kind"][value="dish"]');
-        if (dishChoice) {
-            var dishLabel = dishChoice.closest('label');
-            if (dishLabel) dishLabel.hidden = !capabilities.restaurant;
-            dishChoice.disabled = !capabilities.restaurant;
-        }
-        var typeGrid = document.querySelector('#items_v2 .iv2-types');
-        if (typeGrid) typeGrid.style.gridTemplateColumns = 'repeat(' + (capabilities.restaurant ? 3 : 2) + ', minmax(0, 1fr))';
-        if (dishChoice && !capabilities.restaurant && dishChoice.checked) {
+        dishChoice.closest('label').hidden = !capabilities.restaurant;
+        dishChoice.disabled = !capabilities.restaurant;
+        document.querySelector('#items_v2 .iv2-types').style.gridTemplateColumns = 'repeat(' + (capabilities.restaurant ? 3 : 2) + ', minmax(0, 1fr))';
+        if (!capabilities.restaurant && dishChoice.checked) {
             document.querySelector('#items_v2 input[name="iv2-kind"][value="product"]').checked = true;
             document.querySelector('#items_v2 input[name="iv2-stock"][value="tracked"]').checked = true;
         }
@@ -123,7 +111,7 @@
         show('iv2-copy-notice', !!copySource && !saved);
         text('iv2-copy-notice', P.i18n.t('lang_iv2_copy_notice', 'Copy of {name}. This is a new, unsaved item. The original item will not change.').replace('{name}', copySource));
         var noun = f.kind === 'dish' ? 'dish' : f.kind === 'service' ? 'service' : 'item';
-        text('iv2-title', copySource ? P.i18n.t('lang_iv2_create_copy', 'Create a copy') : (editing ? P.i18n.t('lang_iv2_modify_item', 'Modify item') : PosnicPro.i18n.t('lang_po_create', 'Create').trim() + ' ' + noun)); text('iv2-name-label', noun.charAt(0).toUpperCase() + noun.slice(1) + ' name');
+        text('iv2-title', copySource ? P.i18n.t('lang_iv2_create_copy', 'Create a copy') : (editing ? PosnicPro.i18n.t('lang_edit_title', 'Edit') : PosnicPro.i18n.t('lang_po_create', 'Create')).trim() + ' ' + noun); text('iv2-name-label', noun.charAt(0).toUpperCase() + noun.slice(1) + ' name');
         document.querySelector('#items_v2 .iv2-heading p').textContent = editing ? P.i18n.t('lang_iv2_edit_hint', 'Add details to your saved item, then save your changes.') : P.i18n.t('lang_start_with_a_name_we_ll_help_you_get_it_re', 'Start with a name. We’ll help you get it ready to sell.');
         document.getElementById('iv2-name').placeholder = f.kind === 'dish' ? 'e.g. Tea, Chicken biryani, Butter naan' : f.kind === 'service' ? 'e.g. Haircut, Delivery, Repair' : 'e.g. Mineral water, Blue shirt';
         if (!busy && !saved) text('iv2-save', copySource ? P.i18n.t('lang_iv2_save_copy', 'Save as new item') + ' →' : editing ? P.i18n.t('lang_iv2_save_changes', 'Save changes') + ' →' : 'Save ' + noun + ' →');
@@ -132,8 +120,9 @@
         var price = Number(f.price);
         show('iv2-zero-price', (attempted || touched.has('iv2-price')) && price === 0 && !f.openPrice);
         show('iv2-quantity-row', tracked && !f.family);
-        document.getElementById('iv2-quantity').disabled = !tracked || f.family;
+        document.getElementById('iv2-quantity').disabled = editing || !tracked || f.family;
         document.getElementById('iv2-has-variants').disabled = editing;
+        if (editing) show('iv2-quantity-row', false);
         show('iv2-zero-stock', (attempted || touched.has('iv2-quantity')) && tracked && Number(f.quantity) === 0);
         document.querySelector('#items_v2 input[name="iv2-stock"][value="tracked"]').disabled = f.kind === 'service' || busy || saved;
         text('iv2-stock-note', tracked ? (f.zeroStock === 'negative' ? PosnicPro.i18n.t('lang_for_this_item_only_sales_can_take_its_stoc', 'For this item only: sales can take its stock below zero.') : PosnicPro.i18n.t('lang_stock_tracking_applies_to_this_item_only', 'Stock tracking applies to this item only.')) : 'This item can be sold without an opening stock quantity.');
@@ -175,84 +164,33 @@
         }, function () { taxLoading = false; show('iv2-tax-error', true); });
     }
     function reset() {
-        // Reset the editor's parent state and every child module as one
-        // transaction. Do this after the previous save has completed so no
-        // saved/locked state can leak into the next article.
-        busy = false;
-        saved = false;
-        attempted = false;
-        editing = false;
-        savedItemId = null;
-        savedBranch = null;
-        existingItem = null;
-        editBaseline = null;
-        editSequence++;
-        touched.clear();
-
+        busy = false; editing = false; savedItemId = null; savedBranch = null; existingItem = null; editBaseline = null; editSequence++;
         document.getElementById('iv2-copy-source').value = '';
-        document.getElementById('iv2-form').reset();
-        P.itemsV2Details.reset();
-        applyBusinessContext();
-
-        // The fieldset can remain disabled after a successful save; native
-        // form.reset() does not restore disabled properties.
+        P.itemsV2Workspace.reset(); touched.clear();
+        document.getElementById('iv2-form').reset(); P.itemsV2Details.reset(); applyBusinessContext(); saved = false; attempted = false;
         document.getElementById('iv2-fields').disabled = false;
         document.getElementById('iv2-save').disabled = false;
-        text('iv2-save', 'Save item →');
-        show('iv2-success', false);
-        show('iv2-error', false);
-
+        text('iv2-save', 'Save item →'); show('iv2-success', false); show('iv2-error', false);
         document.getElementById('iv2-tax-type').value = P.local.get('tax_type') === 'exclusive' ? 'exclusive' : 'inclusive';
         var def = P.local.get('default_tax_id');
         if (def && Array.from(document.getElementById('iv2-tax').options).some(function (o) { return o.value === String(def); })) document.getElementById('iv2-tax').value = def;
-
-        // Workspace reset comes after child/form reset so the success screen,
-        // lock and active step are the final state before rendering.
-        P.itemsV2Workspace.reset();
-        render();
-        var firstField = document.getElementById('iv2-type-name');
-        if (firstField && !firstField.disabled) firstField.focus();
+        render(); document.getElementById('iv2-name').focus();
     }
     function save(event) {
         if (event) event.preventDefault();
         if (busy || saved) return false;
-        // Once an existing item has loaded, its ID is authoritative. Keep the
-        // editor in update mode even if a navigation/render callback changed
-        // the transient flag; never fall through to POST and create a duplicate.
-        if (savedItemId && existingItem) editing = true;
-        if (editing && (!savedItemId || !existingItem)) {
-            fail('The selected item is not fully loaded. Reopen it before saving so no duplicate item is created.');
-            return false;
-        }
-        if (P.itemsV2Workspace.currentStep() === 'step1') { P.itemsV2Workspace.goToStep('step2', true); return false; }
         if (P.aclLoaded && P.aclLoaded() && !P.checkAccess('item', 'write')) { fail('You don’t have permission to create items.'); return false; }
         if (editing && savedBranch !== P.local.get('branch_id_set')) { fail(P.i18n.t('lang_iv2_edit_branch_changed', 'The active branch changed. Open the item again before editing.')); return false; }
         attempted = true; render();
+        if (!P.itemsV2Workspace.ready()) { fail(P.i18n.t('lang_iv2_draft_lists', 'Some draft selections are unavailable. Reload to retry, or discard the draft before saving.')); return false; }
         var f = fields(), a = assess(f);
-        // Missing optional draft-list selections must not block a normal item
-        // save. Only pause a variant-family save when its pending variant draft
-        // cannot be restored, since saving that family incomplete would lose rows.
-        if (f.family && !P.itemsV2Workspace.ready()) {
-            fail(P.i18n.t('lang_iv2_draft_lists', 'Some variant draft selections are unavailable. Reload to retry, or discard the draft before saving.'));
-            return false;
-        }
         if (a.error) { fail(a.error, a.field); return false; }
         var advancedError = P.itemsV2Details.validate();
         if (advancedError) { fail(advancedError.error, advancedError.field); return false; }
-        // Validate explicitly and reveal the owning step before focusing a field.
-        // Native reportValidity() on the whole multi-step form can fail on a required
-        // control inside a hidden panel, making Save appear to do nothing.
-        var invalidField = document.querySelector('#iv2-fields input:invalid, #iv2-fields select:invalid, #iv2-fields textarea:invalid');
-        if (invalidField) { fail(invalidField.validationMessage || 'Check this field.', invalidField.id); return false; }
         var form = document.getElementById('iv2-form');
-        if (capabilities.tax && !taxReady) { fail('Wait for tax settings to load, or choose Try again above.', 'iv2-tax-error'); return false; }
+        if (!form.reportValidity()) return false;
+        if (!taxReady) { fail('Wait for tax settings to load, or choose Try again above.', 'iv2-tax-error'); return false; }
         var data = Object.assign(payload(f), P.itemsV2Details.data());
-        // Retail item CREATION intentionally has no tax field. During editing,
-        // preserve the selected item's stored tax configuration unless the user
-        // explicitly changes it; clearing these fields here reset saved settings.
-        if (!editing && !capabilities.restaurant) {
-            data.tax = 0; data.tax_id = ''; data.tax_name = ''; data.hsn_code = ''; data.hsn_description = ''; data.tax_type = 'inclusive';
-        }
         if (capabilities.restaurant && f.kind !== 'service') {
             data.diet = value('iv2-diet'); data.daypart_ids = checkedValues('iv2-periods');
             data.modifier_group_ids = checkedValues('iv2-modifiers'); data.show_on_menu = document.getElementById('iv2-menu').checked;
@@ -263,36 +201,17 @@
         function unlock() { busy = false; document.getElementById('iv2-fields').disabled = false; document.getElementById('iv2-save').disabled = false; text('iv2-save', 'Save item →'); render(); }
         P.itemsV2Details.upload().then(function(){
         Object.assign(data, P.itemsV2Details.data());
-        /* Standalone items use the canonical inventory field. Keep the stock
-           input authoritative after advanced details are merged, for both
-           POST creation and PUT editing. Variant-family quantities remain
-           owned by their individual generated rows. */
-        if (!f.family) {
-            var standaloneQuantity = Number(value('iv2-quantity'));
-            data.available_quantity = f.kind !== 'service' && f.stock === 'tracked' && Number.isFinite(standaloneQuantity)
-                ? Math.max(0, standaloneQuantity) : 0;
-        }
         var requestData = Object.assign({}, data);
-        if (editing && existingItem) {
-            // Start with the complete stored record, then overlay every value
-            // represented by the editor. Do not rely on a field-by-field
-            // baseline diff: legacy aliases, ObjectIds and image metadata can
-            // compare unequal even when unchanged, while a missed alias can
-            // prevent a deliberate name/category/price/photo edit from being
-            // included. The server owns stock quantities on this details route.
-            requestData = Object.assign({}, existingItem, {
-                sku_id: existingItem.itemid || existingItem.sku_id,
-                inventory: existingItem.track_inventory != null ? existingItem.track_inventory : existingItem.inventory,
-                hsn_code: existingItem.hsncode != null ? existingItem.hsncode : existingItem.hsn_code,
-                hsn_description: existingItem.hsndescription || existingItem.hsn_description,
-                position: existingItem.sort_order != null ? existingItem.sort_order : existingItem.position,
-                cover_image: existingItem.image || existingItem.cover_image,
-                image: Array.isArray(existingItem.multi_image) ? existingItem.multi_image : (Array.isArray(existingItem.image) ? existingItem.image : [])
-            }, requestData);
-            // Explicit editor fields always win, including name, category,
-            // all selling-price tiers and the selected/replaced cover photo.
+        if (editing && existingItem && editBaseline) {
+            var changes = {};
+            Object.keys(requestData).forEach(function(k){if(JSON.stringify(requestData[k]) !== JSON.stringify(editBaseline[k])) changes[k]=requestData[k];});
+            // Preserve stored fields that are hidden or not represented in this editor.
+            requestData = Object.assign({}, existingItem, {sku_id:existingItem.itemid, inventory:existingItem.track_inventory,
+                hsn_code:existingItem.hsncode, hsn_description:existingItem.hsndescription, position:existingItem.sort_order,
+                cover_image:existingItem.image, image:existingItem.multi_image || []}, changes);
             ['_id','id','branch_id','branch_access','license','created_date','updated_date'].forEach(function(k){delete requestData[k];});
         }
+        if (editing) delete requestData.available_quantity;
         P.request({ url: editing ? 'items/' + encodeURIComponent(savedItemId) + '/details' : f.family ? 'items/createFamily' : 'items', method: editing ? 'PUT' : 'POST', data: JSON.stringify(f.family ? P.itemsV2Details.family(requestData) : requestData) }, function (r) {
             unlock();
             if (!r || r.type !== 'success') { fail(r && r.message || 'Couldn’t save. Your entries are still here.'); return; }
@@ -306,7 +225,7 @@
             }
             document.getElementById('iv2-copy-source').value = '';
             show('iv2-copy-notice', false);
-            P.itemsV2Workspace.saved(data, id, a, f.family, !editing);
+            P.itemsV2Workspace.saved(data, id, a, f.family);
         }, function (xhr) {
             unlock(); var message = 'Couldn’t confirm the save. Check your item list before trying again.';
             try { message = JSON.parse(xhr.responseText).message || message; } catch (_) { /* preserve the form */ }
@@ -317,28 +236,7 @@
     }
     function bind() {
         if (bound) return; bound = true;
-        var form = document.getElementById('iv2-form');
-        // The editor is multi-step: native browser validation tries to validate
-        // required controls in hidden panels before submit fires, preventing the
-        // custom validator/save handler from running at all. Validate in save().
-        form.noValidate = true;
-        // The router only fires when the hash changes. After saving an item,
-        // the user is still on #/items/new, so clicking the same dropdown link
-        // would otherwise do nothing. Handle that same-route click explicitly;
-        // different routes continue through the normal router unchanged.
-        document.addEventListener('click', function (event) {
-            var target = event.target;
-            var link = target && target.closest ? target.closest('a[href="#/items/new"]') : null;
-            if (!link) return;
-            var currentRoute = String(root.location.hash || '');
-            if (currentRoute.charAt(0) === '#') currentRoute = currentRoute.slice(1);
-            if (currentRoute.charAt(0) === '/') currentRoute = currentRoute.slice(1);
-            if (currentRoute.charAt(currentRoute.length - 1) === '/') currentRoute = currentRoute.slice(0, -1);
-            if (currentRoute !== 'items/new') return;
-            event.preventDefault();
-            showAdd();
-        });
-        form.addEventListener('submit', save);
+        var form = document.getElementById('iv2-form'); form.addEventListener('submit', save);
         form.addEventListener('focusout', function (event) { touched.add(event.target.id); if (!saved && !busy) render(); });
         form.addEventListener('input', function (event) {
             if (event.target.id === 'iv2-name' || event.target.id === 'iv2-price') document.getElementById('iv2-confirm-zero').checked = false;
@@ -378,30 +276,20 @@
             var nameInput = document.getElementById('iv2-name'); nameInput.focus(); nameInput.select();
             nameInput.dispatchEvent(new Event('input', { bubbles: true }));
     }
-    function mountEditor(mode) {
-        editorMode = mode === 'modify' ? 'modify' : 'create';
-        var editor = document.getElementById('items_v2');
-        var host = document.getElementById(editorMode === 'modify' ? 'items_modify_page' : 'items_v2_mount');
-        if (editor && host && editor.parentNode !== host) host.appendChild(editor);
-    }
     function open(initialName) {
-        // Editing and creation have separate page mounts while sharing the
-        // same two-step editor controls and data model.
+        if (editing) reset();
         if (P.HideSideBarModal) P.HideSideBarModal();
-        $('.page_loader,#osk-container').hide();
-        var host = document.getElementById(editorMode === 'modify' ? 'items_modify_page' : 'items_v2_mount');
-        if (host) $(host).show();
-        $('#items_v2').show();
+        $('.page_loader,#osk-container').hide(); $('#items_v2').show();
         capabilities = readCapabilities();
         P.itemsV2Details.init();
-        P.itemsV2Workspace.init({refresh:render,reset:showAdd,edit:function () {
+        P.itemsV2Workspace.init({refresh:render,reset:reset,edit:function () {
             if (!savedItemId || savedBranch !== P.local.get('branch_id_set')) return;
             editing = true; saved = false; attempted = false;
             document.getElementById('iv2-copy-source').value = '';
             document.getElementById('iv2-fields').disabled = false; document.getElementById('iv2-save').disabled = false;
             P.itemsV2Workspace.edit(); render();
         },duplicate:prepareCopy        });
-        show('iv2-tax-field', capabilities.tax); var taxType = document.getElementById('iv2-tax-type'); if (taxType) taxType.hidden = !capabilities.tax;
+        show('iv2-tax-field', capabilities.tax); document.getElementById('iv2-tax-type').hidden = !capabilities.tax;
         if (!bound) applyBusinessContext();
         if (capabilities.restaurant) loadRestaurantOptions();
         bind(); document.querySelectorAll('#items_v2 .iv2-currency').forEach(function (el) { el.textContent = P.local.get('currencySign') || ''; });
@@ -416,24 +304,10 @@
             document.getElementById('iv2-name').value = initialName;
             document.getElementById('iv2-name').dispatchEvent(new Event('input', { bubbles: true }));
         }
-        // Every entry into the modern editor starts on the first page. Do
-        // this here as well as in showAdd(), so router re-entry and
-        // "Create another" cannot inherit Step 2 from the previous session.
-        P.itemsV2Workspace.goToStep('step1');
         render(); document.getElementById('iv2-name').focus();
     }
-    function openModifyPage(id, duplicate) {
-        if (!id) { P.alert('error', 'Choose an item before opening its editor.'); return false; }
-        // Open Modify directly from the dossier action rather than relying on
-        // route matching that can fall back to the Create item entry point.
-        mountEditor(duplicate ? 'create' : 'modify');
-        $('#items').hide(); $('#items_new').hide();
+    function showEdit(id, duplicate) {
         open(); reset();
-        if (!duplicate) {
-            text('iv2-title', 'Modify item');
-            var heading = document.querySelector('#items_v2 .iv2-heading p');
-            if (heading) heading.textContent = 'Edit the saved article and save your changes.';
-        }
         var sequence = ++editSequence, branch = P.local.get('branch_id_set');
         editing = true; savedItemId = String(id); savedBranch = branch; busy = true;
         P.itemsV2Workspace.edit(); render();
@@ -442,105 +316,25 @@
         P.get({url:'items/getItemDetails',data:{id:id}}, function(r) {
             if(sequence!==editSequence || branch!==P.local.get('branch_id_set'))return;
             if(!r || r.type!=='success' || !r.data)return failed(r&&r.message);
-            // The legacy details endpoint returns a record directly, while
-            // API adapters may wrap it more than once (data.item, data.data.item,
-            // result.item, etc.). Select the deepest object that actually carries
-            // article fields; accepting a wrapper with only an id produced a
-            // blank editor while appearing to have loaded successfully.
-            function unwrapItem(response) {
-                var queue = [{ value: response, depth: 0 }], seen = [], best = null, bestScore = 0;
-                var keys = ['name','item_name','title','itemid','sku_id','barcode_id','selling_price','price','company_price','available_quantity','article_type','brand_abbreviation','model_reference','multi_image'];
-                while (queue.length) {
-                    var entry = queue.shift(), value = entry.value;
-                    if (!value || typeof value !== 'object' || Array.isArray(value) || seen.indexOf(value) !== -1 || entry.depth > 5) continue;
-                    seen.push(value);
-                    var score = keys.reduce(function(total, key) { return total + (value[key] != null && value[key] !== '' ? 1 : 0); }, 0);
-                    if (score > bestScore) { best = value; bestScore = score; }
-                    ['item','item_details','record','result','data','details'].forEach(function(key) {
-                        if (value[key] && typeof value[key] === 'object') queue.push({ value: value[key], depth: entry.depth + 1 });
-                    });
-                }
-                return best;
-            }
-            var item = unwrapItem(r.data);
-            if (!item || typeof item !== 'object' || (!item.name && !item.item_name && !item.title && !item.itemid && !item._id && !item.id)) {
-                return failed('The item details response did not contain a usable item record. No changes were made.');
-            }
-            // Older catalogue records can use item_name/title rather than
-            // name. Normalize only the display field; keep the original
-            // record intact for the edit merge and same-ID PUT update.
-            item = Object.assign({}, item, { name: item.name || item.item_name || item.title || '' });
-            existingItem = item;
+            var item = r.data; existingItem = item;
             function set(id,v){var e=document.getElementById('iv2-'+id);if(e)e.value=v==null?'':v;}
             function choice(name,v){document.querySelectorAll('#items_v2 [name="iv2-'+name+'"]').forEach(function(e){e.checked=e.value===v;});}
-            function select(id,v,name,rate){var e=document.getElementById('iv2-'+id);if(!e)return;v=v==null?'':String(v);var o=Array.from(e.options).find(function(x){return x.value===v;});if(!o){o=new Option(name||v,v);o.dataset.name=name||'';o.dataset.rate=rate||0;e.add(o);}else{if(name)o.dataset.name=name;o.dataset.rate=rate||o.dataset.rate||0;}e.value=v;}
-            var tracked = item.track_inventory != null ? item.track_inventory : item.inventory;
-            choice('kind',item.item_kind==='service' || item.kind==='service'?'service':'product');
-            choice('stock',tracked === false ? 'untracked' : 'tracked');
-            choice('zero-stock',item.negative_stock?'negative':'later');
-            // Load the existing record into both pages, including fields that
-            // older catalogue records stored under legacy aliases.
-            set('name',item.name || item.item_name || item.title);
-            set('price',item.selling_price != null ? item.selling_price : item.price);
-            set('cost',item.company_price != null ? item.company_price : item.purchase_cost_dzd);
-            set('quantity',Math.max(0,Number(item.available_quantity != null ? item.available_quantity : item.quantity)||0));
-            set('sku',item.itemid || item.sku_id || item.sku);
-            set('barcode',item.barcode_id || item.barcode);
-            set('description',item.description);
-            set('tax-type',item.tax_type||'inclusive');
-            set('diet',item.diet);set('plu',item.plu_code);set('gtin',item.gtin);
+            choice('kind',item.item_kind==='service'?'service':'product');choice('stock',item.track_inventory?'tracked':'untracked');choice('zero-stock',item.negative_stock?'negative':'later');
+            set('name',item.name);set('price',item.selling_price);set('cost',item.company_price);set('quantity',Math.max(0,Number(item.available_quantity)||0));set('sku',item.itemid);set('barcode',item.barcode_id);set('description',item.description);set('tax-type',item.tax_type||'inclusive');set('diet',item.diet);
             document.getElementById('iv2-confirm-zero').checked=Number(item.selling_price)===0;
-            document.getElementById('iv2-orderable').checked=!!item.ecommerce;
-            document.getElementById('iv2-menu').checked=item.show_on_menu!==false;
-            select('category',item.category_id,item.category_name || item.category || '');
-            select('tax',item.tax_id,item.tax_name,item.tax);
-            select('unit',item.unit_id || item.unit || 'qty',item.unit || 'Quantity');
-            select('supplier',item.supplier_id,item.supplier_name || item.supplier || '');
-            ['periods','modifiers'].forEach(function(key){var box=document.getElementById('iv2-'+key),values=item[key==='periods'?'daypart_ids':'modifier_group_ids']||[];values=values.map(String);values.forEach(function(v){if(!Array.from(box.querySelectorAll('input')).some(function(e){return e.value===v;})){var label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.value=v;label.append(input,document.createTextNode(v));box.append(label);}});box.querySelectorAll('input').forEach(function(e){e.checked=values.includes(e.value);});});
-            P.itemsV2Details.load(item);
-            // Keep identity fields immutable in Modify mode. The original SKU and
-            // barcode remain in the request merge even though these controls are read-only.
-            ['iv2-sku','iv2-barcode'].forEach(function(id){var field=document.getElementById(id);if(field)field.disabled=true;});
+            document.getElementById('iv2-orderable').checked=!!item.ecommerce;document.getElementById('iv2-menu').checked=item.show_on_menu!==false;
+            function select(id,v,name,rate){var e=document.getElementById('iv2-'+id),o=new Option(name||'',String(v||''));o.dataset.name=name||'';o.dataset.rate=rate||0;e.add(o);e.value=String(v||'');}
+            select('category',item.category_id,item.category_name);select('tax',item.tax_id,item.tax_name,item.tax);
+            ['periods','modifiers'].forEach(function(key){var box=document.getElementById('iv2-'+key),values=item[key==='periods'?'daypart_ids':'modifier_group_ids']||[];values.forEach(function(v){if(!Array.from(box.querySelectorAll('input')).some(function(e){return e.value===v;})){var label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.value=v;label.append(input,document.createTextNode(v));box.append(label);}});box.querySelectorAll('input').forEach(function(e){e.checked=values.includes(e.value);});});
+            P.itemsV2Details.load(item);busy=false;document.getElementById('iv2-fields').disabled=false;document.getElementById('iv2-save').disabled=false;render();
             var f=fields();editBaseline=Object.assign(payload(f),P.itemsV2Details.data());
             if(capabilities.restaurant){editBaseline.diet=value('iv2-diet');editBaseline.daypart_ids=checkedValues('iv2-periods');editBaseline.modifier_group_ids=checkedValues('iv2-modifiers');editBaseline.show_on_menu=document.getElementById('iv2-menu').checked;}
             if(capabilities.online)editBaseline.ecommerce=document.getElementById('iv2-orderable').checked;
-            // The complete record and baseline are now ready; only now permit edits.
-            busy=false;
-            document.getElementById('iv2-fields').disabled=false;
-            document.getElementById('iv2-save').disabled=false;
-            render();
-            // Align baseline aliases with the actual update payload. Without
-            // this, a one-field edit looked like changes to every legacy key.
-            editBaseline.sku_id=item.itemid || item.sku_id || item.sku || '';
-            editBaseline.inventory=tracked !== false;
-            editBaseline.hsn_code=item.hsncode != null ? item.hsncode : (item.hsn_code || '');
-            editBaseline.hsn_description=item.hsndescription || item.hsn_description || '';
-            editBaseline.position=item.sort_order != null ? item.sort_order : (item.position || 0);
-            editBaseline.cover_image=item.image || item.cover_image || 'item.svg';
-            editBaseline.image=Array.isArray(item.multi_image) ? item.multi_image : (Array.isArray(item.image) ? item.image : []);
-            editBaseline.tax_id=item.tax_id || '';editBaseline.tax_name=item.tax_name || '';editBaseline.tax=Number(item.tax)||0;
-            editBaseline.tax_type=item.tax_type || 'inclusive';
-            editBaseline.category_name=item.category_name || item.category || '';
-            editBaseline.ecommerce=!!item.ecommerce;
-            editBaseline.open_price=!!item.open_price;
-            editBaseline.item_weight_machine_based=!!item.item_weight_machine_based;
-            document.getElementById('iv2-tab-step1').click();document.getElementById('iv2-name').focus();
+            document.getElementById('iv2-tab-basics').click();document.getElementById('iv2-name').focus();
             if (duplicate) prepareCopy();
         },function(){failed();});
     }
-    function showAdd() {
-        // Always restore the creation editor to its own page mount.
-        mountEditor('create');
-        $('#items').hide();
-        open();
-        reset();
-        $('#items_v2').show();
-        // Explicitly select step one after every reset. This also covers the
-        // same-route "Create another" flow, where the hash does not change.
-        P.itemsV2Workspace.goToStep('step1');
-        return false;
-    }
-    P.items_v2 = { openModifyPage: openModifyPage, showClone: function(id){openModifyPage(id,true);}, showAdd: showAdd, showDataTablePage: open, setBusinessContext: function (category) {
+    P.items_v2 = { showEdit: showEdit, showClone: function(id){showEdit(id,true);}, showAdd: open, showDataTablePage: open, setBusinessContext: function (category) {
         businessContext = ['restaurant', 'retail', 'service'].includes(category) ? category : null;
         if (bound) { capabilities = readCapabilities(); reset(); if (capabilities.restaurant) loadRestaurantOptions(); }
     } };
