@@ -900,8 +900,12 @@ PosnicPro.items = {
             window.hasher.setHash('items');
         }
         PosnicPro.items._chrome();
-        PosnicPro.items.mountFilters();
         PosnicPro.items.closeDoc();
+        // Explicitly restore the catalogue after leaving the independent editor.
+        $('#posnic_independent_modify_page').hide();
+        $('#items_v2_mount,#items_modify_page,#items_new').hide();
+        $('.page-title-box,#items').show();
+        PosnicPro.items.mountFilters();
         PosnicPro.items.loadList(1);
     },
     _modifyRecord: null,
