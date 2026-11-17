@@ -545,6 +545,22 @@ PosnicPro.sales.view = {
         $("<div class='loadingSpinner'></div>").appendTo(loader);
         PosnicPro.get('sales/' + id, function (response) {
             if (response.type === 'success') {
+                var pendingPayment = PosnicPro.sales._pendingPaymentRequest;
+                if (pendingPayment && String(pendingPayment.saleId) === String(id)) {
+                    var baskets = PosnicPro.sales.multiBasket;
+                    if (baskets && baskets.initialized && baskets.activeId !== pendingPayment.sessionId) {
+                        var owner = baskets.sessions.find(function (session) { return session.id === pendingPayment.sessionId; });
+                        if (!owner) { PosnicPro.sales._pendingPaymentRequest = null; PosnicPro.alert('warning', 'The customer basket for this payment is no longer open.'); return; }
+                        baskets.switchTo(pendingPayment.sessionId);
+                    }
+                    PosnicPro.sales._pendingPaymentRequest = null;
+                    PosnicPro.sales.paymentOnlyMode = true;
+                    PosnicPro.sales.originalSaleData = null;
+                    PosnicPro.sales.defaultCustomer = false;
+                    PosnicPro.sales.refundSaleAction = false;
+                    PosnicPro.sales.recentSaleAction = false;
+                    PosnicPro.sales.saleProcess = 'edit';
+                }
                 data = response.data;
                 PosnicPro.sales.editSaleId = data._id || data.id || data.sales_document_id || id;
 

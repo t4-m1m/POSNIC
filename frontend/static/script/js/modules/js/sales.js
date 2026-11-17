@@ -289,7 +289,7 @@ PosnicPro.sales = {
         $("#save_btn").prop('disabled', false);
         $("#save_submit").removeClass('disabled');
         
-        if (PosnicPro.sales.saleProcess !== 'KOT') {
+        if (PosnicPro.sales.saleProcess !== 'KOT' && !PosnicPro.sales._pendingPaymentRequest) {
             PosnicPro.sales.saleProcess = 'edit';
         }
         PosnicPro.kotorder.kotHideShow();
@@ -386,11 +386,16 @@ PosnicPro.sales = {
         // Mark we are in payment-only mode and reuse the normal Edit flow to load
         // the sale page and items. Once the edit data is ready, we will open the
         // tender screen from recentMenu.editItems.
-        PosnicPro.sales.paymentOnlyMode = true;
-        PosnicPro.sales.originalSaleData = null;
-        PosnicPro.sales.defaultCustomer = false;
-        PosnicPro.sales.refundSaleAction = false;
-        PosnicPro.sales.recentSaleAction = false;
+        var multiBasket = PosnicPro.sales.multiBasket;
+        if (multiBasket && multiBasket.initialized) {
+            PosnicPro.sales._pendingPaymentRequest = { saleId: String(id), sessionId: multiBasket.activeId, token: String(id) + ':' + Date.now() };
+        } else {
+            PosnicPro.sales.paymentOnlyMode = true;
+            PosnicPro.sales.originalSaleData = null;
+            PosnicPro.sales.defaultCustomer = false;
+            PosnicPro.sales.refundSaleAction = false;
+            PosnicPro.sales.recentSaleAction = false;
+        }
 
         // Update URL to mimic viewing this sale (#/sales/{id}) without
         // triggering Crossroads routes.
@@ -14787,7 +14792,9 @@ $(document).ready(function () {
         'SaleTableLineItems', 'sale_offlineadditems', 'charges', 'extraDiscount',
         'addSalesLineTable', 'addLineTable', 'returnSalesLineTable',
         'selectedTable', 'selectedPerson', 'currentItemNoteId', 'dineType',
-        'defaultCustomer', 'SaleAction', 'salesExchange', '_selectedPriceTierLineId'
+        'defaultCustomer', 'SaleAction', 'salesExchange', '_selectedPriceTierLineId',
+        'editSaleId', 'paymentOnlyMode', 'originalSaleData', 'kotPaymentMode',
+        'refundSaleAction', 'recentSaleAction'
     ];
     function clone(value) {
         if (value === undefined) return undefined;
@@ -15098,6 +15105,21 @@ $(document)
         PosnicPro.sales.unbindTenderKeyboardShortcuts(false);
     });
 
+})();
+
+
+/* Restore barcode focus after product/category navigation inside the Sales workspace. */
+(function () {
+    if (window.__posnicSalesCategoryRefocus) return;
+    window.__posnicSalesCategoryRefocus = true;
+    var selectors = '#home-tab-justified,#profile-tab-justified,#contact-tab-justified,#sales_new .nav-link,#sales_new [data-category-id],#sales_new .sales-category,#sales_new .category-tab,#sales_new .items_head,#sales_new .sales_new_class';
+    function refocus() {
+        var root = document.getElementById('sales_new');
+        if (!root || !root.getClientRects().length) return;
+        window.setTimeout(function () { if (window.PosnicPro && PosnicPro.sales && PosnicPro.sales.focusBarcodeInput) PosnicPro.sales.focusBarcodeInput(true); }, 100);
+    }
+    document.addEventListener('click', function (event) { if (event.target && event.target.closest && event.target.closest(selectors)) refocus(); }, true);
+    document.addEventListener('shown.bs.tab', function (event) { var root = document.getElementById('sales_new'); if (root && root.contains(event.target)) refocus(); }, true);
 })();
 
 /* POS search: focusing the item field selects its current query so the next
