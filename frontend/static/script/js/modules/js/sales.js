@@ -9404,7 +9404,8 @@ PosnicPro.sales.recentMenu = {
             // For all KOT edit screens (including kotorder/{id}/edit and
             // kotsales/{id}/edit), always show "Update" as the primary
             // action label.
-                $(".changeSalesBtnText").text(PosnicPro.i18n.t('lang_updatebtn_title', 'Update'));
+                var normalSaleModification = !isKotEditFlow && !PosnicPro.sales.paymentOnlyMode && PosnicPro.sales.saleProcess === 'edit' && PosnicPro.sales.EditRecentSaleParams && ['add', 'edit'].indexOf(String(PosnicPro.sales.EditRecentSaleParams.sale_process || '').toLowerCase()) !== -1;
+                $('.changeSalesBtnText').text(normalSaleModification ? 'Confirmer la modification' : PosnicPro.i18n.t('lang_updatebtn_title', 'Update'));
 
             // And use the *current* date/time as the updated date instead of
             // the original sale date when we are in a KOT edit flow.
@@ -14815,7 +14816,7 @@ $(document).ready(function () {
         'selectedTable', 'selectedPerson', 'currentItemNoteId', 'dineType',
         'defaultCustomer', 'SaleAction', 'salesExchange', '_selectedPriceTierLineId',
         'editSaleId', 'paymentOnlyMode', 'originalSaleData', 'kotPaymentMode',
-        'refundSaleAction', 'recentSaleAction', 'addSalesItemChars', 'EditRecentSaleParams', '_lineModifiers', '_orderRequestId'
+        'refundSaleAction', 'recentSaleAction', 'addSalesItemChars', 'EditRecentSaleParams', '_lineModifiers', '_orderRequestId', 'saleProcess', 'editSaleAction', 'salesId', '_sourceQuoteId', '_quoteHonoured'
     ];
     function clone(value) {
         if (value === undefined) return undefined;
@@ -14999,6 +15000,9 @@ $(document).ready(function () {
             // Start with a genuinely empty sale using the existing POS reset logic.
             if (PosnicPro.sales.clear && PosnicPro.sales.clear.cartItems) PosnicPro.sales.clear.cartItems(false);
             PosnicPro.sales.addSalesItemChars = []; PosnicPro.sales.EditRecentSaleParams = []; PosnicPro.sales._lineModifiers = {};
+            PosnicPro.sales.SaleAction = 'add'; PosnicPro.sales.saleProcess = null; PosnicPro.sales.editSaleAction = false;
+            PosnicPro.sales.editSaleId = ''; PosnicPro.sales.salesId = ''; PosnicPro.sales.paymentOnlyMode = false;
+            PosnicPro.sales.originalSaleData = null; PosnicPro.sales.refundSaleAction = false; PosnicPro.sales.recentSaleAction = false;
             if (PosnicPro.sales.resetOrderRequest) PosnicPro.sales.resetOrderRequest();
             // Each simultaneous basket owns its own customer context. The legacy
             // cart reset intentionally keeps customer details in some workflows,
