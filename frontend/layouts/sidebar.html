@@ -1,3 +1,19 @@
+<style>
+/* Cashier-only compact navigation. Admin layout remains untouched. */
+body.posnic-cashier-minimal .vertical-menu-detail { display:none !important; }
+body.posnic-cashier-minimal .navigationbar { width:76px !important; min-width:76px !important; }
+body.posnic-cashier-minimal .vertical-menu-icon { width:76px !important; min-width:76px !important; }
+body.posnic-cashier-minimal .vertical-menu-icon .nav { align-items:center; }
+body.posnic-cashier-minimal .vertical-menu-icon .nav > a:not(#posnic-new-sale-quicklink):not(#posnic-cashier-history-quicklink) { display:none !important; }
+body.posnic-cashier-minimal .vertical-menu-icon .logobar { display:none !important; }
+body.posnic-cashier-minimal .vertical-menu-icon #posnic-new-sale-quicklink,
+body.posnic-cashier-minimal .vertical-menu-icon #posnic-cashier-history-quicklink {
+ display:flex !important; align-items:center; justify-content:center; width:48px; height:48px;
+ margin:12px auto; border-radius:12px; font-size:22px;
+}
+body.posnic-cashier-minimal .leftbar, body.posnic-cashier-minimal .sidebar,
+body.posnic-cashier-minimal .navigationbar { box-shadow:none !important; }
+</style>
 <div class="leftbar">
     <!-- Start Sidebar -->
     <div class="sidebar">
@@ -13,6 +29,11 @@
                         href="#/sales/new" role="button" aria-label="Nouvelle vente"
                         title="Nouvelle vente" data-toggle="tooltip" data-placement="right">
                         <i class="feather icon-plus" aria-hidden="true"></i>
+                    </a>
+                    <a class="posnic-cashier-history-quicklink" id="posnic-cashier-history-quicklink"
+                        href="#/sales" role="button" aria-label="Historique des ventes"
+                        title="Historique des ventes" data-toggle="tooltip" data-placement="right">
+                        <i class="feather icon-clock" aria-hidden="true"></i>
                     </a>
                     <a class="nav-link nav-link-active" id="v-pills-dashboard-tab" data-toggle="pill"
                         href="#v-pills-dashboard" role="tab" aria-controls="v-pills-dashboard"
