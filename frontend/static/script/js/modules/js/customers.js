@@ -448,8 +448,11 @@ PosnicPro.customers = {
                         }
                     }
                     var hash = window.location.hash.slice(1);
-                    if (hash === '/sales/customers/new') {
-                        hasher.changed.active = false; //disable changed signal
+                    var createdFromSales = hash === '/sales/customers/new';
+                    if (createdFromSales) {
+                        // A quick-create customer belongs to the sale in progress.
+                        // Bind it to the current basket and keep the cashier on Sales.
+                        hasher.changed.active = false;
                         hasher.replaceHash('sales/new');
                         $('#sales_new_customer_partial_balance').val(data.partial_balance);
                         $('#customer_current_balance').val('0');
@@ -462,11 +465,11 @@ PosnicPro.customers = {
                         $('#sales_new_customer_country').val(data.country);
                         $('#sales_new_customer_gst_type').val(data.gst_type);
                         $('#sales_new_customer_gst_number').val(data.gst_number);
-                        $(".infobar-settings-sidebar-overlay").css({"background": "transparent", "position": "initial"});
+                        $(".infobar-settings-sidebar-overlay").css({"background": "transparent", "position": "initial", "pointerEvents": "none"});
                         $("#infobar-settings-sidebar-customer").removeClass("sidebarshow");
-                        hasher.changed.active = true; //enable changed signal
+                        hasher.changed.active = true;
                     }
-                    if (PosnicPro.action === 'add') {
+                    if (PosnicPro.action === 'add' && !createdFromSales) {
                         PosnicPro.customers.customersTable('customers');
                         $('#show_last_created_customer').show();
                         let customerId = data.customer_id || data._id || data.id;
@@ -485,6 +488,19 @@ PosnicPro.customers = {
                     loader.find(".loadingSpinner:first").remove();
                     /*This function call for updating customername.json,getcustomers.json file */
                     PosnicPro.alert(response.type, response.message);
+                    if (createdFromSales) {
+                        // Keep route and visible workspace aligned after the modal closes.
+                        window.setTimeout(function () {
+                            hasher.changed.active = false;
+                            hasher.replaceHash('sales/new');
+                            hasher.changed.active = true;
+                            $('.page_loader').not('#sales_new').hide();
+                            $('.page-title-box,#sales_new').show();
+                            if (PosnicPro.sales && PosnicPro.sales.focusBarcodeInput) {
+                                PosnicPro.sales.focusBarcodeInput(true);
+                            }
+                        }, 80);
+                    }
                 } else {
                     PosnicPro.alert(response.type, response.message);
                 }
