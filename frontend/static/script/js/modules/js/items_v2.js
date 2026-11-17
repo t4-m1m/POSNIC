@@ -74,7 +74,7 @@
         var tax = document.getElementById('iv2-tax').selectedOptions[0];
         var category = document.getElementById('iv2-category').selectedOptions[0];
         var details = P.itemsV2Details.status();
-        return { name: value('iv2-name'), price: details.family && details.prices.length ? Math.min.apply(null, details.prices) : value('iv2-price'), cost: value('iv2-cost'), quantity: details.family ? details.quantities.reduce(function(sum,n){return sum+Math.max(0,Number(n)||0);},0) : value('iv2-quantity'), kind: selected('iv2-kind'), stock: selected('iv2-stock'), zeroStock: selected('iv2-zero-stock'), confirmZero: document.getElementById('iv2-confirm-zero').checked, openPrice: details.openPrice, family: details.family,
+        return { name: value('iv2-name'), price: details.family && details.prices.length ? Math.min.apply(null, details.prices) : value('iv2-price'), cost: value('iv2-cost'), quantity: details.family && details.quantities.length ? Math.min.apply(null, details.quantities) : value('iv2-quantity'), kind: selected('iv2-kind'), stock: selected('iv2-stock'), zeroStock: selected('iv2-zero-stock'), confirmZero: document.getElementById('iv2-confirm-zero').checked, openPrice: details.openPrice, family: details.family,
             taxId: '', taxName: '', taxRate: 0, taxType: 'inclusive', categoryId: value('iv2-category'), categoryName: category && category.dataset.name || '', barcode: value('iv2-barcode'), sku: value('iv2-sku'), description: value('iv2-description') };
     }
     function money(n) { return (P.local.get('currencySign') || '') + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -126,7 +126,7 @@
         text('iv2-title', copySource ? P.i18n.t('lang_iv2_create_copy', 'Create a copy') : (editing ? P.i18n.t('lang_iv2_modify_item', 'Modify item') : PosnicPro.i18n.t('lang_po_create', 'Create').trim() + ' ' + noun)); text('iv2-name-label', noun.charAt(0).toUpperCase() + noun.slice(1) + ' name');
         document.querySelector('#items_v2 .iv2-heading p').textContent = editing ? P.i18n.t('lang_iv2_edit_hint', 'Add details to your saved item, then save your changes.') : P.i18n.t('lang_start_with_a_name_we_ll_help_you_get_it_re', 'Start with a name. We’ll help you get it ready to sell.');
         document.getElementById('iv2-name').placeholder = f.kind === 'dish' ? 'e.g. Tea, Chicken biryani, Butter naan' : f.kind === 'service' ? 'e.g. Haircut, Delivery, Repair' : 'e.g. Mineral water, Blue shirt';
-        if (!busy && !saved) text('iv2-save', copySource ? P.i18n.t('lang_iv2_save_copy', 'Save as new item') + ' →' : editing ? P.i18n.t('lang_iv2_save_changes', 'Save changes') + ' →' : 'Enregistrer et Valider →');
+        if (!busy && !saved) text('iv2-save', copySource ? P.i18n.t('lang_iv2_save_copy', 'Save as new item') + ' →' : editing ? P.i18n.t('lang_iv2_save_changes', 'Save changes') + ' →' : 'Save ' + noun + ' →');
         var details = P.itemsV2Details.status();
         if (details.hsn) f.taxRate = details.tax;
         var price = Number(f.price);
@@ -198,7 +198,7 @@
         // form.reset() does not restore disabled properties.
         document.getElementById('iv2-fields').disabled = false;
         document.getElementById('iv2-save').disabled = false;
-        text('iv2-save', 'Enregistrer et Valider →');
+        text('iv2-save', 'Save item →');
         show('iv2-success', false);
         show('iv2-error', false);
 
@@ -224,18 +224,7 @@
             fail('The selected item is not fully loaded. Reopen it before saving so no duplicate item is created.');
             return false;
         }
-        if (P.itemsV2Workspace.currentStep() === 'step1') {
-            var requiredStepOne=['iv2-type-name','iv2-brand-abbr','iv2-reference'];
-            for(var requiredIndex=0;requiredIndex<requiredStepOne.length;requiredIndex++){
-                var requiredField=document.getElementById(requiredStepOne[requiredIndex]);
-                requiredField.value=requiredField.value.trim();
-                if(!requiredField.value){fail('Complete the required article name fields before continuing.',requiredField.id);return false;}
-            }
-            var refDate=document.getElementById('iv2-reference-date');
-            if(!/^[0-9]{2}-[0-9]{2}$/.test(refDate.value)){fail('Reference date must use YY-MM format.',refDate.id);return false;}
-            P.itemsV2Details.update(capabilities,selected('iv2-kind'));
-            P.itemsV2Workspace.goToStep('step2', true);return false;
-        }
+        if (P.itemsV2Workspace.currentStep() === 'step1') { P.itemsV2Workspace.goToStep('step2', true); return false; }
         if (P.aclLoaded && P.aclLoaded() && !P.checkAccess('item', 'write')) { fail('You don’t have permission to create items.'); return false; }
         if (editing && savedBranch !== P.local.get('branch_id_set')) { fail(P.i18n.t('lang_iv2_edit_branch_changed', 'The active branch changed. Open the item again before editing.')); return false; }
         attempted = true; render();
@@ -395,33 +384,6 @@
         var host = document.getElementById(editorMode === 'modify' ? 'items_modify_page' : 'items_v2_mount');
         if (editor && host && editor.parentNode !== host) host.appendChild(editor);
     }
-    function arrangeOwnerSteps() {
-        var fieldsBox=document.getElementById('iv2-fields');
-        if(!fieldsBox || fieldsBox.dataset.posnicOwnerSteps==='1')return;
-        fieldsBox.dataset.posnicOwnerSteps='1';
-        var tabs=fieldsBox.querySelector('.iv2-tabs');
-        var step1=document.createElement('div'),step2=document.createElement('div');
-        step1.id='iv2-step1-content';step1.className='iv2-step-content';
-        step2.id='iv2-step2-content';step2.className='iv2-step-content';
-        fieldsBox.insertBefore(step1,tabs?tabs.nextSibling:fieldsBox.firstChild);
-        fieldsBox.insertBefore(step2,step1.nextSibling);
-        function move(selector,target){var node=fieldsBox.querySelector(selector);if(node)target.appendChild(node);return node;}
-        var identification=document.createElement('div');identification.className='iv2-identification-card';step1.appendChild(identification);
-        move('#iv2-codes',identification);
-        move('#iv2-variants',identification);
-        move('.iv2-name-builder',step1);
-        move('#iv2-details-extra',step1);
-        move('.iv2-purchase-cost',step2);
-        var stock=document.createElement('section');stock.id='iv2-stock-card';stock.className='iv2-section iv2-details iv2-stock-card';
-        var stockTitle=document.createElement('h2');stockTitle.className='iv2-subheading';stockTitle.textContent='Current stock quantity';stock.appendChild(stockTitle);
-        move('#iv2-quantity-row',stock);move('#iv2-zero-stock',stock);move('#iv2-stock-note',stock);step2.appendChild(stock);
-        move('#iv2-pricing-extra',step2);
-        move('#iv2-appearance',step2);
-        var panels=fieldsBox.querySelectorAll('.iv2-tab-panel');panels.forEach(function(panel){panel.hidden=true;panel.style.display='none';});
-        var tabsButtons=fieldsBox.querySelectorAll('.iv2-tabs [role=tab]');
-        if(tabsButtons.length>=2){tabsButtons[0].setAttribute('aria-controls','iv2-step1-content');tabsButtons[1].setAttribute('aria-controls','iv2-step2-content');tabsButtons[0].innerHTML='<span class="iv2-step">1</span> Basic information &amp; variants <small id="iv2-summary-step1"></small>';tabsButtons[1].innerHTML='<span class="iv2-step">2</span> Stock &amp; pricing <small id="iv2-summary-step2"></small>';}
-        var style=document.createElement('style');style.id='iv2-owner-step-layout';style.textContent='#items_v2 .iv2-step-content{display:grid;gap:10px;align-items:start;overflow-y:auto!important;overflow-x:hidden!important}#items_v2 .iv2-step-content[hidden]{display:none!important}#items_v2 .iv2-step-content>*{min-width:0}#items_v2 .iv2-identification-card{min-width:0;min-height:0;overflow-y:auto!important;overflow-x:hidden!important}#items_v2 .iv2-identification-card>#iv2-codes,#items_v2 .iv2-identification-card>#iv2-variants{margin:0 0 8px!important}#items_v2 #iv2-variant-rows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:none!important;overflow:visible!important}#items_v2 .iv2-variant{min-width:0}#items_v2 .iv2-variant-remove,#items_v2 .iv2-variant-generate{margin-top:6px}#items_v2 #iv2-quantity-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,180px);gap:8px;align-items:center}@media(max-width:760px){#items_v2 .iv2-step-content{grid-template-columns:minmax(0,1fr)}#items_v2 #iv2-variant-rows{grid-template-columns:minmax(0,1fr)}}';if(!document.getElementById(style.id))document.head.appendChild(style);
-    }
     function open(initialName) {
         // Editing and creation have separate page mounts while sharing the
         // same two-step editor controls and data model.
@@ -432,7 +394,6 @@
         $('#items_v2').show();
         capabilities = readCapabilities();
         P.itemsV2Details.init();
-        arrangeOwnerSteps();
         P.itemsV2Workspace.init({refresh:render,reset:showAdd,edit:function () {
             if (!savedItemId || savedBranch !== P.local.get('branch_id_set')) return;
             editing = true; saved = false; attempted = false;
