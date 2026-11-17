@@ -716,21 +716,23 @@ PosnicPro.dashboard = {
         var totals = data.totals || {};
         var kpis = data.kpis || {}, profit = data.profit || {}, lowStock = data.lowStock || {};
         $('#dashboard-kpi-sales').text(PosnicPro.dashboard.money(kpis.total_sales != null ? kpis.total_sales : totals.sales_amount));
-        $('#dashboard-kpi-profit').text(PosnicPro.dashboard.money(profit.net_profit));
+        $('#dashboard-kpi-profit').text(PosnicPro.dashboard.money(profit.net_profit) + ' · ' + (Number(profit.margin_percent) || 0).toFixed(1) + '%');
         $('#dashboard-kpi-orders').text(Number(totals.sales_count || 0).toLocaleString());
         $('#dashboard-kpi-lowstock').text(Number(lowStock.count || 0).toLocaleString());
-        var financeRows = [
-            { label: 'Revenue', value: Number(profit.revenue) || 0, color: '#2563eb' },
-            { label: 'Cost of goods', value: Number(profit.cogs) || 0, color: '#0d9488' },
-            { label: 'Expenses', value: Number(profit.expenses) || 0, color: '#f59e0b' },
-            { label: 'Net profit', value: Number(profit.net_profit) || 0, color: '#16a34a' }
+        var financeGroups = [
+            { label: 'Sales', values: [{ label: 'Revenue', value: Number(profit.revenue) || 0, color: '#2563eb' }, { label: 'Cost of goods', value: Number(profit.cogs) || 0, color: '#0d9488' }] },
+            { label: 'Profitability', values: [{ label: 'Net profit', value: Number(profit.net_profit) || 0, color: '#16a34a' }, { label: 'Expenses', value: Number(profit.expenses) || 0, color: '#f59e0b' }] }
         ];
-        var financeHost = $('#dashboard-profit-bars').empty(), financeMax = Math.max(1, ...financeRows.map(function (x) { return Math.abs(x.value); }));
-        financeRows.forEach(function (x) {
-            var row = $('<div class="da-bar-row"></div>').append($('<strong>').text(x.label));
-            row.append($('<div class="da-bar-track"><div class="da-bar-fill"></div></div>').find('.da-bar-fill').css({ width: (Math.abs(x.value) / financeMax * 100) + '%', background: x.color }).end());
-            row.append($('<span class="text-right"></span>').text(PosnicPro.dashboard.money(x.value)));
-            financeHost.append(row);
+        var financeHost = $('#dashboard-profit-bars').empty();
+        var financeMax = Math.max(1, ...financeGroups.reduce(function (all, group) { return all.concat(group.values.map(function (x) { return Math.abs(x.value); })); }, []));
+        financeGroups.forEach(function (group) {
+            financeHost.append($('<div class="small font-weight-bold mt-3 mb-1">').text(group.label));
+            group.values.forEach(function (x) {
+                var row = $('<div class="da-bar-row"></div>').append($('<strong>').text(x.label));
+                row.append($('<div class="da-bar-track"><div class="da-bar-fill"></div></div>').find('.da-bar-fill').css({ width: (Math.abs(x.value) / financeMax * 100) + '%', background: x.color }).end());
+                row.append($('<span class="text-right"></span>').text(PosnicPro.dashboard.money(x.value)));
+                financeHost.append(row);
+            });
         });
         var topHost = $('#dashboard-top-products-chart').empty(), topItems = Array.isArray(data.topItems) ? data.topItems.slice(0, 7) : [];
         var topMax = Math.max(1, ...topItems.map(function (x) { return Number(x.total_amount) || 0; }));
