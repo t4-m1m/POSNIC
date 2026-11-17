@@ -314,8 +314,18 @@
         var nameWrap=document.createElement('div');nameWrap.className='iv2-owner-field iv2-owner-generated';nameLabel.textContent='Generated article name';nameInput.readOnly=true;nameInput.required=true;nameWrap.append(nameLabel,nameInput);nameFields.appendChild(nameWrap);
         function move(selector,target){var node=document.querySelector(selector);if(node)target.appendChild(node);return node;}
         move('#iv2-details-extra',p1);move('#iv2-codes',p1);move('#iv2-variants',p1);
+        var detailsSection=document.getElementById('iv2-details-extra');
+        if(detailsSection){var detailsTitle=detailsSection.querySelector('h2');if(detailsTitle)detailsTitle.textContent='Category & brand';['tags','position','mfg','expiry'].forEach(function(id){var el=document.getElementById('iv2-'+id);if(el&&el.parentElement)el.parentElement.hidden=true;});['description'].forEach(function(id){var el=document.getElementById('iv2-'+id),lab=detailsSection.querySelector('label[for="iv2-'+id+'"]');if(el)el.hidden=true;if(lab)lab.hidden=true;});}
+        var codeSection=document.getElementById('iv2-codes');
+        if(codeSection){var codeTitle=codeSection.querySelector('h2');if(codeTitle)codeTitle.textContent='Code-barres';['plu','sku','gtin','alt-barcodes','purchase-unit','pack-size'].forEach(function(id){var el=document.getElementById('iv2-'+id);if(el&&el.parentElement)el.parentElement.hidden=true;});var sameSku=document.getElementById('iv2-same-sku');if(sameSku&&sameSku.parentElement)sameSku.parentElement.hidden=true;}
+        var variantSection=document.getElementById('iv2-variants');
+        if(variantSection){var variantTitle=variantSection.querySelector('h2');if(variantTitle)variantTitle.textContent='Article avec variantes';var variantLabel=variantSection.querySelector('label[for="iv2-has-variants"]');if(variantLabel){var wording=variantLabel.querySelector('lang');if(wording)wording.textContent='Article avec variantes';}}
+        var photoSection=document.getElementById('iv2-appearance');
+        if(photoSection){var photoTitle=photoSection.querySelector('h2');if(photoTitle)photoTitle.textContent='Photos';['icon','tile-color','tile-shape','auto-tile'].forEach(function(id){var el=document.getElementById('iv2-'+id);if(el&&el.parentElement)el.parentElement.hidden=true;});}
+        var pricingSection=document.getElementById('iv2-pricing-extra');
+        if(pricingSection){['mrp','reorder','unit','supplier','service-unit','discount-type','discount','open-price','weight'].forEach(function(id){var el=document.getElementById('iv2-'+id);if(el&&el.parentElement)el.parentElement.hidden=true;});}
         var stockSection=document.querySelector('#iv2-panel-basics section:nth-of-type(2)');
-        if(stockSection){var stockTitle=stockSection.querySelector('.iv2-section-title');if(stockTitle)stockTitle.remove();move('#iv2-quantity-row',stockSection);p2.appendChild(stockSection);}
+        if(stockSection){var stockTitle=stockSection.querySelector('.iv2-section-title');if(stockTitle)stockTitle.remove();var qtyLabel=stockSection.querySelector('label[for="iv2-quantity"]');if(qtyLabel)qtyLabel.textContent='Current Stock Quantity';move('#iv2-quantity-row',stockSection);p2.appendChild(stockSection);}
         var priceLabel=document.querySelector('label[for=iv2-price]'),priceInput=document.getElementById('iv2-price');
         var priceSection=document.createElement('section');priceSection.className='iv2-section';priceSection.innerHTML='<h2>Selling prices (DA)</h2><div class="iv2-owner-price-grid" id="iv2-owner-price-grid"></div>';
         var priceGrid=priceSection.querySelector('#iv2-owner-price-grid'),priceWrap=document.createElement('div');priceWrap.className='iv2-owner-field';priceLabel.textContent='Selling Price 1 (DA)';priceInput.required=true;priceWrap.append(priceLabel,priceInput);priceGrid.appendChild(priceWrap);
