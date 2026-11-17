@@ -489,17 +489,37 @@ PosnicPro.customers = {
                     /*This function call for updating customername.json,getcustomers.json file */
                     PosnicPro.alert(response.type, response.message);
                     if (createdFromSales) {
-                        // Keep route and visible workspace aligned after the modal closes.
+                        // Keep a short-lived route guard until the customer
+                        // sidebar/modal close handler has finished its own routing.
+                        PosnicPro.customers._salesQuickCreatePending = true;
+                        if (!window.__posnicQuickCustomerSalesGuard) {
+                            window.__posnicQuickCustomerSalesGuard = true;
+                            window.addEventListener('hashchange', function () {
+                                if (!PosnicPro.customers._salesQuickCreatePending) return;
+                                if (/^#\/(?:customers|customer)(?:\/|$)/i.test(String(window.location.hash || ''))) {
+                                    window.setTimeout(function () {
+                                        if (!PosnicPro.customers._salesQuickCreatePending) return;
+                                        hasher.changed.active = false;
+                                        hasher.replaceHash('sales/new');
+                                        hasher.changed.active = true;
+                                        $('.page_loader').not('#sales_new').hide();
+                                        $('.page-title-box,#sales_new').show();
+                                        if (PosnicPro.sales && PosnicPro.sales.focusBarcodeInput) PosnicPro.sales.focusBarcodeInput(true);
+                                        PosnicPro.customers._salesQuickCreatePending = false;
+                                    }, 60);
+                                }
+                            });
+                        }
                         window.setTimeout(function () {
+                            if (!PosnicPro.customers._salesQuickCreatePending) return;
                             hasher.changed.active = false;
                             hasher.replaceHash('sales/new');
                             hasher.changed.active = true;
                             $('.page_loader').not('#sales_new').hide();
                             $('.page-title-box,#sales_new').show();
-                            if (PosnicPro.sales && PosnicPro.sales.focusBarcodeInput) {
-                                PosnicPro.sales.focusBarcodeInput(true);
-                            }
-                        }, 80);
+                            if (PosnicPro.sales && PosnicPro.sales.focusBarcodeInput) PosnicPro.sales.focusBarcodeInput(true);
+                        }, 180);
+                        window.setTimeout(function () { PosnicPro.customers._salesQuickCreatePending = false; }, 8000);
                     }
                 } else {
                     PosnicPro.alert(response.type, response.message);

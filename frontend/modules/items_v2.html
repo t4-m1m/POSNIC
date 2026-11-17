@@ -108,6 +108,27 @@
 #items_v2 #iv2-codes > label:has(#iv2-has-variants){display:flex !important;align-items:center;gap:8px}
 #items_v2 #iv2-variant-editor[hidden]{display:none !important}
 </style>
+<style id="iv2-cashier-viewport-fit">
+/* Payment-style fixed workbench: all item fields remain visible together. */
+#items_v2_mount,#items_v2{height:calc(100vh - 70px);min-height:0;overflow:hidden}
+#items_v2 .iv2-workspace{height:100%;min-height:0;padding:6px 10px;display:flex;flex-direction:column;gap:4px}
+#items_v2 .iv2-heading{flex:0 0 auto;margin:0 0 2px}
+#items_v2 .iv2-layout{flex:1 1 auto;min-height:0;overflow:visible}
+#items_v2 #iv2-form{gap:5px;align-content:start}
+#items_v2 #iv2-codes,#items_v2 #iv2-variants,#items_v2 #iv2-details-extra,#items_v2 #iv2-appearance,#items_v2 .iv2-name-builder,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-pricing-extra,#items_v2 #iv2-stock-card{padding:6px;min-height:0}
+#items_v2 .iv2-section-title,#items_v2 .iv2-subheading{font-size:12px;margin:0 0 4px}
+#items_v2 label{font-size:10px;line-height:1.15;margin-bottom:2px}
+#items_v2 input:not([type=checkbox]):not([type=radio]):not([type=file]),#items_v2 select{height:28px;min-height:28px;padding:3px 6px;font-size:11px}
+#items_v2 .iv2-grid{gap:4px}
+#items_v2 .iv2-note,#items_v2 #iv2-purchase-cost-summary{font-size:9px;line-height:1.15;margin-top:2px}
+#items_v2 #iv2-variant-rows{max-height:62px}
+#items_v2 .iv2-photo-list{max-height:38px}
+#items_v2 #iv2-quantity-row{grid-template-columns:1fr 80px;gap:4px}
+#items_v2 .iv2-actions{padding:4px 7px}
+#items_v2 #iv2-save{min-height:31px}
+@media(max-height:820px) and (min-width:901px){#items_v2 .iv2-workspace{padding:3px 8px;gap:2px}#items_v2 #iv2-form{gap:3px}#items_v2 #iv2-codes,#items_v2 #iv2-variants,#items_v2 #iv2-details-extra,#items_v2 #iv2-appearance,#items_v2 .iv2-name-builder,#items_v2 .iv2-purchase-cost,#items_v2 #iv2-pricing-extra,#items_v2 #iv2-stock-card{padding:4px}#items_v2 .iv2-grid{gap:3px}#items_v2 input:not([type=checkbox]):not([type=radio]):not([type=file]),#items_v2 select{height:25px;min-height:25px;padding:2px 5px;font-size:10px}}
+</style>
+
 
 
 <style id="iv2-simplified-item-form">
