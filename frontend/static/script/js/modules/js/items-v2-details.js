@@ -311,12 +311,12 @@
     function update(capabilities, kind) {
         caps=capabilities;
         el('food-extra').hidden=!caps.restaurant || kind==='service'; el('tax-extra').hidden=true;
-        el('service-unit').parentElement.hidden=kind!=='service'; el('variants').hidden=false; el('variant-editor').hidden=kind==='service' || !el('has-variants').checked; el('quantity-row').hidden=kind==='service' || isFamily();
+        el('service-unit').parentElement.hidden=kind!=='service'; el('variants').hidden=false; el('variant-editor').hidden=kind==='service' || !el('has-variants').checked; el('quantity-row').hidden=kind==='service';
         ['food-extra','tax-extra','variants'].forEach(function(id){el(id).querySelectorAll('input,select,textarea,button').forEach(function(input){input.disabled=el(id).hidden;});});
         ['reorder','purchase-unit','pack-size','weight'].forEach(function(id){el(id).closest(id==='weight'?'label':'div').hidden=kind==='service';});
         ['plu','sku','barcode','gtin','alt-barcodes','same-sku'].forEach(function(id){el(id).disabled=isFamily();});
         el('variant-editor').querySelectorAll('input,select,button').forEach(function(input){input.disabled=kind==='service' || el('variant-editor').hidden;});
-        el('quantity').disabled=kind==='service' || isFamily();
+        el('quantity').disabled=kind==='service'; el('quantity').readOnly=isFamily(); if(isFamily()){captureVariants();el('quantity').value=variants.reduce(function(sum,row){return sum+Math.max(0,Number(row.available_quantity)||0);},0);}
         el('weight').closest('label').hidden=!caps.weight || kind==='service';
         el('weight').disabled=!caps.weight || kind==='service';
         el('discount').max=val('discount-type')==='percentage'?'100':'';
