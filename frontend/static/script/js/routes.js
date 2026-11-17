@@ -70,10 +70,7 @@ $(document).ready(function () {
     });
     crossroads.addRoute('{module}/{id}/edit', function (module, id) {
         RECORD_ID = id;
-        withModule(module, function () {
-            if (module === 'items') { PosnicPro.items_v2.showModify(id); return; }
-            PosnicPro[module].showEdit(id);
-        });
+        withModule(module, function () { PosnicPro[module].showEdit(id); });
     });
     crossroads.addRoute('{module}/{id}/delete', function (module, id) {
         RECORD_ID = id;
