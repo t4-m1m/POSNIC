@@ -170,6 +170,31 @@
             card.querySelectorAll('[data-field]').forEach(function (input) { variants[index][input.dataset.field] = input.value; });
         });
     }
+    function renderVariantRows() {
+        var box=el('variant-rows');box.replaceChildren();
+                variants.forEach(function (row, i) {
+                    var card = document.createElement('div'); card.className = 'iv2-variant'; card.dataset.variantIndex=String(i);
+                    var heading = document.createElement('h3'); heading.textContent = row.variant_value; card.appendChild(heading);
+                    var remove = button('Supprimer', function () { captureVariants(); variants.splice(i,1); renderVariantRows(); notify(); });
+                    remove.classList.add('iv2-variant-remove'); card.appendChild(remove);
+                    var grid = document.createElement('div'); grid.className = 'iv2-grid';
+                    variantFields().forEach(function (spec) {
+                        var wrap = document.createElement('div'), lab = document.createElement('label'), input = document.createElement('input');
+                        input.id = 'iv2-variant-' + i + '-' + spec[0]; lab.htmlFor = input.id; lab.textContent = spec[1]; input.dataset.field = spec[0]; input.type = spec[2];
+                        if (spec[2] === 'number') { input.min = '0'; input.step = 'any'; }
+                        input.value = row[spec[0]] || ''; wrap.append(lab, input);
+                        if (spec[0] === 'barcode_id') {
+                            var gen = button('Générer', function () {
+                                captureVariants();var used=variants.map(function(v){return v.barcode_id;}).concat([val('barcode')]);
+                                row.barcode_id=makeInternalBarcode(used);input.value=row.barcode_id;notify();
+                            });
+                            gen.classList.add('iv2-variant-generate');wrap.appendChild(gen);
+                        }
+                        grid.appendChild(wrap);
+                    });
+                    card.appendChild(grid); box.appendChild(card);
+                }); notify();
+    }
     function variantSignature() { return JSON.stringify([val('axis1'),selectedValues('values1'),val('axis2'),selectedValues('values2')]); }
     function generate() {
         var firstValues = selectedValues('values1'), secondValues = selectedValues('values2');
@@ -189,29 +214,7 @@
             var code = makeInternalBarcode(Array.from(usedCodes)); usedCodes.add(code);
             return { variant_value: name, selling_price: val('price'), available_quantity: '0', company_price: val('cost'), mrp_price: val('mrp'), position: val('position'), barcode_id: code, sku_id: '', gtin: '', discount_amount: val('discount-type') === 'amount' ? val('discount') : '', discount_percentage: val('discount-type') === 'percentage' ? val('discount') : '' };
         });
-        signature = variantSignature(); var box = el('variant-rows'); box.replaceChildren();
-        variants.forEach(function (row, i) {
-            var card = document.createElement('div'); card.className = 'iv2-variant'; card.dataset.variantIndex=String(i);
-            var heading = document.createElement('h3'); heading.textContent = row.variant_value; card.appendChild(heading);
-            var remove = button('Supprimer', function () { captureVariants(); variants.splice(i,1); renderVariantRows(); notify(); });
-            remove.classList.add('iv2-variant-remove'); card.appendChild(remove);
-            var grid = document.createElement('div'); grid.className = 'iv2-grid';
-            variantFields().forEach(function (spec) {
-                var wrap = document.createElement('div'), lab = document.createElement('label'), input = document.createElement('input');
-                input.id = 'iv2-variant-' + i + '-' + spec[0]; lab.htmlFor = input.id; lab.textContent = spec[1]; input.dataset.field = spec[0]; input.type = spec[2];
-                if (spec[2] === 'number') { input.min = '0'; input.step = 'any'; }
-                input.value = row[spec[0]] || ''; wrap.append(lab, input);
-                if (spec[0] === 'barcode_id') {
-                    var gen = button('Générer', function () {
-                        captureVariants();var used=variants.map(function(v){return v.barcode_id;}).concat([val('barcode')]);
-                        row.barcode_id=makeInternalBarcode(used);input.value=row.barcode_id;notify();
-                    });
-                    gen.classList.add('iv2-variant-generate');wrap.appendChild(gen);
-                }
-                grid.appendChild(wrap);
-            });
-            card.appendChild(grid); box.appendChild(card);
-        }); notify();
+        signature = variantSignature(); renderVariantRows();
     }
     function isFamily() {
         var kind = document.querySelector('#items_v2 [name="iv2-kind"]:checked');
