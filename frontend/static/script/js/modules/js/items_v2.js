@@ -434,6 +434,9 @@
         open();
         reset();
         $('#items_v2').show();
+        // Explicitly select step one after every reset. This also covers the
+        // same-route "Create another" flow, where the hash does not change.
+        P.itemsV2Workspace.goToStep('step1');
         return false;
     }
     P.items_v2 = { showEdit: showEdit, showClone: function(id){showEdit(id,true);}, showAdd: showAdd, showDataTablePage: open, setBusinessContext: function (category) {
