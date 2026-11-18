@@ -246,6 +246,7 @@ class ItemRepository extends BaseModel {
     page = 1,
     limit = 5,
     sort = { _id: -1 },
+    summary = false,
   } = {}) {
     const { collection, filter } = await this.listScope({ branchId, licenseId, filters });
 
@@ -301,13 +302,67 @@ class ItemRepository extends BaseModel {
         .toArray();
     }
 
-    const [total, items] = await Promise.all([collection.countDocuments(filter), itemsPromise]);
+    const numeric = (field) => ({
+      $convert: {
+        input: { $ifNull: [field, 0] },
+        to: 'double',
+        onError: 0,
+        onNull: 0,
+      },
+    });
+    const summaryPromise = summary
+      ? collection
+          .aggregate([
+            { $match: filter },
+            {
+              $addFields: {
+                _summaryQty: {
+                  $cond: [
+                    { $in: ['$track_inventory', [true, 'true']] },
+                    numeric('$available_quantity'),
+                    0,
+                  ],
+                },
+                _summaryCost: numeric('$company_price'),
+                _summaryPrice1: numeric('$selling_price'),
+                _summaryPrice2: numeric({ $ifNull: ['$selling_price_2', '$selling_price2'] }),
+                _summaryPrice3: numeric({ $ifNull: ['$selling_price_3', '$selling_price3'] }),
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                itemCount: { $sum: 1 },
+                stock: { $sum: '$_summaryQty' },
+                cost: { $sum: '$_summaryCost' },
+                costQty: { $sum: { $multiply: ['$_summaryCost', '$_summaryQty'] } },
+                price1: { $sum: '$_summaryPrice1' },
+                price1Qty: { $sum: { $multiply: ['$_summaryPrice1', '$_summaryQty'] } },
+                price2: { $sum: '$_summaryPrice2' },
+                price2Qty: { $sum: { $multiply: ['$_summaryPrice2', '$_summaryQty'] } },
+                price3: { $sum: '$_summaryPrice3' },
+                price3Qty: { $sum: { $multiply: ['$_summaryPrice3', '$_summaryQty'] } },
+              },
+            },
+          ])
+          .toArray()
+      : Promise.resolve(null);
+
+    const [total, items, summaryRows] = await Promise.all([
+      collection.countDocuments(filter),
+      itemsPromise,
+      summaryPromise,
+    ]);
 
     const list = items.map((doc) => BaseModel.simplifyFields(doc));
 
     return {
       items: list,
       total,
+      summary: summary ? (summaryRows && summaryRows[0]) || {
+        itemCount: 0, stock: 0, cost: 0, costQty: 0,
+        price1: 0, price1Qty: 0, price2: 0, price2Qty: 0, price3: 0, price3Qty: 0,
+      } : undefined,
       page: effectivePage,
       limit: effectiveLimit,
       totalPages: Math.ceil(total / effectiveLimit) || 1,

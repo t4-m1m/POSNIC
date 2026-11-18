@@ -318,6 +318,7 @@ class ItemsController extends BaseController {
         filters,
         options,
         labelPricing: req.query.label_pricing === 'true',
+        summary: req.query.summary === 'true',
       });
 
       if (result.status === true) {

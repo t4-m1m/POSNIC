@@ -709,7 +709,7 @@ PosnicPro.items = {
         PosnicPro.listFilter.request('items', {
             url: 'items',
             data: (function () {
-                var d = { page: self._page, limit: self.PAGE_SIZE, filters: JSON.stringify(filters) };
+                var d = { page: self._page, limit: self.PAGE_SIZE, filters: JSON.stringify(filters), summary: true };
                 var sv = PosnicPro.listSort.value('items');
                 if (sv && !self._tableSortKey) { d.sort = sv; }
                 return d;
@@ -748,7 +748,7 @@ PosnicPro.items = {
             var cur = PosnicPro.local.get('currencySign') || 'DA';
             var sortArrow = function (key) { return self._tableSortKey === key ? (self._tableSortDirection === 'asc' ? ' ▲' : ' ▼') : ''; };
             var sortHead = function (key, label, align) { return '<th data-sort-key="' + key + '" class="' + (align || '') + '" aria-sort="' + (self._tableSortKey === key ? (self._tableSortDirection === 'asc' ? 'ascending' : 'descending') : 'none') + '">' + label + '<span class="items-sort-indicator">' + sortArrow(key) + '</span></th>'; };
-            var totals = { stock: 0, cost: 0, stockCost: 0, price1: 0, price2: 0, price3: 0 };
+            var totals = { stock: 0, cost: 0, costQty: 0, price1: 0, price1Qty: 0, price2: 0, price2Qty: 0, price3: 0, price3Qty: 0 };
             var html = '<div class="table-responsive items-table-responsive"><table class="table table-borderless items-modern-table">'
                 + '<thead><tr><th class="items-avatar-head" style="width:44px;"></th>'
                 + sortHead('name','Nom') + sortHead('category','Catégorie')
@@ -774,8 +774,10 @@ PosnicPro.items = {
                 var stock = tracked ? (Number(r.available_quantity) || 0) : 0;
                 var cost = Number(r.company_price) || 0, price1 = Number(r.selling_price) || 0;
                 var price2 = Number(r.selling_price_2 || r.selling_price2) || 0, price3 = Number(r.selling_price_3 || r.selling_price3) || 0;
-                totals.stock += stock; totals.cost += cost; totals.stockCost += cost * stock;
-                totals.price1 += price1; totals.price2 += price2; totals.price3 += price3;
+                totals.stock += stock; totals.cost += cost; totals.costQty += cost * stock;
+                totals.price1 += price1; totals.price1Qty += price1 * stock;
+                totals.price2 += price2; totals.price2Qty += price2 * stock;
+                totals.price3 += price3; totals.price3Qty += price3 * stock;
                 var low = tracked && stock <= Number(r.low_stock || 0);
                 var stockCell = tracked ? (low ? '<span class="rs-pill unpaid">' : '<span>') + esc(stock) + ' ' + esc(unit) + '</span>' : '<span class="q-muted">-</span>';
                 var moneyCell = function (v) { return cur + '&nbsp;' + Number(v || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); };
@@ -789,11 +791,20 @@ PosnicPro.items = {
                     + '<td class="text-right">' + moneyCell(price2) + '</td>'
                     + '<td class="text-right">' + moneyCell(price3) + '</td></tr>';
             });
+            // The API summary is calculated over every item matching the active filters,
+            // not just this page. Keep the page sums only as a safe fallback for older APIs.
+            var summary = data.summary || totals;
+            var itemCount = Number(summary.itemCount !== undefined ? summary.itemCount : data.total) || 0;
             var moneyTotal = function (v) { return cur + '&nbsp;' + Number(v || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); };
-            html += '</tbody><tfoot><tr class="items-total-row"><th></th><th>Total · ' + list.length + ' article(s)</th><th>Total</th>'
-                + '<th class="text-right">' + totals.stock.toLocaleString() + '</th>'
-                + '<th class="text-right">' + moneyTotal(totals.cost) + '<small class="items-stock-cost-total">Stock cost: ' + moneyTotal(totals.stockCost) + '</small></th>'
-                + '<th class="text-right">' + moneyTotal(totals.price1) + '</th><th class="text-right">' + moneyTotal(totals.price2) + '</th><th class="text-right">' + moneyTotal(totals.price3) + '</th></tr></tfoot></table></div>';
+            var totalPair = function (sum, weighted) {
+                return moneyTotal(sum) + '<small class="items-stock-cost-total">Σ price × qty: ' + moneyTotal(weighted) + '</small>';
+            };
+            html += '</tbody><tfoot><tr class="items-total-row"><th></th><th>Filtered total · ' + itemCount + ' article(s)</th><th>Total</th>'
+                + '<th class="text-right">' + Number(summary.stock || 0).toLocaleString() + '</th>'
+                + '<th class="text-right">' + totalPair(summary.cost, summary.costQty !== undefined ? summary.costQty : totals.costQty) + '</th>'
+                + '<th class="text-right">' + totalPair(summary.price1, summary.price1Qty !== undefined ? summary.price1Qty : totals.price1Qty) + '</th>'
+                + '<th class="text-right">' + totalPair(summary.price2, summary.price2Qty !== undefined ? summary.price2Qty : totals.price2Qty) + '</th>'
+                + '<th class="text-right">' + totalPair(summary.price3, summary.price3Qty !== undefined ? summary.price3Qty : totals.price3Qty) + '</th></tr></tfoot></table></div>';
             $('#items_list_rows').html(html);
             self.renderPager(Number(data.total) || list.length);
         }, function () {

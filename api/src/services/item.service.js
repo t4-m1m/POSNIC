@@ -143,6 +143,7 @@ class ItemService {
     filters = {},
     options = {},
     labelPricing = false,
+    summary = false,
   } = {}) {
     try {
       if (!branchId || !licenseId) {
@@ -164,12 +165,14 @@ class ItemService {
         page,
         limit,
         sort,
+        summary,
       });
 
       return {
         status: true,
         data: {
           total: result.total,
+          summary: result.summary,
           current_page: result.page,
           total_pages: result.totalPages,
           per_page: result.limit,
