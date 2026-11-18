@@ -35,9 +35,12 @@ exports.ensureZrCustomer = async (req, res) => {
     let customer = await customers.findOne(filter);
     if (!customer) {
       const now = new Date();
+      const branchKey = String(sc.branch_id || 'default').replace(/[^a-f0-9]/gi, '').toLowerCase() || 'default';
       const candidate = {
         _id: new ObjectId(), name: 'ZR Express', branch_id: sc.branch_id,
         branch_name: String(req.user?.branch_name || req.user?.branch?.name || ''),
+        // Customer.email is unique; use a reserved example.com address for this system-only account.
+        email: 'zr-express-' + branchKey + '@example.com',
         license: sc.license, phone: '', country: 'Algeria', status: 'active',
         gst: 'disable', gst_type: 'consumer', price_tier: 1,
         creditLimit: 0, currentBalance: 0, paymentTerms: 'net30',
