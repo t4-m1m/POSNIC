@@ -4531,7 +4531,8 @@ PosnicPro.sales.guardDiscountApproval = function (params, proceed) {
 PosnicPro.sales.addSale = {
     /*Save Sales Order*/
     cartOrderSubmit: function (payment) {
-        if (!PosnicPro.sales.paymentOnlyMode && PosnicPro.sales.saleProcess !== 'KOT' && PosnicPro.saleExtensions?.dispatch('submit')) return false;
+        var zrDraft = window.__posnicZrDraft || null;
+        if (!zrDraft && !PosnicPro.sales.paymentOnlyMode && PosnicPro.sales.saleProcess !== 'KOT' && PosnicPro.saleExtensions?.dispatch('submit')) return false;
         // // ✅ Prevent duplicate submissions
         // if (PosnicPro.sales.submissionInProgress || $("#save_btn").prop('disabled') || $("#save_submit").hasClass('disabled')) {
         //     console.log('⚠️ Submission already in progress');
@@ -4542,8 +4543,8 @@ PosnicPro.sales.addSale = {
         PosnicPro.sales.submissionInProgress = true;
         $("#save_btn").prop('disabled', true);
         $("#save_submit").addClass('disabled');
-        if (PosnicPro.sales.saleProcess === 'KOT') {
-            $('#infobar-settings-sidebar-tender-details').hide();
+        if (zrDraft || PosnicPro.sales.saleProcess === 'KOT') {
+            $('#infobar-settings-sidebar-tender-details').removeClass('sidebarview').hide();
         } else {
             $('#infobar-settings-sidebar-tender-details').show();
         }
@@ -4787,8 +4788,14 @@ PosnicPro.sales.addSale = {
             }
             if (fullyUnpaidNewSale) payment_mode_val = 'Credit';
             if (versementDraft) payment_mode_val = 'Versement';
-            var zrDraft = window.__posnicZrDraft || null;
-            if (zrDraft) { payment_mode_val = 'LIVRAISON_ZR'; payments = { LIVRAISON_ZR: Number(zrDraft.saleTotal) || 0 }; partial = (Number(zrDraft.saleTotal)||0).toFixed(2); partial_check = 'false'; $('#unpaid_payment_toggle').prop('checked', true); }
+            zrDraft = zrDraft || window.__posnicZrDraft || null;
+            if (zrDraft) {
+                payment_mode_val = 'LIVRAISON_ZR';
+                payments = { LIVRAISON_ZR: Number(zrDraft.saleTotal) || 0 };
+                partial = (Number(zrDraft.saleTotal) || 0).toFixed(2);
+                partial_check = 'false';
+                $('#unpaid_payment_toggle').prop('checked', true);
+            }
             let register_id = PosnicPro.sales.saleRegisterId();
             var isKotNewSale = (PosnicPro.sales.saleProcess === 'KOT');
             var newSaleTableNumber = '';
@@ -4863,7 +4870,15 @@ PosnicPro.sales.addSale = {
                     quote_price_honoured: PosnicPro.sales._sourceQuoteId
                         ? (PosnicPro.sales._quoteHonoured ? 'true' : 'false') : undefined,
                     multi_payment: payments,
-                    delivery_checkout: zrDraft ? { provider:'ZR_EXPRESS', tracking_number:zrDraft.parcel.trackingNumber, parcel_id:zrDraft.parcel.id, delivery_fee:zrDraft.deliveryFee, cod_total:zrDraft.codTotal } : undefined,
+                    delivery_checkout: zrDraft ? {
+                        provider: 'ZR_EXPRESS',
+                        tracking_number: zrDraft.parcel.trackingNumber,
+                        parcel_id: zrDraft.parcel.id,
+                        delivery_fee: zrDraft.deliveryFee,
+                        cod_total: zrDraft.codTotal,
+                        recipient_name: zrDraft.recipientName,
+                        recipient_phone: zrDraft.recipientPhone
+                    } : undefined,
                     versement_checkout: versementDraft ? {
                         customer_name: versementDraft.customer_name,
                         phone: versementDraft.phone,
@@ -4901,7 +4916,35 @@ PosnicPro.sales.addSale = {
                 if (response.type === 'success') {
                     if (window.__posnicZrDraft) {
                         var zrSaved = window.__posnicZrDraft; window.__posnicZrDraft = null;
-                        PosnicPro.post({url:'delivery-zr/link',data:JSON.stringify({saleId:response.data.sales_id,parcel:zrSaved.parcel,externalId:zrSaved.externalId,wilaya:zrSaved.wilaya,commune:zrSaved.commune,deliveryType:zrSaved.deliveryType,deliveryFee:zrSaved.deliveryFee,codTotal:zrSaved.codTotal,address:zrSaved.address})},function(r){if(r&&r.type==='success'&&window.electronAPI&&window.electronAPI.zr.saveBordereau){window.electronAPI.zr.saveBordereau(zrSaved.bordereauHtml(response.data.sales_id));}else{PosnicPro.alert('warning','Vente enregistrée, liaison Livraison ZR à vérifier.');}},function(){PosnicPro.alert('warning','Vente enregistrée, liaison Livraison ZR à rétablir.');});
+                        PosnicPro.post({url:'delivery-zr/link',data:JSON.stringify({
+                            saleId: response.data.sales_id,
+                            customerId: zrSaved.customerId,
+                            recipientName: zrSaved.recipientName,
+                            recipientPhone: zrSaved.recipientPhone,
+                            parcel: zrSaved.parcel,
+                            externalId: zrSaved.externalId,
+                            wilaya: zrSaved.wilaya,
+                            commune: zrSaved.commune,
+                            deliveryType: zrSaved.deliveryType,
+                            deliveryFee: zrSaved.deliveryFee,
+                            codTotal: zrSaved.codTotal,
+                            address: zrSaved.address
+                        })}, function(r) {
+                            if (r && r.type === 'success' && window.electronAPI && window.electronAPI.zr.saveBordereau) {
+                                window.electronAPI.zr.saveBordereau(zrSaved.bordereauHtml(response.data.sales_id))
+                                    .then(function(saved) {
+                                        if (saved && saved.saved) PosnicPro.alert('success', 'Vente ZR enregistrée et bordereau PDF sauvegardé.');
+                                        else PosnicPro.alert('info', 'Vente ZR enregistrée. Enregistrement du bordereau annulé.');
+                                    })
+                                    .catch(function(error) {
+                                        PosnicPro.alert('error', error && error.message || 'Vente enregistrée, mais le bordereau PDF n’a pas été sauvegardé.');
+                                    });
+                            } else {
+                                PosnicPro.alert('warning', 'Vente enregistrée, liaison Livraison ZR à vérifier.');
+                            }
+                        }, function() {
+                            PosnicPro.alert('warning', 'Vente enregistrée, liaison Livraison ZR à rétablir.');
+                        });
                     }
                     if (versementDraft) {
                         window.__posnicVersementDraft = null;
@@ -15497,28 +15540,132 @@ if (!window.__posnicCaptureSearchLabelClick) {
 function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c];});}
 function updateZrCod(){var total=Number(PosnicPro.sales.extraDiscount&&PosnicPro.sales.extraDiscount.sale_new_tot)||Number($('#grand_total').val())||0;$('#zr-cod').val((total+(Number($('#zr-fee').val())||0)).toFixed(2));}
 function applyZrFee(){var code=Number($('#zr-wilaya option:selected').attr('data-code'));var row=(window.__zrTariffs||[]).find(x=>Number(x.code)===code);if(row){$('#zr-fee').val($('#zr-type').val()==='home'?Number(row.domicileFee)||0:Number(row.bureauFee)||0);}updateZrCod();}
-function bindZrTerritorySearch(searchSelector,selectSelector){var $search=$(searchSelector),$select=$(selectSelector);$search.off('input.zrterritory').on('input.zrterritory',function(){var all=$select.data('all-options');if(typeof all!=='string')all=$select.html();$select.html(all);var q=String($search.val()||'').trim().toLocaleLowerCase();if(!q)return;$select.find('option').each(function(){if(this.value&&this.text.toLocaleLowerCase().indexOf(q)===-1)$(this).remove();});var exact=$select.find('option').filter(function(){return this.value&&this.text.toLocaleLowerCase()===q;}).first();if(exact.length&&$select.val()!==exact.val())$select.val(exact.val()).trigger('change');});$select.off('change.zrterritory').on('change.zrterritory',function(){var option=this.options[this.selectedIndex];if(option&&option.value)$search.val(option.text);});}
-function modal(){if($('#posnic-zr-modal').length)return; $('body').append('<div class="modal fade" id="posnic-zr-modal" data-backdrop="static" data-keyboard="false" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><form id="posnic-zr-form"><div class="modal-header"><h5>Livraison · ZR Express</h5><button type="button" class="close" data-dismiss="modal">×</button></div><div class="modal-body"><div class="row"><div class="col-md-6 form-group"><label>Nom *</label><input id="zr-name" class="form-control" required></div><div class="col-md-6 form-group"><label>Téléphone *</label><input id="zr-phone" class="form-control" required></div><div class="col-md-6 form-group"><label>Téléphone secondaire</label><input id="zr-phone2" class="form-control"></div><div class="col-md-6 form-group"><label>Wilaya *</label><input id="zr-wilaya-search" type="search" class="form-control mb-2" placeholder="Rechercher une wilaya..." autocomplete="off"><select id="zr-wilaya" class="form-control" required></select></div><div class="col-md-6 form-group"><label>Commune *</label><input id="zr-commune-search" type="search" class="form-control mb-2" placeholder="Rechercher une commune..." autocomplete="off"><select id="zr-commune" class="form-control" required></select></div><div class="col-md-6 form-group" id="zr-hub-wrap" style="display:none"><label>Point relais *</label><select id="zr-hub" class="form-control"></select></div><div class="col-md-6 form-group"><label>Type</label><select id="zr-type" class="form-control"><option value="home">À domicile</option><option value="pickup-point">Bureau</option></select></div><div class="col-md-6 form-group"><label>Adresse</label><input id="zr-address" class="form-control"></div><div class="col-md-6 form-group"><label>Frais livraison (DZD)</label><input id="zr-fee" type="number" min="0" step="0.01" value="0" class="form-control"></div><div class="col-md-6 form-group"><label>Montant COD (DZD)</label><input id="zr-cod" class="form-control" readonly></div></div><p id="zr-info" class="small text-muted"></p></div><div class="modal-footer"><button type="button" class="btn btn-light" data-dismiss="modal">Annuler</button><button class="btn btn-primary">Créer la livraison</button></div></form></div></div></div>');
-bindZrTerritorySearch('#zr-wilaya-search','#zr-wilaya');bindZrTerritorySearch('#zr-commune-search','#zr-commune');$('#zr-wilaya').on('change',async function(){try{$('#zr-commune-search').val('');let rows=await electronAPI.zr.communes(window.__zrCredentials,$(this).val());var options='<option value="">Choisir la commune</option>'+rows.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');$('#zr-commune').html(options).data('all-options',options);applyZrFee();}catch(e){PosnicPro.alert('error',e.message);}});$('#zr-type').on('change',function(){var pickup=$(this).val()==='pickup-point';$('#zr-hub-wrap').toggle(pickup);$('#zr-hub').prop('required',pickup);applyZrFee();});$('#zr-fee').on('input',updateZrCod);
+function requestZrApi(method,url,data){
+ return new Promise(function(resolve,reject){
+  PosnicPro.request({method:method,url:url,data:JSON.stringify(data||{})},function(r){
+   if(r&&r.type==='success')resolve(r.data||{});
+   else reject(new Error(r&&r.message||'Opération ZR Express impossible.'));
+  },function(xhr){
+   var m='Opération ZR Express impossible.';
+   try{m=JSON.parse(xhr.responseText||'{}').message||m;}catch(_){}
+   reject(new Error(m));
+  });
+ });
+}
+window.posnicZrRequest=requestZrApi;
+function initZrSelectSearch(){
+ var $modal=$('#posnic-zr-modal');
+ if(!$.fn.select2)return;
+ $modal.find('#zr-wilaya,#zr-commune').each(function(){
+  var $select=$(this);
+  if($select.hasClass('select2-hidden-accessible'))return;
+  $select.select2({
+   dropdownParent:$modal,width:'100%',minimumResultsForSearch:0,
+   placeholder:'Rechercher et sélectionner…',allowClear:true,
+   language:{noResults:function(){return 'Aucun résultat';},searching:function(){return 'Recherche…';}}
+  });
+ });
+}
+function modal(){if($('#posnic-zr-modal').length)return; $('body').append('<div class="modal fade" id="posnic-zr-modal" data-backdrop="static" data-keyboard="false" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content"><form id="posnic-zr-form"><div class="modal-header"><h5>Livraison · ZR Express</h5><button type="button" class="close" data-dismiss="modal">×</button></div><div class="modal-body"><div class="row"><div class="col-md-6 form-group"><label>Nom *</label><input id="zr-name" class="form-control" required></div><div class="col-md-6 form-group"><label>Téléphone *</label><input id="zr-phone" class="form-control" required></div><div class="col-md-6 form-group"><label>Téléphone secondaire</label><input id="zr-phone2" class="form-control"></div><div class="col-md-6 form-group"><label>Wilaya *</label><select id="zr-wilaya" class="form-control" required></select></div><div class="col-md-6 form-group"><label>Commune *</label><select id="zr-commune" class="form-control" required></select></div><div class="col-md-6 form-group" id="zr-hub-wrap" style="display:none"><label>Point relais *</label><select id="zr-hub" class="form-control"></select></div><div class="col-md-6 form-group"><label>Type</label><select id="zr-type" class="form-control"><option value="home">À domicile</option><option value="pickup-point">Bureau</option></select></div><div class="col-md-6 form-group"><label>Adresse</label><input id="zr-address" class="form-control"></div><div class="col-md-6 form-group"><label>Frais livraison (DZD)</label><input id="zr-fee" type="number" min="0" step="0.01" value="0" class="form-control"></div><div class="col-md-6 form-group"><label>Montant COD (DZD)</label><input id="zr-cod" class="form-control" readonly></div></div><p id="zr-info" class="small text-muted"></p></div><div class="modal-footer"><button type="button" class="btn btn-light" data-dismiss="modal">Annuler</button><button class="btn btn-primary">Créer la livraison</button></div></form></div></div></div>');
+initZrSelectSearch();
+$('#zr-wilaya').on('change',async function(){
+ try{
+  var rows=await electronAPI.zr.communes(window.__zrCredentials,$(this).val());
+  var options='<option value="">Choisir la commune</option>'+rows.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('');
+  $('#zr-commune').html(options).val('').trigger('change');
+  applyZrFee();
+ }catch(e){PosnicPro.alert('error',e.message);}
+});$('#zr-type').on('change',function(){var pickup=$(this).val()==='pickup-point';$('#zr-hub-wrap').toggle(pickup);$('#zr-hub').prop('required',pickup);applyZrFee();});$('#zr-fee').on('input',updateZrCod);
 $('#posnic-zr-form').on('submit',async function(e){
-e.preventDefault();
-var $b=$(this).find('button[type=submit]').prop('disabled',true);
-try{
-var rows=$('#sales_new_items_table tbody tr[id^="touch_row_"]').map(function(){var id=this.id.replace('touch_row_','');return {name:$('#addSalesLineItemName_'+id).text(),quantity:Number($('#touchsale_item_qty'+id).val())||1,unitPrice:Number($('#addSalesLineItemSellingPrice_'+id).text())||Number($('#addSalesLineItemPrice_'+id).text())||0};}).get().filter(x=>x.name);
-if(!rows.length)throw Error('Le panier est vide.');
-var total=Number(PosnicPro.sales.extraDiscount&&PosnicPro.sales.extraDiscount.sale_new_tot)||Number($('#grand_total').val())||0;
-var fee=Number($('#zr-fee').val());if(!Number.isFinite(fee)||fee<0)throw Error('Frais de livraison invalides.');
-updateZrCod();var externalId='POSNIC-'+Date.now(), payload={customerName:$('#zr-name').val(),phone:$('#zr-phone').val(),phoneAlt:$('#zr-phone2').val(),cityTerritoryId:$('#zr-wilaya').val(),districtTerritoryId:$('#zr-commune').val(),sourceHubId:$('#zr-hub').val(),deliveryType:$('#zr-type').val(),address:$('#zr-address').val(),codTotal:total+fee,externalId:externalId,items:rows};
-var parcel=await electronAPI.zr.createParcel(window.__zrCredentials,payload);
-window.__posnicZrDraft={parcel:parcel,externalId:externalId,wilaya:$('#zr-wilaya option:selected').text(),commune:$('#zr-commune option:selected').text(),deliveryType:payload.deliveryType,deliveryFee:fee,codTotal:total+fee,saleTotal:total,address:payload.address||'',bordereauHtml:function(saleNo){var barcode='';try{var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');if(window.JsBarcode){window.JsBarcode(svg,parcel.trackingNumber,{format:'CODE128',displayValue:false,height:42,margin:0});barcode=svg.outerHTML;}}catch(_){}return '<!doctype html><html><head><meta charset="utf-8"><style>@page{size:100mm 150mm;margin:5mm}body{font:10px Arial}h2{font-size:16px}.code{font-size:20px;font-weight:bold;letter-spacing:2px}table{width:100%;border-collapse:collapse}td{padding:3px;border-bottom:1px solid #ddd}</style></head><body><h2>ZR EXPRESS · POSNIC</h2><div class="code">'+esc(parcel.trackingNumber)+'</div><hr>Vente : '+esc(saleNo)+'<br>Client : '+esc(payload.customerName)+'<br>Téléphone : '+esc(payload.phone)+'<br>Wilaya : '+esc($('#zr-wilaya option:selected').text())+'<br>Commune : '+esc($('#zr-commune option:selected').text())+'<br>Type : '+esc(payload.deliveryType)+'<br>Adresse : '+esc(payload.address)+'<hr><table>'+rows.map(x=>'<tr><td>'+esc(x.name)+' × '+x.quantity+'</td><td>'+money(x.unitPrice*x.quantity)+'</td></tr>').join('')+'</table><hr>Frais livraison : '+money(fee)+' DZD<h2>COD : '+money(total+fee)+' DZD</h2>Tracking : '+esc(parcel.trackingNumber)+'</body></html>';}};
-$('#posnic-zr-modal').modal('hide');
-PosnicPro.sales.runFunctionShortcut('F2');
-setTimeout(function(){$('.payment-amount-input').val('0');$('.payment-amount-input').first().val(total.toFixed(2));$('#unpaid_payment_toggle').prop('checked',true).trigger('change');$('#Partial_amount').val(total.toFixed(2));PosnicPro.alert('info','Validez le règlement LIVRAISON_ZR pour enregistrer la vente et le bordereau.');},350);
-}catch(err){PosnicPro.alert('error',err.message||'Création du colis impossible.');}
-finally{$b.prop('disabled',false);}
+ e.preventDefault();
+ var $b=$(this).find('button[type=submit]').prop('disabled',true),parcel=null;
+ try{
+  var rows=$('#sales_new_items_table tbody tr[id^="touch_row_"]').map(function(){
+   var id=this.id.replace('touch_row_','');
+   return {name:$('#addSalesLineItemName_'+id).text(),quantity:Number($('#touchsale_item_qty'+id).val())||1,
+    unitPrice:Number($('#addSalesLineItemSellingPrice_'+id).text())||Number($('#addSalesLineItemPrice_'+id).text())||0};
+  }).get().filter(x=>x.name);
+  if(!rows.length)throw Error('Le panier est vide.');
+  var total=Number(PosnicPro.sales.extraDiscount&&PosnicPro.sales.extraDiscount.sale_new_tot)||Number($('#grand_total').val())||0;
+  var fee=Number($('#zr-fee').val());
+  if(!Number.isFinite(fee)||fee<0)throw Error('Frais de livraison invalides.');
+  if(!$('#zr-name').val().trim()||!$('#zr-phone').val().trim())throw Error('Le nom et le téléphone du destinataire sont obligatoires.');
+  if(!$('#zr-wilaya').val()||!$('#zr-commune').val())throw Error('Sélectionnez une wilaya et une commune.');
+  updateZrCod();
+  var zrCustomer=await requestZrApi('POST','delivery-zr/customer',{});
+  if(!zrCustomer.id)throw Error('Impossible de préparer le compte client ZR Express.');
+  var externalId='POSNIC-'+Date.now();
+  var payload={
+   customerName:$('#zr-name').val().trim(),phone:$('#zr-phone').val().trim(),phoneAlt:$('#zr-phone2').val().trim(),
+   cityTerritoryId:$('#zr-wilaya').val(),districtTerritoryId:$('#zr-commune').val(),sourceHubId:$('#zr-hub').val(),
+   deliveryType:$('#zr-type').val(),address:$('#zr-address').val(),codTotal:total+fee,externalId:externalId,items:rows
+  };
+  parcel=await electronAPI.zr.createParcel(window.__zrCredentials,payload);
+  var recipientName=payload.customerName,recipientPhone=payload.phone;
+  window.__posnicZrDraft={
+   parcel:parcel,customerId:zrCustomer.id,recipientName:recipientName,recipientPhone:recipientPhone,
+   externalId:externalId,wilaya:$('#zr-wilaya option:selected').text(),commune:$('#zr-commune option:selected').text(),
+   deliveryType:payload.deliveryType,deliveryFee:fee,codTotal:total+fee,saleTotal:total,address:payload.address||'',
+   bordereauHtml:function(saleNo){
+    var barcode='';
+    try{var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');if(window.JsBarcode)window.JsBarcode(svg,parcel.trackingNumber,{format:'CODE128',displayValue:false,height:42,margin:0});barcode=svg.outerHTML;}catch(_){}
+    return '<!doctype html><html><head><meta charset="utf-8"><style>@page{size:100mm 150mm;margin:5mm}body{font:10px Arial}h2{font-size:16px}.code{font-size:20px;font-weight:bold;letter-spacing:2px}table{width:100%;border-collapse:collapse}td{padding:3px;border-bottom:1px solid #ddd}</style></head><body><h2>ZR EXPRESS · POSNIC</h2><div class="code">'+esc(parcel.trackingNumber)+'</div>'+barcode+'<hr>Vente : '+esc(saleNo)+'<br>Client : '+esc(recipientName)+'<br>Téléphone : '+esc(recipientPhone)+'<br>Wilaya : '+esc($('#zr-wilaya option:selected').text())+'<br>Commune : '+esc($('#zr-commune option:selected').text())+'<br>Type : '+esc(payload.deliveryType)+'<br>Adresse : '+esc(payload.address)+'<hr><table>'+rows.map(x=>'<tr><td>'+esc(x.name)+' × '+x.quantity+'</td><td>'+money(x.unitPrice*x.quantity)+'</td></tr>').join('')+'</table><hr>Frais livraison : '+money(fee)+' DZD<h2>COD : '+money(total+fee)+' DZD</h2>Tracking : '+esc(parcel.trackingNumber)+'</body></html>';
+   }
+  };
+  $('#sales_new_customer_id').val(zrCustomer.id);
+  $('#sales_new_customer_name').val('ZR Express');
+  $('#sales_new_customer_phone,#sales_new_customer_email,#sales_new_customer_address').val('');
+  PosnicPro.sales.defaultCustomer=false;
+  if(typeof PosnicPro.sales.updateCustomerChip==='function')PosnicPro.sales.updateCustomerChip();
+  if(typeof PosnicPro.sales.syncCustomerHeader==='function')PosnicPro.sales.syncCustomerHeader();
+  $('.payment-amount-input').val('0');
+  if($('.payment-amount-input').length)$('.payment-amount-input').first().val(total.toFixed(2));
+  $('#Partial_amount').val(total.toFixed(2));
+  $('#unpaid_payment_toggle').prop('checked',true).trigger('change');
+  $('#posnic-zr-modal').modal('hide');
+  if(!PosnicPro.sales.addSale||typeof PosnicPro.sales.addSale.cartOrderSubmit!=='function')throw Error('Le moteur de validation de vente est indisponible.');
+  PosnicPro.sales.addSale.cartOrderSubmit();
+ }catch(err){
+  if(parcel&&parcel.id){try{await electronAPI.zr.cancelParcel(window.__zrCredentials,parcel.id);}catch(_){}}
+  window.__posnicZrDraft=null;
+  PosnicPro.alert('error',err.message||'Création du colis impossible.');
+ }finally{$b.prop('disabled',false);}
 });
 }
-PosnicPro.sales.openZrDelivery=async function(){if(PosnicPro.sales.SaleAction!=='add'||PosnicPro.sales.saleProcess==='KOT'){PosnicPro.alert('warning','F7 est disponible sur une nouvelle vente.');return;}modal();var $modal=$('#posnic-zr-modal');$('#zr-info').text('Connexion à ZR Express et chargement des wilayas…');$modal.modal({backdrop:'static',keyboard:false,show:true});try{let c=await electronAPI.zr.getCredentials();if(!c)throw Error('Configurez les identifiants ZR Express dans Paramètres.');window.__zrCredentials=c;let d=await electronAPI.zr.catalog(c);window.__zrTariffs=(d.wilayas||[]).map(function(w){var r=(d.rates||[]).find(function(x){return Number(x.toTerritoryCode||x.code||0)===Number(w.code);})||{};var home=0,bureau=0;(r.deliveryPrices||[]).forEach(function(p){if(p.deliveryType==='home')home=Number(p.price)||0;if(p.deliveryType==='pickup-point')bureau=Number(p.price)||0;});return {code:w.code,name:w.name,domicileFee:home,bureauFee:bureau};});PosnicPro.get({url:'settings/group/preferences',data:{}},function(pr){var v=pr&&pr.data&&(pr.data.values||pr.data)||{};window.__zrTariffs=Array.isArray(v.zr_express_tariffs)&&v.zr_express_tariffs.length?v.zr_express_tariffs:(window.__zrTariffs||[]);applyZrFee();});var wilayaOptions='<option value="">Choisir la wilaya</option>'+d.wilayas.map(x=>'<option data-code="'+esc(x.code)+'" value="'+esc(x.id)+'">'+esc(x.code+' · '+x.name)+'</option>').join('');$('#zr-wilaya').html(wilayaOptions).data('all-options',wilayaOptions);$('#zr-wilaya-search,#zr-commune-search').val('');var communeOptions='<option value="">Choisir la commune</option>';$('#zr-commune').html(communeOptions).data('all-options',communeOptions);$('#zr-hub').html('<option value="">Choisir le point relais</option>'+d.hubs.filter(x=>x.isPickupPoint).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join(''));$('#zr-type').val('home').trigger('change');$('#zr-name').val($('#sales_new_customer_name').val());$('#zr-phone').val($('#sales_new_customer_phone').val());$('#zr-address').val($('#sales_new_customer_address').val());$('#zr-info').text('Tarifs chargés. Complétez les informations du destinataire puis créez la livraison.');applyZrFee();if(!window.JsBarcode){$.getScript('static/script/js/JsBarcode.all.min.js');}}catch(e){$('#zr-info').text(e.message||'Impossible de charger les données ZR Express.');PosnicPro.alert('error',e.message);}};
+PosnicPro.sales.openZrDelivery=async function(){
+ if(PosnicPro.sales.SaleAction!=='add'||PosnicPro.sales.saleProcess==='KOT'){PosnicPro.alert('warning','F7 est disponible sur une nouvelle vente.');return;}
+ modal();
+ var $modal=$('#posnic-zr-modal');
+ $('#zr-info').text('Connexion à ZR Express et chargement des wilayas…');
+ $modal.modal({backdrop:'static',keyboard:false,show:true});
+ try{
+  let c=await electronAPI.zr.getCredentials();
+  if(!c)throw Error('Configurez les identifiants ZR Express dans Paramètres.');
+  window.__zrCredentials=c;
+  let d=await electronAPI.zr.catalog(c);
+  window.__zrTariffs=(d.wilayas||[]).map(function(w){
+   var r=(d.rates||[]).find(function(x){return Number(x.toTerritoryCode||x.code||0)===Number(w.code);})||{};
+   var home=0,bureau=0;(r.deliveryPrices||[]).forEach(function(p){if(p.deliveryType==='home')home=Number(p.price)||0;if(p.deliveryType==='pickup-point')bureau=Number(p.price)||0;});
+   return {code:w.code,name:w.name,domicileFee:home,bureauFee:bureau};
+  });
+  PosnicPro.get({url:'settings/group/preferences',data:{}},function(pr){
+   var v=pr&&pr.data&&(pr.data.values||pr.data)||{};
+   window.__zrTariffs=Array.isArray(v.zr_express_tariffs)&&v.zr_express_tariffs.length?v.zr_express_tariffs:(window.__zrTariffs||[]);
+   applyZrFee();
+  });
+  var wopts='<option value="">Choisir la wilaya</option>'+d.wilayas.map(x=>'<option data-code="'+esc(x.code)+'" value="'+esc(x.id)+'">'+esc(x.code+' · '+x.name)+'</option>').join('');
+  $('#zr-wilaya').html(wopts).val('').trigger('change');
+  $('#zr-commune').html('<option value="">Choisir la commune</option>').val('').trigger('change');
+  $('#zr-hub').html('<option value="">Choisir le point relais</option>'+d.hubs.filter(x=>x.isPickupPoint).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('')).val('').trigger('change');
+  $('#zr-type').val('home').trigger('change');
+  $('#zr-name').val($('#sales_new_customer_name').val()==='ZR Express'?'':$('#sales_new_customer_name').val());
+  $('#zr-phone').val($('#sales_new_customer_phone').val());
+  $('#zr-address').val($('#sales_new_customer_address').val());
+  $('#zr-info').text('Tarifs chargés. Recherchez directement dans les champs Wilaya et Commune, puis complétez les informations du destinataire.');
+  applyZrFee();
+  if(!window.JsBarcode)$.getScript('static/script/js/JsBarcode.all.min.js');
+ }catch(e){$('#zr-info').text(e.message||'Impossible de charger les données ZR Express.');PosnicPro.alert('error',e.message);}
+};
 $(document).on('keydown.zrf7',function(e){if(e.key==='F7'&&$('#sales_new').is(':visible')&&!$('.modal.show').length){e.preventDefault();e.stopImmediatePropagation();PosnicPro.sales.openZrDelivery();}});
 })(jQuery);
 
@@ -15528,30 +15675,52 @@ function escZ(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){retu
 function moneyZ(v){return (Number(v)||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function ensureZrTracking(){
  if($('#posnic-zr-tracking').length)return;
- $('body').append('<div class="modal fade" id="posnic-zr-tracking" tabindex="-1"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Livraison · ZR Express</h5><button class="close" data-dismiss="modal">×</button></div><div class="modal-body"><div class="d-flex flex-wrap mb-3" style="gap:8px"><div class="border rounded p-2 flex-fill">En cours <b id="zr-stat-progress">0</b><small id="zr-stat-progress-amount" class="d-block"></small></div><div class="border rounded p-2 flex-fill">Livré <b id="zr-stat-delivered">0</b><small id="zr-stat-delivered-amount" class="d-block"></small></div><div class="border rounded p-2 flex-fill">Encaissé <b id="zr-stat-paid">0</b><small id="zr-stat-paid-amount" class="d-block"></small></div><div class="border rounded p-2 flex-fill">Retours <b id="zr-stat-returned">0</b><small id="zr-stat-returned-amount" class="d-block"></small></div></div><div class="form-row mb-3"><div class="col-md-5"><input id="zr-track-search" class="form-control" placeholder="Tracking, client, téléphone, wilaya"></div><div class="col-md-3"><select id="zr-track-filter" class="form-control"><option value="">Tous</option><option>EN_COURS</option><option>LIVRE</option><option>ENCAISSE</option><option>RETOUR</option></select></div><div class="col-md-4 text-right"><button class="btn btn-outline-primary" id="zr-track-sync">Actualiser statuts ZR</button> <button class="btn btn-primary" id="zr-track-refresh">Actualiser</button></div></div><div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>Tracking</th><th>Date</th><th>Client / téléphone</th><th>Wilaya</th><th>Articles</th><th>Type</th><th>Frais</th><th>COD</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="zr-track-rows"><tr><td colspan="10">Chargement…</td></tr></tbody></table></div></div></div></div></div>');
+ $('body').append('<div class="modal fade" id="posnic-zr-tracking" tabindex="-1"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Livraison · ZR Express</h5><button class="close" data-dismiss="modal">×</button></div><div class="modal-body"><div class="d-flex flex-wrap mb-3" style="gap:8px"><div class="border rounded p-2 flex-fill">En cours <b id="zr-stat-progress">0</b><small id="zr-stat-progress-amount" class="d-block"></small></div><div class="border rounded p-2 flex-fill">Livré <b id="zr-stat-delivered">0</b><small id="zr-stat-delivered-amount" class="d-block"></small></div><div class="border rounded p-2 flex-fill">Encaissé <b id="zr-stat-paid">0</b><small id="zr-stat-paid-amount" class="d-block"></small></div><div class="border rounded p-2 flex-fill">Retours <b id="zr-stat-returned">0</b><small id="zr-stat-returned-amount" class="d-block"></small></div><div class="border rounded p-2 flex-fill">Annulées <b id="zr-stat-cancelled">0</b><small id="zr-stat-cancelled-amount" class="d-block"></small></div></div><div class="form-row mb-3"><div class="col-md-5"><input id="zr-track-search" class="form-control" placeholder="Tracking, client, téléphone, wilaya"></div><div class="col-md-3"><select id="zr-track-filter" class="form-control"><option value="">Tous</option><option>EN_COURS</option><option>LIVRE</option><option>ENCAISSE</option><option>RETOUR</option><option>ANNULEE</option></select></div><div class="col-md-4 text-right"><button class="btn btn-outline-primary" id="zr-track-sync">Actualiser statuts ZR</button> <button class="btn btn-primary" id="zr-track-refresh">Actualiser</button></div></div><div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>Tracking</th><th>Date</th><th>Client / téléphone</th><th>Wilaya</th><th>Articles</th><th>Type</th><th>Frais</th><th>COD</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="zr-track-rows"><tr><td colspan="10">Chargement…</td></tr></tbody></table></div></div></div></div></div>');
  $('#zr-track-refresh').on('click',loadZrRows);$('#zr-track-filter,#zr-track-search').on('input change',renderZrRows);
  $('#zr-track-sync').on('click',syncZrRows);
  $('#zr-track-rows').on('click','[data-zr-action]',async function(){
   var action=$(this).data('zr-action'),tracking=String($(this).data('tracking')||'');
-  if(action==='pdf'){var row=(window.__zrDeliveryRows||[]).find(x=>x.tracking_number===tracking);if(row)printZrRow(row);return;}
+  var row=(window.__zrDeliveryRows||[]).find(x=>x.tracking_number===tracking);
+  if(!row)return;
+  if(action==='pdf'){printZrRow(row);return;}
+  if(action==='cancel'){
+   if(!window.confirm('Annuler cette livraison ZR Express et sa vente POSNIC ? Le stock de la vente sera restauré.'))return;
+   var $button=$(this).prop('disabled',true).text('Annulation…');
+   try{
+    var credentials=await electronAPI.zr.getCredentials();
+    if(!credentials)throw Error('Identifiants ZR Express non configurés.');
+    await electronAPI.zr.cancelParcel(credentials,row.parcel_id);
+    await window.posnicZrRequest('POST','sales/cancel/'+encodeURIComponent(row.sale_id),{});
+    await window.posnicZrRequest('POST','delivery-zr/'+encodeURIComponent(tracking)+'/cancel',{});
+    PosnicPro.alert('success','Livraison ZR et vente POSNIC annulées. Le stock a été restauré.');
+    loadZrRows();
+   }catch(e){PosnicPro.alert('error',e.message||'Impossible d’annuler la livraison et sa vente.');loadZrRows();}
+   finally{$button.prop('disabled',false).text('Annuler');}
+   return;
+  }
   var label=action==='return'?'RETOUR':'ENCAISSE';
   if(action==='return'&&!window.confirm('Confirmer le retour ? Le stock suivi sera restauré une seule fois.'))return;
-  try{await PosnicPro.request({method:'PATCH',url:'delivery-zr/'+encodeURIComponent(tracking)+'/status',data:JSON.stringify({status:label})},function(r){if(r&&r.type==='success')loadZrRows();else PosnicPro.alert('error',r&&r.message||'Mise à jour impossible.');},function(xhr){var m='Mise à jour impossible.';try{m=JSON.parse(xhr.responseText||'{}').message||m;}catch(_){}PosnicPro.alert('error',m);});}catch(e){PosnicPro.alert('error',e.message);}
+  try{await window.posnicZrRequest('PATCH','delivery-zr/'+encodeURIComponent(tracking)+'/status',{status:label});loadZrRows();}
+  catch(e){PosnicPro.alert('error',e.message||'Mise à jour impossible.');}
  });
 }
-function printZrRow(r){
- var barcode='';try{var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');if(window.JsBarcode){window.JsBarcode(svg,r.tracking_number,{format:'CODE128',displayValue:false,height:42,margin:0});barcode=svg.outerHTML;}}catch(_){}
- var html='<!doctype html><html><head><meta charset="utf-8"><style>@page{size:100mm 150mm;margin:5mm}body{font:10px Arial}h2{font-size:16px}.code{font-size:20px;font-weight:bold}table{width:100%;border-collapse:collapse}td{padding:3px;border-bottom:1px solid #ddd}</style></head><body><h2>ZR EXPRESS · POSNIC</h2><div class="code">'+escZ(r.tracking_number)+'</div><hr>Vente : '+escZ(r.sale_number)+'<br>Client : '+escZ(r.customer_name)+'<br>Téléphone : '+escZ(r.customer_phone)+'<br>Wilaya : '+escZ(r.wilaya)+'<br>Commune : '+escZ(r.commune)+'<br>Adresse : '+escZ(r.address)+'<hr><table>'+((r.items||[]).map(x=>'<tr><td>'+escZ(x.name)+' × '+x.quantity+'</td><td>'+moneyZ(x.price*x.quantity)+'</td></tr>').join(''))+'</table><hr>Frais : '+moneyZ(r.delivery_fee)+' DZD<h2>COD : '+moneyZ(r.cod_total)+' DZD</h2></body></html>';
- if(window.electronAPI&&window.electronAPI.zr.saveBordereau)window.electronAPI.zr.saveBordereau(html);
+async function printZrRow(r){
+ var barcode='';
+ try{var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');if(window.JsBarcode){window.JsBarcode(svg,r.tracking_number,{format:'CODE128',displayValue:false,height:42,margin:0});barcode=svg.outerHTML;}}catch(_){}
+ var recipient=r.recipient_name||r.customer_name||'',phone=r.recipient_phone||r.customer_phone||'';
+ var html='<!doctype html><html><head><meta charset="utf-8"><style>@page{size:100mm 150mm;margin:5mm}body{font:10px Arial}h2{font-size:16px}.code{font-size:20px;font-weight:bold}table{width:100%;border-collapse:collapse}td{padding:3px;border-bottom:1px solid #ddd}</style></head><body><h2>ZR EXPRESS · POSNIC</h2><div class="code">'+escZ(r.tracking_number)+'</div>'+barcode+'<hr>Vente : '+escZ(r.sale_number)+'<br>Client : '+escZ(recipient)+'<br>Téléphone : '+escZ(phone)+'<br>Wilaya : '+escZ(r.wilaya)+'<br>Commune : '+escZ(r.commune)+'<br>Adresse : '+escZ(r.address)+'<hr><table>'+((r.items||[]).map(x=>'<tr><td>'+escZ(x.name)+' × '+x.quantity+'</td><td>'+moneyZ(x.price*x.quantity)+'</td></tr>').join(''))+'</table><hr>Frais : '+moneyZ(r.delivery_fee)+' DZD<h2>COD : '+moneyZ(r.cod_total)+' DZD</h2></body></html>';
+ if(!window.electronAPI||!window.electronAPI.zr.saveBordereau){PosnicPro.alert('error','Le service d’enregistrement PDF est indisponible.');return;}
+ try{var result=await window.electronAPI.zr.saveBordereau(html);if(result&&result.saved)PosnicPro.alert('success','Bordereau PDF enregistré.');else PosnicPro.alert('info','Enregistrement du bordereau annulé.');}
+ catch(error){PosnicPro.alert('error',error&&error.message||'Le bordereau PDF n’a pas été sauvegardé.');}
 }
 async function loadZrRows(){
  $('#zr-track-rows').html('<tr><td colspan="9">Chargement…</td></tr>');
  PosnicPro.get({url:'delivery-zr',data:{}},function(r){
   if(!r||r.type!=='success'){PosnicPro.alert('error',r&&r.message||'Chargement impossible');return;}
   window.__zrDeliveryRows=(r.data&&r.data.list)||[];
-  var stats={EN_COURS:{count:0,amount:0},LIVRE:{count:0,amount:0},ENCAISSE:{count:0,amount:0},RETOUR:{count:0,amount:0}};
+  var stats={EN_COURS:{count:0,amount:0},LIVRE:{count:0,amount:0},ENCAISSE:{count:0,amount:0},RETOUR:{count:0,amount:0},ANNULEE:{count:0,amount:0}};
   (r.data&&r.data.summary||[]).forEach(x=>stats[x._id]={count:x.count||0,amount:x.amount||0});
-  $('#zr-stat-progress').text(stats.EN_COURS.count);$('#zr-stat-progress-amount').text(moneyZ(stats.EN_COURS.amount)+' DZD détenus');$('#zr-stat-delivered').text(stats.LIVRE.count);$('#zr-stat-delivered-amount').text(moneyZ(stats.LIVRE.amount)+' DZD à reverser');$('#zr-stat-paid').text(stats.ENCAISSE.count);$('#zr-stat-paid-amount').text(moneyZ(stats.ENCAISSE.amount)+' DZD reversés');$('#zr-stat-returned').text(stats.RETOUR.count);$('#zr-stat-returned-amount').text(moneyZ(stats.RETOUR.amount)+' DZD');
+  $('#zr-stat-progress').text(stats.EN_COURS.count);$('#zr-stat-progress-amount').text(moneyZ(stats.EN_COURS.amount)+' DZD détenus');$('#zr-stat-delivered').text(stats.LIVRE.count);$('#zr-stat-delivered-amount').text(moneyZ(stats.LIVRE.amount)+' DZD à reverser');$('#zr-stat-paid').text(stats.ENCAISSE.count);$('#zr-stat-paid-amount').text(moneyZ(stats.ENCAISSE.amount)+' DZD reversés');$('#zr-stat-returned').text(stats.RETOUR.count);$('#zr-stat-returned-amount').text(moneyZ(stats.RETOUR.amount)+' DZD');$('#zr-stat-cancelled').text(stats.ANNULEE.count);$('#zr-stat-cancelled-amount').text(moneyZ(stats.ANNULEE.amount)+' DZD');
   renderZrRows();
  },function(){ $('#zr-track-rows').html('<tr><td colspan="10">Erreur de chargement.</td></tr>');});
 }
@@ -15559,7 +15728,7 @@ function renderZrRows(){
  var q=String($('#zr-track-search').val()||'').toLowerCase(),st=String($('#zr-track-filter').val()||'');
  var rows=(window.__zrDeliveryRows||[]).filter(r=>(!st||r.status===st)&&(!q||[r.tracking_number,r.customer_name,r.customer_phone,r.wilaya].join(' ').toLowerCase().includes(q)));
  if(!rows.length){$('#zr-track-rows').html('<tr><td colspan="10">Aucune livraison.</td></tr>');return;}
- $('#zr-track-rows').html(rows.map(r=>'<tr><td><b>'+escZ(r.tracking_number)+'</b></td><td>'+escZ(new Date(r.created_at).toLocaleDateString('fr-FR'))+'</td><td>'+escZ(r.customer_name)+'<br><small>'+escZ(r.customer_phone)+'</small></td><td>'+escZ(r.wilaya)+' / '+escZ(r.commune)+'</td><td>'+escZ(r.delivery_type==='home'?'Domicile':'Bureau')+'</td><td>'+moneyZ(r.delivery_fee)+'</td><td>'+moneyZ(r.cod_total)+'</td><td>'+escZ(r.status)+'</td><td><button class="btn btn-sm btn-outline-secondary" data-zr-action="pdf" data-tracking="'+escZ(r.tracking_number)+'">PDF</button> '+(r.status==='LIVRE'?'<button class="btn btn-sm btn-success" data-zr-action="paid" data-tracking="'+escZ(r.tracking_number)+'">Encaissé</button>':'')+' '+(r.status!=='RETOUR'&&r.status!=='ENCAISSE'?'<button class="btn btn-sm btn-danger" data-zr-action="return" data-tracking="'+escZ(r.tracking_number)+'">Retour</button>':'')+'</td></tr>').join(''));
+ $('#zr-track-rows').html(rows.map(r=>'<tr><td><b>'+escZ(r.tracking_number)+'</b></td><td>'+escZ(new Date(r.created_at).toLocaleDateString('fr-FR'))+'</td><td>'+escZ(r.customer_name)+'<br><small>'+escZ(r.customer_phone)+'</small></td><td>'+escZ(r.wilaya)+' / '+escZ(r.commune)+'</td><td>'+escZ(r.delivery_type==='home'?'Domicile':'Bureau')+'</td><td>'+moneyZ(r.delivery_fee)+'</td><td>'+moneyZ(r.cod_total)+'</td><td>'+escZ(r.status)+'</td><td><button class="btn btn-sm btn-outline-secondary" data-zr-action="pdf" data-tracking="'+escZ(r.tracking_number)+'">PDF</button> '+(r.status==='LIVRE'?'<button class="btn btn-sm btn-success" data-zr-action="paid" data-tracking="'+escZ(r.tracking_number)+'">Encaissé</button>':'')+' '+(r.status!=='RETOUR'&&r.status!=='ENCAISSE'&&r.status!=='ANNULEE'?'<button class="btn btn-sm btn-danger" data-zr-action="return" data-tracking="'+escZ(r.tracking_number)+'">Retour</button>':'')+' '+(r.status!=='RETOUR'&&r.status!=='ENCAISSE'&&r.status!=='ANNULEE'?'<button class="btn btn-sm btn-outline-danger" data-zr-action="cancel" data-tracking="'+escZ(r.tracking_number)+'">Annuler</button>':'')+'</td></tr>').join(''));
 }
 async function syncZrRows(){
  var credentials=await electronAPI.zr.getCredentials(),rows=window.__zrDeliveryRows||[];
@@ -15567,7 +15736,7 @@ async function syncZrRows(){
  $('#zr-track-sync').prop('disabled',true).text('Synchronisation…');
  try{
   for(var row of rows){
-   if(row.status==='ENCAISSE'||row.status==='RETOUR')continue;
+   if(row.status==='ENCAISSE'||row.status==='RETOUR'||row.status==='ANNULEE')continue;
    try{
     var parcel=await electronAPI.zr.getParcel(credentials,row.tracking_number),state=String(parcel&&parcel.state&&parcel.state.name||parcel&&parcel.status||'').toLowerCase();
     var next=/return|retour/.test(state)?'RETOUR':/deliver|livr/.test(state)?'LIVRE':'EN_COURS';
