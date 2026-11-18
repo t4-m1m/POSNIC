@@ -15576,3 +15576,60 @@ finally{$b.prop('disabled',false);}
 PosnicPro.sales.openZrDelivery=async function(){if(PosnicPro.sales.SaleAction!=='add'||PosnicPro.sales.saleProcess==='KOT'){PosnicPro.alert('warning','F7 est disponible sur une nouvelle vente.');return;}modal();try{let c=await electronAPI.zr.getCredentials();if(!c)throw Error('Configurez les identifiants ZR Express dans Paramètres.');window.__zrCredentials=c;let d=await electronAPI.zr.catalog(c);$('#zr-wilaya').html(d.wilayas.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.code+' · '+x.name)+'</option>').join(''));$('#zr-hub').html(d.hubs.filter(x=>!x.isPickupPoint).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join(''));$('#zr-name').val($('#sales_new_customer_name').val());$('#zr-phone').val($('#sales_new_customer_phone').val());$('#zr-address').val($('#sales_new_customer_address').val());$('#zr-info').text('Tarifs ZR à vérifier et à saisir selon le barème de votre compte.');$('#posnic-zr-modal').modal('show');}catch(e){PosnicPro.alert('error',e.message);}};
 $(document).on('keydown.zrf7',function(e){if(e.key==='F7'&&$('#sales_new').is(':visible')&&!$('.modal.show').length){e.preventDefault();e.stopImmediatePropagation();PosnicPro.sales.openZrDelivery();}});
 })(jQuery);
+
+(function($){
+'use strict';
+function escZ(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function moneyZ(v){return (Number(v)||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function ensureZrTracking(){
+ if($('#posnic-zr-tracking').length)return;
+ $('body').append('<div class="modal fade" id="posnic-zr-tracking" tabindex="-1"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Livraison · ZR Express</h5><button class="close" data-dismiss="modal">×</button></div><div class="modal-body"><div class="d-flex flex-wrap mb-3" style="gap:8px"><div class="border rounded p-2 flex-fill">En cours <b id="zr-stat-progress">0</b></div><div class="border rounded p-2 flex-fill">Livré <b id="zr-stat-delivered">0</b></div><div class="border rounded p-2 flex-fill">Encaissé <b id="zr-stat-paid">0</b></div><div class="border rounded p-2 flex-fill">Retours <b id="zr-stat-returned">0</b></div></div><div class="form-row mb-3"><div class="col-md-5"><input id="zr-track-search" class="form-control" placeholder="Tracking, client, téléphone, wilaya"></div><div class="col-md-3"><select id="zr-track-filter" class="form-control"><option value="">Tous</option><option>EN_COURS</option><option>LIVRE</option><option>ENCAISSE</option><option>RETOUR</option></select></div><div class="col-md-4 text-right"><button class="btn btn-outline-primary" id="zr-track-sync">Actualiser statuts ZR</button> <button class="btn btn-primary" id="zr-track-refresh">Actualiser</button></div></div><div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>Tracking</th><th>Date</th><th>Client / téléphone</th><th>Wilaya</th><th>Type</th><th>Frais</th><th>COD</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="zr-track-rows"><tr><td colspan="9">Chargement…</td></tr></tbody></table></div></div></div></div></div>');
+ $('#zr-track-refresh').on('click',loadZrRows);$('#zr-track-filter,#zr-track-search').on('input change',renderZrRows);
+ $('#zr-track-sync').on('click',syncZrRows);
+ $('#zr-track-rows').on('click','[data-zr-action]',async function(){
+  var action=$(this).data('zr-action'),tracking=String($(this).data('tracking')||'');
+  if(action==='pdf'){var row=(window.__zrDeliveryRows||[]).find(x=>x.tracking_number===tracking);if(row)printZrRow(row);return;}
+  var label=action==='return'?'RETOUR':'ENCAISSE';
+  if(action==='return'&&!window.confirm('Confirmer le retour ? Le stock suivi sera restauré une seule fois.'))return;
+  try{await PosnicPro.request({method:'PATCH',url:'delivery-zr/'+encodeURIComponent(tracking)+'/status',data:JSON.stringify({status:label})},function(r){if(r&&r.type==='success')loadZrRows();else PosnicPro.alert('error',r&&r.message||'Mise à jour impossible.');},function(xhr){var m='Mise à jour impossible.';try{m=JSON.parse(xhr.responseText||'{}').message||m;}catch(_){}PosnicPro.alert('error',m);});}catch(e){PosnicPro.alert('error',e.message);}
+ });
+}
+function printZrRow(r){
+ var html='<!doctype html><html><head><meta charset="utf-8"><style>@page{size:100mm 150mm;margin:5mm}body{font:10px Arial}h2{font-size:16px}.code{font-size:20px;font-weight:bold}table{width:100%;border-collapse:collapse}td{padding:3px;border-bottom:1px solid #ddd}</style></head><body><h2>ZR EXPRESS · POSNIC</h2><div class="code">'+escZ(r.tracking_number)+'</div><hr>Vente : '+escZ(r.sale_number)+'<br>Client : '+escZ(r.customer_name)+'<br>Téléphone : '+escZ(r.customer_phone)+'<br>Wilaya : '+escZ(r.wilaya)+'<br>Commune : '+escZ(r.commune)+'<br>Adresse : '+escZ(r.address)+'<hr><table>'+((r.items||[]).map(x=>'<tr><td>'+escZ(x.name)+' × '+x.quantity+'</td><td>'+moneyZ(x.price*x.quantity)+'</td></tr>').join(''))+'</table><hr>Frais : '+moneyZ(r.delivery_fee)+' DZD<h2>COD : '+moneyZ(r.cod_total)+' DZD</h2></body></html>';
+ if(window.electronAPI&&window.electronAPI.zr.saveBordereau)window.electronAPI.zr.saveBordereau(html);
+}
+async function loadZrRows(){
+ $('#zr-track-rows').html('<tr><td colspan="9">Chargement…</td></tr>');
+ PosnicPro.get({url:'delivery-zr',data:{}},function(r){
+  if(!r||r.type!=='success'){PosnicPro.alert('error',r&&r.message||'Chargement impossible');return;}
+  window.__zrDeliveryRows=(r.data&&r.data.list)||[];
+  var stats={EN_COURS:0,LIVRE:0,ENCAISSE:0,RETOUR:0};
+  (r.data&&r.data.summary||[]).forEach(x=>stats[x._id]=x.count||0);
+  $('#zr-stat-progress').text(stats.EN_COURS);$('#zr-stat-delivered').text(stats.LIVRE);$('#zr-stat-paid').text(stats.ENCAISSE);$('#zr-stat-returned').text(stats.RETOUR);
+  renderZrRows();
+ },function(){ $('#zr-track-rows').html('<tr><td colspan="9">Erreur de chargement.</td></tr>');});
+}
+function renderZrRows(){
+ var q=String($('#zr-track-search').val()||'').toLowerCase(),st=String($('#zr-track-filter').val()||'');
+ var rows=(window.__zrDeliveryRows||[]).filter(r=>(!st||r.status===st)&&(!q||[r.tracking_number,r.customer_name,r.customer_phone,r.wilaya].join(' ').toLowerCase().includes(q)));
+ if(!rows.length){$('#zr-track-rows').html('<tr><td colspan="9">Aucune livraison.</td></tr>');return;}
+ $('#zr-track-rows').html(rows.map(r=>'<tr><td><b>'+escZ(r.tracking_number)+'</b></td><td>'+escZ(new Date(r.created_at).toLocaleDateString('fr-FR'))+'</td><td>'+escZ(r.customer_name)+'<br><small>'+escZ(r.customer_phone)+'</small></td><td>'+escZ(r.wilaya)+' / '+escZ(r.commune)+'</td><td>'+escZ(r.delivery_type==='home'?'Domicile':'Bureau')+'</td><td>'+moneyZ(r.delivery_fee)+'</td><td>'+moneyZ(r.cod_total)+'</td><td>'+escZ(r.status)+'</td><td><button class="btn btn-sm btn-outline-secondary" data-zr-action="pdf" data-tracking="'+escZ(r.tracking_number)+'">PDF</button> '+(r.status==='LIVRE'?'<button class="btn btn-sm btn-success" data-zr-action="paid" data-tracking="'+escZ(r.tracking_number)+'">Encaissé</button>':'')+' '+(r.status!=='RETOUR'&&r.status!=='ENCAISSE'?'<button class="btn btn-sm btn-danger" data-zr-action="return" data-tracking="'+escZ(r.tracking_number)+'">Retour</button>':'')+'</td></tr>').join(''));
+}
+async function syncZrRows(){
+ var credentials=await electronAPI.zr.getCredentials(),rows=window.__zrDeliveryRows||[];
+ if(!credentials){PosnicPro.alert('error','Identifiants ZR Express non configurés.');return;}
+ $('#zr-track-sync').prop('disabled',true).text('Synchronisation…');
+ try{
+  for(var row of rows){
+   if(row.status==='ENCAISSE'||row.status==='RETOUR')continue;
+   try{
+    var parcel=await electronAPI.zr.getParcel(credentials,row.tracking_number),state=String(parcel&&parcel.state&&parcel.state.name||parcel&&parcel.status||'').toLowerCase();
+    var next=/return|retour/.test(state)?'RETOUR':/deliver|livr/.test(state)?'LIVRE':'EN_COURS';
+    if(next!==row.status) await new Promise((resolve,reject)=>PosnicPro.request({method:'PATCH',url:'delivery-zr/'+encodeURIComponent(row.tracking_number)+'/status',data:JSON.stringify({status:next})},resolve,reject));
+   }catch(e){console.warn('[ZR Express] status sync failed',row.tracking_number,e.message);}
+  }
+  loadZrRows();
+ }finally{$('#zr-track-sync').prop('disabled',false).text('Actualiser statuts ZR');}
+}
+PosnicPro.sales.openZrTracking=function(){ensureZrTracking();$('#posnic-zr-tracking').modal('show');loadZrRows();};
+})(jQuery);
