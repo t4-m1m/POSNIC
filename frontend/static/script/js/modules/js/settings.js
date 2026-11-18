@@ -10342,6 +10342,18 @@ $(document).on('click','#save_captain_tables',function(){
     esc: function (value) { return $('<span>').text(value == null ? '' : String(value)).html().replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); },
     loadZrExpress: function () {
         var self = PosnicPro.integrations;
+        // The parcel workflow reads credentials from Electron's encrypted local
+        // store, not from the API settings endpoint. Restore the non-secret
+        // tenant identifier here and keep the API key write-only in the UI.
+        if (window.electronAPI && window.electronAPI.zr && window.electronAPI.zr.getCredentials) {
+            window.electronAPI.zr.getCredentials().then(function (saved) {
+                if (saved && saved.tenantId && !$('#zr_tenant_id').val()) {
+                    $('#zr_tenant_id').val(saved.tenantId);
+                }
+            }).catch(function (error) {
+                console.warn('[ZR Express] Could not read saved desktop credentials:', error);
+            });
+        }
         PosnicPro.get({ url: 'settings/group/secrets', data: {} }, function (secretResult) {
             var configured = secretResult && secretResult.data && secretResult.data.configured || {};
             var ready = !!(configured.zr_express_tenant_id && configured.zr_express_api_key);
@@ -10368,16 +10380,27 @@ $(document).on('click','#save_captain_tables',function(){
         $('#zr_tariffs_body').html(html);
     },
     testZrExpress: function () {
-        var credentials = { tenantId: $('#zr_tenant_id').val().trim(), apiKey: $('#zr_api_key').val() };
-        if (!credentials.tenantId || !credentials.apiKey) {
-            PosnicPro.alert('warning', 'Saisissez le Tenant ID et la clé API pour tester la connexion.');
-            return;
-        }
+        var tenantId = $('#zr_tenant_id').val().trim();
+        var apiKey = $('#zr_api_key').val();
         if (!window.electronAPI || !window.electronAPI.zr) {
             PosnicPro.alert('error', 'La connexion ZR Express est disponible uniquement dans POSNIC Desktop.');
             return;
         }
-        window.electronAPI.zr.catalog(credentials).then(function (catalog) {
+        // An empty key means "keep the key already saved", as the field's
+        // placeholder promises. Resolve it from Electron's encrypted store.
+        var savedCredentials = window.electronAPI.zr.getCredentials
+            ? window.electronAPI.zr.getCredentials()
+            : Promise.resolve(null);
+        savedCredentials.then(function (saved) {
+            var credentials = {
+                tenantId: tenantId || (saved && saved.tenantId) || '',
+                apiKey: apiKey || (saved && saved.apiKey) || ''
+            };
+            if (!credentials.tenantId || !credentials.apiKey) {
+                PosnicPro.alert('warning', 'Saisissez le Tenant ID et la clé API, ou enregistrez-les une première fois.');
+                return;
+            }
+            return window.electronAPI.zr.catalog(credentials).then(function (catalog) {
             PosnicPro.integrations._zrCatalog = { credentials: credentials, catalog: catalog };
             var hubs = (catalog.hubs || []).filter(function(h){return !h.isPickupPoint;});
             var saved = $('#zr_source_hub').data('saved-value') || '';
@@ -10400,29 +10423,55 @@ $(document).on('click','#save_captain_tables',function(){
             });
             PosnicPro.integrations.renderZrTariffs(rows);
             PosnicPro.alert('success', 'Connexion ZR Express réussie. ' + rows.length + ' wilayas chargées.');
-        }).catch(function(error){PosnicPro.alert('error', error.message || 'Connexion ZR Express impossible.');});
+            }).catch(function(error){PosnicPro.alert('error', error.message || 'Connexion ZR Express impossible.');});
+        }).catch(function(error){PosnicPro.alert('error', error.message || 'Impossible de lire les identifiants ZR Express enregistrés.');});
     },
     saveZrExpress: function () {
-        var self = PosnicPro.integrations, catalog = self._zrCatalog;
+        var self = PosnicPro.integrations;
         var tenantId = $('#zr_tenant_id').val().trim(), apiKey = $('#zr_api_key').val();
-        var secrets = {};
-        if (tenantId) secrets.zr_express_tenant_id = tenantId;
-        if (apiKey) secrets.zr_express_api_key = apiKey;
+        if (!window.electronAPI || !window.electronAPI.zr || !window.electronAPI.zr.saveCredentials) {
+            PosnicPro.alert('error', 'Le stockage sécurisé ZR Express est indisponible. Réinstallez la mise à jour POSNIC.');
+            return;
+        }
         var tariffs = [];
         $('#zr_tariffs_body tr[data-code]').each(function(){
             var row = $(this);
             tariffs.push({code:Number(row.attr('data-code')),name:row.attr('data-name'),bureauFee:Math.max(0,Number(row.find('.zr-bureau-fee').val())||0),domicileFee:Math.max(0,Number(row.find('.zr-home-fee').val())||0)});
         });
         var prefs = {zr_express_source_hub_id:$('#zr_source_hub').val() || '',zr_express_tariffs:tariffs};
-        var savePrefs = function(){
-            PosnicPro.put({url:'settings/group/preferences',data:JSON.stringify(prefs)},function(){
-                PosnicPro.alert('success','Paramètres ZR Express enregistrés.');
-                self.loadZrExpress();
-            },function(){PosnicPro.alert('error','Impossible d’enregistrer les tarifs ZR Express.');});
+        var saveAll = function(credentials) {
+            if (!credentials || !credentials.tenantId || !credentials.apiKey) {
+                PosnicPro.alert('warning', 'Saisissez le Tenant ID et la clé API avant d’enregistrer.');
+                return;
+            }
+            var secrets = {
+                zr_express_tenant_id: credentials.tenantId,
+                zr_express_api_key: credentials.apiKey
+            };
+            // F7 reads this OS-encrypted copy directly from Electron. Saving
+            // only through the API settings endpoint left F7 with no credentials.
+            window.electronAPI.zr.saveCredentials(credentials).then(function () {
+                PosnicPro.put({url:'settings/group/secrets',data:JSON.stringify(secrets)},function(){
+                    PosnicPro.put({url:'settings/group/preferences',data:JSON.stringify(prefs)},function(){
+                        $('#zr_tenant_id').val(credentials.tenantId);
+                        $('#zr_api_key').val('');
+                        PosnicPro.alert('success','Identifiants et paramètres ZR Express enregistrés.');
+                        self.loadZrExpress();
+                    },function(){PosnicPro.alert('error','Identifiants enregistrés localement, mais impossible d’enregistrer les tarifs ZR Express.');});
+                },function(){PosnicPro.alert('error','Identifiants enregistrés localement, mais impossible de synchroniser les identifiants dans les paramètres.');});
+            }).catch(function(error){
+                PosnicPro.alert('error', error.message || 'Impossible d’enregistrer les identifiants ZR Express de façon sécurisée.');
+            });
         };
-        if (Object.keys(secrets).length) {
-            PosnicPro.put({url:'settings/group/secrets',data:JSON.stringify(secrets)},function(){savePrefs();},function(){PosnicPro.alert('error','Impossible d’enregistrer les identifiants ZR Express.');});
-        } else savePrefs();
+        if (tenantId && apiKey) {
+            saveAll({tenantId:tenantId,apiKey:apiKey});
+        } else if (window.electronAPI.zr.getCredentials) {
+            window.electronAPI.zr.getCredentials().then(saveAll).catch(function(error){
+                PosnicPro.alert('error', error.message || 'Impossible de lire les identifiants ZR Express enregistrés.');
+            });
+        } else {
+            PosnicPro.alert('warning', 'Saisissez le Tenant ID et la clé API avant d’enregistrer.');
+        }
     },
 }; }
     }
