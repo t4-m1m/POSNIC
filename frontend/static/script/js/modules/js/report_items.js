@@ -419,6 +419,50 @@ $(document).ready(function () {
 
 
 
+
+/* POSNIC DataChartCanvas: dependency-free, DPR-aware canvas renderer for Electron. */
+function DataChartCanvas(host, config) {
+ if(!host)return;var canvas=document.createElement('canvas');canvas.setAttribute('role','img');canvas.setAttribute('aria-label',config.label||'Live chart');canvas.style.cssText='display:block;width:100%;height:240px;min-height:240px;touch-action:pan-y;';
+ host.innerHTML='';host.style.cssText+=';display:block;width:100%;height:240px;min-height:240px;position:relative;';host.appendChild(canvas);
+ var tip=document.createElement('div');tip.style.cssText='display:none;position:absolute;z-index:5;pointer-events:none;padding:7px 10px;border-radius:7px;background:#111827;color:#fff;font:12px Arial,sans-serif;box-shadow:0 3px 14px rgba(0,0,0,.2);white-space:nowrap;';host.appendChild(tip);
+ var points=[],width=600,raf=0;
+ function money(v){return (Number(v)||0).toLocaleString(undefined,{maximumFractionDigits:2})+' DZD';}
+ function roundRect(c,x,y,w,h,r){r=Math.min(r,w/2,h/2);c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
+ function draw(){
+  raf=0;var rect=host.getBoundingClientRect(),w=Math.max(1,rect.width||host.clientWidth||600),h=240,dpr=Math.max(1,Math.min(3,window.devicePixelRatio||1));width=w;
+  canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);canvas.style.width=w+'px';canvas.style.height=h+'px';
+  var c=canvas.getContext('2d');if(!c)return;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);points=[];
+  var data=config.data||[],pad={l:48,r:16,t:18,b:34},pw=Math.max(10,w-pad.l-pad.r),ph=h-pad.t-pad.b;
+  if(config.type==='line'){
+   var vals=data.map(function(d){return Math.max(0,Number(d.value)||0);}),max=Math.max(1,...vals),axis=Math.ceil(max/4)*4||4;
+   c.font='10px Arial';c.fillStyle='#64748b';c.strokeStyle='rgba(148,163,184,.35)';
+   for(var g=0;g<=4;g++){var gy=pad.t+ph*g/4;c.setLineDash([4,5]);c.beginPath();c.moveTo(pad.l,gy);c.lineTo(w-pad.r,gy);c.stroke();c.setLineDash([]);c.textAlign='right';c.fillText(Math.round(axis*(1-g/4)).toLocaleString(),pad.l-7,gy+3);}
+   var coords=data.map(function(d,i){return{x:pad.l+(data.length===1?pw/2:i*pw/Math.max(1,data.length-1)),y:pad.t+ph-(Math.max(0,Number(d.value)||0)/axis)*ph,value:Number(d.value)||0,label:d.label||''};});
+   if(coords.length){var grad=c.createLinearGradient(0,pad.t,0,pad.t+ph);grad.addColorStop(0,'rgba(37,99,235,.26)');grad.addColorStop(1,'rgba(37,99,235,.01)');c.beginPath();coords.forEach(function(p,i){i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y);});c.lineTo(coords[coords.length-1].x,pad.t+ph);c.lineTo(coords[0].x,pad.t+ph);c.closePath();c.fillStyle=grad;c.fill();
+    c.beginPath();coords.forEach(function(p,i){i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y);});c.strokeStyle=config.color||'#2563eb';c.lineWidth=3;c.lineJoin='round';c.stroke();
+    c.beginPath();coords.forEach(function(p,i){var a=vals.slice(Math.max(0,i-2),i+1),v=a.reduce(function(s,x){return s+x;},0)/a.length,x=p.x,y=pad.t+ph-v/axis*ph;i?c.lineTo(x,y):c.moveTo(x,y);});c.strokeStyle='#f59e0b';c.lineWidth=2;c.setLineDash([6,4]);c.stroke();c.setLineDash([]);
+    coords.forEach(function(p){c.beginPath();c.arc(p.x,p.y,4.5,0,Math.PI*2);c.fillStyle='#fff';c.fill();c.strokeStyle=config.color||'#2563eb';c.lineWidth=2;c.stroke();points.push({x:p.x,y:p.y,label:p.label,display:money(p.value)});});
+    if(data.length<=7){c.fillStyle='#64748b';c.textAlign='center';coords.forEach(function(p){c.fillText(String(p.label).slice(0,10),p.x,h-12);});}
+   }else{c.beginPath();c.moveTo(pad.l,pad.t+ph);c.lineTo(w-pad.r,pad.t+ph);c.stroke();c.beginPath();c.arc(pad.l+pw/2,pad.t+ph/2,6,0,Math.PI*2);c.fillStyle='#2563eb';c.fill();}
+  }else if(config.type==='donut'){
+   var total=data.reduce(function(s,d){return s+Math.max(0,Number(d.value)||0);},0),cx=Math.min(w*.32,105),cy=120,rad=Math.min(74,Math.max(48,w*.18)),colors=config.colors||['#2563eb','#38bdf8','#5e6ad2','#f59e0b','#16a34a','#f87171'];
+   c.beginPath();c.arc(cx,cy,rad,0,Math.PI*2);c.strokeStyle='#e5e7eb';c.lineWidth=19;c.stroke();var angle=-Math.PI/2;
+   if(total>0)data.forEach(function(d,i){var v=Math.max(0,Number(d.value)||0),sweep=v/total*Math.PI*2;c.beginPath();c.arc(cx,cy,rad,angle,angle+sweep);c.strokeStyle=colors[i%colors.length];c.lineWidth=19;c.lineCap='round';c.stroke();var mid=angle+sweep/2;points.push({x:cx+Math.cos(mid)*rad,y:cy+Math.sin(mid)*rad,label:d.label,display:d.unit==='qty'?v.toLocaleString()+' units':money(v)});angle+=sweep;});
+   c.textAlign='center';c.fillStyle='#111827';c.font='bold 14px Arial';c.fillText(config.center||total.toLocaleString(),cx,cy+3);c.font='9px Arial';c.fillStyle='#64748b';c.fillText(config.centerLabel||'TOTAL',cx,cy+17);
+   var lx=Math.min(w-135,Math.max(cx+rad+18,w*.58)),ly=30;c.font='10px Arial';data.slice(0,8).forEach(function(d,i){var y=ly+i*24;c.fillStyle=colors[i%colors.length];c.beginPath();c.arc(lx,y-3,4,0,Math.PI*2);c.fill();c.fillStyle='#475569';c.textAlign='left';c.fillText(String(d.label||'').slice(0,16),lx+10,y);c.textAlign='right';c.fillText((total?((Number(d.value)||0)/total*100):0).toFixed(1)+'%',w-8,y);});
+   if(!total){c.fillStyle='#64748b';c.textAlign='center';c.fillText('No data',cx,cy+rad+25);}
+  }else if(config.type==='bars'){
+   var maxBar=Math.max(1,...data.map(function(d){return Math.max(Number(d.a)||0,Number(d.b)||0);})),groupH=ph/Math.max(1,data.length),barH=Math.max(5,Math.min(10,(groupH-5)/2));
+   data.forEach(function(d,i){var y=pad.t+i*groupH;c.fillStyle='#64748b';c.textAlign='right';c.font='10px Arial';c.fillText(String(d.label||'').slice(0,14),pad.l-7,y+12);[['a','#06b6d4'],['b','#2563eb']].forEach(function(pair,j){var v=Math.max(0,Number(d[pair[0]])||0),bw=v/maxBar*pw,yy=y+j*(barH+3);roundRect(c,pad.l,yy,Math.max(v?2:0,bw),barH,barH/2);c.fillStyle=pair[1];c.fill();points.push({x:pad.l+bw,y:yy+barH/2,label:d.label,display:money(v)});});});
+  }
+ }
+ function schedule(){if(!raf)raf=window.requestAnimationFrame(draw);}
+ var observer=window.ResizeObserver?new ResizeObserver(schedule):null;if(observer)observer.observe(host);
+ canvas.addEventListener('mousemove',function(e){var r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,best=null,dist=Infinity;points.forEach(function(p){var d=Math.hypot(x-p.x,y-p.y);if(d<dist){dist=d;best=p;}});if(best&&dist<25){tip.textContent=best.label+' · '+best.display;tip.style.display='block';tip.style.left=Math.max(4,Math.min(width-170,x+12))+'px';tip.style.top=Math.max(4,y-30)+'px';}else tip.style.display='none';});
+ canvas.addEventListener('mouseleave',function(){tip.style.display='none';});schedule();
+ return{redraw:schedule,destroy:function(){if(observer)observer.disconnect();if(raf)window.cancelAnimationFrame(raf);}};
+}
+
 /* Stock health dashboard: theme-aware analytics over completed sales and live inventory. */
 PosnicPro.stockHealthReport = (function () {
     var snapshot = null, filtered = null;
@@ -442,57 +486,25 @@ PosnicPro.stockHealthReport = (function () {
         rows.forEach(function(r){var tr=$('<tr>');tr.append(safeCell(r.name),safeCell(r.sku));if(mode==='all')tr.append(safeCell(r.category),safeCell(r.brand));tr.append(safeCell(r.stock));if(mode==='all')tr.append(safeCell(r.sold_quantity));if(mode==='dormant')tr.append(safeCell(r.last_sale?moment(r.last_sale).format('DD/MM/YYYY'):'—'),safeCell(r.days_since_sale));tr.append(safeCell(currency(r.stock_value)));body.append(tr);});
     }
     function renderTrend(points) {
-        var holder=$('#stock-health-trend-chart').empty(), data=points||[];
-        if(!data.length){holder.text('Aucune vente enregistrée sur cette période.').addClass('sh-muted');return;}
-        var max=Math.max(1,...data.map(p=>Number(p.quantity)||0)), width=720, height=160, pad=12;
-        var coords=data.map((p,i)=>({x:pad+i*(width-2*pad)/Math.max(1,data.length-1),y:height-pad-(Number(p.quantity)||0)/max*(height-2*pad)}));
-        var line=coords.map((p,i)=>(i?'L':'M')+p.x.toFixed(1)+' '+p.y.toFixed(1)).join(' ');
-        var area=line+' L '+coords[coords.length-1].x+' '+(height-pad)+' L '+coords[0].x+' '+(height-pad)+' Z';
-        var svg=$('<svg viewBox="0 0 720 180" role="img" aria-label="Sales quantity trend"></svg>');
-        [0,.5,1].forEach(function(v){var y=pad+v*(height-2*pad);svg.append($('<line x1="12" x2="708">').attr('y1',y).attr('y2',y).attr('stroke','var(--sh-border)').attr('stroke-dasharray','4 5'));});
-        svg.append($('<path>').attr('d',area).attr('fill','var(--posnic-accent-soft,rgba(37,99,235,.12))'));
-        svg.append($('<path>').attr('d',line).attr('fill','none').attr('stroke','var(--sh-accent)').attr('stroke-width','3').attr('stroke-linecap','round').attr('stroke-linejoin','round'));
-        coords.forEach(function(p,i){if(i%5===0||i===coords.length-1)svg.append($('<circle>').attr('cx',p.x).attr('cy',p.y).attr('r',3.5).attr('fill','var(--sh-accent)'));});
-        holder.append(svg);
-        var labels=$('<div class="d-flex justify-content-between sh-muted small">').append($('<span>').text(data[0].date),$('<span>').text(data[Math.floor(data.length/2)].date),$('<span>').text(data[data.length-1].date));holder.append(labels);
-        var total=data.reduce((s,p)=>s+(Number(p.quantity)||0),0);holder.append($('<div class="mt-2 small sh-muted">').text('Total vendu sur 30 jours : '+total.toLocaleString()));
+        var data=(points||[]).map(function(p){return{label:String(p.date||''),value:Number(p.quantity)||0};});
+        if(!data.length)data=[{label:'No movement',value:0}];
+        DataChartCanvas(document.getElementById('stock-health-trend-chart'),{type:'line',label:'Stock movement quantity',data:data,color:'#06b6d4'});
+        var total=data.reduce(function(s,p){return s+p.value;},0);
+        $('#stock-health-trend-chart').append($('<div class="mt-1 small sh-muted">').text('Total vendu sur 30 jours : '+total.toLocaleString()));
     }
     function renderCategoryComparison(rows) {
-        var groups = {};
-        (rows || []).forEach(function (r) {
-            var key = String(r.category || 'Sans catégorie');
-            var quantity = Math.max(0, Number(r.stock != null ? r.stock : r.quantity) || 0);
-            var unitCost = Number(r.buying_price != null ? r.buying_price : r.unit_cost);
-            var unitRetail = Number(r.selling_price_1 != null ? r.selling_price_1 : r.selling_price);
-            if (!groups[key]) groups[key] = { name: key, cost: 0, retail: 0, units: 0 };
-            groups[key].units += quantity;
-            groups[key].cost += quantity * (Number.isFinite(unitCost) ? unitCost : (Number(r.stock_value) || 0) / Math.max(1, quantity));
-            groups[key].retail += quantity * (Number.isFinite(unitRetail) ? unitRetail : 0);
+        var groups={};
+        (rows||[]).forEach(function(item){
+            var name=String(item.category||item.category_name||'Sans catégorie');
+            var qty=Math.max(0,Number(item.stock!=null?item.stock:(item.quantity!=null?item.quantity:item.available_quantity))||0);
+            var cost=Number(item.buying_price!=null?item.buying_price:(item.unit_cost!=null?item.unit_cost:item.company_price))||0;
+            var retail=Number(item.selling_price_1!=null?item.selling_price_1:(item.selling_price!=null?item.selling_price:0))||0;
+            if(!groups[name])groups[name]={label:name,a:0,b:0};
+            groups[name].a+=qty*cost;groups[name].b+=qty*retail;
         });
-        var cats = Object.keys(groups).map(function (key) { return groups[key]; }).sort(function (a, b) { return b.retail - a.retail; }).slice(0, 10);
-        var host = $('#stock-health-category-value-chart').empty().css({ width: '100%', minHeight: '260px', height: '260px', overflowY: 'auto', overflowX: 'hidden' });
-        if (!cats.length) {
-            host.append($('<div class="text-center sh-muted py-5">Aucune donnée de stock disponible.</div>'));
-            return;
-        }
-        var width = 680, rowHeight = 24, top = 12, left = 116, right = 14;
-        var height = Math.max(190, top + cats.length * 43 + 28), plotWidth = width - left - right;
-        var max = Math.max(1, ...cats.map(function (x) { return Math.max(x.cost, x.retail); }));
-        var svg = $('<svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Grouped stock purchase and retail value by category" style="display:block;width:100%;height:' + height + 'px;min-height:260px;overflow:visible"></svg>');
-        cats.forEach(function (x, index) {
-            var y = top + index * 43;
-            svg.append($('<text>').attr({ x: left - 8, y: y + 15, 'text-anchor': 'end', fill: 'var(--sh-text)', 'font-size': 11 }).text(x.name.length > 18 ? x.name.slice(0, 17) + '…' : x.name));
-            var costWidth = x.cost / max * plotWidth, retailWidth = x.retail / max * plotWidth;
-            var costBar = $('<rect>').attr({ x: left, y: y, width: Math.max(x.cost > 0 ? 1 : 0, costWidth), height: 9, rx: 4, fill: '#0d9488', style: 'cursor:pointer' });
-            costBar.append($('<title>').text(x.name + ' · Coût d’achat: ' + currency(x.cost) + ' DZD · ' + x.units.toLocaleString() + ' unités'));
-            var retailBar = $('<rect>').attr({ x: left, y: y + 13, width: Math.max(x.retail > 0 ? 1 : 0, retailWidth), height: 9, rx: 4, fill: '#2563eb', style: 'cursor:pointer' });
-            retailBar.append($('<title>').text(x.name + ' · Valeur de vente: ' + currency(x.retail) + ' DZD · ' + x.units.toLocaleString() + ' unités'));
-            svg.append(costBar, retailBar);
-        });
-        host.append(svg, $('<div class="d-flex flex-wrap sh-muted small mt-1" style="gap:14px">').append(
-            $('<span>').html('<i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#0d9488;margin-right:5px"></i>Coût d’achat'),
-            $('<span>').html('<i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#2563eb;margin-right:5px"></i>Valeur de vente')
-        ));
+        var data=Object.keys(groups).map(function(k){return groups[k];}).sort(function(a,b){return b.b-a.b;}).slice(0,8);
+        if(!data.length)data=[{label:'No categories',a:0,b:0}];
+        DataChartCanvas(document.getElementById('stock-health-category-value-chart'),{type:'bars',label:'Purchase cost and retail value by category',data:data});
     }
     function renderStockLevels(rows) {
         var host = $('#stock-health-stock-levels-chart').empty(), list = (rows || []).slice();
@@ -512,46 +524,16 @@ PosnicPro.stockHealthReport = (function () {
         section('Top stock',top,'#2563eb'); section('Stock faible',low,'#f59e0b');
     }
     function renderCategoryDonut(rows) {
-        var groups = {};
-        (rows || []).forEach(function (r) {
-            var key = String(r.category || 'Sans catégorie');
-            groups[key] = (groups[key] || 0) + Math.max(0, Number(r.stock != null ? r.stock : r.quantity) || 0);
+        var groups={};
+        (rows||[]).forEach(function(item){
+            var name=String(item.category||item.category_name||'Sans catégorie');
+            var qty=Math.max(0,Number(item.stock!=null?item.stock:(item.quantity!=null?item.quantity:item.available_quantity))||0);
+            groups[name]=(groups[name]||0)+qty;
         });
-        var vals = Object.keys(groups).map(function (key) { return { name: key, value: groups[key] }; }).sort(function (a, b) { return b.value - a.value; });
-        var total = vals.reduce(function (sum, item) { return sum + item.value; }, 0);
-        var host = $('#stock-health-category-donut').empty().css({ width: '100%', minHeight: '260px', height: '260px' });
-        var colors = ['#2563eb', '#0d9488', '#f59e0b', '#16a34a', '#8b5cf6', '#ec4899', '#0891b2', '#f97316'];
-        var radius = 43, circumference = 2 * Math.PI * radius, offset = 0;
-        var svg = $('<svg viewBox="0 0 140 140" role="img" aria-label="Stock unit distribution by category" style="width:150px;height:150px;flex:0 0 150px;display:block;overflow:visible"></svg>');
-        svg.append($('<circle cx="70" cy="70" r="43" fill="none" stroke="var(--sh-border)" stroke-width="14"></circle>'));
-        if (total > 0) {
-            vals.forEach(function (item, index) {
-                var segment = circumference * item.value / total;
-                var arc = $('<circle cx="70" cy="70" r="43" fill="none" stroke-width="14" stroke-linecap="butt" style="cursor:pointer"></circle>').attr({
-                    stroke: colors[index % colors.length], 'stroke-dasharray': segment + ' ' + circumference,
-                    'stroke-dashoffset': -offset, transform: 'rotate(-90 70 70)'
-                });
-                arc.append($('<title>').text(item.name + ' · ' + item.value.toLocaleString() + ' unités · ' + (item.value / total * 100).toFixed(1) + '%'));
-                svg.append(arc); offset += segment;
-            });
-        }
-        svg.append($('<text x="70" y="67" text-anchor="middle" font-size="17" font-weight="700" fill="currentColor"></text>').text(total.toLocaleString()));
-        svg.append($('<text x="70" y="81" text-anchor="middle" font-size="8" letter-spacing=".5" fill="currentColor"></text>').text('UNITÉS'));
-        var legend = $('<div style="flex:1;min-width:125px;max-width:220px"></div>');
-        if (!vals.length || total <= 0) {
-            legend.append($('<div class="sh-muted small">Aucun article en stock.</div>'));
-        } else {
-            vals.forEach(function (item, index) {
-                var row = $('<div class="d-flex justify-content-between align-items-center small mb-1" style="gap:8px"></div>');
-                row.append($('<span class="d-flex align-items-center text-truncate" style="min-width:0"></span>').append(
-                    $('<i style="display:inline-block;width:9px;height:9px;flex:0 0 9px;border-radius:50%;margin-right:6px"></i>').css('background', colors[index % colors.length]),
-                    $('<span class="text-truncate"></span>').text(item.name)
-                ));
-                row.append($('<strong style="white-space:nowrap"></strong>').text(item.value.toLocaleString() + ' · ' + (item.value / total * 100).toFixed(1) + '%'));
-                legend.append(row);
-            });
-        }
-        host.append($('<div class="d-flex flex-wrap align-items-center justify-content-center" style="gap:14px;height:250px"></div>').append(svg, legend));
+        var data=Object.keys(groups).map(function(k){return{label:k,value:groups[k]};}).sort(function(a,b){return b.value-a.value;});
+        if(!data.length)data=[{label:'No stock',value:0}];
+        var total=data.reduce(function(s,p){return s+p.value;},0);
+        DataChartCanvas(document.getElementById('stock-health-category-donut'),{type:'donut',label:'Stock units by category',data:data,center:total.toLocaleString(),centerLabel:'UNITS'});
     }
     function renderTop(rows) {
         var holder=$('#stock-health-top-products').empty(), max=Math.max(1,...(rows||[]).map(r=>Number(r.sold_quantity)||0));

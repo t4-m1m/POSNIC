@@ -1,3 +1,47 @@
+
+/* POSNIC DataChartCanvas: dependency-free, DPR-aware canvas renderer for Electron. */
+function DataChartCanvas(host, config) {
+ if(!host)return;var canvas=document.createElement('canvas');canvas.setAttribute('role','img');canvas.setAttribute('aria-label',config.label||'Live chart');canvas.style.cssText='display:block;width:100%;height:240px;min-height:240px;touch-action:pan-y;';
+ host.innerHTML='';host.style.cssText+=';display:block;width:100%;height:240px;min-height:240px;position:relative;';host.appendChild(canvas);
+ var tip=document.createElement('div');tip.style.cssText='display:none;position:absolute;z-index:5;pointer-events:none;padding:7px 10px;border-radius:7px;background:#111827;color:#fff;font:12px Arial,sans-serif;box-shadow:0 3px 14px rgba(0,0,0,.2);white-space:nowrap;';host.appendChild(tip);
+ var points=[],width=600,raf=0;
+ function money(v){return (Number(v)||0).toLocaleString(undefined,{maximumFractionDigits:2})+' DZD';}
+ function roundRect(c,x,y,w,h,r){r=Math.min(r,w/2,h/2);c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
+ function draw(){
+  raf=0;var rect=host.getBoundingClientRect(),w=Math.max(1,rect.width||host.clientWidth||600),h=240,dpr=Math.max(1,Math.min(3,window.devicePixelRatio||1));width=w;
+  canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);canvas.style.width=w+'px';canvas.style.height=h+'px';
+  var c=canvas.getContext('2d');if(!c)return;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);points=[];
+  var data=config.data||[],pad={l:48,r:16,t:18,b:34},pw=Math.max(10,w-pad.l-pad.r),ph=h-pad.t-pad.b;
+  if(config.type==='line'){
+   var vals=data.map(function(d){return Math.max(0,Number(d.value)||0);}),max=Math.max(1,...vals),axis=Math.ceil(max/4)*4||4;
+   c.font='10px Arial';c.fillStyle='#64748b';c.strokeStyle='rgba(148,163,184,.35)';
+   for(var g=0;g<=4;g++){var gy=pad.t+ph*g/4;c.setLineDash([4,5]);c.beginPath();c.moveTo(pad.l,gy);c.lineTo(w-pad.r,gy);c.stroke();c.setLineDash([]);c.textAlign='right';c.fillText(Math.round(axis*(1-g/4)).toLocaleString(),pad.l-7,gy+3);}
+   var coords=data.map(function(d,i){return{x:pad.l+(data.length===1?pw/2:i*pw/Math.max(1,data.length-1)),y:pad.t+ph-(Math.max(0,Number(d.value)||0)/axis)*ph,value:Number(d.value)||0,label:d.label||''};});
+   if(coords.length){var grad=c.createLinearGradient(0,pad.t,0,pad.t+ph);grad.addColorStop(0,'rgba(37,99,235,.26)');grad.addColorStop(1,'rgba(37,99,235,.01)');c.beginPath();coords.forEach(function(p,i){i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y);});c.lineTo(coords[coords.length-1].x,pad.t+ph);c.lineTo(coords[0].x,pad.t+ph);c.closePath();c.fillStyle=grad;c.fill();
+    c.beginPath();coords.forEach(function(p,i){i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y);});c.strokeStyle=config.color||'#2563eb';c.lineWidth=3;c.lineJoin='round';c.stroke();
+    c.beginPath();coords.forEach(function(p,i){var a=vals.slice(Math.max(0,i-2),i+1),v=a.reduce(function(s,x){return s+x;},0)/a.length,x=p.x,y=pad.t+ph-v/axis*ph;i?c.lineTo(x,y):c.moveTo(x,y);});c.strokeStyle='#f59e0b';c.lineWidth=2;c.setLineDash([6,4]);c.stroke();c.setLineDash([]);
+    coords.forEach(function(p){c.beginPath();c.arc(p.x,p.y,4.5,0,Math.PI*2);c.fillStyle='#fff';c.fill();c.strokeStyle=config.color||'#2563eb';c.lineWidth=2;c.stroke();points.push({x:p.x,y:p.y,label:p.label,display:money(p.value)});});
+    if(data.length<=7){c.fillStyle='#64748b';c.textAlign='center';coords.forEach(function(p){c.fillText(String(p.label).slice(0,10),p.x,h-12);});}
+   }else{c.beginPath();c.moveTo(pad.l,pad.t+ph);c.lineTo(w-pad.r,pad.t+ph);c.stroke();c.beginPath();c.arc(pad.l+pw/2,pad.t+ph/2,6,0,Math.PI*2);c.fillStyle='#2563eb';c.fill();}
+  }else if(config.type==='donut'){
+   var total=data.reduce(function(s,d){return s+Math.max(0,Number(d.value)||0);},0),cx=Math.min(w*.32,105),cy=120,rad=Math.min(74,Math.max(48,w*.18)),colors=config.colors||['#2563eb','#38bdf8','#5e6ad2','#f59e0b','#16a34a','#f87171'];
+   c.beginPath();c.arc(cx,cy,rad,0,Math.PI*2);c.strokeStyle='#e5e7eb';c.lineWidth=19;c.stroke();var angle=-Math.PI/2;
+   if(total>0)data.forEach(function(d,i){var v=Math.max(0,Number(d.value)||0),sweep=v/total*Math.PI*2;c.beginPath();c.arc(cx,cy,rad,angle,angle+sweep);c.strokeStyle=colors[i%colors.length];c.lineWidth=19;c.lineCap='round';c.stroke();var mid=angle+sweep/2;points.push({x:cx+Math.cos(mid)*rad,y:cy+Math.sin(mid)*rad,label:d.label,display:d.unit==='qty'?v.toLocaleString()+' units':money(v)});angle+=sweep;});
+   c.textAlign='center';c.fillStyle='#111827';c.font='bold 14px Arial';c.fillText(config.center||total.toLocaleString(),cx,cy+3);c.font='9px Arial';c.fillStyle='#64748b';c.fillText(config.centerLabel||'TOTAL',cx,cy+17);
+   var lx=Math.min(w-135,Math.max(cx+rad+18,w*.58)),ly=30;c.font='10px Arial';data.slice(0,8).forEach(function(d,i){var y=ly+i*24;c.fillStyle=colors[i%colors.length];c.beginPath();c.arc(lx,y-3,4,0,Math.PI*2);c.fill();c.fillStyle='#475569';c.textAlign='left';c.fillText(String(d.label||'').slice(0,16),lx+10,y);c.textAlign='right';c.fillText((total?((Number(d.value)||0)/total*100):0).toFixed(1)+'%',w-8,y);});
+   if(!total){c.fillStyle='#64748b';c.textAlign='center';c.fillText('No data',cx,cy+rad+25);}
+  }else if(config.type==='bars'){
+   var maxBar=Math.max(1,...data.map(function(d){return Math.max(Number(d.a)||0,Number(d.b)||0);})),groupH=ph/Math.max(1,data.length),barH=Math.max(5,Math.min(10,(groupH-5)/2));
+   data.forEach(function(d,i){var y=pad.t+i*groupH;c.fillStyle='#64748b';c.textAlign='right';c.font='10px Arial';c.fillText(String(d.label||'').slice(0,14),pad.l-7,y+12);[['a','#06b6d4'],['b','#2563eb']].forEach(function(pair,j){var v=Math.max(0,Number(d[pair[0]])||0),bw=v/maxBar*pw,yy=y+j*(barH+3);roundRect(c,pad.l,yy,Math.max(v?2:0,bw),barH,barH/2);c.fillStyle=pair[1];c.fill();points.push({x:pad.l+bw,y:yy+barH/2,label:d.label,display:money(v)});});});
+  }
+ }
+ function schedule(){if(!raf)raf=window.requestAnimationFrame(draw);}
+ var observer=window.ResizeObserver?new ResizeObserver(schedule):null;if(observer)observer.observe(host);
+ canvas.addEventListener('mousemove',function(e){var r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,best=null,dist=Infinity;points.forEach(function(p){var d=Math.hypot(x-p.x,y-p.y);if(d<dist){dist=d;best=p;}});if(best&&dist<25){tip.textContent=best.label+' · '+best.display;tip.style.display='block';tip.style.left=Math.max(4,Math.min(width-170,x+12))+'px';tip.style.top=Math.max(4,y-30)+'px';}else tip.style.display='none';});
+ canvas.addEventListener('mouseleave',function(){tip.style.display='none';});schedule();
+ return{redraw:schedule,destroy:function(){if(observer)observer.disconnect();if(raf)window.cancelAnimationFrame(raf);}};
+}
+
 PosnicPro.dashboard = {
     showDataTablePage: function () {
         PosnicPro.HideSideBarModal();
@@ -744,94 +788,15 @@ PosnicPro.dashboard = {
             row.append($('<span class="text-right"></span>').text(PosnicPro.dashboard.money(amount)));
             topHost.append(row);
         });
-        // Live sales series from the dashboard overview response (server-filtered
-        // completed sales for the currently selected period).
-        var days = Array.isArray(totals.sales_days) ? totals.sales_days : [];
-        var values = (Array.isArray(totals.sales_amounts) ? totals.sales_amounts : []).map(function (value) { return Math.max(0, Number(value) || 0); });
-        var count = Math.max(days.length, values.length);
-        if (!count) { count = 1; days = ['No sales']; values = [0]; }
-        while (days.length < count) days.push('');
-        while (values.length < count) values.push(0);
-        var host = $('#dashboard-sales-trend').empty().css({ width: '100%', height: '260px', minHeight: '260px', position: 'relative' });
-        var width = 900, height = 260, left = 76, right = 20, top = 18, bottom = 42;
-        var plotWidth = width - left - right, plotHeight = height - top - bottom;
-        var maxValue = Math.max(1, ...values), axisMax = Math.ceil(maxValue / 4) * 4 || 4;
-        var points = values.map(function (value, index) {
-            return { x: left + (count === 1 ? plotWidth / 2 : index * plotWidth / (count - 1)), y: top + plotHeight - (value / axisMax) * plotHeight, value: value, label: days[index] || '' };
-        });
-        var moving = values.map(function (_, index) { var sample = values.slice(Math.max(0, index - 2), index + 1); return sample.reduce(function (sum, value) { return sum + value; }, 0) / sample.length; });
-        var linePath = points.map(function (point, index) { return (index ? 'L' : 'M') + point.x.toFixed(1) + ' ' + point.y.toFixed(1); }).join(' ');
-        var areaPath = linePath + ' L ' + points[points.length - 1].x.toFixed(1) + ' ' + (top + plotHeight) + ' L ' + points[0].x.toFixed(1) + ' ' + (top + plotHeight) + ' Z';
-        var avgPath = moving.map(function (value, index) { var x = left + (count === 1 ? plotWidth / 2 : index * plotWidth / (count - 1)); var y = top + plotHeight - (value / axisMax) * plotHeight; return (index ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1); }).join(' ');
-        var svg = $('<svg viewBox="0 0 900 260" role="img" aria-label="Dynamic sales trend in DZD" style="display:block;width:100%;height:260px;overflow:visible"></svg>');
-        var defs = $('<defs><linearGradient id="posnicSalesAreaLive" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#2563eb" stop-opacity=".28"/><stop offset="100%" stop-color="#2563eb" stop-opacity=".015"/></linearGradient></defs>');
-        svg.append(defs);
-        for (var tick = 0; tick <= 4; tick++) {
-            var tickValue = axisMax * tick / 4, tickY = top + plotHeight - tick * plotHeight / 4;
-            svg.append($('<line>').attr({ x1: left, x2: width - right, y1: tickY, y2: tickY, stroke: 'var(--theme-border-color,#dbe3ed)', 'stroke-dasharray': '4 5' }));
-            svg.append($('<text>').attr({ x: left - 10, y: tickY + 4, 'text-anchor': 'end', fill: 'var(--theme-text-muted,#64748b)', 'font-size': 11 }).text(PosnicPro.dashboard.money(tickValue)));
-        }
-        svg.append($('<path>').attr({ d: areaPath, fill: 'url(#posnicSalesAreaLive)' }));
-        svg.append($('<path>').attr({ d: linePath, fill: 'none', stroke: '#2563eb', 'stroke-width': 3.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
-        svg.append($('<path>').attr({ d: avgPath, fill: 'none', stroke: '#f59e0b', 'stroke-width': 2.5, 'stroke-dasharray': '7 5', 'stroke-linecap': 'round' }));
-        points.forEach(function (point, index) {
-            var marker = $('<circle>').attr({ cx: point.x, cy: point.y, r: count > 30 ? 3.5 : 5, fill: '#fff', stroke: '#2563eb', 'stroke-width': 2.5, style: 'cursor:pointer' });
-            marker.append($('<title>').text((point.label || 'Sales') + ' · ' + PosnicPro.dashboard.money(point.value) + ' DZD'));
-            svg.append(marker);
-            if (count <= 12) svg.append($('<text>').attr({ x: point.x, y: height - 22, 'text-anchor': 'middle', fill: 'var(--theme-text-muted,#64748b)', 'font-size': 10 }).text(point.label || ''));
-        });
-        if (!values.some(function (v) { return v > 0; })) {
-            svg.append($('<text x="450" y="112" text-anchor="middle" font-size="13" fill="var(--theme-text-muted,#64748b)">').text('No completed sales in this period'));
-        } else if (count > 12) {
-            var labels = $('<div class="d-flex justify-content-between text-muted small mt-1"></div>');
-            labels.append($('<span>').text(days[0] || ''), $('<span>').text(days[Math.floor(count / 2)] || ''), $('<span>').text(days[count - 1] || ''));
-            host.append(svg, labels);
-        }
-        host.append(svg);
-        host.append($('<div class="da-legend mt-1"><span><i class="da-dot" style="background:#2563eb"></i>Daily sales (DZD)</span><span><i class="da-dot" style="background:#f59e0b"></i>3-period moving average</span></div>'));
-
-        // Payment mix is based on the actual amounts returned by the overview
-        // endpoint; percentages are derived from amounts if not supplied.
-        var mix = Array.isArray(data.paymentMix) ? data.paymentMix.filter(function (item) { return item; }) : [];
-        var donut = $('#dashboard-payment-donut').empty().css({ width: '100%', minHeight: '260px', height: '260px', display: 'flex', alignItems: 'center', justifyContent: 'center' });
-        var paymentTotal = mix.reduce(function (sum, item) { return sum + Math.max(0, Number(item.amount != null ? item.amount : item.total) || 0); }, 0);
-        var pctTotal = mix.reduce(function (sum, item) { return sum + Math.max(0, Number(item.pct) || 0); }, 0);
-        var colors = ['#2563eb', '#16a34a', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#f97316'];
-        var radius = 48, circumference = 2 * Math.PI * radius, offset = 0;
-        var ring = $('<svg viewBox="0 0 150 150" role="img" aria-label="Payment distribution by method" style="width:160px;height:160px;flex:0 0 160px;overflow:visible"></svg>');
-        ring.append($('<circle cx="75" cy="75" r="48" fill="none" stroke="var(--theme-border-color,#e5e7eb)" stroke-width="16"></circle>'));
-        if (paymentTotal > 0 || pctTotal > 0) {
-            mix.forEach(function (item, index) {
-                var amount = Math.max(0, Number(item.amount != null ? item.amount : item.total) || 0);
-                var percentage = paymentTotal > 0 ? amount / paymentTotal * 100 : Math.max(0, Number(item.pct) || 0) / pctTotal * 100;
-                var segment = circumference * percentage / 100;
-                var arc = $('<circle cx="75" cy="75" r="48" fill="none" stroke-width="16" stroke-linecap="butt" style="cursor:pointer"></circle>').attr({
-                    stroke: colors[index % colors.length], 'stroke-dasharray': segment + ' ' + circumference,
-                    'stroke-dashoffset': -offset, transform: 'rotate(-90 75 75)'
-                });
-                arc.append($('<title>').text((item.mode || item.method || 'Other') + ' · ' + PosnicPro.dashboard.money(amount) + ' DZD · ' + percentage.toFixed(1) + '%'));
-                ring.append(arc); offset += segment;
-            });
-        }
-        ring.append($('<text x="75" y="70" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor"></text>').text(PosnicPro.dashboard.money(paymentTotal || 0)));
-        ring.append($('<text x="75" y="85" text-anchor="middle" font-size="8" letter-spacing=".8" fill="currentColor"></text>').text('TOTAL DZD'));
-        var legend = $('<div style="flex:1;min-width:145px;max-width:220px"></div>');
-        if (!mix.length || (paymentTotal <= 0 && pctTotal <= 0)) {
-            legend.append($('<div class="text-muted small text-center">No recorded payments in this period</div>'));
-        } else {
-            mix.forEach(function (item, index) {
-                var amount = Math.max(0, Number(item.amount != null ? item.amount : item.total) || 0);
-                var percentage = paymentTotal > 0 ? amount / paymentTotal * 100 : Math.max(0, Number(item.pct) || 0) / pctTotal * 100;
-                var row = $('<div class="d-flex align-items-center justify-content-between small mb-2" style="gap:8px"></div>');
-                row.append($('<span class="d-flex align-items-center" style="min-width:0;gap:7px"></span>').append(
-                    $('<span style="display:inline-block;width:10px;height:10px;flex:0 0 10px;border-radius:50%"></span>').css('background', colors[index % colors.length]),
-                    $('<span class="text-truncate"></span>').text(item.mode || item.method || 'Other')
-                ));
-                row.append($('<strong style="white-space:nowrap"></strong>').text(percentage.toFixed(1) + '% · ' + PosnicPro.dashboard.money(amount)));
-                legend.append(row);
-            });
-        }
-        donut.append($('<div class="d-flex flex-wrap align-items-center justify-content-center" style="gap:16px;width:100%"></div>').append(ring, legend));
+        var days=Array.isArray(totals.sales_days)?totals.sales_days:[];
+        var amounts=Array.isArray(totals.sales_amounts)?totals.sales_amounts:[];
+        var salesSeries=amounts.map(function(v,i){return{label:String(days[i]||('Point '+(i+1))),value:Number(v)||0};});
+        if(!salesSeries.length)salesSeries=[{label:'No sales',value:0}];
+        DataChartCanvas(document.getElementById('dashboard-sales-trend'),{type:'line',label:'Sales trend in DZD',data:salesSeries,color:'#2563eb'});
+        var mix=Array.isArray(data.paymentMix)?data.paymentMix:[];
+        var paymentSeries=mix.map(function(p){return{label:p.mode||p.method||'Other',value:Number(p.amount!=null?p.amount:p.total)||0};});
+        var paymentTotal=paymentSeries.reduce(function(s,p){return s+p.value;},0);
+        DataChartCanvas(document.getElementById('dashboard-payment-donut'),{type:'donut',label:'Payment distribution',data:paymentSeries,center:PosnicPro.dashboard.money(paymentTotal),centerLabel:'TOTAL DZD'});
     },
 
     renderBestSellers: function (items) {
