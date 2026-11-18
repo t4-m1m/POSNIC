@@ -18,31 +18,87 @@ body.posnic-cashier-minimal .navigationbar { box-shadow:none !important; }
 body:not(.posnic-cashier-minimal) #posnic-cashier-history-quicklink,
 body:not(.posnic-cashier-minimal) #posnic-cashier-versements-quicklink { display:none !important; }
 
-/* Non-admin staff keep the blue icon buttons, never the hover-expanded list. */
+/* Non-admin staff use a permanently compact icon rail. Keep the rail,
+   content and header on the same geometry even when the legacy toggle-menu
+   class or pointer hover is activated. */
 @media (min-width: 768px) {
     body.posnic-nonadmin-icon-rail .leftbar,
-    body.posnic-nonadmin-icon-rail .leftbar:hover {
+    body.posnic-nonadmin-icon-rail .leftbar:hover,
+    body.posnic-nonadmin-icon-rail.toggle-menu .leftbar,
+    body.posnic-nonadmin-icon-rail.toggle-menu .leftbar:hover {
         width: 76px !important;
+        min-width: 76px !important;
         margin-left: 0 !important;
-        transition: none !important;
+        transform: none !important;
+        transition: width .22s ease, transform .22s ease !important;
     }
+    body.posnic-nonadmin-icon-rail .sidebar,
     body.posnic-nonadmin-icon-rail .navigationbar,
     body.posnic-nonadmin-icon-rail .vertical-menu-icon {
         width: 76px !important;
         min-width: 76px !important;
+        max-width: 76px !important;
+        box-sizing: border-box !important;
+    }
+    body.posnic-nonadmin-icon-rail .navigationbar {
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        transition: none !important;
     }
     body.posnic-nonadmin-icon-rail .vertical-menu-detail,
-    body.posnic-nonadmin-icon-rail .leftbar:hover .vertical-menu-detail {
+    body.posnic-nonadmin-icon-rail .leftbar:hover .vertical-menu-detail,
+    body.posnic-nonadmin-icon-rail.toggle-menu .vertical-menu-detail {
         display: none !important;
+        width: 0 !important;
+        min-width: 0 !important;
     }
-    body.posnic-nonadmin-icon-rail .rightbar {
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav {
+        width: 76px !important;
+        min-width: 76px !important;
+        align-items: center !important;
+        flex-wrap: nowrap !important;
+    }
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a,
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a:hover,
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a:focus,
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a:active {
+        position: relative !important;
+        display: flex !important;
+        flex: 0 0 48px !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 48px !important;
+        min-width: 48px !important;
+        height: 48px !important;
+        margin: 8px auto !important;
+        padding: 0 !important;
+        transform: none !important;
+        transition: background-color .16s ease, opacity .16s ease !important;
+        pointer-events: auto !important;
+        cursor: pointer !important;
+    }
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a img,
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a i {
+        pointer-events: none !important;
+        transition: opacity .16s ease !important;
+    }
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a:hover {
+        background-color: rgba(255,255,255,.12) !important;
+    }
+    body.posnic-nonadmin-icon-rail .rightbar,
+    body.posnic-nonadmin-icon-rail.toggle-menu .rightbar {
         margin-left: 76px !important;
+        transition: margin-left .22s ease !important;
     }
-    body.posnic-nonadmin-icon-rail .footerbar {
+    body.posnic-nonadmin-icon-rail .footerbar,
+    body.posnic-nonadmin-icon-rail.toggle-menu .footerbar {
         left: 76px !important;
     }
-    body.posnic-nonadmin-icon-rail .leftbar:hover ~ .rightbar .topbar {
+    body.posnic-nonadmin-icon-rail .rightbar .topbar,
+    body.posnic-nonadmin-icon-rail .leftbar:hover ~ .rightbar .topbar,
+    body.posnic-nonadmin-icon-rail.toggle-menu .rightbar .topbar {
         left: 76px !important;
+        transition: left .22s ease !important;
     }
 }
 </style>
