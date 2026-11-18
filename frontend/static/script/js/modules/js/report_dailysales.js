@@ -1332,8 +1332,9 @@ function metrics(){
  var salaryPrimeCashTotal=salaryPrimes.reduce(function(sum,row){return /^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(row.method||'cash').trim())?sum+num(row.amount):sum;},0);
  // Sales + debt collections are already represented in pay.cash by their recorded tender.
  // Add only the cash portion of settled versements; TPE and BaridiMob stay out.
- var versementPayments=Array.isArray(r.versement_payments)?r.versement_payments:[];
- var versementCashTotal=versementPayments.reduce(function(sum,row){return /^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(row.payment_mode||'').trim())?sum+num(row.amount):sum;},0);
+ // The API exposes only the settlement transaction here; the original deposit
+ // was already counted as a sale payment on its own transaction date.
+ var versementCashTotal=num(r.versement_settlement_cash_total);
  // ZR COD is physical cash only after the parcel reaches ENCAISSE (the API payout ledger).
  var deliveryPayoutCashTotal=num(r.delivery_payout_cash_total);
  var cashExpected=expensesAvailable?pay.cash+versementCashTotal+deliveryPayoutCashTotal-expenses-salaryCashTotal-salaryAdvanceCashTotal-salaryPrimeCashTotal:null;
