@@ -51,7 +51,8 @@ body:not(.posnic-cashier-minimal) #posnic-cashier-versements-quicklink { display
     }
     body.posnic-nonadmin-icon-rail .sidebar,
     body.posnic-nonadmin-icon-rail .navigationbar,
-    body.posnic-nonadmin-icon-rail .vertical-menu-icon {
+    body.posnic-cashier-minimal .vertical-menu-icon,
+  body.posnic-nonadmin-icon-rail .vertical-menu-icon {
         width: 76px !important;
         min-width: 76px !important;
         max-width: 76px !important;
@@ -281,11 +282,13 @@ body:not(.posnic-cashier-minimal) #posnic-cashier-versements-quicklink { display
     isolation:isolate !important;
     pointer-events:auto !important;
   }
+  body.posnic-cashier-minimal .vertical-menu-icon .posnic-cashier-shortcuts,
   body.posnic-nonadmin-icon-rail .vertical-menu-icon > .posnic-cashier-shortcuts {
     position:relative !important;
     z-index:151 !important;
     pointer-events:auto !important;
   }
+  body.posnic-cashier-minimal .vertical-menu-icon .posnic-cashier-shortcuts > a,
   body.posnic-nonadmin-icon-rail .vertical-menu-icon > .posnic-cashier-shortcuts > a {
     position:relative !important;
     z-index:152 !important;
@@ -301,6 +304,7 @@ body:not(.posnic-cashier-minimal) #posnic-cashier-versements-quicklink { display
     cursor:pointer !important;
     touch-action:manipulation !important;
   }
+  body.posnic-cashier-minimal .vertical-menu-icon .posnic-cashier-shortcuts > a *,
   body.posnic-nonadmin-icon-rail .vertical-menu-icon > .posnic-cashier-shortcuts > a * {
     pointer-events:none !important;
   }
