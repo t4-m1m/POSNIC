@@ -101,6 +101,76 @@ body:not(.posnic-cashier-minimal) #posnic-cashier-versements-quicklink { display
         transition: left .22s ease !important;
     }
 }
+
+/* Keep the non-admin rail's hit targets independent of the legacy sidebar
+   hover/toggle animation. The three cashier shortcuts must remain directly
+   clickable, and the category tabs must receive clean, non-overlapping hits. */
+@media (min-width: 768px) {
+    body.posnic-nonadmin-icon-rail .leftbar,
+    body.posnic-nonadmin-icon-rail.toggle-menu .leftbar,
+    body.posnic-nonadmin-icon-rail .leftbar:hover,
+    body.posnic-nonadmin-icon-rail.toggle-menu .leftbar:hover {
+        z-index: 110 !important;
+        width: 76px !important;
+        min-width: 76px !important;
+        max-width: 76px !important;
+        transition: none !important;
+    }
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon {
+        position: relative !important;
+        z-index: 1 !important;
+        pointer-events: auto !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+    }
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav {
+        position: relative !important;
+        z-index: 2 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 2px !important;
+        pointer-events: auto !important;
+    }
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a,
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a:hover,
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a:focus,
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a:active {
+        position: relative !important;
+        z-index: 3 !important;
+        flex: 0 0 48px !important;
+        width: 48px !important;
+        min-width: 48px !important;
+        height: 48px !important;
+        margin: 4px auto !important;
+        padding: 0 !important;
+        border: 0 !important;
+        transform: none !important;
+        pointer-events: auto !important;
+        touch-action: manipulation !important;
+        transition: background-color .16s ease, opacity .16s ease !important;
+    }
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a.active,
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a[aria-selected="true"] {
+        background-color: rgba(0,0,0,.28) !important;
+    }
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a img,
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a i {
+        pointer-events: none !important;
+    }
+    body.posnic-nonadmin-icon-rail .rightbar,
+    body.posnic-nonadmin-icon-rail.toggle-menu .rightbar {
+        margin-left: 76px !important;
+        transition: none !important;
+    }
+    body.posnic-nonadmin-icon-rail .rightbar .topbar,
+    body.posnic-nonadmin-icon-rail.toggle-menu .rightbar .topbar {
+        left: 76px !important;
+        transition: none !important;
+    }
+}
 </style>
 <div class="leftbar">
     <!-- Start Sidebar -->
