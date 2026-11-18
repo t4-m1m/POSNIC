@@ -15669,7 +15669,7 @@ PosnicPro.sales.openZrDelivery=async function(){
   $('#zr-hub').html('<option value="">Choisir le point relais</option>'+d.hubs.filter(x=>x.isPickupPoint).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('')).val('').trigger('change.select2');
   $('#zr-type').val('home').trigger('change');
   var saleCustomerName=String($('#sales_new_customer_name').val()||'').trim();
-  if(/walk.?in|cash customer|comptoir|client\\s+de\\s+passage/i.test(saleCustomerName)||/^zr express$/i.test(saleCustomerName))saleCustomerName='';
+  if(/walk.?in|cash customer|comptoir|client.?de.?passage/i.test(saleCustomerName)||/^zr express$/i.test(saleCustomerName))saleCustomerName='';
   $('#zr-name').val(saleCustomerName);
   $('#zr-phone').val($('#sales_new_customer_phone').val());
   $('#zr-address').val($('#sales_new_customer_address').val());
