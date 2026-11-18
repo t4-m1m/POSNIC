@@ -541,6 +541,8 @@ function apiPort() {
 }
 
 let mainWindow;
+// ZR Express v1 courier bridge; credentials are supplied only for each authorized request.
+require('./zr-express').register({ ipcMain, getWindow: () => mainWindow, BrowserWindow, dialog });
 let apiServer;
 let hardwareManager;
 let kotManager;

@@ -9,6 +9,11 @@ window.addEventListener('unhandledrejection', event => {
 
 // Expose hardware and printer APIs to renderer
 contextBridge.exposeInMainWorld('electronAPI', {
+  zr: {
+    catalog: credentials => ipcRenderer.invoke('zr:catalog', credentials),
+    createParcel: (credentials, parcel) => ipcRenderer.invoke('zr:createParcel', credentials, parcel),
+    getParcel: (credentials, tracking) => ipcRenderer.invoke('zr:getParcel', credentials, tracking),
+  },
   diagnostics: {
     state: () => ipcRenderer.invoke('diagnostics:state'),
     start: () => ipcRenderer.invoke('diagnostics:start'),
