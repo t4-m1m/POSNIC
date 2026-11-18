@@ -1057,293 +1057,6 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
 
 
 
-/* Sales viewport layout v2: size the full ancestor chain before constraining
-   the basket/catalogue columns. The previous rule constrained the form while
-   its contentbar parent still had auto height, collapsing the working area. */
-@media (min-width: 768px) {
-  #sales_new {
-    height: calc(100vh - 64px) !important;
-    max-height: calc(100vh - 64px) !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-  }
-  #sales_new > #containerbar { display: none !important; }
-  #sales_new > .contentbar {
-    height: 100% !important;
-    max-height: 100% !important;
-    min-height: 0 !important;
-    margin: 0 !important;
-    padding: 8px 18px 10px !important;
-    box-sizing: border-box !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-  }
-  #sales_new > .contentbar > .breadcrumbbar {
-    flex: 0 0 auto !important;
-    margin: 0 0 8px !important;
-    min-height: 0 !important;
-  }
-  #sales_new #billing_outlet_context {
-    flex: 0 0 auto !important;
-    min-height: 0 !important;
-  }
-  #sales_new > .contentbar > .row.align-items-center {
-    flex: 1 1 0 !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    margin: 0 !important;
-  }
-  #sales_new > .contentbar > .row.align-items-center > .col-12 {
-    display: flex !important;
-    flex-direction: column !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-  }
-  #sales_new #touchsales_page {
-    display: flex !important;
-    flex: 1 1 0 !important;
-    flex-direction: column !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-  }
-  #sales_new #touchsales_page > .row:first-child {
-    flex: 0 0 auto !important;
-    min-height: 0 !important;
-    margin-bottom: 0 !important;
-  }
-  #sales_new #touchsales_page > #sales-function-shortcuts {
-    flex: 0 0 auto !important;
-    min-height: 0 !important;
-    margin: 4px 0 8px !important;
-  }
-  #sales_new #touchsales_page > .row:has(#instance-view) {
-    display: flex !important;
-    flex: 1 1 0 !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    align-items: stretch !important;
-    margin: 0 !important;
-  }
-  #sales_new #touchsales_page > .row:has(#instance-view) > #items_view_hide {
-    flex: 0 0 42% !important;
-    width: 42% !important;
-    max-width: 42% !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-  #sales_new #touchsales_page > .row:has(#instance-view) > #instance-view {
-    flex: 0 0 58% !important;
-    width: 58% !important;
-    max-width: 58% !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-  #sales_new #items_view_hide > .row {
-    display: flex !important;
-    flex: 1 1 0 !important;
-    flex-direction: column !important;
-    flex-wrap: nowrap !important;
-    width: 100% !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    margin: 0 !important;
-    overflow: hidden !important;
-  }
-  #sales_new #items_view_hide > .row > .input-group {
-    flex: 0 0 auto !important;
-    width: 100% !important;
-  }
-  #sales_new #items_view_hide > .row > div:last-child {
-    display: flex !important;
-    flex: 1 1 0 !important;
-    flex-direction: column !important;
-    width: 100% !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-  }
-  #sales_new #items_view_hide #defaultTabJustified {
-    flex: 0 0 auto !important;
-    margin-bottom: 6px !important;
-  }
-  #sales_new #items_view_hide #sales_new_productList,
-  #sales_new #items_view_hide #sales_new_categoryList,
-  #sales_new #items_view_hide #sales_new_brandList {
-    flex: 1 1 0 !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-  }
-  #sales_new #instance-view #viewtest {
-    display: flex !important;
-    flex: 1 1 0 !important;
-    flex-direction: column !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    margin-bottom: 6px !important;
-  }
-  #sales_new #instance-view #sales_table {
-    flex: 1 1 0 !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-  }
-  #sales_new #instance-view #sales_table .table-responsive {
-    height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
-  }
-  #sales_new #instance-view #sales_new_items_table {
-    margin-bottom: 0 !important;
-  }
-  #sales_new #instance-view #sales_coupon_row,
-  #sales_new #instance-view > .row.kot-hide {
-    flex: 0 0 auto !important;
-  }
-  #sales_new .sales-function-shortcuts button > *,
-  #sales_new button > i,
-  #sales_new a > i,
-  #sales_new button > svg,
-  #sales_new a > svg { pointer-events: none; }
-  #sales_new .sales-function-shortcuts button,
-  #sales_new button,
-  #sales_new a { position: relative; z-index: 2; }
-  #sales_new .sales-function-toolbar-placeholder { display: none !important; }
-}
-@media (max-height: 760px) and (min-width: 768px) {
-  #sales_new { height: calc(100vh - 56px) !important; max-height: calc(100vh - 56px) !important; }
-  #sales_new > .contentbar { padding-top: 4px !important; padding-bottom: 4px !important; }
-  #sales_new .sales-function-shortcuts { gap: 5px; padding: 5px; margin-bottom: 4px; }
-  #sales_new .sales-function-key { min-height: 36px; padding: 4px 7px; }
-  #sales_new .sales-function-key span { font-size: 10px; }
-  #sales_new .sales-function-key kbd { font-size: 9px; }
-}
-
-
-/* Sales catalogue layout correction: keep the scanner/search row horizontal
-   and place the category tabs immediately above their active content. */
-@media (min-width: 768px) {
-  #sales_new #items_view_hide {
-    display: flex !important;
-    flex-direction: column !important;
-    flex-wrap: nowrap !important;
-    align-items: stretch !important;
-    min-width: 0 !important;
-  }
-  /* The first row contains only the barcode/search input group. */
-  #sales_new #items_view_hide > .row {
-    display: block !important;
-    flex: 0 0 auto !important;
-    width: 100% !important;
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: visible !important;
-    margin: 0 0 8px !important;
-  }
-  #sales_new #items_view_hide > .row > .input-group,
-  #sales_new #items_view_hide > .row > .col-12.input-group {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    align-items: stretch !important;
-    width: 100% !important;
-    height: 38px !important;
-    min-height: 38px !important;
-    gap: 0 !important;
-    padding-right: 0 !important;
-  }
-  #sales_new #sales_new_item_name {
-    display: block !important;
-    flex: 1 1 auto !important;
-    width: 1% !important;
-    min-width: 0 !important;
-    height: 38px !important;
-  }
-  #sales_new #sales_barcode_ready,
-  #sales_new #camera_scan_btn,
-  #sales_new #quick_sale_btn {
-    display: inline-flex !important;
-    flex: 0 0 auto !important;
-    align-items: center !important;
-    height: 38px !important;
-    white-space: nowrap !important;
-  }
-  #sales_new #camera_scan_btn[style*="display:none"] { display: none !important; }
-
-  #sales_new #items_view_hide > .sales-customer-entry {
-    display: flex !important;
-    flex: 0 0 auto !important;
-    align-items: center !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    margin: 0 0 8px !important;
-  }
-  #sales_new #items_view_hide > .toggle-customer-user {
-    position: absolute !important;
-    z-index: 30 !important;
-  }
-  /* This wrapper contains loyalty, the four tabs, and the catalogue lists. */
-  #sales_new #items_view_hide > div:not(.row):not(.sales-customer-entry):not(.toggle-customer-user) {
-    display: flex !important;
-    flex: 1 1 0 !important;
-    flex-direction: column !important;
-    width: 100% !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    margin: 0 !important;
-  }
-  #sales_new #items_view_hide #sales_loyalty_panel {
-    flex: 0 0 auto !important;
-  }
-  #sales_new #items_view_hide #defaultTabJustified {
-    display: flex !important;
-    flex: 0 0 auto !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    width: 100% !important;
-    margin: 0 0 8px !important;
-  }
-  #sales_new #items_view_hide #defaultTabJustified > .nav-item {
-    flex: 1 1 0 !important;
-    min-width: 0 !important;
-  }
-  #sales_new #items_view_hide #defaultTabJustified .nav-link {
-    white-space: nowrap !important;
-    padding: 8px 5px !important;
-  }
-  #sales_new #items_view_hide #sales_new_productList,
-  #sales_new #items_view_hide #sales_new_categoryList,
-  #sales_new #items_view_hide #sales_new_brandList {
-    flex: 1 1 0 !important;
-    width: 100% !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-  }
-}
-
 /* Sales workspace final layout: keep the scanner row measurable, tabs directly
    beneath it, catalogue independently scrollable, and basket rows reachable. */
 @media (min-width: 768px) {
@@ -1418,35 +1131,31 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
   /* The barcode/search input is a fixed-height first row, never a flex child
      with height:0. Tabs remain in the following sibling, immediately below. */
   #sales_new #items_view_hide > .row {
-    display: block !important; flex: 0 0 44px !important;
-    width: 100% !important; height: 44px !important; min-height: 44px !important;
-    max-height: 44px !important; margin: 0 0 8px !important;
+    display: block !important; flex: 0 0 38px !important;
+    width: 100% !important; height: 38px !important; min-height: 38px !important; max-height: 38px !important; margin: 0 0 8px !important;
     padding: 0 !important; overflow: visible !important;
   }
   #sales_new #items_view_hide > .row > .col-12.input-group,
   #sales_new #items_view_hide > .row > .input-group {
     display: flex !important; flex-flow: row nowrap !important;
     align-items: stretch !important; width: 100% !important;
-    height: 42px !important; min-height: 42px !important; max-height: 42px !important;
+    height: 38px !important; min-height: 38px !important; max-height: 38px !important;
     padding: 0 !important; margin: 0 !important; overflow: visible !important;
     box-sizing: border-box !important;
   }
   #sales_new #items_view_hide #sales_new_item_name {
     display: block !important; flex: 1 1 0 !important; width: 1% !important;
-    min-width: 0 !important; height: 42px !important; min-height: 42px !important;
-    max-height: 42px !important; box-sizing: border-box !important;
+    min-width: 0 !important; height: 38px !important; min-height: 38px !important;
+    max-height: 38px !important; box-sizing: border-box !important;
   }
   #sales_new #items_view_hide #sales_barcode_ready,
-  #sales_new #items_view_hide #camera_scan_btn,
   #sales_new #items_view_hide #quick_sale_btn {
     display: inline-flex !important; flex: 0 0 auto !important;
-    align-items: center !important; height: 42px !important;
-    min-height: 42px !important; max-height: 42px !important;
+    align-items: center !important; height: 38px !important;
+    min-height: 38px !important; max-height: 38px !important;
     white-space: nowrap !important; box-sizing: border-box !important;
   }
-  #sales_new #camera_scan_btn[style*="display:none"] { display: none !important; }
-
-  /* This direct child follows the scanner row in sales_write.html. */
+/* This direct child follows the scanner row in sales_write.html. */
   #sales_new #items_view_hide > div:not(.row):not(.sales-customer-entry):not(.toggle-customer-user) {
     display: flex !important; flex: 1 1 0 !important; flex-direction: column !important;
     width: 100% !important; height: 0 !important; min-height: 0 !important;
@@ -1458,9 +1167,6 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
     flex-wrap: nowrap !important; width: 100% !important; margin: 0 0 8px !important;
   }
   #sales_new #items_view_hide #defaultTabJustified > .nav-item { flex: 1 1 0 !important; min-width: 0 !important; }
-  #sales_new #items_view_hide #defaultTabJustified .nav-link {
-    white-space: nowrap !important; padding: 8px 5px !important;
-  }
   #sales_new #items_view_hide #sales_new_productList,
   #sales_new #items_view_hide #sales_new_categoryList,
   #sales_new #items_view_hide #sales_new_brandList {
@@ -1487,6 +1193,16 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
   #sales_new #instance-view #sales_new_items_table { margin-bottom: 0 !important; }
   #sales_new #instance-view #sales_coupon_row,
   #sales_new #instance-view > .row.kot-hide { flex: 0 0 auto !important; }
+
+  #sales_new .sales-function-shortcuts button > *,
+  #sales_new button > i,
+  #sales_new a > i,
+  #sales_new button > svg,
+  #sales_new a > svg { pointer-events: none; }
+  #sales_new .sales-function-shortcuts button,
+  #sales_new button,
+  #sales_new a { position: relative; z-index: 2; }
+  #sales_new .sales-function-toolbar-placeholder { display: none !important; }
 
   /* A modal/popover must cover the sales workspace cleanly. Hide only the
      catalogue visually without changing its flex width or collapsing the basket. */

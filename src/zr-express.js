@@ -14,34 +14,51 @@ function credentialsOf(value) {
 
 async function request(credentials, method, path, body) {
   const auth = credentialsOf(credentials);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  try {
-    const response = await fetch(BASE_URL + '/' + String(path).replace(/^\/+/, ''), {
-      method,
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/json',
-        'X-Tenant': auth.tenantId,
-        'X-Api-Key': auth.apiKey
-      },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      signal: controller.signal
-    });
-    const text = await response.text();
-    let data = {};
-    try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { message: text.slice(0, 500) }; }
-    if (!response.ok) {
-      const validation = Array.isArray(data.errors) ? data.errors.map(function (item) {
-        return [item.field || item.property || '', item.message || item.error || item.code || 'Invalid value'].filter(Boolean).join(': ');
-      }).filter(Boolean).join('; ') : '';
-      const message = validation || data.message || data.title || data.detail || ('ZR Express returned HTTP ' + response.status);
-      throw new Error(String(message).slice(0, 700));
+  const endpoint = String(path).replace(/^\/+/, '');
+  const url = BASE_URL + '/' + endpoint;
+  let response;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      response = await fetch(url, {
+        method,
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+          'X-Tenant': auth.tenantId,
+          'X-Api-Key': auth.apiKey
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        signal: controller.signal
+      });
+      break;
+    } catch (error) {
+      if (error && error.name === 'AbortError') {
+        throw new Error('ZR Express timed out while requesting ' + endpoint + '. Check your connection and try again.');
+      }
+      if (attempt === 0) {
+        await new Promise(resolve => setTimeout(resolve, 700));
+        continue;
+      }
+      const cause = error && error.cause;
+      const detail = cause && (cause.code || cause.message) || error && error.message || 'network error';
+      throw new Error('ZR Express could not reach ' + endpoint + ' (' + detail + '). Check internet access, DNS and firewall, then retry.');
+    } finally {
+      clearTimeout(timer);
     }
-    return data;
-  } finally {
-    clearTimeout(timer);
   }
+  const text = await response.text();
+  let data = {};
+  try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { message: text.slice(0, 500) }; }
+  if (!response.ok) {
+    const validation = Array.isArray(data.errors) ? data.errors.map(function (item) {
+      return [item.field || item.property || '', item.message || item.error || item.code || 'Invalid value'].filter(Boolean).join(': ');
+    }).filter(Boolean).join('; ') : '';
+    const message = validation || data.message || data.title || data.detail || ('ZR Express returned HTTP ' + response.status);
+    throw new Error(String(message).slice(0, 700));
+  }
+  return data;
 }
 
 async function searchAll(credentials, path, baseBody) {
