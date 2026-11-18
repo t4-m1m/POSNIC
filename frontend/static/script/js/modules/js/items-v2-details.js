@@ -110,7 +110,16 @@
     }
     function fill(id, rows, get) {
         var select = el(id), before = select.value;
-        rows.forEach(function (row) { var data = get(row); if (!data.id) return; var o = new Option(data.name, data.id); o.dataset.name = data.name; o.dataset.unit = data.unit || ''; select.add(o); });
+        rows.forEach(function (row) {
+            var data = get(row);
+            if (!data.id) return;
+            // "Balance" is not a sellable unit of measure in the item editor.
+            if (id === 'unit' && /^balance$/i.test(String(data.name || '').trim())) return;
+            var o = new Option(data.name, data.id);
+            o.dataset.name = data.name;
+            o.dataset.unit = data.unit || '';
+            select.add(o);
+        });
         if (before) select.value = before;
     }
     function requestOptions(id, url, get) {
