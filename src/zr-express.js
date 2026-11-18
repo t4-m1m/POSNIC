@@ -129,8 +129,7 @@ async function resolveCustomer(auth, parcel, phone) {
     return [p.number1, p.number2, item.phoneNumber, item.phone].some(value => String(value || '').replace(/\\D/g, '') === digits);
   }) || rows.find(item => String(item.name || '').trim().toLowerCase() === String(parcel.customerName || '').trim().toLowerCase());
   if (match && match.id) return String(match.id);
-  const created = await request(auth, 'POST', 'customers', {
-    type: 'individual',
+  const created = await request(auth, 'POST', 'customers/individual', {
     name: String(parcel.customerName || '').trim(),
     phone: { number1: phone, number2: intlPhone(parcel.phoneAlt) },
     addresses: [{
