@@ -1,0 +1,10 @@
+'use strict';
+const express=require('express');
+const router=express.Router();
+const {protect}=require('../middleware/auth');
+const controller=require('../controllers/zr-delivery.controller');
+router.use(protect);
+router.get('/',controller.list);
+router.post('/link',controller.link);
+router.patch('/:tracking/status',controller.updateStatus);
+module.exports=router;
