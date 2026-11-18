@@ -15699,8 +15699,16 @@ function ensureZrTracking(){
    try{
     var credentials=await electronAPI.zr.getCredentials();
     if(!credentials)throw Error('Identifiants ZR Express non configurés.');
-    await electronAPI.zr.cancelParcel(credentials,row.parcel_id);
-    await window.posnicZrRequest('POST','sales/cancel/'+encodeURIComponent(row.sale_id),{});
+    try {
+     await electronAPI.zr.cancelParcel(credentials,row.parcel_id);
+    } catch(cancelError) {
+     if(!/already\\s+(cancelled|canceled)|annul[eé]e/i.test(String(cancelError&&cancelError.message||'')))throw cancelError;
+    }
+    try {
+     await window.posnicZrRequest('POST','sales/cancel/'+encodeURIComponent(row.sale_id),{});
+    } catch(saleError) {
+     if(!/already cancelled/i.test(String(saleError&&saleError.message||'')))throw saleError;
+    }
     await window.posnicZrRequest('POST','delivery-zr/'+encodeURIComponent(tracking)+'/cancel',{});
     PosnicPro.alert('success','Livraison ZR et vente POSNIC annulées. Le stock a été restauré.');
     loadZrRows();

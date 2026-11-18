@@ -142,6 +142,7 @@ exports.cancel = async (req, res) => {
 exports.updateStatus = async (req,res) => {
   try {
     const sc=scope(req), tracking=String(req.params.tracking||'').trim(), next=statusOf(req.body.status);
+    if (next === 'ANNULEE') return res.status(400).json({ type:'error', message:'Use the Annuler action to cancel the parcel and its linked sale together.' });
     const col=req.db.collection('zr_deliveries'), row=await col.findOne({tracking_number:tracking,...sc});
     if(!row) return res.status(404).json({type:'error',message:'Delivery not found.'});
     if(row.status==='ANNULEE') return res.status(409).json({type:'error',message:'Cancelled deliveries are closed.'});
