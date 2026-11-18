@@ -15668,7 +15668,9 @@ PosnicPro.sales.openZrDelivery=async function(){
   $('#zr-commune').html('<option value="">Choisir la commune</option>').val('').trigger('change.select2');
   $('#zr-hub').html('<option value="">Choisir le point relais</option>'+d.hubs.filter(x=>x.isPickupPoint).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('')).val('').trigger('change.select2');
   $('#zr-type').val('home').trigger('change');
-  $('#zr-name').val($('#sales_new_customer_name').val()==='ZR Express'?'':$('#sales_new_customer_name').val());
+  var saleCustomerName=String($('#sales_new_customer_name').val()||'').trim();
+  if(/walk.?in|cash customer|comptoir|client\\s+de\\s+passage/i.test(saleCustomerName)||/^zr express$/i.test(saleCustomerName))saleCustomerName='';
+  $('#zr-name').val(saleCustomerName);
   $('#zr-phone').val($('#sales_new_customer_phone').val());
   $('#zr-address').val($('#sales_new_customer_address').val());
   $('#zr-info').text('Tarifs chargés. Recherchez directement dans les champs Wilaya et Commune, puis complétez les informations du destinataire.');
