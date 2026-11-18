@@ -1306,3 +1306,60 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
   .vertical-menu-icon .posnic-cashier-shortcuts > a *,
   .vertical-menu-icon .nav > a * { pointer-events:none !important; }
 }
+
+
+/* POSNIC catalogue viewport: fixed pane, independently scrollable contents. */
+@media (min-width: 768px) {
+  /* The search field and four tabs stay fixed; only this pane's contents scroll. */
+  #sales_new #items_view_hide > div:has(> #defaultTabJustified) {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+  }
+  #sales_new #items_view_hide #sales_new_productList,
+  #sales_new #items_view_hide #sales_new_categoryList,
+  #sales_new #items_view_hide #sales_new_brandList {
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+  }
+  #sales_new #items_view_hide #sales_new_productList:not([style*="display: none"]),
+  #sales_new #items_view_hide #sales_new_categoryList:not([style*="display: none"]),
+  #sales_new #items_view_hide #sales_new_brandList:not([style*="display: none"]) {
+    visibility: visible !important;
+  }
+  /* Content is allowed to grow naturally inside the scroll viewport. */
+  #sales_new #items_view_hide #item-lists,
+  #sales_new #items_view_hide #category-lists,
+  #sales_new #items_view_hide #brand-lists,
+  #sales_new #items_view_hide #recent_sales_list {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: max-content !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  #sales_new #items_view_hide .sale-tile-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important;
+    align-content: start !important;
+    align-items: start !important;
+    gap: 10px !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+}
