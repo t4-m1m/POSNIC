@@ -1155,8 +1155,9 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
     min-height: 38px !important; max-height: 38px !important;
     white-space: nowrap !important; box-sizing: border-box !important;
   }
-/* This direct child follows the scanner row in sales_write.html. */
-  #sales_new #items_view_hide > div:not(.row):not(.sales-customer-entry):not(.toggle-customer-user) {
+/* Only the catalogue wrapper may grow. Hidden customer-history/state
+     elements are siblings and must never consume vertical flex space. */
+  #sales_new #items_view_hide > div:has(> #defaultTabJustified) {
     display: flex !important; flex: 1 1 0 !important; flex-direction: column !important;
     width: 100% !important; height: 0 !important; min-height: 0 !important;
     overflow: hidden !important; margin: 0 !important;
@@ -1204,13 +1205,7 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
   #sales_new a { position: relative; z-index: 2; }
   #sales_new .sales-function-toolbar-placeholder { display: none !important; }
 
-  /* A modal/popover must cover the sales workspace cleanly. Hide only the
-     catalogue visually without changing its flex width or collapsing the basket. */
-  body.modal-open #sales_new #items_view_hide,
-  body:has(.swal2-container.swal2-shown) #sales_new #items_view_hide,
-  body:has(.bootbox.modal.show) #sales_new #items_view_hide {
-    visibility: hidden !important; pointer-events: none !important;
-  }
+  /* Popups overlay the sales workspace; keep the catalogue visible underneath. */
   #sales_new .sales-customer-entry,
   #sales_new .sales-customer-pop { display: none !important; }
 }
