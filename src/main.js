@@ -541,8 +541,15 @@ function apiPort() {
 }
 
 let mainWindow;
-// ZR Express v1 courier bridge; credentials are supplied only for each authorized request.
-require('./zr-express').register({ ipcMain, getWindow: () => mainWindow, BrowserWindow, dialog, app, safeStorage: require('electron').safeStorage });
+// ZR Express is an optional courier integration: a bridge registration problem must
+// never prevent the core POS window, local API, or cashier workflow from starting.
+try {
+  require('./zr-express').register({
+    ipcMain, getWindow: () => mainWindow, BrowserWindow, dialog, app, safeStorage
+  });
+} catch (error) {
+  console.error('[ZR Express] Desktop bridge unavailable; continuing POS startup:', error);
+}
 let apiServer;
 let hardwareManager;
 let kotManager;
@@ -2137,8 +2144,35 @@ function createWindow(showStartupLoader = !isWarmStartup()) {
     console.error('[Renderer] Preload script failed:', { preloadPath }, error);
   });
 
+  let rendererRecoveryStarted = false;
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
     console.error('[Renderer] Render process gone:', details);
+    updateHealthStatus({
+      interface: 'renderer-crashed',
+      lastError: { stage: 'render-process-gone', reason: details && details.reason, exitCode: details && details.exitCode }
+    });
+    // A renderer crash must not leave a visible, permanently blank POS window.
+    // Retry the normal login page once; if that fails, show the built-in recovery screen.
+    if (rendererRecoveryStarted || !mainWindow || mainWindow.isDestroyed()) return;
+    rendererRecoveryStarted = true;
+    setTimeout(() => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      const loginUrl = `http://localhost:${apiPort()}/public/login.html`;
+      mainWindow.loadURL(loginUrl).then(() => {
+        if (!mainWindow || mainWindow.isDestroyed()) return;
+        if (!mainWindow.isVisible()) mainWindow.show();
+        mainWindow.focus();
+        updateHealthStatus({ interface: 'renderer-recovered', lastError: null });
+      }).catch(error => {
+        console.error('[Renderer] Automatic recovery failed:', error);
+        if (!mainWindow || mainWindow.isDestroyed()) return;
+        mainWindow.loadFile(path.join(__dirname, 'loading.html'), {
+          query: { startupError: 'The POSNIC interface stopped unexpectedly', details: String(error.message || error) }
+        }).then(() => {
+          if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) mainWindow.show();
+        }).catch(loadError => console.error('[Renderer] Recovery screen failed:', loadError));
+      });
+    }, 500);
   });
 
   mainWindow.webContents.on(
