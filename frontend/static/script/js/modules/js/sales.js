@@ -15702,7 +15702,7 @@ function ensureZrTracking(){
     try {
      await electronAPI.zr.cancelParcel(credentials,row.parcel_id);
     } catch(cancelError) {
-     if(!/already\\s+(cancelled|canceled)|annul[eé]e/i.test(String(cancelError&&cancelError.message||'')))throw cancelError;
+     if(!/already\s+(cancelled|canceled)|annul[eé]e/i.test(String(cancelError&&cancelError.message||'')))throw cancelError;
     }
     try {
      await window.posnicZrRequest('POST','sales/cancel/'+encodeURIComponent(row.sale_id),{});
