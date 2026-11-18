@@ -797,7 +797,7 @@ PosnicPro.items = {
             var itemCount = Number(summary.itemCount !== undefined ? summary.itemCount : data.total) || 0;
             var moneyTotal = function (v) { return cur + '&nbsp;' + Number(v || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); };
             var totalPair = function (sum, weighted) {
-                return '<span class="items-total-value items-total-value-1"><span class="items-total-label">Total 1</span><strong>' + moneyTotal(sum) + '</strong></span>' + '<span class="items-total-value items-total-value-2"><span class="items-total-label">Total 2 · price × qty</span><strong>' + moneyTotal(weighted) + '</strong></span>';
+                return '<div class="items-total-card items-total-card-1"><span class="items-total-label">TOTAL 1 · SUM OF PRICES</span><strong>' + moneyTotal(sum) + '</strong></div>' + '<div class="items-total-card items-total-card-2"><span class="items-total-label">TOTAL 2 · PRICE × STOCK QTY</span><strong>' + moneyTotal(weighted) + '</strong></div>';
             };
             html += '</tbody><tfoot><tr class="items-total-row"><th></th><th>Filtered total · ' + itemCount + ' article(s)</th><th>Total</th>'
                 + '<th class="text-right">' + Number(summary.stock || 0).toLocaleString() + '</th>'
