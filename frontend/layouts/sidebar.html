@@ -188,6 +188,67 @@ body:not(.posnic-cashier-minimal) #posnic-cashier-versements-quicklink { display
         transition: none !important;
     }
 }
+
+/* Admin-only compact top alignment for the blue icon rail.
+   Keep the logo, quick-add button and existing navigation links in DOM;
+   flatten only the nav wrapper so they can be visually ordered together. */
+@media (min-width: 768px) {
+    body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail) .vertical-menu-icon {
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        gap: 12px !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+    }
+    body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail) .vertical-menu-icon > .nav {
+        display: contents !important;
+    }
+    body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail) .vertical-menu-icon .nav-pills > .logobar {
+        order: 0 !important;
+        flex: 0 0 auto !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 8px 0 !important;
+    }
+    body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail) .vertical-menu-icon > .posnic-cashier-shortcuts {
+        order: 1 !important;
+        display: flex !important;
+        flex: 0 0 auto !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 0 !important;
+        width: 60px !important;
+        min-width: 60px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail) .vertical-menu-icon > .posnic-cashier-shortcuts > a {
+        display: flex !important;
+        flex: 0 0 48px !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 48px !important;
+        min-width: 48px !important;
+        height: 48px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail) .vertical-menu-icon .nav-pills > a.nav-link {
+        order: 2 !important;
+        display: flex !important;
+        flex: 0 0 48px !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 60px !important;
+        min-width: 60px !important;
+        height: 48px !important;
+        margin: 0 !important;
+        padding: 7px 5px !important;
+    }
+}
 </style>
 <div class="leftbar">
     <!-- Start Sidebar -->
