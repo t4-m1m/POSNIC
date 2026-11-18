@@ -1,5 +1,6 @@
 <style>
-/* Cashier-only compact navigation. Admin layout remains untouched. */
+/* Cashier-only compact navigation. The administrator keeps the original blue sidebar layout. */
+.posnic-cashier-shortcuts { display:none; }
 body.posnic-cashier-minimal .vertical-menu-detail { display:none !important; }
 body.posnic-cashier-minimal .navigationbar { width:76px !important; min-width:76px !important; }
 body.posnic-cashier-minimal .vertical-menu-icon { width:76px !important; min-width:76px !important; }
@@ -12,8 +13,8 @@ body.posnic-nonadmin-icon-rail .vertical-menu-icon .posnic-cashier-shortcuts {
 }
 body.posnic-cashier-minimal .vertical-menu-icon .posnic-cashier-shortcuts > a,
 body.posnic-nonadmin-icon-rail .vertical-menu-icon .posnic-cashier-shortcuts > a {
-    display:flex !important; flex:0 0 48px; align-items:center; justify-content:center;
-    width:48px; min-width:48px; height:48px; margin:4px auto; padding:0;
+    display:flex !important; flex:0 0 56px; align-items:center; justify-content:center;
+    width:76px; min-width:76px; height:56px; margin:0; padding:0;
     position:relative; z-index:5; pointer-events:auto; touch-action:manipulation;
     transform:none !important; transition:background-color .16s ease, opacity .16s ease !important;
 }
@@ -81,7 +82,7 @@ body:not(.posnic-cashier-minimal) #posnic-cashier-versements-quicklink { display
     body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a:active {
         position: relative !important;
         display: flex !important;
-        flex: 0 0 48px !important;
+        flex: 0 0 56px !important;
         align-items: center !important;
         justify-content: center !important;
         width: 48px !important;
@@ -158,10 +159,10 @@ body:not(.posnic-cashier-minimal) #posnic-cashier-versements-quicklink { display
         position: relative !important;
         z-index: 3 !important;
         flex: 0 0 48px !important;
-        width: 48px !important;
-        min-width: 48px !important;
-        height: 48px !important;
-        margin: 4px auto !important;
+        width: 76px !important;
+        min-width: 76px !important;
+        height: 56px !important;
+        margin: 0 !important;
         padding: 0 !important;
         border: 0 !important;
         transform: none !important;
