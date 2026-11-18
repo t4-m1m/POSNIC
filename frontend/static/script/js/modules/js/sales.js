@@ -15644,6 +15644,7 @@ $('#posnic-zr-form').on('submit',async function(e){
 PosnicPro.sales.openZrDelivery=async function(){
  if(PosnicPro.sales.SaleAction!=='add'||PosnicPro.sales.saleProcess==='KOT'){PosnicPro.alert('warning','F7 est disponible sur une nouvelle vente.');return;}
  modal();
+ await initZrSelectSearch();
  var $modal=$('#posnic-zr-modal');
  $('#zr-info').text('Connexion à ZR Express et chargement des wilayas…');
  $modal.modal({backdrop:'static',keyboard:false,show:true});
