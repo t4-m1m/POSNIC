@@ -10339,6 +10339,7 @@ $(document).on('click','#save_captain_tables',function(){
         try { return JSON.parse(raw || '{}') || {}; } catch (_) { return {
     // ---- ZR Express (credentials are write-only in the settings API) ----
     _zrCatalog: null,
+    esc: function (value) { return $('<span>').text(value == null ? '' : String(value)).html().replace(/\"/g, '&quot;').replace(/'/g, '&#39;'); },
     loadZrExpress: function () {
         var self = PosnicPro.integrations;
         PosnicPro.get({ url: 'settings/group/secrets', data: {} }, function (secretResult) {
