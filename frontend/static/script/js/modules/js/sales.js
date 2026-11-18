@@ -4787,6 +4787,8 @@ PosnicPro.sales.addSale = {
             }
             if (fullyUnpaidNewSale) payment_mode_val = 'Credit';
             if (versementDraft) payment_mode_val = 'Versement';
+            var zrDraft = window.__posnicZrDraft || null;
+            if (zrDraft) { payment_mode_val = 'LIVRAISON_ZR'; payments = { LIVRAISON_ZR: Number(zrDraft.saleTotal) || 0 }; partial = (Number(zrDraft.saleTotal)||0).toFixed(2); partial_check = 'false'; $('#unpaid_payment_toggle').prop('checked', true); }
             let register_id = PosnicPro.sales.saleRegisterId();
             var isKotNewSale = (PosnicPro.sales.saleProcess === 'KOT');
             var newSaleTableNumber = '';
@@ -4861,6 +4863,7 @@ PosnicPro.sales.addSale = {
                     quote_price_honoured: PosnicPro.sales._sourceQuoteId
                         ? (PosnicPro.sales._quoteHonoured ? 'true' : 'false') : undefined,
                     multi_payment: payments,
+                    delivery_checkout: zrDraft ? { provider:'ZR_EXPRESS', tracking_number:zrDraft.parcel.trackingNumber, parcel_id:zrDraft.parcel.id, delivery_fee:zrDraft.deliveryFee, cod_total:zrDraft.codTotal } : undefined,
                     versement_checkout: versementDraft ? {
                         customer_name: versementDraft.customer_name,
                         phone: versementDraft.phone,
@@ -4896,6 +4899,10 @@ PosnicPro.sales.addSale = {
                 // ✅ Clear submission flag
     PosnicPro.sales.submissionInProgress = false;
                 if (response.type === 'success') {
+                    if (window.__posnicZrDraft) {
+                        var zrSaved = window.__posnicZrDraft; window.__posnicZrDraft = null;
+                        PosnicPro.post({url:'delivery-zr/link',data:JSON.stringify({saleId:response.data.sales_id,parcel:zrSaved.parcel,externalId:zrSaved.externalId,wilaya:zrSaved.wilaya,commune:zrSaved.commune,deliveryType:zrSaved.deliveryType,deliveryFee:zrSaved.deliveryFee,codTotal:zrSaved.codTotal,address:zrSaved.address})},function(r){if(r&&r.type==='success'&&window.electronAPI&&window.electronAPI.zr.saveBordereau){window.electronAPI.zr.saveBordereau(zrSaved.bordereauHtml(response.data.sales_id));}else{PosnicPro.alert('warning','Vente enregistrée, liaison Livraison ZR à vérifier.');}},function(){PosnicPro.alert('warning','Vente enregistrée, liaison Livraison ZR à rétablir.');});
+                    }
                     if (versementDraft) {
                         window.__posnicVersementDraft = null;
                         // F6 uses the exact same direct thermal sale-print pipeline
@@ -12118,7 +12125,8 @@ $(document).on('click.posnicCreditRules', '#save_btn', function (event) {
 
 /* The on-screen function keys deliberately invoke the exact same handlers as the physical keys. */
 PosnicPro.sales.runFunctionShortcut = function (key) {
-    if (!['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F8'].includes(key)) return;
+    if (!['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8'].includes(key)) return;
+    if (key === 'F7') return PosnicPro.sales.openZrDelivery();
     if (key === 'F6') {
         if (typeof PosnicPro.sales.openVersementCheckout === 'function') return PosnicPro.sales.openVersementCheckout();
         return false;
@@ -15541,4 +15549,14 @@ if (!window.__posnicCaptureSearchLabelClick) {
  $('#posnic-cashier-close-confirm').on('click',function(){var counted=Number($('#posnic-cashier-counted').val()),expected=Number($('#posnic-cashier-expected-value').val());if(!Number.isFinite(counted)||counted<0){$('#posnic-cashier-close-status').text('Saisissez un montant compté valide.');return;}var $b=$(this).prop('disabled',true).text('Enregistrement…');PosnicPro.post({url:'sales/cashierDayClose',data:JSON.stringify({branch:PosnicPro.local.get('branch_id_set'),date:$('#posnic-cashier-date').val(),expected_cash:expected,counted_cash:counted})},function(r){$b.prop('disabled',false).text('Clôturer la journée');if(!r||r.type!=='success'){$('#posnic-cashier-close-status').text(r&&r.message||'Impossible d’enregistrer la fermeture.');return;}var d=Number(r.data&&r.data.difference||0);$('#posnic-cashier-close-status').text(d===0?'Journée clôturée. La caisse est exacte.':'Journée clôturée. Écart enregistré : '+money(d)+'.');$('#posnic-cashier-close-confirm').prop('disabled',true);PosnicPro.alert('success',d===0?'Fermeture de journée enregistrée.':'Fermeture enregistrée avec un écart de '+money(d)+'.');},function(xhr){$b.prop('disabled',false).text('Clôturer la journée');var m='Impossible d’enregistrer la fermeture.';try{m=JSON.parse(xhr.responseText||'{}').message||m;}catch(_){}$('#posnic-cashier-close-status').text(m);});});}
  function updateDifference(){var expected=Number($('#posnic-cashier-expected-value').val()),raw=$('#posnic-cashier-counted').val(),d=raw===''?null:Number(raw)-expected;$('#posnic-cashier-difference').text(d==null||!Number.isFinite(d)?'—':(d>0?'+':'')+money(d));$('#posnic-cashier-close-confirm').prop('disabled',d==null||!Number.isFinite(d)||Number(raw)<0);}
  $(function(){ensureModal();canSeeButton();if(window.MutationObserver&&document.body)new MutationObserver(canSeeButton).observe(document.body,{attributes:true,childList:true,subtree:true,attributeFilter:['style','class','hidden']});$(window).on('hashchange.posnicCashierClose',canSeeButton);$(document).on('click','#posnic-cashier-day-close',function(){var branch=PosnicPro.local.get('branch_id_set'),date=dayKey();if(!branch){PosnicPro.alert('error','Aucune succursale active.');return;}$('#posnic-cashier-expected').text('Calcul…');$('#posnic-cashier-counted').val('');$('#posnic-cashier-difference').text('—');$('#posnic-cashier-close-status').text('Chargement des mouvements de la journée…');$('#posnic-cashier-close-confirm').prop('disabled',true);$('#posnic-cashier-date').val(date);$('#posnic-cashier-close-modal').modal('show');PosnicPro.get({url:'sales/cashierDaySummary',data:{branch:branch,starting_date:date,ending_date:date,type:'VIEW'}},function(r){if(!r||r.type!=='success'||!r.data||!Number.isFinite(Number(r.data.cash_expected))){$('#posnic-cashier-close-status').text(r&&r.message||'Le montant théorique est indisponible.');return;}$('#posnic-cashier-expected-value').val(Number(r.data.cash_expected));$('#posnic-cashier-expected').text(money(r.data.cash_expected));$('#posnic-cashier-close-status').text('Vérifiez le tiroir-caisse, saisissez le montant compté, puis confirmez.');updateDifference();$('#posnic-cashier-counted').trigger('focus');},function(xhr){var m='Impossible de charger le montant théorique.';try{m=JSON.parse(xhr.responseText||'{}').message||m;}catch(_){}$('#posnic-cashier-close-status').text(m);});});});
+})(jQuery);
+
+(function($){
+function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c];});}
+function modal(){if($('#posnic-zr-modal').length)return; $('body').append('<div class="modal fade" id="posnic-zr-modal"><div class="modal-dialog modal-lg"><div class="modal-content"><form id="posnic-zr-form"><div class="modal-header"><h5>Livraison · ZR Express</h5><button type="button" class="close" data-dismiss="modal">×</button></div><div class="modal-body"><div class="row"><div class="col-md-6 form-group"><label>Nom *</label><input id="zr-name" class="form-control" required></div><div class="col-md-6 form-group"><label>Téléphone *</label><input id="zr-phone" class="form-control" required></div><div class="col-md-6 form-group"><label>Téléphone secondaire</label><input id="zr-phone2" class="form-control"></div><div class="col-md-6 form-group"><label>Wilaya *</label><select id="zr-wilaya" class="form-control" required></select></div><div class="col-md-6 form-group"><label>Commune *</label><select id="zr-commune" class="form-control" required></select></div><div class="col-md-6 form-group"><label>Hub expéditeur *</label><select id="zr-hub" class="form-control" required></select></div><div class="col-md-6 form-group"><label>Type</label><select id="zr-type" class="form-control"><option value="home">À domicile</option><option value="pickup-point">Bureau</option></select></div><div class="col-md-6 form-group"><label>Adresse</label><input id="zr-address" class="form-control"></div><div class="col-md-6 form-group"><label>Frais livraison (DZD)</label><input id="zr-fee" type="number" min="0" step="0.01" value="0" class="form-control"></div></div><p id="zr-info" class="small text-muted"></p></div><div class="modal-footer"><button type="button" class="btn btn-light" data-dismiss="modal">Annuler</button><button class="btn btn-primary">Créer la livraison</button></div></form></div></div></div>');
+$('#zr-wilaya').on('change',async function(){try{let rows=await electronAPI.zr.communes(window.__zrCredentials,$(this).val());$('#zr-commune').html(rows.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join(''));}catch(e){PosnicPro.alert('error',e.message);}});
+$('#zr-form').on('submit',function(e){e.preventDefault();});
+}
+PosnicPro.sales.openZrDelivery=async function(){if(PosnicPro.sales.SaleAction!=='add'||PosnicPro.sales.saleProcess==='KOT'){PosnicPro.alert('warning','F7 est disponible sur une nouvelle vente.');return;}modal();try{let c=await electronAPI.zr.getCredentials();if(!c)throw Error('Configurez les identifiants ZR Express dans Paramètres.');window.__zrCredentials=c;let d=await electronAPI.zr.catalog(c);$('#zr-wilaya').html(d.wilayas.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.code+' · '+x.name)+'</option>').join(''));$('#zr-hub').html(d.hubs.filter(x=>!x.isPickupPoint).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join(''));$('#zr-name').val($('#sales_new_customer_name').val());$('#zr-phone').val($('#sales_new_customer_phone').val());$('#zr-address').val($('#sales_new_customer_address').val());$('#zr-info').text('Tarifs ZR à vérifier et à saisir selon le barème de votre compte.');$('#posnic-zr-modal').modal('show');}catch(e){PosnicPro.alert('error',e.message);}};
+$(document).on('keydown.zrf7',function(e){if(e.key==='F7'&&$('#sales_new').is(':visible')&&!$('.modal.show').length){e.preventDefault();e.stopImmediatePropagation();PosnicPro.sales.openZrDelivery();}});
 })(jQuery);
