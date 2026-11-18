@@ -31,6 +31,7 @@ exports.link = async (req, res) => {
   try {
     const sc = scope(req), id = saleId(req.body.saleId);
     const sales = req.db.collection('sales'), deliveries = req.db.collection('zr_deliveries');
+    await deliveries.createIndex({sale_id:1,license:1},{unique:true});
     const sale = await sales.findOne({ _id: id, ...sc });
     if (!sale) return res.status(404).json({ type:'error', message:'Sale not found in this branch.' });
     const p = req.body.parcel || {};
@@ -99,7 +100,9 @@ exports.updateStatus = async (req,res) => {
       }
     }
     if(next==='ENCAISSE' && row.status!=='ENCAISSE') {
-      await req.db.collection('zr_delivery_payouts').updateOne({tracking_number:tracking,...sc},
+      const payoutCollection=req.db.collection('zr_delivery_payouts');
+      await payoutCollection.createIndex({tracking_number:1,license:1},{unique:true});
+      await payoutCollection.updateOne({tracking_number:tracking,...sc},
         {$setOnInsert:{tracking_number:tracking,sale_id:row.sale_id,branch_id:sc.branch_id,license:sc.license,amount:row.cod_total,method:'cash',paid_at:set.paid_at,created_by:String(req.user?._id||'')}},{upsert:true});
     }
     return res.json({type:'success',data:{tracking_number:tracking,status:next}});

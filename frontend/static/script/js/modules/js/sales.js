@@ -5092,6 +5092,7 @@ PosnicPro.sales.addSale = {
                     PosnicPro.alert(response.type, response.message);
                 }
             }, function (xhr) {
+                if (window.__posnicZrDraft) { var failedZr = window.__posnicZrDraft; window.__posnicZrDraft = null; if (window.electronAPI && window.electronAPI.zr && window.electronAPI.zr.cancelParcel) window.electronAPI.zr.cancelParcel(window.__zrCredentials, failedZr.parcel.id).catch(function(){ console.warn('[ZR Express] Parcel cancellation needs manual review.'); }); }
                 window.__posnicSendWhatsAppReceiptAfterSave = false;
                 loader.find(".loadingSpinner").remove();
                 if (PosnicPro.businessApproval && PosnicPro.businessApproval.failed(xhr)) return;

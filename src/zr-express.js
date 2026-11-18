@@ -165,6 +165,8 @@ async function createParcel(credentials, input) {
   return { id: created.id, trackingNumber, status: details.state && details.state.name || 'OrderReceived', raw: details };
 }
 
+async function cancelParcel(credentials, parcelId) { const value=String(parcelId||'').trim(); if(!value) throw new Error('Parcel ID is required.'); return request(credentials,'DELETE','parcels/'+encodeURIComponent(value)); }
+
 async function getParcel(credentials, tracking) {
   const value = String(tracking || '').trim();
   if (!value) throw new Error('Tracking number is required.');
@@ -190,6 +192,7 @@ function register({ ipcMain, getWindow, BrowserWindow, dialog, app, safeStorage 
   ipcMain.handle('zr:communes', async (_event, credentials, wilayaUuid) => getCommunes(credentials, wilayaUuid));
   ipcMain.handle('zr:createParcel', async (_event, credentials, parcel) => createParcel(credentials, parcel));
   ipcMain.handle('zr:getParcel', async (_event, credentials, tracking) => getParcel(credentials, tracking));
+  ipcMain.handle('zr:cancelParcel', async (_event, credentials, parcelId) => cancelParcel(credentials, parcelId));
   ipcMain.handle('zr:save-bordereau', async (_event, html) => {
     if (typeof html !== 'string' || !html.includes('<html') || html.length > 200000) throw new Error('Invalid bordereau document.');
     const owner = getWindow && getWindow();
@@ -205,4 +208,4 @@ function register({ ipcMain, getWindow, BrowserWindow, dialog, app, safeStorage 
   });
 }
 
-module.exports = { register, getCatalog, getCommunes, createParcel, getParcel };
+module.exports = { register, getCatalog, getCommunes, createParcel, getParcel, cancelParcel };
