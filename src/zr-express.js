@@ -131,7 +131,7 @@ async function resolveCustomer(auth, parcel, phone) {
   if (match && match.id) return String(match.id);
   const created = await request(auth, 'POST', 'customers/individual', {
     name: String(parcel.customerName || '').trim(),
-    phone: { number1: phone, number2: intlPhone(parcel.phoneAlt) },
+    phone: { number1: phone, ...(intlPhone(parcel.phoneAlt) ? { number2: intlPhone(parcel.phoneAlt) } : {}) },
     addresses: [{
       street: String(parcel.address || '').slice(0, 500),
       cityTerritoryId: String(parcel.cityTerritoryId),
