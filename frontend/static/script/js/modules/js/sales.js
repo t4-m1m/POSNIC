@@ -14913,6 +14913,8 @@ $(document).ready(function () {
                     index: index,
                     value: el.value,
                     checked: !!el.checked,
+                    disabled: !!el.disabled,
+                    readOnly: !!el.readOnly,
                     selectedIndex: typeof el.selectedIndex === 'number' ? el.selectedIndex : -1
                 });
             });
@@ -14930,9 +14932,13 @@ $(document).ready(function () {
             var tender = document.getElementById('infobar-settings-sidebar-tender-details');
             var tenderControls = [];
             var tenderLeaves = [];
+            var tenderButtons = [];
             if (tender) {
                 Array.prototype.forEach.call(tender.querySelectorAll('input,select,textarea'), function (el, index) {
-                    tenderControls.push({ id: el.id || '', name: el.name || '', index: index, value: el.value, checked: !!el.checked, selectedIndex: typeof el.selectedIndex === 'number' ? el.selectedIndex : -1 });
+                    tenderControls.push({ id: el.id || '', name: el.name || '', index: index, value: el.value, checked: !!el.checked, disabled: !!el.disabled, readOnly: !!el.readOnly, selectedIndex: typeof el.selectedIndex === 'number' ? el.selectedIndex : -1 });
+                });
+                Array.prototype.forEach.call(tender.querySelectorAll('button'), function (el, index) {
+                    tenderButtons.push({ id: el.id || '', index: index, disabled: !!el.disabled, hidden: !!el.hidden, ariaPressed: el.getAttribute('aria-pressed') });
                 });
                 Array.prototype.forEach.call(tender.querySelectorAll('[id]'), function (el) {
                     if (!el.children.length && !/^(INPUT|TEXTAREA|SELECT|OPTION)$/.test(el.tagName)) tenderLeaves.push({ id: el.id, html: el.innerHTML });
@@ -14943,8 +14949,11 @@ $(document).ready(function () {
             var overlay = document.querySelector('.infobar-settings-sidebar-overlay');
             return {
                 controls: controls, leaves: leaves, cartHtml: body ? body.innerHTML : null, values: values,
+                buttons: Array.prototype.map.call(root.querySelectorAll('button'), function (el, index) {
+                    return { id: el.id || '', index: index, disabled: !!el.disabled, hidden: !!el.hidden, ariaPressed: el.getAttribute('aria-pressed') };
+                }),
                 tender: {
-                    controls: tenderControls, leaves: tenderLeaves,
+                    controls: tenderControls, leaves: tenderLeaves, buttons: tenderButtons,
                     open: !!(tender && tender.classList.contains('sidebarview')),
                     className: tender ? tender.className : '',
                     style: tender ? tender.getAttribute('style') : null,
@@ -14976,11 +14985,23 @@ $(document).ready(function () {
                 if (!el) return;
                 if (el.type === 'checkbox' || el.type === 'radio') el.checked = saved.checked;
                 else el.value = saved.value;
+                if (saved.disabled !== undefined) el.disabled = saved.disabled;
+                if (saved.readOnly !== undefined) el.readOnly = saved.readOnly;
                 if (saved.selectedIndex >= 0 && typeof el.selectedIndex === 'number') el.selectedIndex = saved.selectedIndex;
             });
             (snapshot.leaves || []).forEach(function (saved) {
                 var el = document.getElementById(saved.id);
                 if (el && root.contains(el) && !el.children.length) el.innerHTML = saved.html;
+            });
+            (snapshot.buttons || []).forEach(function (saved) {
+                var buttons = root.querySelectorAll('button');
+                var el = saved.id ? document.getElementById(saved.id) : buttons[saved.index];
+                if (!el || !root.contains(el)) el = buttons[saved.index];
+                if (!el) return;
+                el.disabled = saved.disabled;
+                el.hidden = saved.hidden;
+                if (saved.ariaPressed !== null) el.setAttribute('aria-pressed', saved.ariaPressed);
+                else el.removeAttribute('aria-pressed');
             });
             var tender = document.getElementById('infobar-settings-sidebar-tender-details');
             if (tender && snapshot.tender) {
@@ -14994,11 +15015,23 @@ $(document).ready(function () {
                     if (!field) return;
                     if (field.type === 'checkbox' || field.type === 'radio') field.checked = saved.checked;
                     else field.value = saved.value;
+                    if (saved.disabled !== undefined) field.disabled = saved.disabled;
+                    if (saved.readOnly !== undefined) field.readOnly = saved.readOnly;
                     if (saved.selectedIndex >= 0 && typeof field.selectedIndex === 'number') field.selectedIndex = saved.selectedIndex;
                 });
                 (snapshot.tender.leaves || []).forEach(function (saved) {
                     var field = document.getElementById(saved.id);
                     if (field && tender.contains(field) && !field.children.length) field.innerHTML = saved.html;
+                });
+                (snapshot.tender.buttons || []).forEach(function (saved) {
+                    var buttons = tender.querySelectorAll('button');
+                    var field = saved.id ? document.getElementById(saved.id) : buttons[saved.index];
+                    if (!field || !tender.contains(field)) field = buttons[saved.index];
+                    if (!field) return;
+                    field.disabled = saved.disabled;
+                    field.hidden = saved.hidden;
+                    if (saved.ariaPressed !== null) field.setAttribute('aria-pressed', saved.ariaPressed);
+                    else field.removeAttribute('aria-pressed');
                 });
                 tender.className = snapshot.tender.className || tender.className;
                 if (snapshot.tender.style === null) tender.removeAttribute('style'); else if (snapshot.tender.style !== undefined) tender.setAttribute('style', snapshot.tender.style);
@@ -15131,6 +15164,8 @@ $(document).ready(function () {
             $('#infobar-settings-sidebar-tender-details').removeClass('sidebarview');
             $('.infobar-settings-sidebar-overlay').hide();
             $('#tenderpage').show();
+            $('#newsalespage').hide();
+            $('#sales_new').show();
             if (PosnicPro.sales.clear && PosnicPro.sales.clear.cartItems) PosnicPro.sales.clear.cartItems(false);
             PosnicPro.sales.addSalesItemChars = []; PosnicPro.sales.EditRecentSaleParams = []; PosnicPro.sales._lineModifiers = {};
             PosnicPro.sales.SaleAction = 'add'; PosnicPro.sales.saleProcess = null; PosnicPro.sales.editSaleAction = false;
