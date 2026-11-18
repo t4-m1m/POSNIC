@@ -489,3 +489,56 @@
  #items_v2 .iv2-step-content>#iv2-appearance{grid-column:1/-1!important}
 }
 </style>
+
+<style id="iv2-step2-organized-layout">
+/* Step 2 is a predictable, responsive form: stock and cost first,
+   then the complete pricing group, then the picture uploader. */
+#items_v2 #iv2-step2-content:not([hidden]){
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+ grid-auto-flow:row!important;
+ grid-auto-rows:min-content!important;
+ align-content:start!important;
+ align-items:start!important;
+ gap:12px!important;
+ height:auto!important;
+ min-height:0!important;
+ max-height:none!important;
+ overflow:visible!important;
+ padding:2px 2px 14px!important;
+}
+#items_v2 #iv2-step2-content>[hidden]{display:none!important}
+#items_v2 #iv2-step2-content>#iv2-stock-card{grid-column:1!important;grid-row:1!important}
+#items_v2 #iv2-step2-content>.iv2-purchase-cost{grid-column:2!important;grid-row:1!important}
+#items_v2 #iv2-step2-content>#iv2-pricing-extra{grid-column:1/-1!important;grid-row:2!important}
+#items_v2 #iv2-step2-content>#iv2-appearance{grid-column:1/-1!important;grid-row:3!important}
+#items_v2 #iv2-step2-content>#iv2-zero-price,
+#items_v2 #iv2-step2-content>#iv2-price-hint,
+#items_v2 #iv2-step2-content>#iv2-tax-error,
+#items_v2 #iv2-step2-content>#iv2-zero-stock{grid-column:1/-1!important}
+#items_v2 #iv2-step2-content>#iv2-pricing-extra .iv2-grid.iv2-pricing{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px!important}
+#items_v2 #iv2-step2-content>#iv2-pricing-extra>.iv2-grid:not(.iv2-pricing){display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important}
+#items_v2 #iv2-step2-content>#iv2-appearance>div:first-of-type{display:flex!important;align-items:center!important;gap:12px!important;flex-wrap:wrap!important}
+#items_v2 #iv2-step2-content>#iv2-appearance input[type=file]{max-width:100%!important;min-height:38px!important}
+#items_v2 #iv2-step2-content .iv2-section,
+#items_v2 #iv2-step2-content .iv2-purchase-cost,
+#items_v2 #iv2-step2-content #iv2-stock-card{min-width:0!important;width:100%!important;height:auto!important;max-height:none!important;overflow:visible!important;align-self:start!important}
+#items_v2 #iv2-step2-content .iv2-grid>div{min-width:0!important}
+#items_v2 #iv2-step2-content input:not([type=checkbox]):not([type=radio]):not([type=file]),
+#items_v2 #iv2-step2-content select,
+#items_v2 #iv2-step2-content textarea{width:100%!important;max-width:100%!important;box-sizing:border-box!important}
+#items_v2 #iv2-step2-content .iv2-photo-list{display:flex!important;flex-wrap:wrap!important;max-height:none!important;overflow:visible!important}
+@media(max-width:900px){
+ #items_v2 #iv2-step2-content:not([hidden]){grid-template-columns:minmax(0,1fr)!important}
+ #items_v2 #iv2-step2-content>#iv2-stock-card,
+ #items_v2 #iv2-step2-content>.iv2-purchase-cost,
+ #items_v2 #iv2-step2-content>#iv2-pricing-extra,
+ #items_v2 #iv2-step2-content>#iv2-appearance{grid-column:1!important;grid-row:auto!important}
+ #items_v2 #iv2-step2-content>#iv2-pricing-extra .iv2-grid.iv2-pricing{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ #items_v2 #iv2-step2-content>#iv2-pricing-extra>.iv2-grid:not(.iv2-pricing){grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:560px){
+ #items_v2 #iv2-step2-content>#iv2-pricing-extra .iv2-grid.iv2-pricing,
+ #items_v2 #iv2-step2-content>#iv2-pricing-extra>.iv2-grid:not(.iv2-pricing){grid-template-columns:minmax(0,1fr)!important}
+}
+</style>
