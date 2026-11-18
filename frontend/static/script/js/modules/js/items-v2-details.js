@@ -218,7 +218,7 @@
                 usedCodes.add(prior.barcode_id);return prior;
             }
             var code=makeInternalBarcode(Array.from(usedCodes));usedCodes.add(code);
-            return {variant_value:name,selling_price:val('price'),available_quantity:'0',company_price:val('cost'),mrp_price:val('mrp'),position:val('position'),barcode_id:code,sku_id:'',gtin:'',discount_amount:val('discount-type')==='amount'?val('discount'):'',discount_percentage:val('discount-type')==='percentage'?val('discount'):''};
+            return {variant_value:name,selling_price:val('price'),available_quantity:'0',company_price:val('cost'),mrp_price:val('mrp'),position:val('position'),barcode_id:code,sku_id:'',gtin:''};
         });
         signature=variantSignature();renderVariantRows();
     }
@@ -277,7 +277,7 @@
         var finalPurchaseCost = manualPurchaseCost && Number.isFinite(enteredPurchaseCost) && enteredPurchaseCost >= 0 ? Math.round((enteredPurchaseCost + Number.EPSILON) * 100) / 100 : (purchaseBase === null ? null : purchaseBase + purchaseExtraCost);
         var out = { mrp_price: Number(val('mrp')), reorder_point: number('reorder'), unit_id: val('unit') === 'qty' ? '' : val('unit'), unit: u && u.dataset.unit || 'qty', supplier_id: val('supplier'), supplier_name: supplier && supplier.dataset.name || '',
             selling_price_2: val('price-2') === '' ? Number(val('price')) || 0 : Number(val('price-2')), selling_price_3: val('price-3') === '' ? (val('price-2') === '' ? Number(val('price')) || 0 : Number(val('price-2')) || 0) : Number(val('price-3')), open_price: checked('open-price'), service_unit: val('service-unit'), item_weight_machine_based: caps.weight && checked('weight'),
-            discount_amount: val('discount-type') === 'amount' ? Number(val('discount')) : 0, discount_percentage: val('discount-type') === 'percentage' ? Number(val('discount')) : 0,
+            discount_amount: 0, discount_percentage: 0,
             plu_code: val('plu'), gtin: val('gtin'), barcodes: list(val('alt-barcodes')), purchase_unit: val('purchase-unit'), conversion_factor: number('pack-size'), brand: val('brand'), article_type: val('type-name'), brand_abbreviation: val('brand-abbr').toLowerCase(), reference_date: val('reference-date'), model_reference: val('reference'), tags: list(val('tags')), position: Number(val('position')),
             items_mfg_date: val('mfg'), items_expiry_date: val('expiry'), icon: val('icon'), tile_color: auto ? auto.color : val('tile-color'), tile_shape: auto ? auto.shape : val('tile-shape'),
             image: photos.map(function (p) { return { name:p.uploaded||p.name, size:p.size, cover:p.cover }; }),
@@ -310,7 +310,7 @@
         }) };
     }
     function status() {
-        captureVariants(); return { family: isFamily(), openPrice: checked('open-price'), prices: variants.map(function(r){return Number(r.selling_price);}), quantities: variants.map(function(r){return Number(r.available_quantity);}), hsn: caps.tax && !!val('hsn'), tax: Number(val('hsn-rate')), discount: Number(val('discount')), discountType: val('discount-type') };
+        captureVariants(); return { family: isFamily(), openPrice: checked('open-price'), prices: variants.map(function(r){return Number(r.selling_price);}), quantities: variants.map(function(r){return Number(r.available_quantity);}), hsn: caps.tax && !!val('hsn'), tax: Number(val('hsn-rate')) };
     }
     function update(capabilities, kind) {
         caps=capabilities;
@@ -323,7 +323,7 @@
         el('quantity').disabled=kind==='service'; el('quantity').readOnly=isFamily(); if(isFamily()){captureVariants();el('quantity').value=variants.reduce(function(sum,row){return sum+Math.max(0,Number(row.available_quantity)||0);},0);}
         el('weight').closest('label').hidden=!caps.weight || kind==='service';
         el('weight').disabled=!caps.weight || kind==='service';
-        el('discount').max=val('discount-type')==='percentage'?'100':'';
+
         el('tile-color').disabled=checked('auto-tile'); el('tile-shape').disabled=checked('auto-tile');
         if(checked('same-sku')&&!isFamily())el('barcode').value=val('sku');
         el('barcode').readOnly=checked('same-sku');
@@ -510,7 +510,7 @@
         if (itemName) el('name').value = itemName;
         ['mfg','expiry'].forEach(function(id){var v=item[id==='mfg'?'items_mfg_date':'items_expiry_date'];el(id).value=v?String(v).slice(0,10):'';});
         el('tags').value=(item.tags||[]).join(', '); el('alt-barcodes').value=(item.barcodes||[]).join(', ');
-        el('discount-type').value=Number(item.discount_percentage)?'percentage':'amount';el('discount').value=item.discount_percentage||item.discount_amount||0;
+
         el('auto-tile').checked=!item.tile_color; el('open-price').checked=!!item.open_price;el('weight').checked=!!item.item_weight_machine_based;el('spice').checked=!!item.spice_choice;
         function select(id,value,name,unit) {value=String(value||'');if(value&&!Array.from(el(id).options).some(function(o){return o.value===value;})){var o=new Option(name||value,value);o.dataset.name=name||value;o.dataset.unit=unit||'';el(id).add(o);}el(id).value=value;}
         select('unit',item.unit_id||item.unit||'qty',item.unit,item.unit);select('supplier',item.supplier_id,item.supplier_name);

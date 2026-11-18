@@ -78,31 +78,6 @@
             taxId: '', taxName: '', taxRate: 0, taxType: 'inclusive', categoryId: value('iv2-category'), categoryName: category && category.dataset.name || '', barcode: value('iv2-barcode'), sku: value('iv2-sku'), description: value('iv2-description') };
     }
     function money(n) { return (P.local.get('currencySign') || '') + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-    var previewTimer, previewKey = '', previewSequence = 0;
-    function pricePreview(f, details) {
-        var params = { price: Number(f.price), tax: details.hsn ? details.tax : Number(f.taxRate), tax_type: f.taxType,
-            discount_amount: details.discountType === 'amount' ? details.discount : 0,
-            discount_percentage: details.discountType === 'percentage' ? details.discount : 0 };
-        var key = JSON.stringify([params, f.family, f.openPrice, taxReady]);
-        if (key === previewKey) return;
-        previewKey = key; clearTimeout(previewTimer); var sequence = ++previewSequence;
-        if (f.family || f.openPrice) {
-            text('iv2-price-hint', f.family ? P.i18n.t('lang_item_price_variants', 'Each variant uses its own price and discount.') : P.i18n.t('lang_item_price_open', 'Customer price is entered at the sale.'));
-            text('iv2-preview-price', f.family ? P.i18n.t('lang_variants_2', 'Variants') : P.i18n.t('lang_cashier_types_the_price', 'Cashier types the price')); return;
-        }
-        text('iv2-preview-price', '—');
-        text('iv2-price-hint', P.i18n.t('lang_item_price_calculating', 'Checking price…'));
-        if (!taxReady || !Number.isFinite(params.price)) return;
-        previewTimer = setTimeout(function () {
-            P.post({ url: 'items/pricePreview', data: JSON.stringify(params) }, function (r) {
-                if (sequence !== previewSequence) return;
-                if (!r || r.type !== 'success' || !r.data || !Number.isFinite(Number(r.data.total))) { unavailable(); return; }
-                text('iv2-preview-price', money(r.data.total));
-                text('iv2-price-hint', P.i18n.t('lang_item_pays_one', 'Customer pays for one: ') + money(r.data.total));
-            }, unavailable);
-            function unavailable() { if (sequence === previewSequence) { text('iv2-price-hint', P.i18n.t('lang_item_price_unavailable', 'Price preview unavailable. Check the price and tax before saving.')); text('iv2-preview-price', '—'); } }
-        }, 200);
-    }
     function render() {
         var dishChoice = document.querySelector('#items_v2 input[name="iv2-kind"][value="dish"]');
         if (dishChoice) {
@@ -138,8 +113,6 @@
         document.querySelector('#items_v2 input[name="iv2-stock"][value="tracked"]').disabled = f.kind === 'service' || busy || saved;
         text('iv2-stock-note', tracked ? (f.zeroStock === 'negative' ? PosnicPro.i18n.t('lang_for_this_item_only_sales_can_take_its_stoc', 'For this item only: sales can take its stock below zero.') : PosnicPro.i18n.t('lang_stock_tracking_applies_to_this_item_only', 'Stock tracking applies to this item only.')) : 'This item can be sold without an opening stock quantity.');
         text('iv2-preview-name', f.name.trim() || 'Your next item');
-        text('iv2-preview-tax', taxReady ? (Number(f.taxRate) ? 'Customer pays · including tax' : 'Customer pays · no tax selected') : 'Loading tax settings');
-        pricePreview(f, details);
         P.itemsV2Workspace.update(capabilities);
         var title = !named ? 'Let’s get started' : a.error ? 'A little more to decide' : a.later ? PosnicPro.i18n.t('lang_saved_for_later_not_ready_to_sell', 'Saved for later, not ready to sell') : PosnicPro.i18n.t('lang_ready_to_sell', 'Ready to sell');
         var note = !named ? 'Give your item a name to begin.' : a.error ? a.error : a.later ? 'Add stock before looking for this item in sale search.' : f.openPrice ? 'The cashier enters the price when selling.' : !price ? 'This item will sell at zero. You can edit the price later.' : tracked ? 'Opening stock: ' + a.quantity + '. Your stock choice will be saved.' : 'No stock count needed. Save it and start selling.';
