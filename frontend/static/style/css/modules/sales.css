@@ -1103,7 +1103,7 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
   #sales_new #sales_table .table-responsive {
     overflow: hidden !important;
   }
-  #sales_new .sales-function-shortcuts > *,
+  #sales_new .sales-function-shortcuts button > *,
   #sales_new button > i,
   #sales_new a > i,
   #sales_new button > svg,
