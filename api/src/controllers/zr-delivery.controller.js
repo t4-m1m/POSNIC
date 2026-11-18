@@ -85,7 +85,8 @@ exports.updateStatus = async (req,res) => {
     if(next==='ENCAISSE') { if(row.status!=='LIVRE' && row.status!=='ENCAISSE') return res.status(409).json({type:'error',message:'Only delivered parcels can be paid out.'}); set.paid_at=row.paid_at||now; }
     if(next==='RETOUR') set.returned_at=row.returned_at||now;
     const updated=await col.findOneAndUpdate({_id:row._id,status:row.status},{ $set:set },{returnDocument:'after'});
-    if(!updated.value && !updated) return res.status(409).json({type:'error',message:'Delivery changed; refresh and retry.'});
+    const updatedDoc = updated && updated.value !== undefined ? updated.value : updated;
+    if(!updatedDoc) return res.status(409).json({type:'error',message:'Delivery changed; refresh and retry.'});
     const saleCol=req.db.collection('sales');
     await saleCol.updateOne({_id:row.sale_id,...sc},{$set:{delivery_status:next,deliveryStatus:next,...(next==='ENCAISSE'?{delivery_paid_at:set.paid_at}:{})}});
     if(next==='RETOUR' && !row.returned_at) {

@@ -2209,7 +2209,12 @@ class SalesController extends BaseController {
         const salaryCash = salaryPaymentDetails.reduce((sum, row) => sum + (isCash(row.method) ? Number(row.amount || 0) : 0), 0);
         const advanceCash = salaryAdvanceDetails.reduce((sum, row) => sum + (isCash(row.method) ? Number(row.amount || 0) : 0), 0);
         const primeCash = salaryPrimeDetails.reduce((sum, row) => sum + (isCash(row.method) ? Number(row.amount || 0) : 0), 0);
-        const cashExpected = roundToTwo(salesCash + collectedCash - expensesTotal - salaryCash - advanceCash - primeCash);
+        const deliveryPayoutRows = await db.collection('zr_delivery_payouts').aggregate([
+          { $match: { license: BaseModel.license || req.user.license || req.user.license_id, branch_id: branchObjectId, paid_at: { $gte: new Date(filteredDateRange.start_date), $lt: new Date(filteredDateRange.end_date) } } },
+          { $group: { _id: null, amount: { $sum: '$amount' } } }
+        ]).toArray();
+        const deliveryPayoutCash = roundToTwo(deliveryPayoutRows.length ? deliveryPayoutRows[0].amount || 0 : 0);
+        const cashExpected = roundToTwo(salesCash + collectedCash + deliveryPayoutCash - expensesTotal - salaryCash - advanceCash - primeCash);
         return this.success(res, { date: branchDetails.from_date, cash_expected: cashExpected, currency: 'DA' }, 'Cash expected loaded', 200);
       }
 
