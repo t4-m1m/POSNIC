@@ -275,7 +275,7 @@ function register({ ipcMain, getWindow, BrowserWindow, dialog, app, safeStorage 
       filters: [{ name: 'PDF', extensions: ['pdf'] }]
     });
     if (choice.canceled || !choice.filePath) return { saved: false };
-    const filePath = /\\.pdf$/i.test(choice.filePath) ? choice.filePath : choice.filePath + '.pdf';
+    const filePath = /\.pdf$/i.test(choice.filePath) ? choice.filePath : choice.filePath + '.pdf';
     const win = new BrowserWindow({
       show: false, width: 480, height: 720,
       webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false }
