@@ -1363,3 +1363,82 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
     overflow: visible !important;
   }
 }
+
+
+/* FIX: the search input is 38px, NOT the entire catalogue row. */
+@media (min-width: 768px) {
+  /* This is the real DOM: one .row contains search, tabs and all three panes. */
+  #sales_new #items_view_hide {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+  #sales_new #items_view_hide > .row {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+  }
+  /* Only the scanner/search control row is fixed at 38px. */
+  #sales_new #items_view_hide > .row > .col-12.input-group,
+  #sales_new #items_view_hide > .row > .input-group {
+    display: flex !important;
+    flex: 0 0 38px !important;
+    width: 100% !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    overflow: visible !important;
+    margin: 0 0 8px !important;
+  }
+  #sales_new #items_view_hide #defaultTabJustified {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-height: 42px !important;
+    margin: 0 0 8px !important;
+  }
+  #sales_new #items_view_hide #sales_new_productList:not([style*="display: none"]),
+  #sales_new #items_view_hide #sales_new_categoryList:not([style*="display: none"]),
+  #sales_new #items_view_hide #sales_new_brandList:not([style*="display: none"]) {
+    display: block !important;
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+  }
+  #sales_new #items_view_hide #item-lists,
+  #sales_new #items_view_hide #category-lists,
+  #sales_new #items_view_hide #brand-lists,
+  #sales_new #items_view_hide #recent_sales_list {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: max-content !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  #sales_new #items_view_hide .sale-tile-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important;
+    align-content: start !important;
+    align-items: start !important;
+    gap: 10px !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+}
