@@ -2160,6 +2160,20 @@ class SalesController extends BaseController {
       const salaryPrimesTotal = roundToTwo(salaryPrimeDetails.reduce((sum, row) => sum + row.amount, 0));
 
       const salesCount = salesPayments.length;
+      const isCashTender = (method) => /^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(method || '').trim());
+      const versementCashTotal = roundToTwo(versementPaymentDetails.reduce(
+        (sum, row) => sum + (isCashTender(row.payment_mode) ? Number(row.amount || 0) : 0), 0
+      ));
+      // A ZR COD payout becomes physical cash only after the parcel is marked ENCAISSE.
+      const deliveryPayoutRows = await db.collection('zr_delivery_payouts').aggregate([
+        { $match: {
+          license: BaseModel.license || req.user.license || req.user.license_id,
+          branch_id: branchObjectId,
+          paid_at: { $gte: new Date(filteredDateRange.start_date), $lt: new Date(filteredDateRange.end_date) },
+        } },
+        { $group: { _id: null, amount: { $sum: '$amount' } } },
+      ]).toArray();
+      const deliveryPayoutCash = roundToTwo(deliveryPayoutRows.length ? deliveryPayoutRows[0].amount || 0 : 0);
 
       // ---- Build response data ----
       const responseData = {
@@ -2170,6 +2184,7 @@ class SalesController extends BaseController {
         debt_payment_total: debtPaymentTotal,
         versement_payment_details: versementPaymentDetails,
         versement_payment_total: versementPaymentTotal,
+        delivery_payout_cash_total: deliveryPayoutCash,
         sales_count: salesCount,
         cost_of_goods_total: costOfGoodsTotal,
         gross_profit_total: grossProfitTotal,
@@ -2203,18 +2218,12 @@ class SalesController extends BaseController {
       responseData.cancellation_summary = cancellationSummary;
 
       if (req.cashierDayClose) {
-        const isCash = (method) => /^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(method || '').trim());
-        const salesCash = paymentDetails.reduce((sum, row) => sum + (isCash(row.payment_mode) ? Number(row.sale_payment || 0) : 0), 0);
-        const collectedCash = debtPaymentDetails.reduce((sum, row) => sum + (isCash(row.payment_mode) ? Number(row.amount || 0) : 0), 0);
-        const salaryCash = salaryPaymentDetails.reduce((sum, row) => sum + (isCash(row.method) ? Number(row.amount || 0) : 0), 0);
-        const advanceCash = salaryAdvanceDetails.reduce((sum, row) => sum + (isCash(row.method) ? Number(row.amount || 0) : 0), 0);
-        const primeCash = salaryPrimeDetails.reduce((sum, row) => sum + (isCash(row.method) ? Number(row.amount || 0) : 0), 0);
-        const deliveryPayoutRows = await db.collection('zr_delivery_payouts').aggregate([
-          { $match: { license: BaseModel.license || req.user.license || req.user.license_id, branch_id: branchObjectId, paid_at: { $gte: new Date(filteredDateRange.start_date), $lt: new Date(filteredDateRange.end_date) } } },
-          { $group: { _id: null, amount: { $sum: '$amount' } } }
-        ]).toArray();
-        const deliveryPayoutCash = roundToTwo(deliveryPayoutRows.length ? deliveryPayoutRows[0].amount || 0 : 0);
-        const cashExpected = roundToTwo(salesCash + collectedCash + deliveryPayoutCash - expensesTotal - salaryCash - advanceCash - primeCash);
+        const salesCash = paymentDetails.reduce((sum, row) => sum + (isCashTender(row.payment_mode) ? Number(row.sale_payment || 0) : 0), 0);
+        const collectedCash = debtPaymentDetails.reduce((sum, row) => sum + (isCashTender(row.payment_mode) ? Number(row.amount || 0) : 0), 0);
+        const salaryCash = salaryPaymentDetails.reduce((sum, row) => sum + (isCashTender(row.method) ? Number(row.amount || 0) : 0), 0);
+        const advanceCash = salaryAdvanceDetails.reduce((sum, row) => sum + (isCashTender(row.method) ? Number(row.amount || 0) : 0), 0);
+        const primeCash = salaryPrimeDetails.reduce((sum, row) => sum + (isCashTender(row.method) ? Number(row.amount || 0) : 0), 0);
+        const cashExpected = roundToTwo(salesCash + collectedCash + versementCashTotal + deliveryPayoutCash - expensesTotal - salaryCash - advanceCash - primeCash);
         return this.success(res, { date: branchDetails.from_date, cash_expected: cashExpected, currency: 'DA' }, 'Cash expected loaded', 200);
       }
 
