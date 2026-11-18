@@ -1913,13 +1913,6 @@ PosnicPro.sales = {
         if (PosnicPro.sales.saleProcess === 'edit' && PosnicPro.sales.paymentOnlyMode !== true && PosnicPro.sales.SaleAction !== 'return') {
             inlinePrice = '&nbsp;<i class="feather icon-edit-1 text-primary sales-edit-line-price" onclick="return PosnicPro.sales.editItemPricingSale(this);" data-id="' + id + '" title="Modifier le prix" style="cursor:pointer;font-size:12px"></i>';
         }
-        var inlineDiscount = '';
-        if (PosnicPro.sales.saleProcess === 'edit' && PosnicPro.sales.paymentOnlyMode !== true && PosnicPro.sales.SaleAction !== 'return') {
-            var lineDiscountIsAmount = Number(params.discount_amount) > 0;
-            var lineDiscountValue = lineDiscountIsAmount ? Number(params.discount_amount) : Number(params.discount_percentage) || 0;
-            var lineDiscountType = lineDiscountIsAmount ? 'amount' : 'percentage';
-            inlineDiscount = '&nbsp;<i class="feather icon-edit-1 text-primary sales-edit-line-discount" onclick="return PosnicPro.sales.editItemDiscountSale(this, ' + lineDiscountValue + ', &quot;' + lineDiscountType + '&quot;);" data-id="' + id + '" title="Modifier la remise" style="cursor:pointer;font-size:12px"></i>';
-        }
         //var inlineTax = '';
 
         // KOT setting
@@ -1957,7 +1950,7 @@ PosnicPro.sales = {
             '    <td id="addSalesLineItemQty_' + id + '" class="text-center add_circle font_size14">' + addLineItemQty + '</td>' +
             '    <td name ="addSalesLineItemUnit" id="addSalesLineItemUnit_' + id + '" class="text-center">' + item_unit + '</td>' +
             '    <td name ="addSalesLineItemPrice" id="addSalesLineItemPrice_' + id + '" class="font_size14" ' + kotHideStyle + '>' + mrpPrice.toFixed(2) + inlinePrice + priceTierControl + '</td>' +
-            '    <td name ="addSalesLineItemDiscount" id="addSalesLineItemDiscountprint_' + id + '" class="text-center font_size14" ' + kotHideStyle + '>' + discount_percentages + inlineDiscount + '</td>' +
+            '    <td name ="addSalesLineItemDiscount" id="addSalesLineItemDiscountprint_' + id + '" class="text-center font_size14" ' + kotHideStyle + '>' + discount_percentages + '</td>' +
             '    <td name="addSalesLineItemTax" id="addSalesLineItemTax_' + id + '" class="text-center font_size14" ' + kotHideStyle + '>' + lineItemTax + '<span>%</span></td>' +
             '    <td name ="addSalesLineTotal" id="addSalesLineTotal_' + id + '" class="font_size14" ' + kotHideStyle + '>' + line_total.toFixed(2) + '</td>' +
             '    <td id="addSalesRemoveLineItem_' + id + '" class="text-center font_size14">' + saleEditIcon + removeLineItem +
@@ -3555,7 +3548,7 @@ PosnicPro.sales = {
                     : currencySign + newDiscountValue.toFixed(2));
 
                 // Inline edit enabled
-                if (PosnicPro.local.get('inline_sale') === 'enable' || PosnicPro.sales.saleProcess === 'edit') {
+                if (PosnicPro.local.get('inline_sale') === 'enable') {
                     $('#addSalesLineItemDiscountprint_' + id).replaceWith(
                         '<td name="addSalesLineItemDiscountprint" id="addSalesLineItemDiscountprint_' + id + '" class="font_size14">' +
                         newEditDiscountValue +
