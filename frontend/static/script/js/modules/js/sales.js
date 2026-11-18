@@ -1574,6 +1574,10 @@ PosnicPro.sales = {
             params.selling_price_3 = Number(item.selling_price_3 != null ? item.selling_price_3 : item.selling_price3) || 0;
             params.price_tier = Number(params.price_tier) || 1;
             params._editTierLoading = false; params._editTierHydrated = true;
+            var tierOptions = [params.selling_price_1, params.selling_price_2, params.selling_price_3].filter(function (price) { return Number.isFinite(Number(price)) && Number(price) > 0; });
+            var $priceCell = $('#addSalesLineItemPrice_' + id);
+            $priceCell.find('.sale-price-tier-label').remove();
+            if (tierOptions.length > 1) $priceCell.append(' ', $('<small class="sale-price-tier-label" title="Press F3 to change selling price">').text('P' + params.price_tier + ' · F3'));
             $name.data('itemText', params);
             var cached = PosnicPro.sales.SaleTableLineItems[id] || {};
             cached.selling_price_2 = params.selling_price_2; cached.selling_price_3 = params.selling_price_3; cached.price_tier = params.price_tier;
@@ -4947,7 +4951,7 @@ PosnicPro.sales.addSale = {
                     if (response.data.whatsapp === true) {
                         $('.printSalesWhatsAppReceipt').show();
                     }
-                    if ($('.payment_mode').val() === 'Qrpay' && payment && payment.id) {
+                    if ($('.payment_mode').val() === 'Qrpay') {
                         var params = {
                             url: 'sales/qrSalePayementUpdate',
                             data: {
@@ -5689,7 +5693,7 @@ PosnicPro.sales.editSale = {
                         }
                     }
 
-                    if ($('.payment_mode').val() === 'Qrpay') {
+                    if ($('.payment_mode').val() === 'Qrpay' && payment && payment.id) {
                         var paramsQr = {
                             url: 'sales/qrSalePayementUpdate',
                             data: {
