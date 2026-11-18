@@ -542,7 +542,7 @@ function apiPort() {
 
 let mainWindow;
 // ZR Express v1 courier bridge; credentials are supplied only for each authorized request.
-require('./zr-express').register({ ipcMain, getWindow: () => mainWindow, BrowserWindow, dialog });
+require('./zr-express').register({ ipcMain, getWindow: () => mainWindow, BrowserWindow, dialog, app, safeStorage: require('electron').safeStorage });
 let apiServer;
 let hardwareManager;
 let kotManager;

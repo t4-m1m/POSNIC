@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('fs').promises;
+const path = require('path');
 const BASE_URL = 'https://api.zrexpress.app/api/v1';
 const REQUEST_TIMEOUT_MS = 20000;
 
@@ -152,7 +154,8 @@ async function createParcel(credentials, input) {
     amount: totalCod,
     externalId: String(parcel.externalId || ('POSNIC-' + Date.now())).slice(0, 100)
   };
-  const stateId = await readyState(auth);
+  let stateId;
+  try { stateId = await readyState(auth); } catch (error) { console.warn('[ZR Express] workflow lookup:', error.message); }
   if (stateId) body.stateId = stateId;
   const created = await request(auth, 'POST', 'parcels', body);
   if (!created || !created.id) throw new Error('ZR Express did not return a parcel ID.');
@@ -168,8 +171,22 @@ async function getParcel(credentials, tracking) {
   return request(credentials, 'GET', 'parcels/' + encodeURIComponent(value));
 }
 
-function register({ ipcMain, getWindow, BrowserWindow, dialog }) {
+function register({ ipcMain, getWindow, BrowserWindow, dialog, app, safeStorage }) {
+  const credentialFile = path.join(app.getPath('userData'), 'zr-express-credentials.enc');
+  async function saveCredentials(credentials) {
+    const auth = credentialsOf(credentials);
+    if (!safeStorage || !safeStorage.isEncryptionAvailable()) throw new Error('Secure credential storage is unavailable.');
+    await fs.writeFile(credentialFile, safeStorage.encryptString(JSON.stringify(auth)), { mode: 0o600 });
+    return { saved: true };
+  }
+  async function readCredentials() {
+    try { if (!safeStorage || !safeStorage.isEncryptionAvailable()) return null; return JSON.parse(safeStorage.decryptString(await fs.readFile(credentialFile))); }
+    catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+  }
+
   ipcMain.handle('zr:catalog', async (_event, credentials) => getCatalog(credentials));
+  ipcMain.handle('zr:credentials-save', async (_event, credentials) => saveCredentials(credentials));
+  ipcMain.handle('zr:credentials-get', async () => readCredentials());
   ipcMain.handle('zr:communes', async (_event, credentials, wilayaUuid) => getCommunes(credentials, wilayaUuid));
   ipcMain.handle('zr:createParcel', async (_event, credentials, parcel) => createParcel(credentials, parcel));
   ipcMain.handle('zr:getParcel', async (_event, credentials, tracking) => getParcel(credentials, tracking));
