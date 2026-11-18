@@ -123,11 +123,11 @@ function intlPhone(value) {
 
 async function resolveCustomer(auth, parcel, phone) {
   const rows = await searchAll(auth, 'customers/search', { pageSize: 100, keyword: phone, includeAllAddresses: true });
-  const digits = phone.replace(/\\D/g, '');
+  const digits = phone.replace(/\D/g, '');
   const match = rows.find(item => {
     const p = item.phone || {};
-    return [p.number1, p.number2, item.phoneNumber, item.phone].some(value => String(value || '').replace(/\\D/g, '') === digits);
-  }) || rows.find(item => String(item.name || '').trim().toLowerCase() === String(parcel.customerName || '').trim().toLowerCase());
+    return [p.number1, p.number2, item.phoneNumber, item.phone].some(value => String(value || '').replace(/\D/g, '') === digits);
+  });
   if (match && match.id) return String(match.id);
   const created = await request(auth, 'POST', 'customers/individual', {
     name: String(parcel.customerName || '').trim(),
@@ -195,7 +195,7 @@ async function createParcel(credentials, input) {
     customer: {
       customerId,
       name: customerName,
-      phone: { number1: phone, number2: intlPhone(parcel.phoneAlt) }
+      phone: { number1: phone, ...(intlPhone(parcel.phoneAlt) ? { number2: intlPhone(parcel.phoneAlt) } : {}) }
     },
     deliveryAddress: {
       cityTerritoryId: String(parcel.cityTerritoryId),
