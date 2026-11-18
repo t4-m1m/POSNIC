@@ -190,6 +190,19 @@ function register({ ipcMain, getWindow, BrowserWindow, dialog, app, safeStorage 
   ipcMain.handle('zr:communes', async (_event, credentials, wilayaUuid) => getCommunes(credentials, wilayaUuid));
   ipcMain.handle('zr:createParcel', async (_event, credentials, parcel) => createParcel(credentials, parcel));
   ipcMain.handle('zr:getParcel', async (_event, credentials, tracking) => getParcel(credentials, tracking));
+  ipcMain.handle('zr:save-bordereau', async (_event, html) => {
+    if (typeof html !== 'string' || !html.includes('<html') || html.length > 200000) throw new Error('Invalid bordereau document.');
+    const owner = getWindow && getWindow();
+    const choice = await dialog.showSaveDialog(owner || undefined, { title:'Enregistrer le bordereau ZR Express', defaultPath:'Bordereau-ZR-Express.pdf', filters:[{name:'PDF',extensions:['pdf']}] });
+    if (choice.canceled || !choice.filePath) return { saved:false };
+    const win = new BrowserWindow({ show:false, width:480, height:720, webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false} });
+    try {
+      await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+      const pdf = await win.webContents.printToPDF({printBackground:true,pageSize:{width:100000,height:150000},margins:{top:0,bottom:0,left:0,right:0}});
+      await fs.writeFile(choice.filePath,pdf);
+      return {saved:true,filePath:choice.filePath};
+    } finally { if (!win.isDestroyed()) win.destroy(); }
+  });
 }
 
 module.exports = { register, getCatalog, getCommunes, createParcel, getParcel };
