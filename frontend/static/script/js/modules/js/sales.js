@@ -1914,8 +1914,13 @@ PosnicPro.sales = {
             inlinePrice = '&nbsp;<i class="feather icon-edit-1 text-primary sales-edit-line-price" onclick="return PosnicPro.sales.editItemPricingSale(this);" data-id="' + id + '" title="Modifier le prix" style="cursor:pointer;font-size:12px"></i>';
         }
         var inlineDiscount = '';
+        if (PosnicPro.sales.saleProcess === 'edit' && PosnicPro.sales.paymentOnlyMode !== true && PosnicPro.sales.SaleAction !== 'return') {
+            var lineDiscountIsAmount = Number(params.discount_amount) > 0;
+            var lineDiscountValue = lineDiscountIsAmount ? Number(params.discount_amount) : Number(params.discount_percentage) || 0;
+            var lineDiscountType = lineDiscountIsAmount ? 'amount' : 'percentage';
+            inlineDiscount = '&nbsp;<i class="feather icon-edit-1 text-primary sales-edit-line-discount" onclick="return PosnicPro.sales.editItemDiscountSale(this, ' + lineDiscountValue + ', &quot;' + lineDiscountType + '&quot;);" data-id="' + id + '" title="Modifier la remise" style="cursor:pointer;font-size:12px"></i>';
+        }
         //var inlineTax = '';
-        /* pencils removed - double-click quick edit replaced them */
 
         // KOT setting
         var kotEnabled = (PosnicPro.local.get('table_options') === 'enable');
@@ -3550,7 +3555,7 @@ PosnicPro.sales = {
                     : currencySign + newDiscountValue.toFixed(2));
 
                 // Inline edit enabled
-                if (PosnicPro.local.get('inline_sale') === 'enable') {
+                if (PosnicPro.local.get('inline_sale') === 'enable' || PosnicPro.sales.saleProcess === 'edit') {
                     $('#addSalesLineItemDiscountprint_' + id).replaceWith(
                         '<td name="addSalesLineItemDiscountprint" id="addSalesLineItemDiscountprint_' + id + '" class="font_size14">' +
                         newEditDiscountValue +
