@@ -1034,3 +1034,20 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
 .posnic-barcode-ready.is-paused{border-color:#d8dee8!important;background:#f5f6f8!important;color:#718096!important}
 @keyframes posnicBarcodePulse{0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,.35);opacity:1}50%{box-shadow:0 0 0 6px rgba(22,163,74,0);opacity:.55}}
 @media(max-width:700px){.posnic-barcode-ready{padding:0 7px!important;font-size:9px;gap:5px}}
+
+/* Sales workspace: give the active basket slightly more room and make its item names easier to scan. */
+@media (min-width: 992px) {
+    #sales_new #instance-view {
+        flex: 0 0 54%;
+        max-width: 54%;
+    }
+    #sales_new #items_view_hide {
+        flex: 0 0 46%;
+        max-width: 46%;
+    }
+}
+#sales_new #sales_new_items_tbody > tr[id^="touch_row_"] > td[id^="addSalesLineItemName_"] {
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.35;
+}

@@ -2001,9 +2001,11 @@ class ItemRepository extends BaseModel {
         sort_order: parseInt(data.position, 10) || 0,
         description: (data.description || '').trim(),
         track_inventory:
-          !id && ['always_available', 'track_quantities'].includes(branch.item_stock_default)
-            ? branch.item_stock_default === 'track_quantities'
-            : Boolean(data.inventory),
+          data.inventory !== undefined
+            ? Boolean(data.inventory)
+            : !id && ['always_available', 'track_quantities'].includes(branch.item_stock_default)
+              ? branch.item_stock_default === 'track_quantities'
+              : Boolean(data.inventory),
         ecommerce: Boolean(data.ecommerce),
         /* Absent means shown. A menu whose default is "hidden" starts empty
            and stays empty until somebody ticks every dish, which is not a
