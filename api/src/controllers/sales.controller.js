@@ -2163,10 +2163,13 @@ class SalesController extends BaseController {
       const isCashTender = (method) => /^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(method || '').trim());
       // Only the settlement transaction is new cash today. The initial versement
       // was already counted with the original sale and must not be counted twice.
-      const versementCashTotal = roundToTwo(settledVersements.reduce(
-        (sum, row) => sum + (isCashTender(row.settlement && row.settlement.method)
-          ? Number(row.settlement && row.settlement.amount || 0) : 0), 0
-      ));
+      const versementCashTotal = roundToTwo(settledVersements.reduce((sum, row) => {
+        const initialCash = isCashTender(row.initial_method)
+          ? Number(row.initial_recorded_amount ?? row.initial_amount ?? 0) : 0;
+        const settlementCash = isCashTender(row.settlement && row.settlement.method)
+          ? Number(row.settlement && row.settlement.amount || 0) : 0;
+        return sum + initialCash + settlementCash;
+      }, 0));
       // A ZR COD payout becomes physical cash only after the parcel is marked ENCAISSE.
       const deliveryPayoutRows = await db.collection('zr_delivery_payouts').aggregate([
         { $match: {

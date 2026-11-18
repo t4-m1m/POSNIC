@@ -266,40 +266,39 @@ function register({ ipcMain, getWindow, BrowserWindow, dialog, app, safeStorage 
   ipcMain.handle('zr:createParcel', async (_event, credentials, parcel) => createParcel(credentials, parcel));
   ipcMain.handle('zr:getParcel', async (_event, credentials, tracking) => getParcel(credentials, tracking));
   ipcMain.handle('zr:cancelParcel', async (_event, credentials, parcelId) => cancelParcel(credentials, parcelId));
-  ipcMain.handle('zr:save-bordereau', async (_event, html) => {
-    if (typeof html !== 'string' || !html.includes('<html') || html.length > 200000) throw new Error('Invalid bordereau document.');
+  ipcMain.handle('zr:save-bordereau', async (_event, input) => {
+    const credentials = input && input.credentials;
+    const trackingNumber = String(input && input.trackingNumber || '').trim();
+    if (!trackingNumber) throw new Error('Numéro de suivi ZR Express manquant.');
+    const labels = await request(credentials, 'POST', 'parcels/labels/multiple/pdf', {
+      trackingNumbers: [trackingNumber],
+      format: 'A4'
+    });
+    const fileUrl = String(labels && (labels.fileUrl || labels.url) || '').trim();
+    if (!fileUrl || !/^https:\/\//i.test(fileUrl)) {
+      const failed = Array.isArray(labels && labels.failedTrackingNumbers) ? labels.failedTrackingNumbers.join(', ') : '';
+      throw new Error('ZR Express n’a pas généré le bordereau officiel.' + (failed ? ' Suivi : ' + failed : ''));
+    }
+    const labelResponse = await fetch(fileUrl);
+    if (!labelResponse.ok) throw new Error('Téléchargement du bordereau ZR Express impossible (HTTP ' + labelResponse.status + ').');
+    const pdf = Buffer.from(await labelResponse.arrayBuffer());
+    if (pdf.length < 100 || pdf.subarray(0, 4).toString('ascii') !== '%PDF') {
+      throw new Error('ZR Express a retourné un fichier de bordereau PDF invalide.');
+    }
     const owner = getWindow && getWindow();
     const choice = await dialog.showSaveDialog(owner || undefined, {
-      title: 'Enregistrer le bordereau ZR Express',
-      defaultPath: 'Bordereau-ZR-Express.pdf',
+      title: 'Enregistrer le bordereau officiel ZR Express',
+      defaultPath: 'Bordereau-ZR-Express-' + trackingNumber + '.pdf',
       filters: [{ name: 'PDF', extensions: ['pdf'] }]
     });
     if (choice.canceled || !choice.filePath) return { saved: false };
     const filePath = /\.pdf$/i.test(choice.filePath) ? choice.filePath : choice.filePath + '.pdf';
-    const win = new BrowserWindow({
-      show: false, width: 480, height: 720,
-      webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false }
-    });
-    try {
-      await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
-      await win.webContents.executeJavaScript('document.fonts && document.fonts.ready ? document.fonts.ready.then(() => true) : true');
-      const pdf = await win.webContents.printToPDF({
-        printBackground: true, preferCSSPageSize: true,
-        pageSize: { width: 100000, height: 150000 },
-        margins: { top: 0, bottom: 0, left: 0, right: 0 }
-      });
-      if (!pdf || !pdf.length) throw new Error('ZR Express produced an empty PDF.');
-      await fs.mkdir(path.dirname(filePath), { recursive: true });
-      await fs.writeFile(filePath, pdf);
-      const stat = await fs.stat(filePath);
-      if (!stat.isFile() || stat.size < 100) throw new Error('The PDF file could not be written completely.');
-      return { saved: true, filePath, size: stat.size };
-    } catch (error) {
-      throw new Error('Impossible d’enregistrer le bordereau PDF : ' + (error.message || 'erreur inconnue'));
-    } finally {
-      if (!win.isDestroyed()) win.destroy();
-    }
-  });;
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, pdf);
+    const stat = await fs.stat(filePath);
+    if (!stat.isFile() || stat.size < 100) throw new Error('Le bordereau PDF ZR Express n’a pas été enregistré complètement.');
+    return { saved: true, filePath, size: stat.size, trackingNumber };
+  });
 }
 
 module.exports = { register, getCatalog, getCommunes, createParcel, getParcel, cancelParcel };

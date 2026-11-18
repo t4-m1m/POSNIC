@@ -123,10 +123,14 @@ exports.cancel = async (req, res) => {
     const deliveries = req.db.collection('zr_deliveries');
     const row = await deliveries.findOne({ tracking_number: tracking, ...sc });
     if (!row) return res.status(404).json({ type: 'error', message: 'Delivery not found.' });
-    const sale = await req.db.collection('sales').findOne({ _id: row.sale_id, ...sc });
-    if (!sale || String(sale.status || '').toLowerCase() !== 'cancelled') {
-      return res.status(409).json({ type: 'error', message: 'Cancel the linked sale successfully before closing this delivery.' });
+    if (row.status === 'ANNULEE') {
+      return res.json({ type: 'success', data: { tracking_number: tracking, status: 'ANNULEE' } });
     }
+    // The renderer cancels the linked sale first through the normal sales
+    // cancellation service (stock, wallet, loyalty and audit reversals). That
+    // service may remove the sale document, so the delivery must not require
+    // it to still exist before recording the carrier cancellation.
+    const sale = await req.db.collection('sales').findOne({ _id: row.sale_id, ...sc });
     const now = new Date();
     const updated = await deliveries.findOneAndUpdate(
       { _id: row._id, status: { $ne: 'ANNULEE' }, ...sc },
@@ -135,9 +139,11 @@ exports.cancel = async (req, res) => {
     );
     const doc = updated && updated.value !== undefined ? updated.value : updated;
     if (!doc) return res.status(409).json({ type: 'error', message: 'Delivery changed; refresh and retry.' });
-    await req.db.collection('sales').updateOne({ _id: row.sale_id, ...sc }, {
-      $set: { delivery_status: 'ANNULEE', deliveryStatus: 'ANNULEE' }
-    });
+    if (sale) {
+      await req.db.collection('sales').updateOne({ _id: row.sale_id, ...sc }, {
+        $set: { delivery_status: 'ANNULEE', deliveryStatus: 'ANNULEE' }
+      });
+    }
     return res.json({ type: 'success', data: { tracking_number: tracking, status: 'ANNULEE' } });
   } catch (error) { return fail(res, error); }
 };

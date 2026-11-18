@@ -17,7 +17,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     createParcel: (credentials, parcel) => ipcRenderer.invoke('zr:createParcel', credentials, parcel),
     getParcel: (credentials, tracking) => ipcRenderer.invoke('zr:getParcel', credentials, tracking),
     cancelParcel: (credentials, parcelId) => ipcRenderer.invoke('zr:cancelParcel', credentials, parcelId),
-    saveBordereau: html => ipcRenderer.invoke('zr:save-bordereau', html),
+    saveBordereau: request => ipcRenderer.invoke('zr:save-bordereau', request),
   },
   diagnostics: {
     state: () => ipcRenderer.invoke('diagnostics:state'),

@@ -4931,7 +4931,7 @@ PosnicPro.sales.addSale = {
                             address: zrSaved.address
                         })}, function(r) {
                             if (r && r.type === 'success' && window.electronAPI && window.electronAPI.zr.saveBordereau) {
-                                window.electronAPI.zr.saveBordereau(zrSaved.bordereauHtml(response.data.sales_id))
+                                window.electronAPI.zr.saveBordereau({ credentials: window.__zrCredentials, trackingNumber: zrSaved.parcel.trackingNumber })
                                     .then(function(saved) {
                                         if (saved && saved.saved) PosnicPro.alert('success', 'Vente ZR enregistrée et bordereau PDF sauvegardé.');
                                         else PosnicPro.alert('info', 'Vente ZR enregistrée. Enregistrement du bordereau annulé.');
@@ -9596,6 +9596,9 @@ PosnicPro.sales.recentMenu = {
         } else if ($('a#profile-tab-justified').hasClass('active')) {
             PosnicPro.sales.recentSaleAction = false;
             PosnicPro.sales.categoryMenu.listCategories();
+        } else if ($('a#brands-tab-justified').hasClass('active')) {
+            PosnicPro.sales.recentSaleAction = false;
+            PosnicPro.sales.brandMenu.listBrands();
         } else {
             PosnicPro.sales.recentSaleAction = false;
             PosnicPro.sales.itemsMenu.onlineProductList();
@@ -15709,7 +15712,9 @@ function ensureZrTracking(){
     try {
      await window.posnicZrRequest('POST','sales/cancel/'+encodeURIComponent(row.sale_id),{});
     } catch(saleError) {
-     if(!/already cancelled/i.test(String(saleError&&saleError.message||'')))throw saleError;
+     // Sale cancellation can already have removed the sale after reversing
+     // stock and balances. Treat that as complete and close the carrier row.
+     if(!/already cancelled|sale not found|not found|introuvable/i.test(String(saleError&&saleError.message||'')))throw saleError;
     }
     await window.posnicZrRequest('POST','delivery-zr/'+encodeURIComponent(tracking)+'/cancel',{});
     PosnicPro.alert('success','Livraison ZR et vente POSNIC annulées. Le stock a été restauré.');
@@ -15725,13 +15730,15 @@ function ensureZrTracking(){
  });
 }
 async function printZrRow(r){
- var barcode='';
- try{var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');if(window.JsBarcode){window.JsBarcode(svg,r.tracking_number,{format:'CODE128',displayValue:false,height:42,margin:0});barcode=svg.outerHTML;}}catch(_){}
- var recipient=r.recipient_name||r.customer_name||'',phone=r.recipient_phone||r.customer_phone||'';
- var html='<!doctype html><html><head><meta charset="utf-8"><style>@page{size:100mm 150mm;margin:5mm}body{font:10px Arial}h2{font-size:16px}.code{font-size:20px;font-weight:bold}table{width:100%;border-collapse:collapse}td{padding:3px;border-bottom:1px solid #ddd}</style></head><body><h2>ZR EXPRESS · POSNIC</h2><div class="code">'+escZ(r.tracking_number)+'</div>'+barcode+'<hr>Vente : '+escZ(r.sale_number)+'<br>Client : '+escZ(recipient)+'<br>Téléphone : '+escZ(phone)+'<br>Wilaya : '+escZ(r.wilaya)+'<br>Commune : '+escZ(r.commune)+'<br>Adresse : '+escZ(r.address)+'<hr><table>'+((r.items||[]).map(x=>'<tr><td>'+escZ(x.name)+' × '+x.quantity+'</td><td>'+moneyZ(x.price*x.quantity)+'</td></tr>').join(''))+'</table><hr>Frais : '+moneyZ(r.delivery_fee)+' DZD<h2>COD : '+moneyZ(r.cod_total)+' DZD</h2></body></html>';
- if(!window.electronAPI||!window.electronAPI.zr.saveBordereau){PosnicPro.alert('error','Le service d’enregistrement PDF est indisponible.');return;}
- try{var result=await window.electronAPI.zr.saveBordereau(html);if(result&&result.saved)PosnicPro.alert('success','Bordereau PDF enregistré.');else PosnicPro.alert('info','Enregistrement du bordereau annulé.');}
- catch(error){PosnicPro.alert('error',error&&error.message||'Le bordereau PDF n’a pas été sauvegardé.');}
+ try{
+  var credentials=await electronAPI.zr.getCredentials();
+  if(!credentials)throw new Error('Identifiants ZR Express non configurés.');
+  var result=await electronAPI.zr.saveBordereau({credentials:credentials,trackingNumber:r.tracking_number});
+  if(result&&result.saved)PosnicPro.alert('success','Bordereau officiel ZR Express enregistré.');
+  else PosnicPro.alert('info','Enregistrement du bordereau annulé.');
+ }catch(error){
+  PosnicPro.alert('error',error&&error.message||'Impossible de récupérer le bordereau officiel ZR Express.');
+ }
 }
 async function loadZrRows(){
  $('#zr-track-rows').html('<tr><td colspan="9">Chargement…</td></tr>');
