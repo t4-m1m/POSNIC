@@ -744,88 +744,94 @@ PosnicPro.dashboard = {
             row.append($('<span class="text-right"></span>').text(PosnicPro.dashboard.money(amount)));
             topHost.append(row);
         });
+        // Live sales series from the dashboard overview response (server-filtered
+        // completed sales for the currently selected period).
         var days = Array.isArray(totals.sales_days) ? totals.sales_days : [];
-        var values = (Array.isArray(totals.sales_amounts) ? totals.sales_amounts : []).map(function (value) { return Number(value) || 0; });
-        var host = $('#dashboard-sales-trend').empty();
-        var width = 720, height = 220, left = 42, right = 14, top = 16, bottom = 28;
+        var values = (Array.isArray(totals.sales_amounts) ? totals.sales_amounts : []).map(function (value) { return Math.max(0, Number(value) || 0); });
+        var count = Math.max(days.length, values.length);
+        if (!count) { count = 1; days = ['No sales']; values = [0]; }
+        while (days.length < count) days.push('');
+        while (values.length < count) values.push(0);
+        var host = $('#dashboard-sales-trend').empty().css({ width: '100%', height: '260px', minHeight: '260px', position: 'relative' });
+        var width = 900, height = 260, left = 76, right = 20, top = 18, bottom = 42;
         var plotWidth = width - left - right, plotHeight = height - top - bottom;
-        var max = Math.max(1, ...values);
-        if (!values.length) {
-            host.html('<div class="text-muted text-center py-5">No completed sales in this period yet.</div>');
-        } else {
-            var points = values.map(function (value, index) {
-                return { x: left + (values.length === 1 ? plotWidth / 2 : index * plotWidth / (values.length - 1)), y: top + plotHeight - (value / max) * plotHeight, value: value, label: days[index] || '' };
-            });
-            var linePath = points.map(function (point, index) { return (index ? 'L' : 'M') + point.x.toFixed(1) + ' ' + point.y.toFixed(1); }).join(' ');
-            var areaPath = linePath + ' L ' + points[points.length - 1].x.toFixed(1) + ' ' + (top + plotHeight) + ' L ' + points[0].x.toFixed(1) + ' ' + (top + plotHeight) + ' Z';
-            var svg = $('<svg viewBox="0 0 720 220" role="img" aria-label="Sales trend based on completed POSNIC sales" style="display:block;width:100%;height:auto;max-height:250px;overflow:visible"></svg>');
-            var defs = $('<defs><linearGradient id="posnicSalesArea" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#4f46e5" stop-opacity=".32"/><stop offset="100%" stop-color="#06b6d4" stop-opacity=".025"/></linearGradient><linearGradient id="posnicSalesLine" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#2563eb"/><stop offset="55%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient></defs>');
-            svg.append(defs);
-            [0, .25, .5, .75, 1].forEach(function (step) {
-                var y = top + step * plotHeight;
-                svg.append($('<line>').attr({ x1: left, x2: width - right, y1: y, y2: y, stroke: 'var(--theme-border-color,#dbe3ed)', 'stroke-dasharray': '4 5', 'stroke-width': 1 }));
-            });
-            svg.append($('<path>').attr({ d: areaPath, fill: 'url(#posnicSalesArea)' }));
-            if (points.length > 1) {
-                svg.append($('<path>').attr({ d: linePath, fill: 'none', stroke: 'url(#posnicSalesLine)', 'stroke-width': 4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
-                var averages = values.map(function (_, i) { var slice = values.slice(Math.max(0, i - 2), i + 1); return slice.reduce(function (a, b) { return a + b; }, 0) / slice.length; });
-                var averagePath = averages.map(function (value, index) {
-                    var x = left + (averages.length === 1 ? plotWidth / 2 : index * plotWidth / (averages.length - 1));
-                    var y = top + plotHeight - (value / max) * plotHeight;
-                    return (index ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
-                }).join(' ');
-                svg.append($('<path>').attr({ d: averagePath, fill: 'none', stroke: '#f59e0b', 'stroke-width': 2.5, 'stroke-dasharray': '7 5', 'stroke-linecap': 'round' }));
-            } else {
-                var singleBar = $('<rect>').attr({ x: points[0].x - 16, y: points[0].y, width: 32, height: Math.max(5, top + plotHeight - points[0].y), rx: 7, fill: 'url(#posnicSalesLine)' });
-                svg.append(singleBar);
-            }
-            points.forEach(function (point, index) {
-                var marker = $('<circle>').attr({ cx: point.x, cy: point.y, r: values.length > 24 ? 3 : 5, fill: '#fff', stroke: ['#2563eb', '#7c3aed', '#06b6d4'][index % 3], 'stroke-width': 3 });
-                marker.append($('<title>').text((point.label || 'Sales') + ': ' + PosnicPro.dashboard.money(point.value)));
-                svg.append(marker);
-            });
+        var maxValue = Math.max(1, ...values), axisMax = Math.ceil(maxValue / 4) * 4 || 4;
+        var points = values.map(function (value, index) {
+            return { x: left + (count === 1 ? plotWidth / 2 : index * plotWidth / (count - 1)), y: top + plotHeight - (value / axisMax) * plotHeight, value: value, label: days[index] || '' };
+        });
+        var moving = values.map(function (_, index) { var sample = values.slice(Math.max(0, index - 2), index + 1); return sample.reduce(function (sum, value) { return sum + value; }, 0) / sample.length; });
+        var linePath = points.map(function (point, index) { return (index ? 'L' : 'M') + point.x.toFixed(1) + ' ' + point.y.toFixed(1); }).join(' ');
+        var areaPath = linePath + ' L ' + points[points.length - 1].x.toFixed(1) + ' ' + (top + plotHeight) + ' L ' + points[0].x.toFixed(1) + ' ' + (top + plotHeight) + ' Z';
+        var avgPath = moving.map(function (value, index) { var x = left + (count === 1 ? plotWidth / 2 : index * plotWidth / (count - 1)); var y = top + plotHeight - (value / axisMax) * plotHeight; return (index ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1); }).join(' ');
+        var svg = $('<svg viewBox="0 0 900 260" role="img" aria-label="Dynamic sales trend in DZD" style="display:block;width:100%;height:260px;overflow:visible"></svg>');
+        var defs = $('<defs><linearGradient id="posnicSalesAreaLive" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#2563eb" stop-opacity=".28"/><stop offset="100%" stop-color="#2563eb" stop-opacity=".015"/></linearGradient></defs>');
+        svg.append(defs);
+        for (var tick = 0; tick <= 4; tick++) {
+            var tickValue = axisMax * tick / 4, tickY = top + plotHeight - tick * plotHeight / 4;
+            svg.append($('<line>').attr({ x1: left, x2: width - right, y1: tickY, y2: tickY, stroke: 'var(--theme-border-color,#dbe3ed)', 'stroke-dasharray': '4 5' }));
+            svg.append($('<text>').attr({ x: left - 10, y: tickY + 4, 'text-anchor': 'end', fill: 'var(--theme-text-muted,#64748b)', 'font-size': 11 }).text(PosnicPro.dashboard.money(tickValue)));
+        }
+        svg.append($('<path>').attr({ d: areaPath, fill: 'url(#posnicSalesAreaLive)' }));
+        svg.append($('<path>').attr({ d: linePath, fill: 'none', stroke: '#2563eb', 'stroke-width': 3.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+        svg.append($('<path>').attr({ d: avgPath, fill: 'none', stroke: '#f59e0b', 'stroke-width': 2.5, 'stroke-dasharray': '7 5', 'stroke-linecap': 'round' }));
+        points.forEach(function (point, index) {
+            var marker = $('<circle>').attr({ cx: point.x, cy: point.y, r: count > 30 ? 3.5 : 5, fill: '#fff', stroke: '#2563eb', 'stroke-width': 2.5, style: 'cursor:pointer' });
+            marker.append($('<title>').text((point.label || 'Sales') + ' · ' + PosnicPro.dashboard.money(point.value) + ' DZD'));
+            svg.append(marker);
+            if (count <= 12) svg.append($('<text>').attr({ x: point.x, y: height - 22, 'text-anchor': 'middle', fill: 'var(--theme-text-muted,#64748b)', 'font-size': 10 }).text(point.label || ''));
+        });
+        if (!values.some(function (v) { return v > 0; })) {
+            svg.append($('<text x="450" y="112" text-anchor="middle" font-size="13" fill="var(--theme-text-muted,#64748b)">').text('No completed sales in this period'));
+        } else if (count > 12) {
             var labels = $('<div class="d-flex justify-content-between text-muted small mt-1"></div>');
-            labels.append($('<span>').text(days[0] || ''), $('<span>').text(days[Math.floor(days.length / 2)] || ''), $('<span>').text(days[days.length - 1] || ''));
-            host.append(svg, labels, $('<div class="da-legend mt-2"><span><i class="da-dot" style="background:#2563eb"></i>Daily sales</span><span><i class="da-dot" style="background:#f59e0b"></i>3-period moving average</span></div>'));
+            labels.append($('<span>').text(days[0] || ''), $('<span>').text(days[Math.floor(count / 2)] || ''), $('<span>').text(days[count - 1] || ''));
+            host.append(svg, labels);
         }
+        host.append(svg);
+        host.append($('<div class="da-legend mt-1"><span><i class="da-dot" style="background:#2563eb"></i>Daily sales (DZD)</span><span><i class="da-dot" style="background:#f59e0b"></i>3-period moving average</span></div>'));
 
-        var mix = Array.isArray(data.paymentMix) ? data.paymentMix : [];
-        var donut = $('#dashboard-payment-donut').empty();
-        var totalPct = mix.reduce(function (sum, item) { return sum + Math.max(0, Number(item.pct) || 0); }, 0);
-        if (!mix.length || totalPct <= 0) {
-            donut.html('<div class="text-muted text-center py-5">No recorded payments in this period yet.</div>');
-            return;
-        }
+        // Payment mix is based on the actual amounts returned by the overview
+        // endpoint; percentages are derived from amounts if not supplied.
+        var mix = Array.isArray(data.paymentMix) ? data.paymentMix.filter(function (item) { return item; }) : [];
+        var donut = $('#dashboard-payment-donut').empty().css({ width: '100%', minHeight: '260px', height: '260px', display: 'flex', alignItems: 'center', justifyContent: 'center' });
+        var paymentTotal = mix.reduce(function (sum, item) { return sum + Math.max(0, Number(item.amount != null ? item.amount : item.total) || 0); }, 0);
+        var pctTotal = mix.reduce(function (sum, item) { return sum + Math.max(0, Number(item.pct) || 0); }, 0);
         var colors = ['#2563eb', '#16a34a', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#f97316'];
-        var radius = 46, circumference = 2 * Math.PI * radius, offset = 0;
-        var ring = $('<svg viewBox="0 0 132 132" role="img" aria-label="Payment distribution from recorded POSNIC payments" style="width:142px;height:142px;flex:0 0 142px;overflow:visible"></svg>');
-        ring.append($('<circle cx="66" cy="66" r="46" fill="none" stroke="var(--theme-border-color,#e5e7eb)" stroke-width="14"></circle>'));
-        mix.forEach(function (item, index) {
-            var percentage = Math.max(0, Number(item.pct) || 0);
-            var segment = circumference * percentage / totalPct;
-            ring.append($('<circle cx="66" cy="66" r="46" fill="none" stroke-width="14" stroke-linecap="round"></circle>').attr({
-                stroke: colors[index % colors.length],
-                'stroke-dasharray': segment + ' ' + (circumference - segment),
-                'stroke-dashoffset': -offset,
-                transform: 'rotate(-90 66 66)'
-            }));
-            offset += segment;
-        });
-        ring.append($('<text x="66" y="63" text-anchor="middle" font-size="18" font-weight="700" fill="currentColor"></text>').text(Math.round(totalPct) + '%'));
-        ring.append($('<text x="66" y="77" text-anchor="middle" font-size="8" letter-spacing=".8" fill="currentColor"></text>').text('PAYMENTS'));
-        var legend = $('<div style="flex:1;min-width:145px"></div>');
-        mix.forEach(function (item, index) {
-            var row = $('<div class="d-flex align-items-center justify-content-between small mb-2" style="gap:8px"></div>');
-            row.append($('<span class="d-flex align-items-center" style="min-width:0;gap:7px"></span>').append(
-                $('<span style="display:inline-block;width:10px;height:10px;flex:0 0 10px;border-radius:50%"></span>').css('background', colors[index % colors.length]),
-                $('<span class="text-truncate"></span>').text(item.mode || 'Other')
-            ));
-            var valueText = (Number(item.pct) || 0).toFixed(1) + '%';
-            if (item.amount != null) valueText += ' · ' + PosnicPro.dashboard.money(item.amount);
-            row.append($('<strong style="white-space:nowrap"></strong>').text(valueText));
-            legend.append(row);
-        });
-        donut.append($('<div class="d-flex flex-wrap align-items-center justify-content-center" style="gap:18px"></div>').append(ring, legend));
+        var radius = 48, circumference = 2 * Math.PI * radius, offset = 0;
+        var ring = $('<svg viewBox="0 0 150 150" role="img" aria-label="Payment distribution by method" style="width:160px;height:160px;flex:0 0 160px;overflow:visible"></svg>');
+        ring.append($('<circle cx="75" cy="75" r="48" fill="none" stroke="var(--theme-border-color,#e5e7eb)" stroke-width="16"></circle>'));
+        if (paymentTotal > 0 || pctTotal > 0) {
+            mix.forEach(function (item, index) {
+                var amount = Math.max(0, Number(item.amount != null ? item.amount : item.total) || 0);
+                var percentage = paymentTotal > 0 ? amount / paymentTotal * 100 : Math.max(0, Number(item.pct) || 0) / pctTotal * 100;
+                var segment = circumference * percentage / 100;
+                var arc = $('<circle cx="75" cy="75" r="48" fill="none" stroke-width="16" stroke-linecap="butt" style="cursor:pointer"></circle>').attr({
+                    stroke: colors[index % colors.length], 'stroke-dasharray': segment + ' ' + circumference,
+                    'stroke-dashoffset': -offset, transform: 'rotate(-90 75 75)'
+                });
+                arc.append($('<title>').text((item.mode || item.method || 'Other') + ' · ' + PosnicPro.dashboard.money(amount) + ' DZD · ' + percentage.toFixed(1) + '%'));
+                ring.append(arc); offset += segment;
+            });
+        }
+        ring.append($('<text x="75" y="70" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor"></text>').text(PosnicPro.dashboard.money(paymentTotal || 0)));
+        ring.append($('<text x="75" y="85" text-anchor="middle" font-size="8" letter-spacing=".8" fill="currentColor"></text>').text('TOTAL DZD'));
+        var legend = $('<div style="flex:1;min-width:145px;max-width:220px"></div>');
+        if (!mix.length || (paymentTotal <= 0 && pctTotal <= 0)) {
+            legend.append($('<div class="text-muted small text-center">No recorded payments in this period</div>'));
+        } else {
+            mix.forEach(function (item, index) {
+                var amount = Math.max(0, Number(item.amount != null ? item.amount : item.total) || 0);
+                var percentage = paymentTotal > 0 ? amount / paymentTotal * 100 : Math.max(0, Number(item.pct) || 0) / pctTotal * 100;
+                var row = $('<div class="d-flex align-items-center justify-content-between small mb-2" style="gap:8px"></div>');
+                row.append($('<span class="d-flex align-items-center" style="min-width:0;gap:7px"></span>').append(
+                    $('<span style="display:inline-block;width:10px;height:10px;flex:0 0 10px;border-radius:50%"></span>').css('background', colors[index % colors.length]),
+                    $('<span class="text-truncate"></span>').text(item.mode || item.method || 'Other')
+                ));
+                row.append($('<strong style="white-space:nowrap"></strong>').text(percentage.toFixed(1) + '% · ' + PosnicPro.dashboard.money(amount)));
+                legend.append(row);
+            });
+        }
+        donut.append($('<div class="d-flex flex-wrap align-items-center justify-content-center" style="gap:16px;width:100%"></div>').append(ring, legend));
     },
 
     renderBestSellers: function (items) {

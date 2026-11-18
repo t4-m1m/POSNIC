@@ -461,21 +461,38 @@ PosnicPro.stockHealthReport = (function () {
         var groups = {};
         (rows || []).forEach(function (r) {
             var key = String(r.category || 'Sans catégorie');
-            if (!groups[key]) groups[key] = { name: key, cost: 0, retail: 0 };
-            groups[key].cost += Number(r.stock_value) || 0;
-            groups[key].retail += (Number(r.stock) || 0) * (Number(r.selling_price) || 0);
+            var quantity = Math.max(0, Number(r.stock != null ? r.stock : r.quantity) || 0);
+            var unitCost = Number(r.buying_price != null ? r.buying_price : r.unit_cost);
+            var unitRetail = Number(r.selling_price_1 != null ? r.selling_price_1 : r.selling_price);
+            if (!groups[key]) groups[key] = { name: key, cost: 0, retail: 0, units: 0 };
+            groups[key].units += quantity;
+            groups[key].cost += quantity * (Number.isFinite(unitCost) ? unitCost : (Number(r.stock_value) || 0) / Math.max(1, quantity));
+            groups[key].retail += quantity * (Number.isFinite(unitRetail) ? unitRetail : 0);
         });
-        var cats = Object.keys(groups).map(function (k) { return groups[k]; }).sort(function (a, b) { return b.retail - a.retail; }).slice(0, 7);
-        var host = $('#stock-health-category-value-chart').empty(), max = Math.max(1, ...cats.map(function (x) { return Math.max(x.cost, x.retail); }));
-        if (!cats.length) { host.text('Aucune donnée disponible.').addClass('sh-muted'); return; }
-        cats.forEach(function (x) {
-            var row = $('<div class="mb-3">');
-            var label = $('<div class="d-flex justify-content-between small mb-1">').append($('<strong>').text(x.name), $('<span class="sh-muted">').text(currency(x.cost) + ' / ' + currency(x.retail)));
-            var cost = $('<div style="height:8px;border-radius:9px;background:var(--sh-border);overflow:hidden;margin-bottom:4px">').append($('<div>').css({height:'100%',width:(x.cost/max*100)+'%',background:'#0d9488',borderRadius:'9px'}));
-            var retail = $('<div style="height:8px;border-radius:9px;background:var(--sh-border);overflow:hidden">').append($('<div>').css({height:'100%',width:(x.retail/max*100)+'%',background:'#2563eb',borderRadius:'9px'}));
-            row.append(label,cost,retail); host.append(row);
+        var cats = Object.keys(groups).map(function (key) { return groups[key]; }).sort(function (a, b) { return b.retail - a.retail; }).slice(0, 10);
+        var host = $('#stock-health-category-value-chart').empty().css({ width: '100%', minHeight: '260px', height: '260px' });
+        if (!cats.length) {
+            host.append($('<div class="text-center sh-muted py-5">Aucune donnée de stock disponible.</div>'));
+            return;
+        }
+        var width = 680, rowHeight = 24, top = 12, left = 116, right = 14;
+        var height = Math.max(190, top + cats.length * 43 + 28), plotWidth = width - left - right;
+        var max = Math.max(1, ...cats.map(function (x) { return Math.max(x.cost, x.retail); }));
+        var svg = $('<svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Grouped stock purchase and retail value by category" style="display:block;width:100%;height:260px;overflow:visible"></svg>');
+        cats.forEach(function (x, index) {
+            var y = top + index * 43;
+            svg.append($('<text>').attr({ x: left - 8, y: y + 15, 'text-anchor': 'end', fill: 'var(--sh-text)', 'font-size': 11 }).text(x.name.length > 18 ? x.name.slice(0, 17) + '…' : x.name));
+            var costWidth = x.cost / max * plotWidth, retailWidth = x.retail / max * plotWidth;
+            var costBar = $('<rect>').attr({ x: left, y: y, width: Math.max(x.cost > 0 ? 1 : 0, costWidth), height: 9, rx: 4, fill: '#0d9488', style: 'cursor:pointer' });
+            costBar.append($('<title>').text(x.name + ' · Coût d’achat: ' + currency(x.cost) + ' DZD · ' + x.units.toLocaleString() + ' unités'));
+            var retailBar = $('<rect>').attr({ x: left, y: y + 13, width: Math.max(x.retail > 0 ? 1 : 0, retailWidth), height: 9, rx: 4, fill: '#2563eb', style: 'cursor:pointer' });
+            retailBar.append($('<title>').text(x.name + ' · Valeur de vente: ' + currency(x.retail) + ' DZD · ' + x.units.toLocaleString() + ' unités'));
+            svg.append(costBar, retailBar);
         });
-        host.append($('<div class="sh-muted small mt-2">').html('<span style="color:#0d9488">■</span> Coût <span class="ml-3" style="color:#2563eb">■</span> Valeur de vente'));
+        host.append(svg, $('<div class="d-flex flex-wrap sh-muted small mt-1" style="gap:14px">').append(
+            $('<span>').html('<i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#0d9488;margin-right:5px"></i>Coût d’achat'),
+            $('<span>').html('<i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#2563eb;margin-right:5px"></i>Valeur de vente')
+        ));
     }
     function renderStockLevels(rows) {
         var host = $('#stock-health-stock-levels-chart').empty(), list = (rows || []).slice();
@@ -496,18 +513,45 @@ PosnicPro.stockHealthReport = (function () {
     }
     function renderCategoryDonut(rows) {
         var groups = {};
-        (rows || []).forEach(function (r) { var key = String(r.category || 'Sans catégorie'); groups[key] = (groups[key] || 0) + (Number(r.stock_value) || 0); });
-        var vals = Object.keys(groups).map(function (k) { return {name:k,value:groups[k]}; }).sort(function(a,b){return b.value-a.value;}).slice(0,6);
-        var total = vals.reduce(function(s,x){return s+x.value;},0), host = $('#stock-health-category-donut').empty();
-        if (!vals.length || total <= 0) { host.text('Aucune donnée disponible.').addClass('sh-muted'); return; }
-        var colors = ['#2563eb','#0d9488','#f59e0b','#16a34a','#8b5cf6','#ec4899'], radius=43, circumference=2*Math.PI*radius, offset=0;
-        var svg = $('<svg viewBox="0 0 120 120" role="img" aria-label="Répartition de la valeur du stock par catégorie" style="width:126px;height:126px;display:block;margin:auto"></svg>');
-        vals.forEach(function(x,i){var length=circumference*x.value/total;svg.append($('<circle cx="60" cy="60" r="43" fill="none" stroke-width="12">').attr({stroke:colors[i], 'stroke-dasharray':length+' '+(circumference-length),'stroke-dashoffset':-offset,transform:'rotate(-90 60 60)'}));offset+=length;});
-        svg.append($('<text x="60" y="58" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">').text(vals.length));
-        svg.append($('<text x="60" y="70" text-anchor="middle" font-size="7" fill="currentColor">').text('CATÉGORIES'));
-        var legend=$('<div class="mt-2">');
-        vals.forEach(function(x,i){var marker=$('<i style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px">').css('background',colors[i]);legend.append($('<div class="d-flex justify-content-between align-items-center small mb-1">').append($('<span class="text-truncate pr-2">').text(x.name).prepend(marker),$('<strong>').text((x.value/total*100).toFixed(1)+'%')));});
-        host.append(svg,legend);
+        (rows || []).forEach(function (r) {
+            var key = String(r.category || 'Sans catégorie');
+            groups[key] = (groups[key] || 0) + Math.max(0, Number(r.stock != null ? r.stock : r.quantity) || 0);
+        });
+        var vals = Object.keys(groups).map(function (key) { return { name: key, value: groups[key] }; }).sort(function (a, b) { return b.value - a.value; });
+        var total = vals.reduce(function (sum, item) { return sum + item.value; }, 0);
+        var host = $('#stock-health-category-donut').empty().css({ width: '100%', minHeight: '260px', height: '260px' });
+        var colors = ['#2563eb', '#0d9488', '#f59e0b', '#16a34a', '#8b5cf6', '#ec4899', '#0891b2', '#f97316'];
+        var radius = 43, circumference = 2 * Math.PI * radius, offset = 0;
+        var svg = $('<svg viewBox="0 0 140 140" role="img" aria-label="Stock unit distribution by category" style="width:150px;height:150px;flex:0 0 150px;display:block;overflow:visible"></svg>');
+        svg.append($('<circle cx="70" cy="70" r="43" fill="none" stroke="var(--sh-border)" stroke-width="14"></circle>'));
+        if (total > 0) {
+            vals.forEach(function (item, index) {
+                var segment = circumference * item.value / total;
+                var arc = $('<circle cx="70" cy="70" r="43" fill="none" stroke-width="14" stroke-linecap="butt" style="cursor:pointer"></circle>').attr({
+                    stroke: colors[index % colors.length], 'stroke-dasharray': segment + ' ' + circumference,
+                    'stroke-dashoffset': -offset, transform: 'rotate(-90 70 70)'
+                });
+                arc.append($('<title>').text(item.name + ' · ' + item.value.toLocaleString() + ' unités · ' + (item.value / total * 100).toFixed(1) + '%'));
+                svg.append(arc); offset += segment;
+            });
+        }
+        svg.append($('<text x="70" y="67" text-anchor="middle" font-size="17" font-weight="700" fill="currentColor"></text>').text(total.toLocaleString()));
+        svg.append($('<text x="70" y="81" text-anchor="middle" font-size="8" letter-spacing=".5" fill="currentColor"></text>').text('UNITÉS'));
+        var legend = $('<div style="flex:1;min-width:125px;max-width:220px"></div>');
+        if (!vals.length || total <= 0) {
+            legend.append($('<div class="sh-muted small">Aucun article en stock.</div>'));
+        } else {
+            vals.forEach(function (item, index) {
+                var row = $('<div class="d-flex justify-content-between align-items-center small mb-1" style="gap:8px"></div>');
+                row.append($('<span class="d-flex align-items-center text-truncate" style="min-width:0"></span>').append(
+                    $('<i style="display:inline-block;width:9px;height:9px;flex:0 0 9px;border-radius:50%;margin-right:6px"></i>').css('background', colors[index % colors.length]),
+                    $('<span class="text-truncate"></span>').text(item.name)
+                ));
+                row.append($('<strong style="white-space:nowrap"></strong>').text(item.value.toLocaleString() + ' · ' + (item.value / total * 100).toFixed(1) + '%'));
+                legend.append(row);
+            });
+        }
+        host.append($('<div class="d-flex flex-wrap align-items-center justify-content-center" style="gap:14px;height:250px"></div>').append(svg, legend));
     }
     function renderTop(rows) {
         var holder=$('#stock-health-top-products').empty(), max=Math.max(1,...(rows||[]).map(r=>Number(r.sold_quantity)||0));
@@ -527,7 +571,7 @@ PosnicPro.stockHealthReport = (function () {
     function load(){var branch=$('.item_branch_value').val();if(Array.isArray(branch))branch=branch[0];if(!branch)branch=PosnicPro.local.get('branch_id')||PosnicPro.local.get('branch');if(!branch){$('#stock-health-error').text('Sélectionnez une agence pour consulter le stock.').show();return;}$('#stock-health-refresh').prop('disabled',true);PosnicPro.get({url:'stock-report',data:{branch:branch}},function(r){$('#stock-health-refresh').prop('disabled',false);if(r&&r.type==='success')render(r.data||{});else $('#stock-health-error').text(r&&r.message||'Impossible de charger le rapport.').show();},function(){$('#stock-health-refresh').prop('disabled',false);$('#stock-health-error').text('Erreur réseau lors du chargement du rapport.').show();});}
     function saveThreshold(){var branch=$('.item_branch_value').val();if(Array.isArray(branch))branch=branch[0];if(!branch)branch=PosnicPro.local.get('branch_id')||PosnicPro.local.get('branch');var days=Math.max(1,Math.min(3650,parseInt($('#stock-health-dormant-days').val(),10)||90));PosnicPro.post({url:'stock-report/settings?branch='+encodeURIComponent(branch||''),data:{dormant_days:days,branch:branch}},function(){load();},function(){load();});}
     function exportCsv(){if(!snapshot||!Array.isArray(snapshot.rows))return;var rows=[['Produit','Référence','Catégorie','Marque','Stock','Qté vendue','Dernière vente','Jours sans vente','Coût unitaire','Valeur stock']];(filtered||snapshot.rows).forEach(r=>rows.push([r.name,r.sku,r.category,r.brand,r.stock,r.sold_quantity,r.last_sale||'Jamais vendu',r.days_since_sale==null?'':r.days_since_sale,r.unit_cost,r.stock_value]));var csv=rows.map(row=>row.map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(';')).join('\r\n');var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='etat-de-stock.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}
-    function applyFilters(){if(!snapshot)return;filtered=filterRows(snapshot.rows);drawRows('#stock-health-critical-rows',filterRows(snapshot.critical),'critical');drawRows('#stock-health-dormant-rows',filterRows(snapshot.dormant),'dormant');drawRows('#stock-health-never-rows',filterRows(snapshot.never_sold),'never');drawRows('#stock-health-all-rows',filtered,'all');}
+    function applyFilters(){if(!snapshot)return;filtered=filterRows(snapshot.rows);renderCategoryComparison(filtered);renderCategoryDonut(filtered);drawRows('#stock-health-critical-rows',filterRows(snapshot.critical),'critical');drawRows('#stock-health-dormant-rows',filterRows(snapshot.dormant),'dormant');drawRows('#stock-health-never-rows',filterRows(snapshot.never_sold),'never');drawRows('#stock-health-all-rows',filtered,'all');}
     $(document).on('click','#stock-health-refresh',load).on('change','#stock-health-dormant-days',saveThreshold).on('click','#stock-health-export',exportCsv).on('input change','#stock-health-search,#stock-health-category,#stock-health-brand,#stock-health-status',applyFilters);
     return {load:load,render:render};
 }());
