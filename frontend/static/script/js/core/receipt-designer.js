@@ -202,7 +202,7 @@
             '.rd-totals{width:' + (sheet ? '48%' : '100%') + ';margin-left:auto;}.rd-transaction{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;border-bottom:1px solid #bbb;padding-bottom:8px;}' +
             '.rd-transaction>strong,.rd-transaction-date{flex:0 0 auto;min-width:0;max-width:100%;}.rd-transaction-date{margin-left:auto;text-align:right;}' +
             '.rd-header-value{display:inline-block;max-width:100%;vertical-align:top;overflow-wrap:anywhere;}.rd-sale-meta{display:flex;justify-content:space-between;gap:4px;align-items:flex-start;}.rd-sale-meta>strong{min-width:0;overflow-wrap:anywhere;}.rd-sale-details .rd-divider{border:0;border-top:1px dashed #777;}.rd-sale-client,.rd-cashier{margin-top:2px;}' +
-            '.rd-muted{color:#555;font-size:.9em;}.rd-text{white-space:pre-wrap;}.rd-divider{border:0;border-top:1px dashed #777;margin:10px 0;}' +
+            '.rd-muted{color:#555;font-size:.9em;}.rd-text{white-space:pre-wrap;}.rd-sale-note{margin-top:5px;padding-top:4px;border-top:1px dashed #888;white-space:pre-wrap;overflow-wrap:anywhere;}.rd-divider{border:0;border-top:1px dashed #777;margin:10px 0;}' +
             '.rd-sheet .rd-store{padding-bottom:12px;border-bottom:2px solid #222;}.rd-terms{margin-top:20px;font-size:.9em;white-space:pre-line;}' +
             (sheet ? sheetCss(format) :
                 '.rd-document{display:flow-root;padding:0!important;}.rd-block:first-child{margin-top:0!important;}.rd-block-logo{margin-top:0!important;padding-top:0!important;}.rd-block:last-child{margin-bottom:0;}' +
@@ -418,7 +418,11 @@
                     }
                 }
                 content += '</div>';
+                if (present(values.sale_note)) {
+                    content += '<div class="rd-sale-note"><strong>' + esc(label('Note')) + ':</strong> ' + esc(String(values.sale_note).trim()) + '</div>';
+                }
             } else if (b.type === 'field') {
+                if (b.field === 'sale_note' && layout.blocks.some(function (entry) { return entry.type === 'totals'; })) return '';
                 var value = b.field === 'sale_note' && typeof b.text === 'string' && b.text.trim() ? b.text : values[b.field];
                 if (b.field === 'receipt_number') value = data.sales_id || data.sale_number || '';
                 if (!present(value)) return '';

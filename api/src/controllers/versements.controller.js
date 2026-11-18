@@ -28,7 +28,7 @@ exports.ensureForSale = async (req, sale) => {
     versement_number: 'V-' + now.toISOString().slice(0,10).replace(/-/g,'') + '-' + require('crypto').randomBytes(3).toString('hex').toUpperCase(),
     sale_key: key, sale_object_id: sale._id, branch_id: new ObjectId(String(branchRaw)),
     ...(sale.cashregister_id && ObjectId.isValid(String(sale.cashregister_id)) ? { register_id: new ObjectId(String(sale.cashregister_id)) } : {}),
-    customer_name: customer, phone, vendor_name: String(meta.vendor_name || sale.cashier_name || '').trim().slice(0, 80), sale_total: total, initial_amount: initial, initial_method: method,
+    customer_name: customer, phone, vendor_name: String(meta.vendor_name || sale.cashier_name || '').trim().slice(0, 80), sale_note: String(sale.sales_description || sale.sale_note || sale.sales_note || '').trim().slice(0, 1000), sale_total: total, initial_amount: initial, initial_method: method,
     remaining: money(Math.max(0, total - initial)), status: settled ? 'settled' : 'pending',
     created_at: now, created_by: actor(req), initial_collected_at: now, initial_recorded_amount: initial,
     ...(settled ? { settled_at: now } : {}),
@@ -69,7 +69,23 @@ exports.list = async (req,res) => {
     const orphanSales = await req.db.collection('sales').find(saleFilter).limit(2000).toArray();
     for (const sale of orphanSales) await exports.ensureForSale(req, sale);
     const rows = await req.db.collection(COLLECTION).find(filter).sort({ created_at:-1 }).limit(2000).toArray();
-    return res.json({ type:'success', data: rows.map(r => ({ ...r, _id:String(r._id) })) });
+    const saleIds = rows.map(r => r.sale_object_id).filter(Boolean);
+    const saleKeys = rows.map(r => String(r.sale_key || '')).filter(Boolean);
+    const linkedSales = saleIds.length || saleKeys.length
+      ? await req.db.collection('sales').find({
+          $or: [
+            ...(saleIds.length ? [{ _id: { $in: saleIds } }] : []),
+            ...(saleKeys.length ? [{ sales_id: { $in: saleKeys } }, { sale_id: { $in: saleKeys } }] : [])
+          ]
+        }, { projection: { sales_description:1, sale_note:1, sales_note:1 } }).toArray()
+      : [];
+    const saleById = new Map(linkedSales.map(s => [String(s._id), s]));
+    const saleByKey = new Map();
+    linkedSales.forEach(s => { saleByKey.set(String(s.sales_id || s.sale_id || ''), s); });
+    return res.json({ type:'success', data: rows.map(r => {
+      const linked = saleById.get(String(r.sale_object_id || '')) || saleByKey.get(String(r.sale_key || '')) || {};
+      return { ...r, sale_note: String(r.sale_note || r.sales_description || linked.sales_description || linked.sale_note || linked.sales_note || '').trim(), _id:String(r._id) };
+    }) });
   } catch(e) { console.error('[versements] list',e); return fail(res,500,'Unable to load versements.'); }
 };
 
@@ -101,7 +117,7 @@ exports.create = async (req,res) => {
     const now = new Date(), initialMethod = String(req.body?.initial_method || 'cash').toLowerCase();
     if (!['cash','tpe','baridimob'].includes(initialMethod)) return fail(res,400,'Choose Espèces, TPE or BaridiMob.');
     const settled = initial >= total - 0.009;
-    const doc = { versement_number:number, sale_key:saleKey(sale), sale_object_id:sale._id, branch_id:new ObjectId(branch), ...(sale.cashregister_id && ObjectId.isValid(String(sale.cashregister_id)) ? { register_id:new ObjectId(String(sale.cashregister_id)) } : {}), customer_name:customer, phone, sale_total:total, initial_amount:initial, initial_method:initialMethod, remaining:money(Math.max(0,total-initial)), status:settled?'settled':'pending', created_at:now, created_by:actor(req), initial_collected_at:now, initial_recorded_amount:initial, ...(settled?{settled_at:now}:{}), settlement:settled?{ amount:0, method:'none', settled_at:now, recorded_by:actor(req) }:null, history:[{type:'initial',amount:initial,method:initialMethod,at:now,by:actor(req)}] };
+    const doc = { versement_number:number, sale_key:saleKey(sale), sale_object_id:sale._id, branch_id:new ObjectId(branch), ...(sale.cashregister_id && ObjectId.isValid(String(sale.cashregister_id)) ? { register_id:new ObjectId(String(sale.cashregister_id)) } : {}), customer_name:customer, phone, sale_note:String(sale.sales_description || sale.sale_note || sale.sales_note || '').trim().slice(0,1000), sale_total:total, initial_amount:initial, initial_method:initialMethod, remaining:money(Math.max(0,total-initial)), status:settled?'settled':'pending', created_at:now, created_by:actor(req), initial_collected_at:now, initial_recorded_amount:initial, ...(settled?{settled_at:now}:{}), settlement:settled?{ amount:0, method:'none', settled_at:now, recorded_by:actor(req) }:null, history:[{type:'initial',amount:initial,method:initialMethod,at:now,by:actor(req)}] };
     const inserted = await collection.insertOne(doc);
     return res.status(201).json({ type:'success', message:'Versement recorded.', data:{...doc,_id:String(inserted.insertedId)} });
   } catch(e) {

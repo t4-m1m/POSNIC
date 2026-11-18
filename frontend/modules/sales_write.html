@@ -247,14 +247,6 @@
                                         </a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="nav-link items_head" id="parked-tab-justified"
-                                            data-toggle="tab" href="#home-justified" role="tab"
-                                            aria-controls="parked" aria-selected="false"
-                                            onclick="PosnicPro.sales.parkedMenu.list();"><i class="feather icon-pause-circle mr-1"></i>
-                                            <lang class="lang_parked_title">Parked</lang>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
                                         <a class="nav-link items_head" id="contact-tab-justified"
                                             data-toggle="tab" href="#contact-justified" role="tab"
                                             aria-controls="contact" aria-selected="false"
@@ -405,8 +397,7 @@
                                                         <span class="sale-chip"><lang class="lang_items">Items</lang>: <strong class="sale-cart-quantity">0</strong>&nbsp; · &nbsp;<lang class="lang_lines">Lines</lang>: <span class="sale-cart-lines">0</span></span>
                                                         <span class="sale-customer-account small" role="status" style="display:none;"></span>
                                                         <a href="javascript:void(0)" class="sale-chip" id="click_payment_description" data-label="Payment note"><i class="feather icon-edit-1"></i> <lang class="lang_paymentnote_title">Payment note</lang></a>
-                                                        <a href="javascript:void(0)" class="sale-chip" id="click_sales_description" data-label="Sale note"><i class="feather icon-edit-1"></i> <lang class="lang_saledescription_title">Sale note</lang></a>
-                                                        <a href="javascript:void(0)" class="sale-chip" id="click_discount_description" data-label="Add discount note" style="display:none;"><i class="feather icon-edit-1"></i> <lang class="lang_discountnote_title">Discount note</lang></a>
+                                                        <a href="javascript:void(0)" class="sale-chip sale-chip-sale-note" id="click_sales_description" data-label="Sale note" style="display:inline-flex!important;"><i class="feather icon-edit-1"></i> <lang class="lang_saledescription_title">Sale note</lang></a>
                                                         <span class="sale-actionbar-sep"></span>
                                                         <a href="javascript:void(0)" class="sale-chip sale-chip-do" id="sale_add_discount">+ <lang class="lang_add_discount">Add discount</lang></a>
                                                         <a href="javascript:void(0)" class="sale-chip sale-chip-do" id="sale_add_charge" style="display:none;">+ <lang class="lang_add_charge">Add charge</lang></a>
@@ -565,12 +556,12 @@
                                                         </button>
                                                     </span>
                                                     <span data-toggle="tooltip" data-placement="top"
-                                                        data-original-title="Clear Sale">
+                                                        data-original-title="Clear">
                                                         <button type="button" id="clearSaleButton"
-                                                            class="col-xs-12 col-md-12 col-lg-2 btn btn-secondary-rgba"
+                                                            class="col-xs-12 col-md-12 col-lg-2 btn btn-danger-rgba"
                                                             onclick="return PosnicPro.resetForm('sale');"
-                                                            style="display: none;" aria-label="Reset" data-t-aria-label="lang_reset_title"><i class="feather icon-refresh-ccw"
-                                                                style="margin-left:-5px;"></i>
+                                                            style="display: none;" aria-label="Clear" data-t-aria-label="lang_clear"><i class="feather icon-trash-2"
+                                                                style="margin-left:-5px;"></i> <span>Clear</span>
                                                         </button>
                                                     </span>
                                                     <a href='#/sales' id="closeSaleButton"

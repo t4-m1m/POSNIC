@@ -600,10 +600,10 @@ PosnicPro.versementsRegister = (function () {
     function render() {
         renderSettlementSummary();
         var q = String($('#versements-search').val() || '').toLowerCase(), body=$('#versements-rows').empty();
-        records.filter(function(r){return !q || [r.customer_name,r.phone,r.versement_number,r.sale_key].join(' ').toLowerCase().indexOf(q)>=0;}).forEach(function(r){
+        records.filter(function(r){return !q || [r.customer_name,r.phone,r.versement_number,r.sale_key,r.sale_note].join(' ').toLowerCase().indexOf(q)>=0;}).forEach(function(r){
             var tr=$('<tr>'), add=function(v){tr.append($('<td>').text(v==null?'':String(v)));};
             add(r.versement_number); add(new Date(r.created_at||Date.now()).toLocaleString());
-            add(r.settled_at ? new Date(r.settled_at).toLocaleString() : '—'); add(r.customer_name); add(r.sale_key);
+            add(r.settled_at ? new Date(r.settled_at).toLocaleString() : '—'); add(r.customer_name); add(r.sale_key); add(r.sale_note || '');
             add(Number(r.sale_total||0).toFixed(2)); add(Number(r.initial_amount||0).toFixed(2)); add(Number(r.remaining||0).toFixed(2));
             add(r.status==='pending'?'En attente':r.status==='settled'?'Réglé':'Annulé');
             var cell=$('<td>');
@@ -615,7 +615,7 @@ PosnicPro.versementsRegister = (function () {
             } else $('<span class="text-muted">Réglé</span>').appendTo(cell);
             tr.append(cell); body.append(tr);
         });
-        if(!body.children().length) body.append($('<tr>').append($('<td colspan="10" class="text-center text-muted">Aucun versement.</td>')));
+        if(!body.children().length) body.append($('<tr>').append($('<td colspan="11" class="text-center text-muted">Aucun versement.</td>')));
     }
     function printReceipt(record) {
         if(!record)return Promise.resolve(false);
@@ -638,6 +638,7 @@ PosnicPro.versementsRegister = (function () {
             customer_name: String(record.customer_name || ''),
             customer_phone: String(record.phone || ''),
             cashier_name: String(record.vendor_name || ''),
+            sale_note: String(record.sale_note || record.sales_description || record.note || ''),
             customer: record.customer_name
                 ? [String(record.customer_name)].concat(record.phone ? ['Téléphone: ' + String(record.phone)] : [])
                 : (record.phone ? ['Téléphone: ' + String(record.phone)] : []),
@@ -651,6 +652,7 @@ PosnicPro.versementsRegister = (function () {
                 {label:'Versement (montant payé)',value:paid.toFixed(2)+' '+currency},
                 {label:'Reste à payer',value:remaining.toFixed(2)+' '+currency},
                 {label:'Vendeur',value:String(record.vendor_name || '')},
+                ...(String(record.sale_note || record.sales_description || record.note || '').trim() ? [{label:'Note',value:String(record.sale_note || record.sales_description || record.note).trim()}] : []),
                 {label:'Statut',value:record.status==='settled'?'Réglé':'En attente'}
             ],
             design: {

@@ -189,6 +189,28 @@ body:not(.posnic-cashier-minimal) #posnic-cashier-versements-quicklink { display
     }
 }
 
+/* Cashier shortcut rows are the hit surface, not just the icon glyphs. */
+@media (min-width: 768px) {
+ body.posnic-nonadmin-icon-rail .vertical-menu-icon > .posnic-cashier-shortcuts {
+  position:relative!important;z-index:120!important;isolation:isolate!important;align-self:stretch!important;
+  width:76px!important;min-width:76px!important;pointer-events:auto!important;
+ }
+ body.posnic-nonadmin-icon-rail .vertical-menu-icon > .posnic-cashier-shortcuts > a {
+  position:relative!important;z-index:121!important;display:flex!important;flex:0 0 56px!important;
+  width:76px!important;min-width:76px!important;max-width:76px!important;height:56px!important;
+  min-height:56px!important;margin:0!important;padding:0!important;pointer-events:auto!important;touch-action:manipulation!important;
+ }
+ body.posnic-nonadmin-icon-rail .vertical-menu-icon > .posnic-cashier-shortcuts > a * {pointer-events:none!important;}
+ body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail) .vertical-menu-icon > .posnic-cashier-shortcuts {
+  position:relative!important;z-index:120!important;isolation:isolate!important;pointer-events:auto!important;
+ }
+ body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail) .vertical-menu-icon > .posnic-cashier-shortcuts > a#posnic-new-sale-quicklink {
+  position:relative!important;z-index:121!important;display:flex!important;flex:0 0 48px!important;width:60px!important;
+  min-width:60px!important;max-width:60px!important;height:48px!important;margin:0!important;padding:0!important;
+  pointer-events:auto!important;touch-action:manipulation!important;
+ }
+ body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail) .vertical-menu-icon > .posnic-cashier-shortcuts > a#posnic-new-sale-quicklink * {pointer-events:none!important;}
+}
 /* Admin-only compact top alignment for the blue icon rail.
    Keep the logo, quick-add button and existing navigation links in DOM;
    flatten only the nav wrapper so they can be visually ordered together. */
