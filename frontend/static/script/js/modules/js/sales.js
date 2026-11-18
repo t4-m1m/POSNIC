@@ -7993,17 +7993,28 @@ PosnicPro.sales.itemCache = {
 PosnicPro.sales.loadSalesTilePage = function (offset, categoryId, done, brandName) {
     var generation = (PosnicPro.sales._catalogueGeneration || 0) + 1;
     PosnicPro.sales._catalogueGeneration = generation;
+    var completed = false;
+    function finish(result) {
+        if (completed) return;
+        completed = true;
+        if (typeof done === 'function') done(result);
+    }
+    function isStale() {
+        return generation !== PosnicPro.sales._catalogueGeneration;
+    }
     PosnicPro.get({ url: 'items/onlineSalesItemsAjaxLists', data: {
         paginate: 'true', tile_page: 'true', limit: 48, offset: offset,
         category_id: categoryId || '', brand: brandName || ''
     } }, function (response) {
-        if (generation !== PosnicPro.sales._catalogueGeneration) return;
-        if (!response || response.type !== 'success') { done(response || { type: 'error' }); return; }
+        // Always settle the caller so its own spinner is removed, even when a
+        // category/brand/recent-list request has superseded this response.
+        if (isStale()) { finish({ type: 'stale', stale: true }); return; }
+        if (!response || response.type !== 'success') { finish(response || { type: 'error' }); return; }
         var data = response.data || {};
-        done({ type: 'success', data: Array.isArray(data) ? data : data.items || [],
+        finish({ type: 'success', data: Array.isArray(data) ? data : data.items || [],
             nextOffset: Number.isInteger(data.next_offset) && data.next_offset > offset ? data.next_offset : null });
     }, function () {
-        if (generation === PosnicPro.sales._catalogueGeneration) done({ type: 'error' });
+        finish(isStale() ? { type: 'stale', stale: true } : { type: 'error' });
     });
 };
 
@@ -8127,12 +8138,13 @@ PosnicPro.sales.itemsMenu = {
         /* crash-hunt probe gate: skippable render */
         if (window.__posnicSkip === 'menu' || window.__posnicSkip === 'all') { return; }
         var loader = $(".loader-product");
-        $("<div class='loadingSpinner'></div>").appendTo(loader);
+        var requestSpinner = $("<div class='loadingSpinner'></div>").appendTo(loader);
         $('#sales_new_productList').show();
         $('#sales_new_categoryList').hide();
         $('#sales_new_brandList').hide();
         PosnicPro.sales.loadSalesTilePage(offset, categoryId, function (response) {
-            loader.find(".loadingSpinner:first").remove();
+            requestSpinner.remove();
+            if (!response || response.stale) return;
             if (response.type === 'success') {
                 var getItemdata = response.data;
                 /* The panel lives on <body>, so removing the grid does not take

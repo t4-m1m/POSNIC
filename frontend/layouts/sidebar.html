@@ -17,6 +17,34 @@ body.posnic-cashier-minimal .navigationbar { box-shadow:none !important; }
 /* The history shortcut belongs only to the compact cashier navigation. */
 body:not(.posnic-cashier-minimal) #posnic-cashier-history-quicklink,
 body:not(.posnic-cashier-minimal) #posnic-cashier-versements-quicklink { display:none !important; }
+
+/* Non-admin staff keep the blue icon buttons, never the hover-expanded list. */
+@media (min-width: 768px) {
+    body.posnic-nonadmin-icon-rail .leftbar,
+    body.posnic-nonadmin-icon-rail .leftbar:hover {
+        width: 76px !important;
+        margin-left: 0 !important;
+        transition: none !important;
+    }
+    body.posnic-nonadmin-icon-rail .navigationbar,
+    body.posnic-nonadmin-icon-rail .vertical-menu-icon {
+        width: 76px !important;
+        min-width: 76px !important;
+    }
+    body.posnic-nonadmin-icon-rail .vertical-menu-detail,
+    body.posnic-nonadmin-icon-rail .leftbar:hover .vertical-menu-detail {
+        display: none !important;
+    }
+    body.posnic-nonadmin-icon-rail .rightbar {
+        margin-left: 76px !important;
+    }
+    body.posnic-nonadmin-icon-rail .footerbar {
+        left: 76px !important;
+    }
+    body.posnic-nonadmin-icon-rail .leftbar:hover ~ .rightbar .topbar {
+        left: 76px !important;
+    }
+}
 </style>
 <div class="leftbar">
     <!-- Start Sidebar -->

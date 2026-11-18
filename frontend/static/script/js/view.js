@@ -33,6 +33,11 @@ $(function () {
     PosnicPro.getBranchTaxList();
 });
 $(document).ready(function () {
+    // Non-admin staff use the icon buttons only. Keep the blue rail compact
+    // permanently; hovering must never expand the legacy full menu over the POS.
+    var sidebarRole = String(PosnicPro.local.get('usertype') || '').trim().toLowerCase();
+    var sidebarAdmin = ['admin', 'super_admin', 'owner'].indexOf(sidebarRole) !== -1;
+    $('body').toggleClass('posnic-nonadmin-icon-rail', !!sidebarRole && !sidebarAdmin);
     (PosnicPro.local.get('gst_action') === 'enable') ? $('.indian-gstr').show() : $('.indian-gstr').hide();
     $('#v-pills-offline-tab,#v-pills-mail-tab,#v-pills-sms-tab,#v-pills-erase-tab,#v-pills-api-tab').remove();
     if (PosnicPro.local.get('usertype') !== 'super_admin') {
