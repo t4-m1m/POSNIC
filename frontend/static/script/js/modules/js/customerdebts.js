@@ -16,10 +16,12 @@
     showDataTablePage: function () {
       if (PosnicPro.HideSideBarModal) PosnicPro.HideSideBarModal();
       $('.vertical-layout').removeClass('toggle-menu');
+      $('.nav-link-active,.tab-pane-active,.dropdown-item').removeClass('active');
       $('.page_loader,#osk-container').hide();
       $('#customerdebts').show();
       $('.vertical-menu li a').removeClass('active');
-      $('#view_customer_debts_page').addClass('active');
+      $('#v-pills-customer-tab,#view_customer_debts_page').addClass('active');
+      $('#v-pills-customer').addClass('show active');
       PosnicPro.customerdebts.load();
     },
     load: function () {

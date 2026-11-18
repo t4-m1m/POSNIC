@@ -26,6 +26,13 @@ class CreditController extends BaseController {
     return req.user?.access?.branch?.write !== false;
   }
 
+  // Debt collection is a cashier/customer operation, not branch administration.
+  // Anyone allowed to read the customer debt ledger may record a settlement.
+  _canCollectDebt(req) {
+    return this.checkPermission('customer', 'read', req.user) ||
+      this.checkPermission('customer', 'write', req.user);
+  }
+
   /** GET /credit/settings - this branch's credit + reminder rules. */
   async getSettings(req, res) {
     try {
@@ -79,7 +86,7 @@ class CreditController extends BaseController {
   /** POST /credit/settle/:customerId - collect money against original sale balances. */
   async settle(req, res) {
     try {
-      if (!this._canWrite(req)) return this.error(res, 'Unauthorized', 403);
+      if (!this._canCollectDebt(req)) return this.error(res, 'Unauthorized', 403);
       const ctx = this._ctx(req);
       const data = await this.service.settleDebt(req.params.customerId, req.body || {}, ctx);
       return this.success(res, data, 'Debt payment recorded');

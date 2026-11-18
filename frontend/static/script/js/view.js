@@ -129,6 +129,17 @@ $('.vertical-menu').on('click', 'li a', function () {
     $(this).addClass('active');
 });
 
+// A same-route click does not emit hashchange. Restore New Sale directly so the
+// compact cashier sidebar can always return from a drawer or custom report panel.
+$(document).on('click.posnicNewSaleQuicklink', '#posnic-new-sale-quicklink', function (event) {
+    var route = String(window.location.hash || '').replace(/^#\/?/, '').replace(/\/$/, '');
+    if (route !== 'sales/new') return;
+    event.preventDefault();
+    if (window.PosnicPro && PosnicPro.sales && typeof PosnicPro.sales.showAdd === 'function') {
+        PosnicPro.sales.showAdd();
+    }
+});
+
 $('.close_on_esc').on('hidden.bs.modal', function () {
     var patt = /^[a-f\d]{24}$/i;
     var parts = currentHash.split('/');

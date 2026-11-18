@@ -1938,6 +1938,14 @@ class ItemRepository extends BaseModel {
         id
       );
 
+      const writesQuantity = Object.prototype.hasOwnProperty.call(data, 'available_quantity');
+      const requestedQuantity = writesQuantity ? Number(data.available_quantity) : NaN;
+      const hasPositiveQuantity = writesQuantity && Number.isFinite(requestedQuantity) && requestedQuantity > 0;
+      const inventoryChoice = data.inventory !== undefined ? data.inventory : data.track_inventory;
+      const inventoryEnabled = inventoryChoice === true || inventoryChoice === 'true' || inventoryChoice === 1 || inventoryChoice === '1';
+      const branchDefaultTracks = !id && branch.item_stock_default === 'track_quantities';
+      const requestedTrackInventory = inventoryChoice !== undefined ? inventoryEnabled : branchDefaultTracks;
+
       const updateData = {
         branch_id: branchObjectId,
         branch_name: branchName,
@@ -2000,12 +2008,7 @@ class ItemRepository extends BaseModel {
         multi_image: multiImage,
         sort_order: parseInt(data.position, 10) || 0,
         description: (data.description || '').trim(),
-        track_inventory:
-          data.inventory !== undefined
-            ? Boolean(data.inventory)
-            : !id && ['always_available', 'track_quantities'].includes(branch.item_stock_default)
-              ? branch.item_stock_default === 'track_quantities'
-              : Boolean(data.inventory),
+        track_inventory: requestedTrackInventory || hasPositiveQuantity,
         ecommerce: Boolean(data.ecommerce),
         /* Absent means shown. A menu whose default is "hidden" starts empty
            and stays empty until somebody ticks every dish, which is not a
@@ -2322,7 +2325,6 @@ class ItemRepository extends BaseModel {
       }
 
       // Additional details must not reset stock that may have changed since creation.
-      const writesQuantity = Object.prototype.hasOwnProperty.call(data, 'available_quantity');
       if (!writesQuantity) delete updateData.available_quantity;
 
       // Update existing item
@@ -2333,6 +2335,11 @@ class ItemRepository extends BaseModel {
         _id: itemObjectId,
         license: licenseObjectId,
       });
+      // If the caller omitted the tracking choice, preserve the saved setting.
+      // Entering a positive opening quantity turns tracking on even for a legacy
+      // item that was previously marked as untracked.
+      if (inventoryChoice === undefined) updateData.track_inventory = existingItem?.track_inventory === true || hasPositiveQuantity;
+      if (hasPositiveQuantity) updateData.track_inventory = true;
       if (sellingPriceHold.active(existingItem, updateData.selling_price))
         return { status: false, message: sellingPriceHold.message };
 
@@ -2385,7 +2392,7 @@ class ItemRepository extends BaseModel {
 
       // Create stock log for EDIT Item (mirrors PHP item_model.php: always log
       // when track_inventory is true; do not gate on branch stock_management).
-      if (writesQuantity && existingItem && existingItem.track_inventory === true) {
+      if (writesQuantity && existingItem && updateData.track_inventory === true) {
         const stockLogsRepository = new StockLogsRepository();
         const openingBalance = existingItem.available_quantity || 0;
         const newBalance = updateData.available_quantity || 0;

@@ -542,3 +542,13 @@
  #items_v2 #iv2-step2-content>#iv2-pricing-extra>.iv2-grid:not(.iv2-pricing){grid-template-columns:minmax(0,1fr)!important}
 }
 </style>
+
+
+<style id="iv2-requested-hidden-controls">
+/* Keep the legacy values in the DOM; only hide the unused controls. */
+#items_v2 #iv2-pricing-extra label:has(#iv2-weight),
+#items_v2 #iv2-appearance > div[aria-hidden="true"]:has(#iv2-icon),
+#items_v2 #iv2-appearance > div:has(#iv2-icon) {
+    display: none !important;
+}
+</style>

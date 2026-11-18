@@ -254,6 +254,10 @@
             var standaloneQuantity = Number(value('iv2-quantity'));
             data.available_quantity = f.kind !== 'service' && f.stock === 'tracked' && Number.isFinite(standaloneQuantity)
                 ? Math.max(0, standaloneQuantity) : 0;
+            // A positive opening quantity is an explicit request to track stock.
+            // Keep the stored flag aligned with the quantity entered in the editor.
+            data.inventory = f.kind !== 'service' && (data.inventory === true || data.available_quantity > 0);
+            data.track_inventory = data.inventory;
         }
         var requestData = Object.assign({}, data);
         if (editing && existingItem) {

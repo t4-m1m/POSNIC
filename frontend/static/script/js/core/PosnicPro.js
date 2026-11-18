@@ -2658,7 +2658,9 @@ PosnicPro = {
     },
 
     showAddModal: function (page) {
-        $(".infobar-settings-sidebar-overlay").addClass("is-active").css({ "background": "rgba(0,0,0,0.4)", "position": "fixed" });
+        $(".infobar-settings-sidebar-overlay").addClass("is-active").css({
+            "background": "rgba(0,0,0,0.4)", "position": "fixed", "pointerEvents": "auto"
+        });
         $("#infobar-settings-sidebar-" + page).addClass("sidebarshow");
     },
 
@@ -2670,7 +2672,11 @@ PosnicPro = {
         /*PopUpModel*/
     },
     HideSideBarModal: function () {
-        $(".infobar-settings-sidebar-overlay").css({ "background": "transparent", "position": "initial" });
+        // Remove the full-screen scrim as well as closing the drawer. Leaving
+        // .is-active behind makes the transparent overlay intercept sidebar clicks.
+        $(".infobar-settings-sidebar-overlay").removeClass("is-active").css({
+            "background": "transparent", "position": "initial", "pointerEvents": ""
+        });
         $(".infobar-settings-sidebar").removeClass("sidebarshow sidebarview");
     },
     /*This function call From sales receiving page for Add new Item & customer */
