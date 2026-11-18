@@ -230,9 +230,10 @@ const processSale = async (
       /walk.?in|cash customer|comptoir|client\s+de\s+passage/i.test(customerName);
     // A checked partial-payment option is not itself an unpaid balance.
     // Require a real customer account only when money remains due or credit is used.
-    if (isWalkIn && (pendingBalance > 0.01 || creditTender > 0.01))
+    const isStandaloneTicketModification = data.preserve_existing_payment === true;
+    if (!isStandaloneTicketModification && isWalkIn && (pendingBalance > 0.01 || creditTender > 0.01))
       return { status: false, message: 'Partial payment and credit require a registered customer. Collect the full amount for a walk-in sale.' };
-    if (pendingBalance > 0.01 || creditTender > 0.01) {
+    if (!isStandaloneTicketModification && (pendingBalance > 0.01 || creditTender > 0.01)) {
       // Enforce the shop's credit-module setting on the server as well as in
       // the cashier UI. Do not rely on client-side controls for account credit.
       let branchSettings = context.branchSettings;
@@ -1075,12 +1076,9 @@ const processSale = async (
         data.multi_payment = existingSale.multi_payment || {};
       } else {
         const due = Math.max(0, finalSaleTotAmount - oldPaid);
-        if (due > 0.01 && isWalkIn) {
-          return { status: false, message: 'Cette modification crée un reste à payer. Associez un client enregistré ou encaissez la différence depuis le paiement.' };
-        }
-        if (due > 0.01 && context.branchSettings?.module_credit_enable === false) {
-          return { status: false, message: 'Le crédit client est désactivé. Encaissez la différence depuis le paiement.' };
-        }
+        // Editing a saved ticket must never be blocked by checkout-only
+        // walk-in/credit restrictions. Keep the original collected amount and
+        // store any increase as the ticket's outstanding balance.
         partialCheck = due > 0.01; partialBalance = Math.min(oldPaid, finalSaleTotAmount);
         paymentStatus = due > 0.01 ? 'Partialy Paid' : 'Paid';
         paymentPending = due; paidAmount = partialBalance; balance = due;
