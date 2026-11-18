@@ -1171,9 +1171,37 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
   #sales_new #items_view_hide #sales_new_productList,
   #sales_new #items_view_hide #sales_new_categoryList,
   #sales_new #items_view_hide #sales_new_brandList {
-    flex: 1 1 0 !important; width: 100% !important; height: 0 !important;
-    min-height: 0 !important; max-height: none !important;
-    overflow-y: auto !important; overflow-x: hidden !important;
+    display: block !important;
+    position: relative !important;
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    visibility: visible !important;
+  }
+  #sales_new #items_view_hide #sales_new_productList[style*="display: none"],
+  #sales_new #items_view_hide #sales_new_categoryList[style*="display: none"],
+  #sales_new #items_view_hide #sales_new_brandList[style*="display: none"] {
+    display: none !important;
+  }
+  #sales_new #items_view_hide #item-lists,
+  #sales_new #items_view_hide #category-lists,
+  #sales_new #items_view_hide #brand-lists {
+    display: block !important;
+    width: 100% !important;
+    min-height: 100% !important;
+    visibility: visible !important;
+  }
+  #sales_new #items_view_hide .sale-tile-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important;
+    align-items: start !important;
+    gap: 10px !important;
+    width: 100% !important;
+    margin: 0 !important;
   }
 
   /* Keep the basket header and all item rows in a real scroll container. */

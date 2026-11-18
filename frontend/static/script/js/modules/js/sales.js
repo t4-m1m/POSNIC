@@ -8243,8 +8243,7 @@ PosnicPro.sales.itemsMenu = {
         categoryId = typeof categoryId === "string" ? categoryId : "";
         brandName = typeof brandName === "string" ? brandName.trim() : "";
         offset = offset || 0;
-        /* crash-hunt probe gate: skippable render */
-        if (window.__posnicSkip === 'menu' || window.__posnicSkip === 'all') { return; }
+        // Always load the live product catalogue when the Articles tab is opened.
         var loader = $(".loader-product");
         var requestSpinner = $("<div class='loadingSpinner'></div>").appendTo(loader);
         $('#sales_new_productList').show();
