@@ -11763,6 +11763,14 @@ $('#sales_new_item_name').scannerDetection({
     onComplete: function (barcode, qty) {
         PosnicPro.sales._searchScanPending = false;
         validScan = true;
+        // A hardware scan is an atomic replacement, not appended text.
+        // Clear the selected search text before resolving the scanned code,
+        // so the old selection cannot survive/collapse into the barcode.
+        var scanInput = document.getElementById('sales_new_item_name');
+        if (scanInput) {
+            scanInput.value = '';
+            try { scanInput.setSelectionRange(0, 0); } catch (e) {}
+        }
         PosnicPro.sales.addByBarcode(barcode);
     },
     onError: function (string, qty) {
