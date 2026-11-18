@@ -15555,14 +15555,23 @@ function requestZrApi(method,url,data){
 window.posnicZrRequest=requestZrApi;
 function initZrSelectSearch(){
  var $modal=$('#posnic-zr-modal');
- if(!$.fn.select2)return;
- $modal.find('#zr-wilaya,#zr-commune').each(function(){
-  var $select=$(this);
-  if($select.hasClass('select2-hidden-accessible'))return;
-  $select.select2({
-   dropdownParent:$modal,width:'100%',minimumResultsForSearch:0,
-   placeholder:'Rechercher et sélectionner…',allowClear:true,
-   language:{noResults:function(){return 'Aucun résultat';},searching:function(){return 'Recherche…';}}
+ if(!window.__zrSelect2Promise){
+  if($.fn.select2)window.__zrSelect2Promise=Promise.resolve();
+  else window.__zrSelect2Promise=$.getScript('static/script/js/plugins/select2/select2.min.js');
+  if(!document.getElementById('posnic-zr-select2-css')){
+   $('<link>',{id:'posnic-zr-select2-css',rel:'stylesheet',href:'static/style/plugins/select2/select2.min.css'}).appendTo('head');
+  }
+ }
+ return Promise.resolve(window.__zrSelect2Promise).then(function(){
+  if(!$.fn.select2)throw new Error('Le moteur de recherche des wilayas et communes est indisponible.');
+  $modal.find('#zr-wilaya,#zr-commune').each(function(){
+   var $select=$(this);
+   if($select.hasClass('select2-hidden-accessible'))return;
+   $select.select2({
+    dropdownParent:$modal,width:'100%',minimumResultsForSearch:0,
+    placeholder:'Rechercher et sélectionner…',allowClear:true,
+    language:{noResults:function(){return 'Aucun résultat';},searching:function(){return 'Recherche…';}}
+   });
   });
  });
 }
@@ -15654,9 +15663,9 @@ PosnicPro.sales.openZrDelivery=async function(){
    applyZrFee();
   });
   var wopts='<option value="">Choisir la wilaya</option>'+d.wilayas.map(x=>'<option data-code="'+esc(x.code)+'" value="'+esc(x.id)+'">'+esc(x.code+' · '+x.name)+'</option>').join('');
-  $('#zr-wilaya').html(wopts).val('').trigger('change');
-  $('#zr-commune').html('<option value="">Choisir la commune</option>').val('').trigger('change');
-  $('#zr-hub').html('<option value="">Choisir le point relais</option>'+d.hubs.filter(x=>x.isPickupPoint).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('')).val('').trigger('change');
+  $('#zr-wilaya').html(wopts).val('').trigger('change.select2');
+  $('#zr-commune').html('<option value="">Choisir la commune</option>').val('').trigger('change.select2');
+  $('#zr-hub').html('<option value="">Choisir le point relais</option>'+d.hubs.filter(x=>x.isPickupPoint).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>').join('')).val('').trigger('change.select2');
   $('#zr-type').val('home').trigger('change');
   $('#zr-name').val($('#sales_new_customer_name').val()==='ZR Express'?'':$('#sales_new_customer_name').val());
   $('#zr-phone').val($('#sales_new_customer_phone').val());

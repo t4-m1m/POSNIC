@@ -917,33 +917,3 @@ body:not(.posnic-cashier-minimal) #posnic-cashier-versements-quicklink { display
     </div>
     <!-- End Sidebar -->
 </div>
-
-
-/* Full-anchor hit targets: artwork never intercepts a click from its button. */
-@media (min-width: 768px) {
-  .vertical-menu-icon,.vertical-menu-icon > .posnic-cashier-shortcuts,
-  .vertical-menu-icon > .nav,.vertical-menu-icon .nav > a { pointer-events:auto !important; }
-  body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail)
-    .vertical-menu-icon > .posnic-cashier-shortcuts {
-    position:relative !important; z-index:140 !important; isolation:isolate !important;
-    width:60px !important; min-width:60px !important;
-  }
-  body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail) #posnic-new-sale-quicklink {
-    position:relative !important; z-index:141 !important; display:flex !important;
-    width:60px !important; min-width:60px !important; max-width:60px !important;
-    height:56px !important; min-height:56px !important; flex:0 0 56px !important;
-    margin:0 !important; cursor:pointer !important; pointer-events:auto !important;
-  }
-  body.posnic-nonadmin-icon-rail .vertical-menu-icon {
-    position:relative !important; z-index:130 !important; isolation:isolate !important;
-  }
-  body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav { position:relative !important; z-index:131 !important; }
-  body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a {
-    position:relative !important; z-index:132 !important; width:76px !important;
-    min-width:76px !important; max-width:76px !important; height:56px !important;
-    min-height:56px !important; flex:0 0 56px !important; cursor:pointer !important;
-    pointer-events:auto !important;
-  }
-  .vertical-menu-icon .posnic-cashier-shortcuts > a *,
-  .vertical-menu-icon .nav > a * { pointer-events:none !important; }
-}

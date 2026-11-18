@@ -5,8 +5,6 @@ const {protect}=require('../middleware/auth');
 const controller=require('../controllers/zr-delivery.controller');
 router.use(protect);
 router.get('/',controller.list);
-router.post('/customer',controller.ensureZrCustomer);
 router.post('/link',controller.link);
-router.post('/:tracking/cancel',controller.cancel);
 router.patch('/:tracking/status',controller.updateStatus);
 module.exports=router;

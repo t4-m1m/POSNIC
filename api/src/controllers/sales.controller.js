@@ -2222,11 +2222,7 @@ class SalesController extends BaseController {
       responseData.cancellation_summary = cancellationSummary;
 
       if (req.cashierDayClose) {
-        const salesCash = paymentDetails.reduce((sum, row) => {
-          const method = String(row.payment_mode || '').trim();
-          if (/^(?:livraison[_\\s-]?zr|zr[_\\s-]?express)$/i.test(method)) return sum;
-          return sum + (isCashTender(method) ? Number(row.sale_payment || 0) : 0);
-        }, 0);
+        const salesCash = paymentDetails.reduce((sum, row) => sum + (isCashTender(row.payment_mode) ? Number(row.sale_payment || 0) : 0), 0);
         const collectedCash = debtPaymentDetails.reduce((sum, row) => sum + (isCashTender(row.payment_mode) ? Number(row.amount || 0) : 0), 0);
         const salaryCash = salaryPaymentDetails.reduce((sum, row) => sum + (isCashTender(row.method) ? Number(row.amount || 0) : 0), 0);
         const advanceCash = salaryAdvanceDetails.reduce((sum, row) => sum + (isCashTender(row.method) ? Number(row.amount || 0) : 0), 0);
