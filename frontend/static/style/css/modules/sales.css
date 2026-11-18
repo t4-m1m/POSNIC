@@ -1343,3 +1343,55 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
     overflow-x: hidden !important;
   }
 }
+
+
+/* Final sales viewport lock: the sales screen must fit the usable window
+   without creating a document/page scrollbar. Only the catalogue list scrolls. */
+@media (min-width: 768px) {
+  html:has(#sales_new:not([style*="display: none"])),
+  body:has(#sales_new:not([style*="display: none"])) {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+  body:has(#sales_new:not([style*="display: none"])) {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+  }
+  #sales_new {
+    height: calc(100vh - 64px) !important;
+    max-height: calc(100vh - 64px) !important;
+    min-height: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    overflow: hidden !important;
+  }
+  @supports (height: 100dvh) {
+    #sales_new {
+      height: calc(100dvh - 64px) !important;
+      max-height: calc(100dvh - 64px) !important;
+    }
+  }
+  #sales_new .sales-customer-entry,
+  #sales_new .sales-customer-pop {
+    display: none !important;
+  }
+  #sales_new > .contentbar,
+  #sales_new > .contentbar > .row.align-items-center,
+  #sales_new #touchsales_page,
+  #sales_new #touchsales_page > .row:has(#instance-view) {
+    overflow: hidden !important;
+    min-height: 0 !important;
+  }
+  #sales_new #items_view_hide {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+}
+@media (max-height: 760px) and (min-width: 768px) {
+  #sales_new { height: calc(100vh - 64px) !important; max-height: calc(100vh - 64px) !important; }
+  @supports (height: 100dvh) {
+    #sales_new { height: calc(100dvh - 64px) !important; max-height: calc(100dvh - 64px) !important; }
+  }
+}
