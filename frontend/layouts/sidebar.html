@@ -271,6 +271,68 @@ body:not(.posnic-cashier-minimal) #posnic-cashier-versements-quicklink { display
         padding: 7px 5px !important;
     }
 }
+
+/* Final hit-target layer: keep the shortcut rail above the sliding detail pane.
+   The anchors, not their icon glyphs, own the full clickable surface. */
+@media (min-width: 768px) {
+  body.posnic-nonadmin-icon-rail .vertical-menu-icon {
+    position:relative !important;
+    z-index:150 !important;
+    isolation:isolate !important;
+    pointer-events:auto !important;
+  }
+  body.posnic-nonadmin-icon-rail .vertical-menu-icon > .posnic-cashier-shortcuts {
+    position:relative !important;
+    z-index:151 !important;
+    pointer-events:auto !important;
+  }
+  body.posnic-nonadmin-icon-rail .vertical-menu-icon > .posnic-cashier-shortcuts > a {
+    position:relative !important;
+    z-index:152 !important;
+    display:flex !important;
+    width:76px !important;
+    min-width:76px !important;
+    max-width:76px !important;
+    height:56px !important;
+    min-height:56px !important;
+    margin:0 !important;
+    padding:0 !important;
+    pointer-events:auto !important;
+    cursor:pointer !important;
+    touch-action:manipulation !important;
+  }
+  body.posnic-nonadmin-icon-rail .vertical-menu-icon > .posnic-cashier-shortcuts > a * {
+    pointer-events:none !important;
+  }
+  body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail) .vertical-menu-icon {
+    position:relative !important;
+    z-index:150 !important;
+    isolation:isolate !important;
+  }
+  body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail) .vertical-menu-icon > .posnic-cashier-shortcuts {
+    position:relative !important;
+    z-index:151 !important;
+    pointer-events:auto !important;
+  }
+  body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail) #posnic-new-sale-quicklink {
+    position:relative !important;
+    z-index:152 !important;
+    display:flex !important;
+    width:60px !important;
+    min-width:60px !important;
+    max-width:60px !important;
+    height:56px !important;
+    min-height:56px !important;
+    margin:0 !important;
+    padding:0 !important;
+    pointer-events:auto !important;
+    cursor:pointer !important;
+    touch-action:manipulation !important;
+  }
+  body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail) #posnic-new-sale-quicklink * {
+    pointer-events:none !important;
+  }
+}
 </style>
 <div class="leftbar">
     <!-- Start Sidebar -->
