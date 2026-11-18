@@ -4675,7 +4675,7 @@ PosnicPro.sales.addSale = {
         } else {
             var loader = $(".loader-sales-balance");
             $("<div class='loadingSpinner'></div>").appendTo(loader);
-            PosnicPro.sales.addSalesLineTable = $('#sales_new_items_table tbody tr').map(function () {
+            PosnicPro.sales.addSalesLineTable = $('#sales_new_items_table tbody tr[id^="touch_row_"]').map(function () {
                 let itemid = $(this).find(':nth-child(9)').text();
                 var status = ($('#salesType_' + itemid).text() === 'instant') ? 'instant' : 'Add';
 
@@ -15126,7 +15126,11 @@ $(document).ready(function () {
             var id = this.nextId++;
             var session = { id: id, label: 'Client ' + (this.sessions.length + 1), customerName: '', snapshot: null };
             this.sessions.push(session);
-            // Start with a genuinely empty sale using the existing POS reset logic.
+            // Start the new tab with its own empty basket and no inherited
+            // tender sidebar. The previous tab's open payment is already saved.
+            $('#infobar-settings-sidebar-tender-details').removeClass('sidebarview');
+            $('.infobar-settings-sidebar-overlay').hide();
+            $('#tenderpage').show();
             if (PosnicPro.sales.clear && PosnicPro.sales.clear.cartItems) PosnicPro.sales.clear.cartItems(false);
             PosnicPro.sales.addSalesItemChars = []; PosnicPro.sales.EditRecentSaleParams = []; PosnicPro.sales._lineModifiers = {};
             PosnicPro.sales.SaleAction = 'add'; PosnicPro.sales.saleProcess = null; PosnicPro.sales.editSaleAction = false;
