@@ -426,8 +426,9 @@
         });
         el('hsn').addEventListener('input', hsnSuggestions);
         el('photos').addEventListener('change',readPhotos);
-        var palette=document.createElement('div');palette.className='iv2-icon-palette';
-        ['📦','👕','👟','👜','📱','📚','🧴','✂️','🔧','☕','🍵','🍛','🍜','🍕','🥪','🥗','🍰','🍨','🥤','💧'].forEach(function(icon){var pick=button(icon,function(){el('icon').value=icon;notify();});pick.setAttribute('aria-label',icon);palette.appendChild(pick);});el('icon').after(palette);
+        // Product photos are uploaded only through the native file picker.
+        // Keep the legacy hidden tile-icon fields for backwards-compatible
+        // payloads, but do not render an emoji picker under the photo uploader.
         el('form').addEventListener('click',function(e){var target=e.target.closest('[data-iv2-advanced]');if(target&&target.dataset.iv2Advanced==='generate')generate();});
         function clearGeneratedVariants(){variants=[];signature='';el('variant-rows').replaceChildren();notify();}
         ['values1','values2'].forEach(function(id){el(id).addEventListener('change',function(){update(caps,document.querySelector('#items_v2 [name="iv2-kind"]:checked').value);notify();});});
