@@ -470,7 +470,7 @@ PosnicPro.stockHealthReport = (function () {
             groups[key].retail += quantity * (Number.isFinite(unitRetail) ? unitRetail : 0);
         });
         var cats = Object.keys(groups).map(function (key) { return groups[key]; }).sort(function (a, b) { return b.retail - a.retail; }).slice(0, 10);
-        var host = $('#stock-health-category-value-chart').empty().css({ width: '100%', minHeight: '260px', height: '260px' });
+        var host = $('#stock-health-category-value-chart').empty().css({ width: '100%', minHeight: '260px', height: '260px', overflowY: 'auto', overflowX: 'hidden' });
         if (!cats.length) {
             host.append($('<div class="text-center sh-muted py-5">Aucune donnée de stock disponible.</div>'));
             return;
@@ -478,7 +478,7 @@ PosnicPro.stockHealthReport = (function () {
         var width = 680, rowHeight = 24, top = 12, left = 116, right = 14;
         var height = Math.max(190, top + cats.length * 43 + 28), plotWidth = width - left - right;
         var max = Math.max(1, ...cats.map(function (x) { return Math.max(x.cost, x.retail); }));
-        var svg = $('<svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Grouped stock purchase and retail value by category" style="display:block;width:100%;height:260px;overflow:visible"></svg>');
+        var svg = $('<svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Grouped stock purchase and retail value by category" style="display:block;width:100%;height:' + height + 'px;min-height:260px;overflow:visible"></svg>');
         cats.forEach(function (x, index) {
             var y = top + index * 43;
             svg.append($('<text>').attr({ x: left - 8, y: y + 15, 'text-anchor': 'end', fill: 'var(--sh-text)', 'font-size': 11 }).text(x.name.length > 18 ? x.name.slice(0, 17) + '…' : x.name));
