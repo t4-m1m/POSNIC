@@ -1216,3 +1216,54 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
   #sales_new .sales-function-key span { font-size: 10px; }
   #sales_new .sales-function-key kbd { font-size: 9px; }
 }
+
+
+/* Active catalogue pane stays visible inside the fixed-height sales workspace. */
+@media (min-width: 768px) {
+  #sales_new #items_view_hide #sales_new_productList:not([style*="display: none"]),
+  #sales_new #items_view_hide #sales_new_categoryList:not([style*="display: none"]),
+  #sales_new #items_view_hide #sales_new_brandList:not([style*="display: none"]) {
+    display:flex !important; flex:1 1 0 !important; flex-direction:column !important;
+    width:100% !important; height:0 !important; min-height:0 !important;
+    max-height:none !important; overflow-x:hidden !important; overflow-y:auto !important;
+    visibility:visible !important;
+  }
+  #sales_new #items_view_hide #item-lists,
+  #sales_new #items_view_hide #category-lists,
+  #sales_new #items_view_hide #brand-lists,
+  #sales_new #items_view_hide #recent_sales_list {
+    display:block !important; flex:0 0 auto !important; width:100% !important;
+    min-height:0 !important; visibility:visible !important;
+  }
+  #sales_new #items_view_hide .sale-tile-grid {
+    display:grid !important; grid-template-columns:repeat(auto-fill,minmax(145px,1fr)) !important;
+    gap:10px !important; width:100% !important; margin:0 !important;
+  }
+
+  /* Admin plus action and non-admin icon rail use the complete anchor as the hit target. */
+  .vertical-menu-icon,.vertical-menu-icon > .posnic-cashier-shortcuts,
+  .vertical-menu-icon > .nav,.vertical-menu-icon .nav > a { pointer-events:auto !important; }
+  body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail)
+    .vertical-menu-icon > .posnic-cashier-shortcuts {
+    position:relative !important; z-index:140 !important; isolation:isolate !important;
+    width:60px !important; min-width:60px !important;
+  }
+  body:not(.posnic-cashier-minimal):not(.posnic-nonadmin-icon-rail) #posnic-new-sale-quicklink {
+    position:relative !important; z-index:141 !important; display:flex !important;
+    width:60px !important; min-width:60px !important; max-width:60px !important;
+    height:56px !important; min-height:56px !important; flex:0 0 56px !important;
+    margin:0 !important; cursor:pointer !important; pointer-events:auto !important;
+  }
+  body.posnic-nonadmin-icon-rail .vertical-menu-icon {
+    position:relative !important; z-index:130 !important; isolation:isolate !important;
+  }
+  body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav { position:relative !important; z-index:131 !important; }
+  body.posnic-nonadmin-icon-rail .vertical-menu-icon .nav > a {
+    position:relative !important; z-index:132 !important; width:76px !important;
+    min-width:76px !important; max-width:76px !important; height:56px !important;
+    min-height:56px !important; flex:0 0 56px !important; cursor:pointer !important;
+    pointer-events:auto !important;
+  }
+  .vertical-menu-icon .posnic-cashier-shortcuts > a *,
+  .vertical-menu-icon .nav > a * { pointer-events:none !important; }
+}

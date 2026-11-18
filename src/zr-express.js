@@ -269,16 +269,37 @@ function register({ ipcMain, getWindow, BrowserWindow, dialog, app, safeStorage 
   ipcMain.handle('zr:save-bordereau', async (_event, html) => {
     if (typeof html !== 'string' || !html.includes('<html') || html.length > 200000) throw new Error('Invalid bordereau document.');
     const owner = getWindow && getWindow();
-    const choice = await dialog.showSaveDialog(owner || undefined, { title:'Enregistrer le bordereau ZR Express', defaultPath:'Bordereau-ZR-Express.pdf', filters:[{name:'PDF',extensions:['pdf']}] });
-    if (choice.canceled || !choice.filePath) return { saved:false };
-    const win = new BrowserWindow({ show:false, width:480, height:720, webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false} });
+    const choice = await dialog.showSaveDialog(owner || undefined, {
+      title: 'Enregistrer le bordereau ZR Express',
+      defaultPath: 'Bordereau-ZR-Express.pdf',
+      filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    });
+    if (choice.canceled || !choice.filePath) return { saved: false };
+    const filePath = /\\.pdf$/i.test(choice.filePath) ? choice.filePath : choice.filePath + '.pdf';
+    const win = new BrowserWindow({
+      show: false, width: 480, height: 720,
+      webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false }
+    });
     try {
       await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
-      const pdf = await win.webContents.printToPDF({printBackground:true,pageSize:{width:100000,height:150000},margins:{top:0,bottom:0,left:0,right:0}});
-      await fs.writeFile(choice.filePath,pdf);
-      return {saved:true,filePath:choice.filePath};
-    } finally { if (!win.isDestroyed()) win.destroy(); }
-  });
+      await win.webContents.executeJavaScript('document.fonts && document.fonts.ready ? document.fonts.ready.then(() => true) : true');
+      const pdf = await win.webContents.printToPDF({
+        printBackground: true, preferCSSPageSize: true,
+        pageSize: { width: 100000, height: 150000 },
+        margins: { top: 0, bottom: 0, left: 0, right: 0 }
+      });
+      if (!pdf || !pdf.length) throw new Error('ZR Express produced an empty PDF.');
+      await fs.mkdir(path.dirname(filePath), { recursive: true });
+      await fs.writeFile(filePath, pdf);
+      const stat = await fs.stat(filePath);
+      if (!stat.isFile() || stat.size < 100) throw new Error('The PDF file could not be written completely.');
+      return { saved: true, filePath, size: stat.size };
+    } catch (error) {
+      throw new Error('Impossible d’enregistrer le bordereau PDF : ' + (error.message || 'erreur inconnue'));
+    } finally {
+      if (!win.isDestroyed()) win.destroy();
+    }
+  });;
 }
 
 module.exports = { register, getCatalog, getCommunes, createParcel, getParcel, cancelParcel };
