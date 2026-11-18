@@ -32,8 +32,11 @@ async function request(credentials, method, path, body) {
     let data = {};
     try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { message: text.slice(0, 500) }; }
     if (!response.ok) {
-      const message = data.message || data.title || data.detail || ('ZR Express returned HTTP ' + response.status);
-      throw new Error(String(message).slice(0, 500));
+      const validation = Array.isArray(data.errors) ? data.errors.map(function (item) {
+        return [item.field || item.property || '', item.message || item.error || item.code || 'Invalid value'].filter(Boolean).join(': ');
+      }).filter(Boolean).join('; ') : '';
+      const message = validation || data.message || data.title || data.detail || ('ZR Express returned HTTP ' + response.status);
+      throw new Error(String(message).slice(0, 700));
     }
     return data;
   } finally {
@@ -118,42 +121,96 @@ function intlPhone(value) {
   return '+' + digits;
 }
 
+async function resolveCustomer(auth, parcel, phone) {
+  const rows = await searchAll(auth, 'customers/search', { pageSize: 100, keyword: phone, includeAllAddresses: true });
+  const digits = phone.replace(/\\D/g, '');
+  const match = rows.find(item => {
+    const p = item.phone || {};
+    return [p.number1, p.number2, item.phoneNumber, item.phone].some(value => String(value || '').replace(/\\D/g, '') === digits);
+  }) || rows.find(item => String(item.name || '').trim().toLowerCase() === String(parcel.customerName || '').trim().toLowerCase());
+  if (match && match.id) return String(match.id);
+  const created = await request(auth, 'POST', 'customers', {
+    type: 'individual',
+    name: String(parcel.customerName || '').trim(),
+    phone: { number1: phone, number2: intlPhone(parcel.phoneAlt) },
+    addresses: [{
+      street: String(parcel.address || '').slice(0, 500),
+      cityTerritoryId: String(parcel.cityTerritoryId),
+      districtTerritoryId: String(parcel.districtTerritoryId),
+      isPrimary: true
+    }]
+  });
+  const customerId = created && (created.id || created.customerId || created.customer && created.customer.id);
+  if (!customerId) throw new Error('ZR Express did not return the new customer ID.');
+  return String(customerId);
+}
+
+async function resolveProduct(auth, item) {
+  const name = String(item.name || 'Article').trim().slice(0, 200) || 'Article';
+  const sku = 'POSNIC-' + require('crypto').createHash('sha1').update(name.toLowerCase()).digest('hex').slice(0, 12).toUpperCase();
+  const rows = await searchAll(auth, 'products/search', { pageSize: 100, keyword: sku });
+  let product = rows.find(row => String(row.sku || row.productSku || '').toUpperCase() === sku);
+  if (!product) {
+    const created = await request(auth, 'POST', 'products', { name, sku, localStock: 0, basePrice: Math.max(0, Number(item.unitPrice) || 0) });
+    product = created && (created.product || created);
+  }
+  const productId = product && (product.id || product.productId);
+  const productSku = product && (product.sku || product.productSku) || sku;
+  if (!productId) throw new Error('ZR Express could not create or resolve a catalog product for "' + name + '". Check Products permissions in your ZR account.');
+  return { productId: String(productId), productSku: String(productSku), productName: name };
+}
+
 async function createParcel(credentials, input) {
   const auth = credentialsOf(credentials);
   const parcel = input || {};
   const items = Array.isArray(parcel.items) ? parcel.items : [];
   const customerName = String(parcel.customerName || '').trim();
   const phone = intlPhone(parcel.phone);
-  if (!customerName || !phone || !parcel.cityTerritoryId || !parcel.districtTerritoryId || !parcel.sourceHubId || !items.length) {
-    throw new Error('Customer, phone, wilaya, commune, source hub and at least one item are required.');
+  const deliveryType = parcel.deliveryType === 'pickup-point' ? 'pickup-point' : 'home';
+  if (!customerName || !phone || !parcel.cityTerritoryId || !parcel.districtTerritoryId || !items.length) {
+    throw new Error('Customer, valid phone, wilaya, commune and at least one item are required.');
   }
-  const productDescription = String(parcel.description || items.map(item => item.name + ' x' + item.quantity).join(', ')).slice(0, 250);
-  const orderedProducts = items.map(item => ({
-    productName: String(item.name || 'Article').slice(0, 200),
-    unitPrice: Number(item.unitPrice || 0),
-    quantity: Math.max(1, Number(item.quantity || 1)),
-    stockType: 'none'
-  }));
+  if (deliveryType === 'pickup-point' && !parcel.sourceHubId) throw new Error('Select a ZR Express pickup point for bureau delivery.');
   const totalCod = Number(parcel.codTotal);
   if (!Number.isFinite(totalCod) || totalCod < 0 || totalCod > 150000) throw new Error('COD amount must be between 0 and 150,000 DZD.');
+  const customerId = await resolveCustomer(auth, parcel, phone);
+  const orderedProducts = [];
+  for (const item of items) {
+    const resolved = await resolveProduct(auth, item);
+    const quantity = Number(item.quantity || 1);
+    const unitPrice = Number(item.unitPrice || 0);
+    if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(unitPrice) || unitPrice < 0) {
+      throw new Error('Invalid quantity or unit price for "' + resolved.productName + '".');
+    }
+    orderedProducts.push({
+      productId: resolved.productId,
+      productSku: resolved.productSku,
+      productName: resolved.productName,
+      unitPrice,
+      quantity,
+      stockType: 'none'
+    });
+  }
+  const productDescription = String(parcel.description || items.map(item => item.name + ' x' + item.quantity).join(', ')).slice(0, 250);
   const body = {
-    hubId: String(parcel.sourceHubId),
     customer: {
-      customerId: require('crypto').randomUUID(),
+      customerId,
       name: customerName,
       phone: { number1: phone, number2: intlPhone(parcel.phoneAlt) }
     },
     deliveryAddress: {
       cityTerritoryId: String(parcel.cityTerritoryId),
       districtTerritoryId: String(parcel.districtTerritoryId),
-      street: String(parcel.address || '').slice(0, 500) || null
+      street: String(parcel.address || '').slice(0, 500)
     },
     orderedProducts,
-    deliveryType: parcel.deliveryType === 'pickup-point' ? 'pickup-point' : 'home',
+    deliveryType,
     description: productDescription,
     amount: totalCod,
+    weight: { weight: 1 },
     externalId: String(parcel.externalId || ('POSNIC-' + Date.now())).slice(0, 100)
   };
+  if (deliveryType === 'pickup-point') body.hubId = String(parcel.sourceHubId);
   let stateId;
   try { stateId = await readyState(auth); } catch (error) { console.warn('[ZR Express] workflow lookup:', error.message); }
   if (stateId) body.stateId = stateId;

@@ -1054,3 +1054,77 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
     font-weight: 750 !important;
     line-height: 1.3 !important;
 }
+
+
+/* Sales screen stays inside the desktop viewport; only the catalogue panes scroll. */
+@media (min-width: 768px) {
+  #sales_new {
+    height: calc(100vh - 116px);
+    max-height: calc(100vh - 116px);
+    min-height: 0;
+    overflow: hidden !important;
+  }
+  #sales_new #touchsales_page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+  #sales_new #touchsales_page > .row:has(#instance-view, #items_view_hide) {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+    align-items: stretch;
+  }
+  #sales_new #instance-view,
+  #sales_new #items_view_hide {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  #sales_new #viewtest,
+  #sales_new #sales_table,
+  #sales_new #items_view_hide > .row,
+  #sales_new #items_view_hide > div {
+    min-height: 0;
+  }
+  #sales_new #sales_new_productList,
+  #sales_new #sales_new_categoryList,
+  #sales_new #sales_new_brandList {
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: 100%;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+  #sales_new #sales_table .table-responsive {
+    overflow: hidden !important;
+  }
+  #sales_new .sales-function-shortcuts > *,
+  #sales_new button > i,
+  #sales_new a > i,
+  #sales_new button > svg,
+  #sales_new a > svg {
+    pointer-events: none;
+  }
+  #sales_new .sales-function-shortcuts button,
+  #sales_new button,
+  #sales_new a {
+    position: relative;
+    z-index: 2;
+  }
+}
+@media (max-height: 760px) and (min-width: 768px) {
+  #sales_new { height: calc(100vh - 92px); max-height: calc(100vh - 92px); }
+  #sales_new .sales-function-shortcuts { gap: 5px; padding: 6px; margin-bottom: 6px; }
+  #sales_new .sales-function-key { min-height: 40px; padding: 5px 8px; }
+  #sales_new .sales-function-key span { font-size: 11px; }
+  #sales_new .sales-function-key kbd { font-size: 10px; }
+}
+#posnic-zr-modal .modal-dialog { max-height: calc(100vh - 32px); }
+#posnic-zr-modal .modal-content { max-height: calc(100vh - 32px); }
+#posnic-zr-modal .modal-body { overflow-y: auto; }
+#posnic-zr-modal .select2-container { width: 100% !important; }
