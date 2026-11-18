@@ -169,6 +169,9 @@ const PREFERENCES = [
      nothing and pays nobody. See services/ai.service.js. */
   'ai_provider',
   'ai_model',
+  // ZR Express account source hub and branch-specific 58-wilaya tariff overrides.
+  'zr_express_source_hub_id',
+  'zr_express_tariffs',
   /* A monthly ceiling on what AI may spend, in the shop's own currency,
      enforced before each call. The money is the shop's - we charge nothing
      for AI and the key is theirs - so this is a promise to them rather than
@@ -222,6 +225,8 @@ const SECRETS = [
      rotated without reinstalling all of them, and a leak is billed to the shop
      until somebody reads the invoice. */
   'ai_api_key',
+  'zr_express_tenant_id',
+  'zr_express_api_key',
 ];
 
 /* Now that an empty value means "leave the saved credential alone", clearing
@@ -277,6 +282,8 @@ const featureToggleRepairs = (doc) => {
  */
 const BRANCH_CREDENTIALS = [
   'email_smtp_password',
+  'zr_express_tenant_id',
+  'zr_express_api_key',
   'smtp_password',
   'way2sms_password',
   'way2sms_api',

@@ -11,6 +11,7 @@ window.addEventListener('unhandledrejection', event => {
 contextBridge.exposeInMainWorld('electronAPI', {
   zr: {
     catalog: credentials => ipcRenderer.invoke('zr:catalog', credentials),
+    communes: (credentials, wilayaUuid) => ipcRenderer.invoke('zr:communes', credentials, wilayaUuid),
     createParcel: (credentials, parcel) => ipcRenderer.invoke('zr:createParcel', credentials, parcel),
     getParcel: (credentials, tracking) => ipcRenderer.invoke('zr:getParcel', credentials, tracking),
   },

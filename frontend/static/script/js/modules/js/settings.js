@@ -10336,7 +10336,94 @@ $(document).on('click','#save_captain_tables',function(){
     function readSettings() {
         var raw = PosnicPro.local.get('general_settings');
         if (raw && typeof raw === 'object') return raw;
-        try { return JSON.parse(raw || '{}') || {}; } catch (_) { return {}; }
+        try { return JSON.parse(raw || '{}') || {}; } catch (_) { return {
+    // ---- ZR Express (credentials are write-only in the settings API) ----
+    _zrCatalog: null,
+    loadZrExpress: function () {
+        var self = PosnicPro.integrations;
+        PosnicPro.get({ url: 'settings/group/secrets', data: {} }, function (secretResult) {
+            var configured = secretResult && secretResult.data && secretResult.data.configured || {};
+            var ready = !!(configured.zr_express_tenant_id && configured.zr_express_api_key);
+            $('#zr_settings_status').text(ready ? 'Identifiants enregistrés' : 'Non configuré')
+                .toggleClass('badge-success', ready).toggleClass('badge-secondary', !ready);
+        });
+        PosnicPro.get({ url: 'settings/group/preferences', data: {} }, function (prefResult) {
+            var values = prefResult && prefResult.data && prefResult.data.values || prefResult.data || {};
+            $('#zr_source_hub').data('saved-value', values.zr_express_source_hub_id || '');
+            var tariffs = values.zr_express_tariffs || [];
+            self.renderZrTariffs(tariffs);
+        });
+    },
+    renderZrTariffs: function (saved) {
+        var rows = Array.isArray(saved) ? saved : [];
+        if (!rows.length) {
+            $('#zr_tariffs_body').html('<tr><td colspan="4" class="text-center text-muted">Aucun tarif chargé. Testez la connexion ZR Express.</td></tr>');
+            return;
+        }
+        var html = '';
+        rows.sort(function(a,b){return Number(a.code)-Number(b.code);}).forEach(function (r) {
+            html += '<tr data-code="' + Number(r.code) + '" data-name="' + PosnicPro.integrations.esc(r.name) + '"><td>' + String(r.code).padStart(2,'0') + '</td><td>' + PosnicPro.integrations.esc(r.name) + '</td><td><input class="form-control form-control-sm zr-bureau-fee" type="number" min="0" step="1" value="' + Number(r.bureauFee || 0) + '"></td><td><input class="form-control form-control-sm zr-home-fee" type="number" min="0" step="1" value="' + Number(r.domicileFee || 0) + '"></td></tr>';
+        });
+        $('#zr_tariffs_body').html(html);
+    },
+    testZrExpress: function () {
+        var credentials = { tenantId: $('#zr_tenant_id').val().trim(), apiKey: $('#zr_api_key').val() };
+        if (!credentials.tenantId || !credentials.apiKey) {
+            PosnicPro.alert('warning', 'Saisissez le Tenant ID et la clé API pour tester la connexion.');
+            return;
+        }
+        if (!window.electronAPI || !window.electronAPI.zr) {
+            PosnicPro.alert('error', 'La connexion ZR Express est disponible uniquement dans POSNIC Desktop.');
+            return;
+        }
+        window.electronAPI.zr.catalog(credentials).then(function (catalog) {
+            PosnicPro.integrations._zrCatalog = { credentials: credentials, catalog: catalog };
+            var hubs = (catalog.hubs || []).filter(function(h){return !h.isPickupPoint;});
+            var saved = $('#zr_source_hub').data('saved-value') || '';
+            $('#zr_source_hub').html('<option value="">Choisir le point d’expédition</option>' + hubs.map(function(h){
+                return '<option value="' + PosnicPro.integrations.esc(h.id) + '">' + PosnicPro.integrations.esc(h.name) + '</option>';
+            }).join('')).val(saved);
+            var rates = catalog.rates || [];
+            var byCode = {};
+            rates.forEach(function(r){
+                var code = Number(r.toTerritoryCode || r.code || 0);
+                var home = 0, bureau = 0;
+                (r.deliveryPrices || []).forEach(function(p){
+                    if(p.deliveryType === 'home') home = Number(p.price || 0);
+                    if(p.deliveryType === 'pickup-point') bureau = Number(p.price || 0);
+                });
+                byCode[code] = {bureauFee:bureau, domicileFee:home};
+            });
+            var rows = (catalog.wilayas || []).map(function(w){
+                return {code:w.code,name:w.name,bureauFee:byCode[w.code] ? byCode[w.code].bureauFee : 0,domicileFee:byCode[w.code] ? byCode[w.code].domicileFee : 0};
+            });
+            PosnicPro.integrations.renderZrTariffs(rows);
+            PosnicPro.alert('success', 'Connexion ZR Express réussie. ' + rows.length + ' wilayas chargées.');
+        }).catch(function(error){PosnicPro.alert('error', error.message || 'Connexion ZR Express impossible.');});
+    },
+    saveZrExpress: function () {
+        var self = PosnicPro.integrations, catalog = self._zrCatalog;
+        var tenantId = $('#zr_tenant_id').val().trim(), apiKey = $('#zr_api_key').val();
+        var secrets = {};
+        if (tenantId) secrets.zr_express_tenant_id = tenantId;
+        if (apiKey) secrets.zr_express_api_key = apiKey;
+        var tariffs = [];
+        $('#zr_tariffs_body tr[data-code]').each(function(){
+            var row = $(this);
+            tariffs.push({code:Number(row.attr('data-code')),name:row.attr('data-name'),bureauFee:Math.max(0,Number(row.find('.zr-bureau-fee').val())||0),domicileFee:Math.max(0,Number(row.find('.zr-home-fee').val())||0)});
+        });
+        var prefs = {zr_express_source_hub_id:$('#zr_source_hub').val() || '',zr_express_tariffs:tariffs};
+        var savePrefs = function(){
+            PosnicPro.put({url:'settings/group/preferences',data:JSON.stringify(prefs)},function(){
+                PosnicPro.alert('success','Paramètres ZR Express enregistrés.');
+                self.loadZrExpress();
+            },function(){PosnicPro.alert('error','Impossible d’enregistrer les tarifs ZR Express.');});
+        };
+        if (Object.keys(secrets).length) {
+            PosnicPro.put({url:'settings/group/secrets',data:JSON.stringify(secrets)},function(){savePrefs();},function(){PosnicPro.alert('error','Impossible d’enregistrer les identifiants ZR Express.');});
+        } else savePrefs();
+    },
+}; }
     }
     function readNames() {
         var settings = readSettings(), names = settings.cashier_names;

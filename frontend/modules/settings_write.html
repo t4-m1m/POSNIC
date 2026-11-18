@@ -342,6 +342,7 @@
                                                 <a class="nav-link active" data-toggle="pill" href="#int-sub-tokens" role="tab"><i class="feather icon-key mr-2"></i><lang class="lang_int_tokens">API Tokens</lang></a>
                                                 <a class="nav-link" data-toggle="pill" href="#int-sub-webhooks" role="tab"><i class="feather icon-send mr-2"></i><lang class="lang_int_webhooks">Webhooks</lang></a>
                                                 <a class="nav-link" data-toggle="pill" href="#int-sub-connectors" role="tab" id="int_connectors_subtab" style="display:none;" onclick="PosnicPro.integrations.loadConnectors();"><i class="feather icon-box mr-2"></i><lang class="lang_int_connectors">Connectors</lang></a>
+                                                <a class="nav-link" data-toggle="pill" href="#int-sub-zr-express" role="tab" onclick="PosnicPro.integrations.loadZrExpress();"><i class="feather icon-truck mr-2"></i>ZR Express</a>
                                                 <a class="nav-link" data-toggle="pill" href="#int-sub-analytics" role="tab" id="int_analytics_subtab"><i class="feather icon-bar-chart-2 mr-2"></i><lang class="lang_int_analytics">Analytics</lang></a>
                                             </div>
                                         </div>
@@ -421,6 +422,26 @@
                                                             <tbody id="int_deliveries_body"><tr><td colspan="5" class="text-center text-muted"><lang class="lang_text_2">&mdash;</lang></td></tr></tbody>
                                                         </table>
                                                     </div>
+                                                </div>
+
+                                                <div class="tab-pane fade" id="int-sub-zr-express" role="tabpanel">
+                                                    <div class="d-flex align-items-center justify-content-between flex-wrap mb-3">
+                                                        <div><h5 class="mb-1">Livraison · ZR Express</h5><small class="text-muted">Connectez votre compte ZR Express et configurez le point d’expédition et les tarifs par wilaya.</small></div>
+                                                        <span id="zr_settings_status" class="badge badge-secondary">Non configuré</span>
+                                                    </div>
+                                                    <div class="form-row">
+                                                        <div class="form-group col-md-6"><label for="zr_tenant_id">Tenant ID</label><input type="text" class="form-control" id="zr_tenant_id" autocomplete="off" placeholder="Tenant ID ZR Express"></div>
+                                                        <div class="form-group col-md-6"><label for="zr_api_key">API Key</label><input type="password" class="form-control" id="zr_api_key" autocomplete="new-password" placeholder="Laisser vide pour conserver la clé enregistrée"></div>
+                                                    </div>
+                                                    <div class="form-row align-items-end">
+                                                        <div class="form-group col-md-8"><label for="zr_source_hub">Point d’expédition (hub marchand)</label><select class="form-control" id="zr_source_hub"><option value="">Charger les points ZR Express…</option></select></div>
+                                                        <div class="form-group col-md-4"><button type="button" class="btn btn-outline-primary btn-block" onclick="PosnicPro.integrations.testZrExpress()">Tester la connexion</button></div>
+                                                    </div>
+                                                    <div class="d-flex align-items-center justify-content-between mt-2 mb-2"><h6 class="mb-0">Tarifs de livraison par wilaya (DZD)</h6><button type="button" class="btn btn-primary btn-sm" onclick="PosnicPro.integrations.saveZrExpress()">Enregistrer</button></div>
+                                                    <div class="table-responsive" style="max-height:420px;overflow:auto">
+                                                        <table class="table table-sm table-striped"><thead><tr><th>Code</th><th>Wilaya</th><th>Bureau / Stop Desk</th><th>Domicile</th></tr></thead><tbody id="zr_tariffs_body"><tr><td colspan="4" class="text-center text-muted">Testez la connexion pour charger les wilayas et tarifs ZR Express.</td></tr></tbody></table>
+                                                    </div>
+                                                    <small class="form-text text-muted">Les clés restent masquées après enregistrement. Les montants affichés proviennent du tarif ZR Express et peuvent être ajustés pour votre boutique.</small>
                                                 </div>
 
                                                 <div class="tab-pane fade" id="int-sub-connectors" role="tabpanel">
