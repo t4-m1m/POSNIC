@@ -239,7 +239,7 @@ PosnicPro.sales = {
         $(".payment_note").addClass("customer-display-hide");
         $("#return_view_hide,#button_return,#check_button,#return_button").css("display", "none");
         PosnicPro.sales.setSaleDefaults();
-        $('.page_loader,#osk-container,#closeSaleButton,#closeEditButton,.return_discount_show').hide();
+        $('.page_loader,#osk-container,#closeSaleButton,#closeEditButton,#saveSaleModificationButton,.return_discount_show').hide();
         $('.page-title-box,#holdSaleButton,#clearSaleButton,.return_discount_hide').show();
                         if (PosnicPro.sales && PosnicPro.sales.syncActionTooltips) { PosnicPro.sales.syncActionTooltips(); }
         /*New Sales*/
@@ -284,6 +284,8 @@ PosnicPro.sales = {
         loader.find(".loadingSpinner:first").remove(); 
     },
     showEdit: function (id) {
+        $('#saveSaleModificationButton').hide().prop('disabled', false);
+        PosnicPro.sales._standaloneEditSave = false;
         var pendingPaymentRequest = PosnicPro.sales._pendingPaymentRequest;
         if (pendingPaymentRequest && String(pendingPaymentRequest.saleId) !== String(id)) {
             PosnicPro.sales._pendingPaymentRequest = null;
@@ -338,6 +340,7 @@ PosnicPro.sales = {
             $('.addDisc-hide-show').show(); $('#sale_add_discount').show();
             $('#closeSaleButton').show().attr('aria-label', 'Annuler la modification');
             $('#closeSaleButton').find('lang').text('Annuler la modification');
+            $('#saveSaleModificationButton').show();
             $('.changeSalesBtnText').text('Confirmer la modification');
         }
 
@@ -346,6 +349,27 @@ PosnicPro.sales = {
         $("#paymentreturnhistory").hide();
         var loader = $(".loader-sales-balance");
         loader.find(".loadingSpinner:first").remove();
+    },
+    saveModifiedSale: function () {
+        if (PosnicPro.sales._standaloneEditSave === true) return false;
+        if (PosnicPro.sales.SaleAction !== 'edit' || !PosnicPro.sales.editSaleId || PosnicPro.sales.saleProcess !== 'edit' || PosnicPro.sales.paymentOnlyMode === true) {
+            PosnicPro.alert('warning', 'Ouvrez un ticket de vente en modification avant de l’enregistrer.');
+            return false;
+        }
+        if (!$('#sales_new_items_table tbody tr[id^="touch_row_"]').length) {
+            PosnicPro.alert('warning', 'Le ticket doit contenir au moins un article.');
+            return false;
+        }
+        PosnicPro.sales._standaloneEditSave = true;
+        var $button = $('#saveSaleModificationButton');
+        $button.prop('disabled', true).attr('aria-busy', 'true').find('lang').text('Enregistrement…');
+        var result = PosnicPro.sales.editSale.cartOrderSubmit();
+        if (result === false) {
+            PosnicPro.sales._standaloneEditSave = false;
+            $button.prop('disabled', false).removeAttr('aria-busy').find('lang').text('Enregistrer les modifications');
+            return false;
+        }
+        return result;
     },
     cancelSale: function (id) {
         if (!id) return;
@@ -635,7 +659,7 @@ PosnicPro.sales = {
         $(".vertical-menu li a").removeClass("active");
         $('#v-pills-dashboard-tab,#view_sales_page').addClass('active');
         $('#v-pills-dashboard').addClass('show active');
-        $('.page_loader,#osk-container,#closeSaleButton,#closeEditButton').hide();
+        $('.page_loader,#osk-container,#closeSaleButton,#closeEditButton,#saveSaleModificationButton').hide();
         $('.page-title-box,#sales,#view_sales_table,#showsalesbody').show();
         $('#view_sales_per_page').closest('.form-group').show();
         $('.card.m-b-30.sales_header .ecommerce-pagination').closest('.card.m-b-30').show();
@@ -1533,6 +1557,30 @@ PosnicPro.sales = {
             params.mrp_price = price;
             PosnicPro.sales.addSalesLineItems(params);
         }).catch(function () { /* dismissed */ });
+    },
+    hydrateEditLinePriceTiers: function (id) {
+        var $name = $('#addSalesLineItemName_' + id);
+        var existing = $name.data('itemText');
+        if (!existing || existing._editTierHydrated || existing._editTierLoading) return;
+        existing._editTierLoading = true;
+        PosnicPro.get({ url: 'items/getItemDetails', data: { id: id } }, function (response) {
+            if (!response || response.type !== 'success' || !response.data || !$name.length) {
+                var failed = $name.data('itemText') || existing; failed._editTierLoading = false; $name.data('itemText', failed); return;
+            }
+            var item = response.data.item || response.data;
+            var params = $.extend(true, {}, $name.data('itemText') || existing);
+            params.selling_price_1 = Number(item.selling_price_1 != null ? item.selling_price_1 : item.selling_price);
+            params.selling_price_2 = Number(item.selling_price_2 != null ? item.selling_price_2 : item.selling_price2) || 0;
+            params.selling_price_3 = Number(item.selling_price_3 != null ? item.selling_price_3 : item.selling_price3) || 0;
+            params.price_tier = Number(params.price_tier) || 1;
+            params._editTierLoading = false; params._editTierHydrated = true;
+            $name.data('itemText', params);
+            var cached = PosnicPro.sales.SaleTableLineItems[id] || {};
+            cached.selling_price_2 = params.selling_price_2; cached.selling_price_3 = params.selling_price_3; cached.price_tier = params.price_tier;
+            PosnicPro.sales.SaleTableLineItems[id] = cached;
+        }, function () {
+            var failed = $name.data('itemText') || existing; failed._editTierLoading = false; $name.data('itemText', failed);
+        });
     },
     changeLinePriceTier: function (id, tier) {
         var $name = $('#addSalesLineItemName_' + id);
@@ -4899,7 +4947,7 @@ PosnicPro.sales.addSale = {
                     if (response.data.whatsapp === true) {
                         $('.printSalesWhatsAppReceipt').show();
                     }
-                    if ($('.payment_mode').val() === 'Qrpay') {
+                    if ($('.payment_mode').val() === 'Qrpay' && payment && payment.id) {
                         var params = {
                             url: 'sales/qrSalePayementUpdate',
                             data: {
@@ -5188,6 +5236,7 @@ PosnicPro.sales.addSale = {
 /*********** THIS FUNCTION HANDLE THE EDIT ,RETURN AND EXCHANGE SALES ORDER ***********/
 PosnicPro.sales.editSale = {
     cartOrderSubmit: function (payment) {
+        var standaloneEditSave = PosnicPro.sales._standaloneEditSave === true;
         var salesAction = (PosnicPro.sales.refundSaleAction === true) ? 'return' : 'edit';
 
         // Table mandatory when table options enabled (edit / exchange)
@@ -5389,9 +5438,11 @@ PosnicPro.sales.editSale = {
                     descriptionFromCache = cachedItem.item_description;
                 }
                 var finalItemDescription = $.trim(noteText) !== '' ? noteText : descriptionFromCache;
+                var linePriceData = $('#addSalesLineItemName_' + itemid).data('itemText') || {};
 
                 return {
                     sale_inline_item_price: $('#saleInlineItemPrice_' + itemid).text(),
+                    price_tier: Number((PosnicPro.sales.SaleTableLineItems[itemid] || {}).price_tier || linePriceData.price_tier) || 1,
                     sale_inline_discount_pervalue: $("#saleInlineDiscountPer_" + itemid).text(),
                     sale_inline_discount_value: $("#saleInlineDiscount_" + itemid).text(),
                     item_status: $('#salesOrderType_' + itemid).text(),
@@ -5562,6 +5613,7 @@ PosnicPro.sales.editSale = {
                 extra_discount_type: !$('#percentIcon').hasClass('d-none') ? "percent" : "price",
                 charges: PosnicPro.sales.charges || [],
                 multi_payment: payments,
+                preserve_existing_payment: PosnicPro.sales._standaloneEditSave === true,
                 enable_multi_payment: PosnicPro.local.get('enable_multi_payment'),
                 table_number: editTableNumber,
                 person_count: editPersonCount,
@@ -5580,6 +5632,7 @@ PosnicPro.sales.editSale = {
             var submitEditSale = function () {
             PosnicPro.request(paramsEdit, function (response) {
                 if (response.type === 'success') {
+                    if (standaloneEditSave) { PosnicPro.sales._standaloneEditSave = false; $('#saveSaleModificationButton').prop('disabled', false).removeAttr('aria-busy').find('lang').text('Enregistrer les modifications'); }
                     // An edit moves stock; cached items are stale.
                     PosnicPro.sales.itemCache.clear();
                     // Normalise sale id for both legacy (string) and new (object) responses
@@ -5746,10 +5799,12 @@ PosnicPro.sales.editSale = {
                     db.customerDisplay.where('clear').equals('yes').delete();
                     loader.find(".loadingSpinner:first").remove();
                 } else {
+                    if (standaloneEditSave) { PosnicPro.sales._standaloneEditSave = false; $('#saveSaleModificationButton').prop('disabled', false).removeAttr('aria-busy').find('lang').text('Enregistrer les modifications'); }
                     PosnicPro.alert(response.type, response.message);
                     loader.find(".loadingSpinner:first").remove();
                 }
             }, function (xhr) {
+                if (standaloneEditSave) { PosnicPro.sales._standaloneEditSave = false; $('#saveSaleModificationButton').prop('disabled', false).removeAttr('aria-busy').find('lang').text('Enregistrer les modifications'); }
                 var response = jQuery.parseJSON(xhr.responseText);
 
                 // Discount approval is disabled for ordinary remises. Do not
@@ -9328,8 +9383,12 @@ PosnicPro.sales.recentMenu = {
         }
         PosnicPro.sales.salesId = result.sales_id;
         $.each(EditRecentSaleItems, function (key, val) {
+            var savedTierMatch = val.pricing && /^tier:([123])$/.exec(String(val.pricing.rule_id || ''));
+            var savedTier = Number(val.price_tier || (val.pricing && val.pricing.price_tier) || (savedTierMatch && savedTierMatch[1])) || 1;
             lineItem = {
                 "sale_inline_item_price": PosnicPro.sales.savedSellingPrice(val),
+                "price_tier": savedTier,
+                "_priceListApplied": true,
                 "item_id": val.item_id,
                 "item_name": val.item_name,
                 "selling_price": PosnicPro.sales.savedSellingPrice(val),
@@ -9354,6 +9413,7 @@ PosnicPro.sales.recentMenu = {
                 "item_description": (typeof (val.item_description) !== "undefined" && val.item_description !== null) ? val.item_description : ''
             };
             PosnicPro.sales.addSalesLineItems(lineItem);
+            PosnicPro.sales.hydrateEditLinePriceTiers(lineItem.item_id);
         });
         $('#sales_description').val(PosnicPro.sales.EditRecentSaleParams.sales_description).hide();
 

@@ -493,6 +493,10 @@ const processSale = async (
             })
           : { delta: 0, lines: [] };
       if (extras.status === false) return extras;
+      const previousTierRule = /^tier:([123])$/.exec(String(previousLine?.pricing?.rule_id || ''));
+      const previousPriceTier = Number(previousLine?.pricing?.price_tier || (previousTierRule && previousTierRule[1]) || 1);
+      const requestedPriceTier = Number(item.price_tier == null ? previousPriceTier : item.price_tier);
+      const preservePreviousPricing = Boolean(previousLine?.pricing && requestedPriceTier === previousPriceTier);
       let pricing;
       try {
         pricing = pricingAuthority.resolve({
@@ -501,7 +505,7 @@ const processSale = async (
           allowCounterPriceOverride: context.allowCounterPriceOverride === true,
           roundGrossUnit: context.roundGrossUnit === true,
           priceTier: item.price_tier == null ? 1 : item.price_tier,
-          previous: previousLine,
+          previous: preservePreviousPricing ? previousLine : undefined,
           submitted: pricingAuthority.desktopSubmittedPrice(item),
           extras: extras.delta,
           outlet,
@@ -1053,6 +1057,52 @@ const processSale = async (
       }
     }
 
+    if (data.preserve_existing_payment === true && existingSale) {
+      // A ticket modification is not a second payment event. Keep collected
+      // tenders and derive the new outstanding balance from the saved amount.
+      const oldStatus = String(existingSale.payment_status || '').trim().toLowerCase();
+      const oldTotal = Number(existingSale.sales_total ?? existingSale.total ?? existingSale.items_total) || 0;
+      const oldPending = Math.max(0, Number(existingSale.payment_pending ?? existingSale.balance) || 0);
+      let oldPaid = Number(existingSale.paid_amount);
+      if (!Number.isFinite(oldPaid) || oldPaid < 0) oldPaid = Number(existingSale.partial_balance);
+      if ((!Number.isFinite(oldPaid) || oldPaid <= 0) && oldStatus !== 'unpaid') oldPaid = Math.max(0, oldTotal - oldPending);
+      oldPaid = Math.max(0, Number(oldPaid) || 0);
+      const wasUnpaid = oldStatus === 'unpaid' || (oldPaid <= 0 && oldPending > 0);
+      if (wasUnpaid) {
+        partialCheck = false; partialBalance = 0; paymentStatus = 'Unpaid';
+        paymentPending = finalSaleTotAmount; paidAmount = 0; balance = finalSaleTotAmount;
+        data.unpaid = 'true'; data.partial_check = 'false'; data.partial_balance = 0;
+        data.multi_payment = existingSale.multi_payment || {};
+      } else {
+        const due = Math.max(0, finalSaleTotAmount - oldPaid);
+        if (due > 0.01 && isWalkIn) {
+          return { status: false, message: 'Cette modification crée un reste à payer. Associez un client enregistré ou encaissez la différence depuis le paiement.' };
+        }
+        if (due > 0.01 && context.branchSettings?.module_credit_enable === false) {
+          return { status: false, message: 'Le crédit client est désactivé. Encaissez la différence depuis le paiement.' };
+        }
+        partialCheck = due > 0.01; partialBalance = Math.min(oldPaid, finalSaleTotAmount);
+        paymentStatus = due > 0.01 ? 'Partialy Paid' : 'Paid';
+        paymentPending = due; paidAmount = partialBalance; balance = due;
+        data.unpaid = 'false'; data.partial_check = partialCheck ? 'true' : 'false';
+        data.partial_balance = partialBalance;
+        const previousPayments = existingSale.multi_payment;
+        if (Array.isArray(previousPayments)) {
+          const preserved = previousPayments.filter((entry) => !/^credit$/i.test(String(entry?.method || entry?.payment_mode || '')));
+          if (due > 0.01) preserved.push({ method: 'Credit', payment_mode: 'Credit', amount: due });
+          data.multi_payment = preserved;
+        } else {
+          const preserved = previousPayments && typeof previousPayments === 'object' ? { ...previousPayments } : {};
+          Object.keys(preserved).forEach((method) => { if (/^credit$/i.test(String(method))) delete preserved[method]; });
+          if (due > 0.01) preserved.Credit = due;
+          data.multi_payment = preserved;
+        }
+      }
+      data.payment_mode = existingSale.payment_mode || data.payment_mode;
+      data.wallet_amount = Number(existingSale.wallet_amount) || 0;
+      data.wallet_check = data.wallet_amount > 0 ? 'true' : 'false';
+    }
+
     // KOT Logic
     // Preserve existing KOT status when editing
     let wasKotProceeded = data.was_kot_proceeded === true || data.was_kot_proceeded === 'true';
@@ -1121,6 +1171,7 @@ const processSale = async (
     // Wallet flows have separate ledger semantics. Never silently
     // increase a submitted tender or rewrite an already collected payment.
     if (
+      data.preserve_existing_payment !== true &&
       (paymentStatus === 'Paid' || paymentStatus === 'Partialy Paid') &&
       data.wallet_check !== true &&
       data.wallet_check !== 'true' &&

@@ -133,6 +133,7 @@ function resolve({
     fail('invalid_tax_configuration', `${name}: invalid catalogue tax configuration.`);
   return {
     version: 1,
+    price_tier: requestedTier,
     item_id: String(product._id),
     source,
     rule_id: ruleId,
