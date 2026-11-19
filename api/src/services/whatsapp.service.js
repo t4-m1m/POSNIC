@@ -42,11 +42,26 @@ class WhatsAppService extends EventEmitter {
     this.reconnectTimers = new Map();
     this.queues = new Map();
     this.lastSentAt = new Map();
-    this.sessionRoot = path.join(
-      process.env.POSNIC_USER_DATA_PATH ||
-        (process.env.APPDATA ? path.join(process.env.APPDATA, 'POSNIC') : path.join(require('os').homedir(), '.posnic')),
-      'whatsapp-auth'
-    );
+    const legacyUserDataPath = process.env.APPDATA
+      ? path.join(process.env.APPDATA, 'POSNIC')
+      : path.join(require('os').homedir(), '.posnic');
+    const userDataPath = process.env.POSNIC_USER_DATA_PATH ||
+      process.env.POSNIC_USER_DATA || legacyUserDataPath;
+    this.sessionRoot = path.join(userDataPath, 'whatsapp-auth');
+
+    // Older builds used APPDATA/POSNIC even when Electron had a custom
+    // userData directory. Copy (never move or delete) those sessions once.
+    const legacySessionRoot = path.join(legacyUserDataPath, 'whatsapp-auth');
+    const sameSessionRoot = path.resolve(legacySessionRoot).toLowerCase() ===
+      path.resolve(this.sessionRoot).toLowerCase();
+    if (!sameSessionRoot && fs.existsSync(legacySessionRoot) && !fs.existsSync(this.sessionRoot)) {
+      try {
+        fs.mkdirSync(path.dirname(this.sessionRoot), { recursive: true });
+        fs.cpSync(legacySessionRoot, this.sessionRoot, { recursive: true, errorOnExist: false, force: false });
+      } catch (error) {
+        console.warn('[WhatsApp] Could not copy the legacy session into userData:', error.message);
+      }
+    }
     fs.mkdirSync(this.sessionRoot, { recursive: true });
   }
 
@@ -76,10 +91,8 @@ class WhatsAppService extends EventEmitter {
     }
     const promise = (async () => {
       if (this.clients.has(key)) await this._destroySocket(key, false);
-      // Ignore and replace incomplete, never-registered pairing credentials.
-      if (!this.hasSavedSession(deviceId, branchId)) {
-        fs.rmSync(this._authDir(deviceId, branchId), { recursive: true, force: true });
-      }
+      // Keep all existing auth material. Only explicit logout or a server-reported
+      // logged-out state may remove a linked-device session.
       return this._connect(deviceId, branchId, null);
     })().finally(() => this.connecting.delete(key));
     this.connecting.set(key, promise);
@@ -103,9 +116,8 @@ class WhatsAppService extends EventEmitter {
 
     const promise = (async () => {
       if (this.clients.has(key)) await this._destroySocket(key, false);
-      // A failed, unregistered pairing attempt leaves a partial creds.json.
-      // Never reuse that half-created identity for the next code request.
-      if (!registered) fs.rmSync(authDir, { recursive: true, force: true });
+      // Reuse the existing auth directory; pairing attempts must not erase
+      // credentials as a side effect of a transient or incomplete connection.
       return this._connect(deviceId, branchId, registered ? null : phone);
     })().finally(() => this.connecting.delete(key));
     this.connecting.set(key, promise);
@@ -223,6 +235,10 @@ class WhatsAppService extends EventEmitter {
             if (timer.unref) timer.unref();
             this.reconnectTimers.set(key, timer);
           } else {
+            if (loggedOut) {
+              try { fs.rmSync(this._authDir(deviceId, branchId), { recursive: true, force: true }); }
+              catch (error) { console.warn('[WhatsApp] Could not remove logged-out auth directory:', error.message); }
+            }
             this.connectionStatus.set(key, loggedOut ? 'logged_out' : 'disconnected');
           }
           this.emit('disconnected', { deviceId, branchId, clientKey: key, reason: statusCode });
@@ -244,11 +260,8 @@ class WhatsAppService extends EventEmitter {
         try { socket.end(new Error('POSNIC pairing initialization failed')); } catch (_) {}
         if (this.clients.get(key) === socket) this.clients.delete(key);
       }
-      // A rejected pairing attempt must not leave corrupt/incomplete auth
-      // material that can poison the next QR or pairing attempt.
-      if (pairingPhone) {
-        try { fs.rmSync(this._authDir(deviceId, branchId), { recursive: true, force: true }); } catch (_) {}
-      }
+      // Do not erase authentication files on connection or pairing errors.
+      // A user can explicitly disconnect, or WhatsApp can report loggedOut.
       return { status: false, connected: false, message: error.message };
     }
   }

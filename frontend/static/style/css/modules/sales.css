@@ -1112,6 +1112,12 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
   #sales_new #touchsales_page > #sales-function-shortcuts {
     flex: 0 0 auto !important; min-height: 0 !important;
   }
+  #sales_new #touchsales_page > #posnic-multi-baskets {
+    flex: 0 0 auto !important;
+    min-height: 40px !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
   #sales_new #touchsales_page > #sales-function-shortcuts { margin: 4px 0 8px !important; }
   #sales_new #touchsales_page > .row:has(#instance-view) {
     display: flex !important; flex: 1 1 0 !important; height: 0 !important;

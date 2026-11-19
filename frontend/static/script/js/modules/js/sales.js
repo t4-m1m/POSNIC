@@ -5045,14 +5045,21 @@ PosnicPro.sales.addSale = {
                         });
                     }
                     var sendWhatsAppReceiptAfterSave = window.__posnicSendWhatsAppReceiptAfterSave === true;
-                    var receiptPhone = String(window.__posnicWhatsAppReceiptPhone || response.data.phone || response.data.customer_phone || '').trim();
+                    var savedReceiptId = response.data._id || response.data.id || response.data.sale_id || response.data.sales_id;
+                    var receiptPhone = String(window.__posnicWhatsAppReceiptPhone || response.data.phone || response.data.customer_phone || $('#sales_new_customer_phone').val() || '').trim();
+                    if (savedReceiptId) {
+                        PosnicPro.sales.lastCompletedSale = {
+                            saleId: String(savedReceiptId),
+                            phoneNumber: receiptPhone
+                        };
+                    }
                     window.__posnicSendWhatsAppReceiptAfterSave = false;
                     window.__posnicWhatsAppReceiptPhone = '';
                     if (sendWhatsAppReceiptAfterSave) {
-                        var savedReceiptId = response.data._id || response.data.id || response.data.sale_id || response.data.sales_id;
                         if (savedReceiptId && receiptPhone && typeof PosnicPro.sales.sendSavedWhatsAppReceipt === 'function') {
                             PosnicPro.sales.sendSavedWhatsAppReceipt(savedReceiptId, receiptPhone);
                         } else {
+                            PosnicPro.sales.restorePaymentWhatsAppButton();
                             PosnicPro.alert('error', 'Vente enregistrée, mais le ticket WhatsApp n’a pas été envoyé : identifiant du ticket ou numéro client manquant.');
                         }
                     }
@@ -5152,6 +5159,7 @@ PosnicPro.sales.addSale = {
                 } else {
                     window.__posnicSendWhatsAppReceiptAfterSave = false;
                     window.__posnicWhatsAppReceiptPhone = '';
+                    if (PosnicPro.sales.restorePaymentWhatsAppButton) PosnicPro.sales.restorePaymentWhatsAppButton();
                     loader.find(".loadingSpinner").remove();
                     if (PosnicPro.businessApproval && PosnicPro.businessApproval.failed({ responseJSON: response })) return;
                     // ✅ Re-enable on error response
@@ -5162,6 +5170,7 @@ PosnicPro.sales.addSale = {
             }, function (xhr) {
                 window.__posnicSendWhatsAppReceiptAfterSave = false;
                 window.__posnicWhatsAppReceiptPhone = '';
+                if (PosnicPro.sales.restorePaymentWhatsAppButton) PosnicPro.sales.restorePaymentWhatsAppButton();
                 if (window.__posnicZrDraft) { var failedZr = window.__posnicZrDraft; window.__posnicZrDraft = null; if (window.electronAPI && window.electronAPI.zr && window.electronAPI.zr.cancelParcel) window.electronAPI.zr.cancelParcel(window.__zrCredentials, failedZr.parcel.id).catch(function(){ console.warn('[ZR Express] Parcel cancellation needs manual review.'); }); }
                 window.__posnicSendWhatsAppReceiptAfterSave = false;
                 loader.find(".loadingSpinner").remove();
@@ -13803,40 +13812,125 @@ PosnicPro.sales.markLockedActions = function () {
     mark('#sale_add_discount', 'discount_apply', 'Applying a discount');
     mark('#sale_add_charge', 'discount_apply', 'Adding a charge');
 };
+/* Keep the last saved receipt independent of the active basket, which is reset after checkout. */
+PosnicPro.sales.lastCompletedSale = PosnicPro.sales.lastCompletedSale || null;
+
+PosnicPro.sales.setPaymentWhatsAppButtonLoading = function (label) {
+    var $button = $('#posnic-send-whatsapp-receipt-payment');
+    if (!$button.length) return;
+    if (typeof $button.data('posnic-original-html') === 'undefined') {
+        $button.data('posnic-original-html', $button.html());
+    }
+    $button.prop('disabled', true).attr('aria-busy', 'true')
+        .html('<i class="feather icon-loader mr-2"></i>' + String(label || 'Envoi WhatsApp…'));
+};
+
+PosnicPro.sales.restorePaymentWhatsAppButton = function () {
+    var $button = $('#posnic-send-whatsapp-receipt-payment');
+    if (!$button.length) return;
+    var original = $button.data('posnic-original-html');
+    if (typeof original === 'string') $button.html(original);
+    $button.prop('disabled', false).removeAttr('aria-busy');
+};
+
 /* Send the exact saved sale receipt through the already-linked local WhatsApp session. */
 PosnicPro.sales.sendSavedWhatsAppReceipt = function (saleId, phoneNumber) {
-    var $button = $('#posnic-send-whatsapp-receipt-payment');
-    var oldHtml = $button.data('posnic-original-html') || $button.html();
-    if (!$button.data('posnic-original-html')) $button.data('posnic-original-html', oldHtml);
-    $button.prop('disabled', true).attr('aria-busy', 'true')
-        .html('<i class="feather icon-loader mr-2"></i>Envoi WhatsApp…');
-    var restore = function () {
-        $button.prop('disabled', false).removeAttr('aria-busy').html(oldHtml);
-    };
-    PosnicPro.post({
-        url: 'whatsapp/send-receipt',
-        data: {
-            sale_id: String(saleId || ''),
-            phone_number: String(phoneNumber || ''),
-            branch_id: PosnicPro.local.get('branch_id_set')
-        }
-    }, function (response) {
+    PosnicPro.sales.setPaymentWhatsAppButtonLoading('Envoi WhatsApp…');
+    var restore = PosnicPro.sales.restorePaymentWhatsAppButton;
+    try {
+        PosnicPro.post({
+            url: 'whatsapp/send-receipt',
+            data: {
+                sale_id: String(saleId || ''),
+                phone_number: String(phoneNumber || ''),
+                branch_id: PosnicPro.local.get('branch_id_set')
+            }
+        }, function (response) {
+            restore();
+            if (response && response.type === 'success') {
+                PosnicPro.alert('success', 'Ticket envoyé avec succès sur WhatsApp.');
+            } else {
+                var message = response && response.message ? ' ' + response.message : '';
+                PosnicPro.alert('error', 'Impossible d’envoyer le ticket WhatsApp.' + message);
+            }
+        }, function (xhr) {
+            restore();
+            var body = xhr && xhr.responseJSON;
+            var reason = body && body.message;
+            if (!reason && xhr && xhr.responseText) {
+                try { reason = JSON.parse(xhr.responseText).message; } catch (_) {}
+            }
+            PosnicPro.alert('error', 'Impossible d’envoyer le ticket WhatsApp.' + (reason ? ' ' + reason : ' Vérifiez la connexion et le numéro client.'));
+        });
+    } catch (error) {
         restore();
-        if (response && response.type === 'success') {
-            PosnicPro.alert('success', response.message || 'Ticket envoyé avec succès sur WhatsApp.');
-        } else {
-            PosnicPro.alert('error', (response && response.message) || 'WhatsApp n’a pas pu envoyer le ticket.');
-        }
-    }, function (xhr) {
-        restore();
-        var body = xhr && xhr.responseJSON;
-        var reason = body && body.message;
-        if (!reason && xhr && xhr.responseText) {
-            try { reason = JSON.parse(xhr.responseText).message; } catch (_) {}
-        }
-        PosnicPro.alert('error', reason || 'Échec de l’envoi WhatsApp. Vérifiez la connexion, le numéro client et réessayez.');
-    });
+        PosnicPro.alert('error', 'Impossible d’envoyer le ticket WhatsApp. ' + (error && error.message ? error.message : 'Erreur inattendue.'));
+    }
 };
+
+/* Delegation lives in the long-lived sales controller, not the injected view HTML. */
+$(document).off('click.posnicWhatsAppReceipt', '#posnic-send-whatsapp-receipt-payment')
+    .on('click.posnicWhatsAppReceipt', '#posnic-send-whatsapp-receipt-payment', function (event) {
+        event.preventDefault();
+        var $button = $(this);
+        if ($button.prop('disabled')) return false;
+
+        var action = String(PosnicPro.sales.SaleAction || 'add');
+        var activeRows = $('#sales_new_items_table tbody tr[id^="touch_row_"]').length;
+        if (action !== 'add') {
+            PosnicPro.alert('warning', 'L’envoi WhatsApp depuis cet écran est réservé aux nouvelles ventes.');
+            return false;
+        }
+
+        if (activeRows > 0) {
+            var phone = String($('#sales_new_customer_phone').val() || '').trim();
+            if (!phone) {
+                PosnicPro.alert('warning', 'Ajoutez le numéro WhatsApp du client dans ses détails avant de valider la vente.');
+                return false;
+            }
+            if (PosnicPro.sales.submissionInProgress || $('#save_btn').prop('disabled')) {
+                PosnicPro.alert('warning', 'Une validation est déjà en cours. Attendez sa fin avant de renvoyer le ticket.');
+                return false;
+            }
+            if (!PosnicPro.sales.addSale || typeof PosnicPro.sales.addSale.cartOrderSubmit !== 'function') {
+                PosnicPro.alert('error', 'Le paiement est indisponible. Rechargez la vente puis réessayez.');
+                return false;
+            }
+
+            window.__posnicWhatsAppReceiptPhone = phone;
+            window.__posnicSendWhatsAppReceiptAfterSave = true;
+            PosnicPro.sales.setPaymentWhatsAppButtonLoading('Enregistrement puis envoi…');
+            var result;
+            try {
+                result = PosnicPro.sales.addSale.cartOrderSubmit();
+            } catch (error) {
+                window.__posnicSendWhatsAppReceiptAfterSave = false;
+                window.__posnicWhatsAppReceiptPhone = '';
+                PosnicPro.sales.restorePaymentWhatsAppButton();
+                PosnicPro.alert('error', 'La vente n’a pas pu être validée. ' + (error && error.message ? error.message : 'Réessayez.'));
+                return false;
+            }
+            window.setTimeout(function () {
+                if (!PosnicPro.sales.submissionInProgress && window.__posnicSendWhatsAppReceiptAfterSave === true) {
+                    window.__posnicSendWhatsAppReceiptAfterSave = false;
+                    window.__posnicWhatsAppReceiptPhone = '';
+                    PosnicPro.sales.restorePaymentWhatsAppButton();
+                    if (result === false) {
+                        PosnicPro.alert('warning', 'La vente n’a pas été lancée. Vérifiez les informations de paiement et réessayez.');
+                    }
+                }
+            }, 0);
+            return false;
+        }
+
+        var last = PosnicPro.sales.lastCompletedSale;
+        if (!last || !last.saleId || !last.phoneNumber) {
+            PosnicPro.alert('warning', 'Aucun ticket enregistré avec un numéro client disponible. Validez une vente ou ajoutez le numéro du client.');
+            return false;
+        }
+        PosnicPro.sales.sendSavedWhatsAppReceipt(last.saleId, last.phoneNumber);
+        return false;
+    });
 
 PosnicPro.sales.noteEdit = {
     open: function (linkId, fieldId, placeholder, maxLen) {

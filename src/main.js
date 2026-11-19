@@ -5247,6 +5247,9 @@ function getLocalSecrets() {
 }
 
 function startServer() {
+  // Keep API services (including Baileys auth) inside Electron's real persistent userData.
+  process.env.POSNIC_USER_DATA_PATH = app.getPath('userData');
+
   // process.env.PORT already holds the port resolveLocalPorts derived and wrote
   // to .ports.json. It used to be overwritten here with a constant captured at
   // module load, which is how a build that advertised 42590 served 5555.

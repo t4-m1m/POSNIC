@@ -1716,24 +1716,8 @@ body[data-theme="warmnight"]{color-scheme:dark}
     if(PosnicPro.sales&&typeof PosnicPro.sales.initPaymentValidation==='function')PosnicPro.sales.initPaymentValidation();
     renderSplit();
   }
-  $(document).off('click.posnicWhatsAppReceipt','#posnic-send-whatsapp-receipt-payment').on('click.posnicWhatsAppReceipt','#posnic-send-whatsapp-receipt-payment',function(){
-    if(PosnicPro.sales&&PosnicPro.sales.SaleAction!=='add'){PosnicPro.alert('warning','Le ticket WhatsApp depuis cet écran est disponible uniquement pour une nouvelle vente.');return;}
-    if($('#save_btn').prop('disabled')){PosnicPro.alert('warning','Vérifiez les montants et les modes de paiement avant de valider la vente.');return;}
-    var phone=String($('#sales_new_customer_phone').val()||'').trim();
-    if(!phone){PosnicPro.alert('warning','Ajoutez le numéro WhatsApp du client dans les détails du client avant de valider la vente.');return;}
-    window.__posnicWhatsAppReceiptPhone=phone;
-    window.__posnicSendWhatsAppReceiptAfterSave=true;
-    $('#save_btn').trigger('click');
-    // cartOrderSubmit sets this synchronously before starting its request.
-    // If a client-side guard rejects the sale, disarm the receipt request so
-    // it can never leak into the next customer's checkout.
-    window.setTimeout(function(){
-      if(!PosnicPro.sales || !PosnicPro.sales.submissionInProgress){
-        window.__posnicSendWhatsAppReceiptAfterSave=false;
-        window.__posnicWhatsAppReceiptPhone='';
-      }
-    },0);
-  });
+  // Payment WhatsApp click handling is owned by sales.js so it remains bound
+  // when this payment view is mounted or replaced dynamically.
   // Only a real cashier edit of the aggregate amount should redistribute
   // it to the selected tender. Programmatic updates from tender switching are
   // summaries and must not collapse an existing Cash + TPE split.

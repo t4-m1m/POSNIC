@@ -128,6 +128,35 @@ const startServer = async () => {
       console.log(`🚀 API Endpoint: http://localhost:${PORT}/api`);
       console.log('🚀 =====================================');
 
+      // Silently restore saved local linked-device sessions after the database
+      // is ready. This is desktop-only; cloud tenants never enumerate local auth.
+      if (process.env.POSNIC_DESKTOP === '1') {
+        Promise.resolve().then(async () => {
+          const { runWithTenant } = require('./src/db/tenant-context');
+          const Branch = require('./src/models/branch.model');
+          const whatsappService = require('./src/services/whatsapp.service');
+          const branches = await runWithTenant({ db: mongoose.connection.db }, () =>
+            Branch.find({
+              whatsapp_device_id: { $exists: true, $nin: ['', null] }
+            }).select('_id whatsapp_device_id').lean()
+          );
+          for (const branch of branches) {
+            const branchId = String(branch._id || '');
+            const deviceId = String(branch.whatsapp_device_id || '').trim();
+            if (!branchId || !deviceId || !whatsappService.hasSavedSession(deviceId, branchId)) continue;
+            whatsappService.initializeClient(deviceId, branchId).then((result) => {
+              if (!result || !result.status) {
+                console.warn('[WhatsApp] Saved session could not be restored:', result && result.message || 'initialization failed');
+              }
+            }).catch((error) => {
+              console.warn('[WhatsApp] Saved session restore failed:', error.message);
+            });
+          }
+        }).catch((error) => {
+          console.warn('[WhatsApp] Automatic session restore skipped:', error.message);
+        });
+      }
+
       /*
        * THE SHOP'S DECLARED DEFAULT, LOOKING FOR ORDERS NOBODY ANSWERED.
        *
