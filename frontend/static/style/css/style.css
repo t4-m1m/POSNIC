@@ -30402,3 +30402,56 @@ html, body {
     padding: 8px 0;
   }
 }
+
+
+/* Compact vertical rhythm for the scrollable operational lists, reports and settings.
+   Keep the cashier workspaces and the fixed item editor outside this rule.
+   The page header is already compact; this closes the second source of blank
+   space: the default 30px content inset plus 30px card-to-card margins. */
+.vertical-layout.page_loader:is(
+  #sales,
+  #purchaseorders_new,
+  #items,
+  #inventorycounts,
+  #categories,
+  #stocklogs,
+  #variants,
+  #lowstockitems,
+  #customerdebts,
+  #customercategory,
+  #settings,
+  [id$="report_new"]
+) > .contentbar,
+.vertical-layout.page_loader:is(
+  #sales,
+  #purchaseorders_new,
+  #items,
+  #inventorycounts,
+  #categories,
+  #stocklogs,
+  #variants,
+  #lowstockitems,
+  #customerdebts,
+  #customercategory,
+  #settings,
+  [id$="report_new"]
+) > #containerbar > .contentbar {
+  padding: 12px 24px 18px !important;
+  margin-bottom: 12px !important;
+}
+.vertical-layout.page_loader:is(
+  #sales,
+  #purchaseorders_new,
+  #items,
+  #inventorycounts,
+  #categories,
+  #stocklogs,
+  #variants,
+  #lowstockitems,
+  #customerdebts,
+  #customercategory,
+  #settings,
+  [id$="report_new"]
+) .contentbar .card.m-b-30 {
+  margin-bottom: 14px !important;
+}
