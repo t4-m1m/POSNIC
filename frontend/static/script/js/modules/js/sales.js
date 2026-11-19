@@ -2414,7 +2414,9 @@ PosnicPro.sales = {
             // (catalogue, basket and customer area) while payment is open.
             // The tender/payment view is the only visible workspace until closed.
             $('#newsalespage').hide();
-            $('#items_view_hide').hide();
+            // Hide the whole sales workspace: the catalogue's desktop flex rule
+            // uses !important, so jQuery .hide() on the catalogue itself is ineffective.
+            $('#sales_new').addClass('posnic-payment-screen');
             $('#tenderpage').show();
             PosnicPro.sales.bindTenderKeyboardShortcuts();
         }
@@ -2427,7 +2429,7 @@ PosnicPro.sales = {
         // it submits directly and keeps the sale workspace available.
         if (!fastPayRequested) {
             $('#newsalespage').hide();
-            $('#items_view_hide').hide();
+            $('#sales_new').addClass('posnic-payment-screen');
         }
         PosnicPro.sales.saleDoneTimer.stop();
         $('#tendered_subtotal').text($('#sales_new_subtotal').text());
@@ -5073,6 +5075,7 @@ PosnicPro.sales.addSale = {
                         }
                         $('#infobar-settings-sidebar-tender-details').removeClass('sidebarview').hide();
                         $('.infobar-settings-sidebar-overlay').css({ background: 'none', position: 'relative' });
+                        $('#sales_new').removeClass('posnic-payment-screen');
                         $('#newsalespage').show();
                     }
                     if (isKotNewSale && PosnicPro.kotPrint) PosnicPro.kotPrint.afterSave(response.data.sales_id);
@@ -15006,6 +15009,9 @@ $(document).on('focusin keydown', '#newsalespage', function (e) {
  * countdown means: this sale is over, bring the next one. The primary's own
  * click is left alone - it IS that path.
  */
+$(document).on('click', '.infobar-tender-close, .infobar-settings-sidebar-overlay', function () {
+    $('#sales_new').removeClass('posnic-payment-screen');
+});
 $(document).on('click', '.infobar-tender-close', function () {
     if (!$('#newsalespage').is(':visible')) { return; }
     if ($(this).hasClass('sale-done-primary')) { return; }
@@ -15331,6 +15337,7 @@ $(document).ready(function () {
             // tender sidebar. The previous tab's open payment is already saved.
             $('#infobar-settings-sidebar-tender-details').removeClass('sidebarview');
             $('.infobar-settings-sidebar-overlay').hide();
+            $('#sales_new').removeClass('posnic-payment-screen');
             $('#tenderpage').show();
             $('#newsalespage').hide();
             $('#sales_new').show();
@@ -15863,5 +15870,18 @@ async function syncZrRows(){
   loadZrRows();
  }finally{$('#zr-track-sync').prop('disabled',false).text('Actualiser statuts ZR');}
 }
-PosnicPro.sales.openZrTracking=function(){if(!window.JsBarcode){$.getScript('static/script/js/JsBarcode.all.min.js');}ensureZrTracking();$('#posnic-zr-tracking').modal('show');loadZrRows();};
+PosnicPro.sales.openZrTracking=function(){
+  if(!window.JsBarcode){$.getScript('static/script/js/JsBarcode.all.min.js');}
+  ensureZrTracking();
+  var $zr=$('#posnic-zr-tracking');
+  $zr.appendTo(document.body).off('.posnicZrLayer')
+    .on('show.bs.modal.posnicZrLayer',function(){ $(this).appendTo(document.body); })
+    .on('shown.bs.modal.posnicZrLayer',function(){
+      var backdrops=document.querySelectorAll('.modal-backdrop');
+      if(backdrops.length)backdrops[backdrops.length-1].classList.add('posnic-zr-modal-backdrop');
+      this.style.zIndex='30050';
+    });
+  $zr.modal('show');
+  loadZrRows();
+};
 })(jQuery);
