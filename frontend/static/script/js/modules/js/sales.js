@@ -85,55 +85,108 @@ PosnicPro.sales = {
         if (!toolbar || !salesPage) return;
 
         var state = PosnicPro.sales._functionToolbarPinState;
-        if (!state) state = PosnicPro.sales._functionToolbarPinState = { placeholder: null, installed: false, frame: false };
+        if (!state) state = PosnicPro.sales._functionToolbarPinState = {
+            placeholder: null, anchor: null, installed: false, frame: false
+        };
 
+        function currentBasketBar() {
+            return document.getElementById('posnic-multi-baskets');
+        }
         function clearPin() {
-            toolbar.classList.remove('sales-function-toolbar-pinned');
-            ['position','top','left','right','width','zIndex','boxSizing'].forEach(function (name) { toolbar.style[name] = ''; });
-            if (state.placeholder && state.placeholder.parentNode) state.placeholder.parentNode.removeChild(state.placeholder);
+            var basketBar = currentBasketBar();
+            [basketBar, toolbar].forEach(function (element) {
+                if (!element) return;
+                element.classList.remove('sales-function-toolbar-pinned', 'sales-multi-baskets-toolbar-pinned');
+                ['position', 'top', 'left', 'right', 'width', 'zIndex', 'boxSizing'].forEach(function (name) {
+                    element.style[name] = '';
+                });
+            });
+            if (state.placeholder && state.placeholder.parentNode) {
+                state.placeholder.parentNode.removeChild(state.placeholder);
+            }
             state.placeholder = null;
+            state.anchor = null;
         }
         function updatePin() {
             state.frame = false;
-            if (!document.documentElement.contains(toolbar) || window.getComputedStyle(salesPage).display === 'none') {
-                clearPin(); return;
+            var basketBar = currentBasketBar();
+            if (!document.documentElement.contains(toolbar) ||
+                window.getComputedStyle(salesPage).display === 'none') {
+                clearPin();
+                return;
             }
-            // Evaluate the toolbar's original flow position on every scroll tick.
-            // Pin once it reaches the viewport top; keep a spacer in normal flow
-            // so the page doesn't jump when the toolbar becomes fixed.
-            if (!state.placeholder) {
-                var flowRect = toolbar.getBoundingClientRect();
-                if (flowRect.top > 0) return;
+
+            // Pin the basket strip and F-key toolbar as one visual unit.
+            // Pinning only the toolbar let the tabs scroll away while the
+            // toolbar stayed fixed at the top of the cashier workspace.
+            var anchor = basketBar && basketBar.parentNode === toolbar.parentNode
+                ? basketBar : toolbar;
+            if (!state.placeholder || state.anchor !== anchor) {
+                if (state.placeholder && state.placeholder.parentNode) {
+                    state.placeholder.parentNode.removeChild(state.placeholder);
+                }
+                var flowRect = anchor.getBoundingClientRect();
+                if (flowRect.top > 0) {
+                    state.placeholder = null;
+                    state.anchor = null;
+                    return;
+                }
                 state.placeholder = document.createElement('div');
                 state.placeholder.className = 'sales-function-toolbar-placeholder';
                 state.placeholder.setAttribute('aria-hidden', 'true');
-                state.placeholder.style.height = Math.max(toolbar.offsetHeight, 1) + 'px';
                 state.placeholder.style.width = '100%';
-                toolbar.parentNode.insertBefore(state.placeholder, toolbar);
+                state.placeholder.style.height = '1px';
+                anchor.parentNode.insertBefore(state.placeholder, anchor);
+                state.anchor = anchor;
             }
+
             var rect = state.placeholder.getBoundingClientRect();
-            if (rect.top > 1) { clearPin(); return; }
+            if (rect.top > 1) {
+                clearPin();
+                return;
+            }
+
+            var left = Math.max(0, rect.left);
+            var width = Math.max(0, rect.width);
+            var hasBasket = !!(basketBar && basketBar.parentNode === toolbar.parentNode);
+            var basketHeight = hasBasket ? basketBar.offsetHeight : 0;
+            var basketGap = hasBasket
+                ? (parseFloat(window.getComputedStyle(basketBar).marginBottom) || 0) : 0;
+
+            if (hasBasket) {
+                basketBar.classList.add('sales-multi-baskets-toolbar-pinned');
+                basketBar.style.position = 'fixed';
+                basketBar.style.top = '0px';
+                basketBar.style.left = left + 'px';
+                basketBar.style.right = 'auto';
+                basketBar.style.width = width + 'px';
+                basketBar.style.zIndex = '1051';
+                basketBar.style.boxSizing = 'border-box';
+            }
+
             toolbar.classList.add('sales-function-toolbar-pinned');
             toolbar.style.position = 'fixed';
-            toolbar.style.top = '0px';
-            toolbar.style.left = Math.max(0, rect.left) + 'px';
+            toolbar.style.top = (basketHeight + basketGap) + 'px';
+            toolbar.style.left = left + 'px';
             toolbar.style.right = 'auto';
-            toolbar.style.width = Math.max(0, rect.width) + 'px';
+            toolbar.style.width = width + 'px';
             toolbar.style.zIndex = '1050';
             toolbar.style.boxSizing = 'border-box';
-            state.placeholder.style.height = Math.max(toolbar.offsetHeight, 1) + 'px';
+
+            var toolbarMargin = parseFloat(window.getComputedStyle(toolbar).marginBottom) || 0;
+            state.placeholder.style.height = Math.max(
+                (hasBasket ? basketHeight + basketGap : 0) + toolbar.offsetHeight + toolbarMargin,
+                1
+            ) + 'px';
         }
         function schedulePin() {
             // Coalesce nested/window scroll events into one geometry read per frame.
-            // This avoids repeated synchronous layout on low-core-count tills.
             if (state.frame) return;
             state.frame = true;
             if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(updatePin);
             else updatePin();
         }
         if (!state.installed) {
-            // Capture catches scroll events from nested scrollable POS containers,
-            // not only window/document scrolling.
             document.addEventListener('scroll', schedulePin, true);
             window.addEventListener('scroll', schedulePin, true);
             window.addEventListener('resize', schedulePin);
