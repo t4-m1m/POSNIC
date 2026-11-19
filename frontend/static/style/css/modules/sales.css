@@ -1374,16 +1374,19 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
     min-height: 0 !important;
     overflow: hidden !important;
   }
+  /* The direct .row is ONLY the scanner/search strip. Letting it grow
+     to 100% pushed the catalogue heading and all four navigation tabs to
+     the bottom of the sales pane. Keep it at the input's real 38px height. */
   #sales_new #items_view_hide > .row {
     display: flex !important;
-    flex: 1 1 0 !important;
-    flex-direction: column !important;
+    flex: 0 0 38px !important;
+    flex-direction: row !important;
     width: 100% !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
-    margin: 0 !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    overflow: visible !important;
+    margin: 0 0 8px !important;
   }
   /* Only the scanner/search control row is fixed at 38px. */
   #sales_new #items_view_hide > .row > .col-12.input-group,
@@ -1396,6 +1399,18 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
     max-height: 38px !important;
     overflow: visible !important;
     margin: 0 0 8px !important;
+  }
+  #sales_new #items_view_hide .sales-catalogue-heading {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    align-items: center !important;
+    min-height: 30px !important;
+    margin: 0 0 4px !important;
+    padding: 0 2px !important;
+    color: var(--theme-text-primary, #263347) !important;
+    font-size: 15px !important;
+    font-weight: 750 !important;
+    line-height: 1.2 !important;
   }
   #sales_new #items_view_hide #defaultTabJustified {
     display: flex !important;
