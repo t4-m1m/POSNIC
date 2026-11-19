@@ -1601,3 +1601,7 @@ body > .modal-backdrop {
     position:relative !important;
     z-index:20020 !important;
 }
+
+
+/* Checkout is exclusive: hide the complete sale workspace, overriding the catalogue's desktop flex rule. */
+#sales_new.posnic-payment-screen > .contentbar { display: none !important; }
