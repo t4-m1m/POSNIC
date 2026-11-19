@@ -8558,22 +8558,12 @@ PosnicPro.sales.itemsMenu = {
      * ============================================================
      */
     variantPop: {
-        /* Long enough that sweeping the mouse across a shelf of tiles does not
-           strobe panels open; short enough that stopping on one feels instant. */
+        /* Hover opens the list; it remains pinned until a choice, an
+           outside click, Escape, or a catalogue rebuild. */
         OPEN_DELAY: 110,
-        /* The grace to cross the gap from tile to panel. Without it the panel
-           closes in the space between them and the list can never be reached. */
-        CLOSE_DELAY: 220,
-        /* A tap synthesises a click ~0-300ms later at the same coordinates.
-           Rows refuse it for this long so the panel cannot choose for anybody. */
-        TOUCH_GUARD: 350,
-
         _gid: null,
         _tile: null,
         _openTimer: null,
-        _closeTimer: null,
-        _openedAt: 0,
-        _byTouch: false,
         _bound: false,
 
         isOpen: function () { return !!document.getElementById('variant_pop'); },
@@ -8646,7 +8636,6 @@ PosnicPro.sales.itemsMenu = {
 
         cancelTimers: function () {
             clearTimeout(PosnicPro.sales.itemsMenu.variantPop._openTimer);
-            clearTimeout(PosnicPro.sales.itemsMenu.variantPop._closeTimer);
         },
 
         close: function () {
@@ -8657,7 +8646,6 @@ PosnicPro.sales.itemsMenu = {
             if (self._tile) { self._tile.classList.remove('wsk-variant-open'); }
             self._gid = null;
             self._tile = null;
-            self._byTouch = false;
         },
 
         /*
@@ -8816,7 +8804,7 @@ PosnicPro.sales.itemsMenu = {
             self.place();
         },
 
-        open: function (groupId, tile, byTouch) {
+        open: function (groupId, tile) {
             var self = PosnicPro.sales.itemsMenu.variantPop;
             var rows = (PosnicPro.sales.itemsMenu._families || {})[groupId] || [];
             if (!rows.length || !tile) { return; }
@@ -8865,8 +8853,6 @@ PosnicPro.sales.itemsMenu = {
 
             self._gid = groupId;
             self._tile = tile;
-            self._byTouch = byTouch === true;
-            self._openedAt = Date.now();
             tile.classList.add('wsk-variant-open');
             self.place();
         },
@@ -8900,32 +8886,18 @@ PosnicPro.sales.itemsMenu = {
                 if (e.pointerType !== 'mouse') { return; }
                 if (inPop(e.target)) {
                     self.cancelTimers();
-                    /* Pointing at a colour shows its sizes, the way a menu
-                       works - no click needed to look. Nothing is added by
-                       pointing, here or anywhere else in this panel. */
+                    /* Preview a matrix axis on hover; a size still needs an
+                       explicit click or tap on its own button. */
                     var axis = e.target.closest ? e.target.closest('#variant_pop .vp-axis') : null;
                     if (axis) { self.selectAxis(axis.getAttribute('data-axis-value')); }
                     return;
                 }
-
                 var tile = tileOf(e.target);
-                if (tile) {
-                    var gid = tile.getAttribute('data-variant-group');
-                    self.cancelTimers();
-                    if (gid && gid === self._gid && self.isOpen()) { return; }
-                    self._openTimer = setTimeout(function () {
-                        self.open(gid, tile, false);
-                    }, self.OPEN_DELAY);
-                    return;
-                }
-
-                /* Off both. Scheduled rather than immediate, so the pointer can
-                   cross the few pixels between tile and panel. */
-                if (self.isOpen() || self._openTimer) {
-                    clearTimeout(self._openTimer);
-                    clearTimeout(self._closeTimer);
-                    self._closeTimer = setTimeout(function () { self.close(); }, self.CLOSE_DELAY);
-                }
+                if (!tile) { return; }
+                var gid = tile.getAttribute('data-variant-group');
+                self.cancelTimers();
+                if (gid && gid === self._gid && self.isOpen()) { return; }
+                self._openTimer = setTimeout(function () { self.open(gid, tile); }, self.OPEN_DELAY);
             });
 
             document.addEventListener('click', function (e) {
@@ -8949,7 +8921,7 @@ PosnicPro.sales.itemsMenu = {
                     var tile = tileOf(e.target);
                     if (tile) {
                         e.preventDefault();
-                        self.open(tile.getAttribute('data-variant-group'), tile, false);
+                        self.open(tile.getAttribute('data-variant-group'), tile);
                         var first = document.querySelector('#variant_pop .vp-row');
                         if (first) { first.focus(); }
                         return;
@@ -8996,15 +8968,7 @@ PosnicPro.sales.itemsMenu = {
     openVariantPicker: function (groupId, tile) {
         var self = PosnicPro.sales.itemsMenu.variantPop;
         self.bind();
-        /* Only a real pointer event tells us which kind it was; window.event
-           is gone by the time a keyboard Enter arrives, and treating that as
-           touch would only make the guard slightly more cautious. */
-        var ev = window.event;
-        var byTouch = !!(ev && ev.pointerType && ev.pointerType !== 'mouse');
-        if (!tile && ev && ev.target && ev.target.closest) {
-            tile = ev.target.closest('.wsk-variant');
-        }
-        self.open(groupId, tile, byTouch);
+        self.open(groupId, tile);
     },
 
     pickVariant: function (item_id) {

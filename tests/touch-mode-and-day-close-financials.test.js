@@ -25,9 +25,10 @@ test('closing Ticket Studio uses theme surfaces while keeping the receipt paper 
 
 test('Ticket Studio includes a salary-payment block and subtracts actual RH payments from net', () => {
   const report = read('frontend/static/script/js/modules/js/report_dailysales.js');
+  const controller = read('api/src/controllers/sales.controller.js');
   assert.match(report, /\['salary','Paiements salaires'\]/);
   assert.match(report, /salary_payments_total/);
-  assert.match(report, /net:gross-expenses-salaryPaymentsTotal/);
+  assert.match(report, /net:gross-expenses-salaryPaymentsTotal-salaryAdvancesTotal-salaryPrimesTotal/);
   assert.match(report, /worker_name/);
   // The closing ticket must preserve the cashier-entered RH payment note.
   assert.match(controller, /notes: \{ \$ifNull: \['\$notes', ''\] \}/);
@@ -57,8 +58,9 @@ test('cash expected for the day subtracts only cash salary payments and active c
   const report = read('frontend/static/script/js/modules/js/report_dailysales.js');
   const controller = read('api/src/controllers/sales.controller.js');
   assert.match(report, /salaryCashTotal=salaryPayments\.reduce/);
-  assert.match(report, /cashExpected=expensesAvailable\?pay\.cash-expenses-salaryCashTotal:null/);
+  assert.match(report, /cashExpected=expensesAvailable\?pay\.cash-debtCashTotal\+deliveryPayoutCashTotal-expenses-salaryCashTotal-salaryAdvanceCashTotal-salaryPrimeCashTotal:null/);
   assert.match(report, /case'cashhand'/);
   assert.match(report, /case'debt':[\s\S]*?debtRows/);
+  assert.match(controller, /const cashExpected = roundToTwo\(salesCash \+ deliveryPayoutCash - expensesTotal - salaryCash - advanceCash - primeCash\);/);
   assert.match(controller, /branch_id: branchObjectId,[\s\S]{0,100}is_deleted: \{ \$ne: true \}/);
 });

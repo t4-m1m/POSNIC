@@ -2230,11 +2230,12 @@ class SalesController extends BaseController {
           if (/^(?:livraison[_\s-]?zr|zr[_\s-]?express)$/i.test(method)) return sum;
           return sum + (isCashTender(method) ? Number(row.sale_payment || 0) : 0);
         }, 0);
-        const collectedCash = debtPaymentDetails.reduce((sum, row) => sum + (isCashTender(row.payment_mode) ? Number(row.amount || 0) : 0), 0);
+        // Debt collections and versement payments remain disclosed separately,
+        // but are intentionally excluded from "Espèces nettes du jour".
         const salaryCash = salaryPaymentDetails.reduce((sum, row) => sum + (isCashTender(row.method) ? Number(row.amount || 0) : 0), 0);
         const advanceCash = salaryAdvanceDetails.reduce((sum, row) => sum + (isCashTender(row.method) ? Number(row.amount || 0) : 0), 0);
         const primeCash = salaryPrimeDetails.reduce((sum, row) => sum + (isCashTender(row.method) ? Number(row.amount || 0) : 0), 0);
-        const cashExpected = roundToTwo(salesCash + collectedCash + versementCashTotal + deliveryPayoutCash - expensesTotal - salaryCash - advanceCash - primeCash);
+        const cashExpected = roundToTwo(salesCash + deliveryPayoutCash - expensesTotal - salaryCash - advanceCash - primeCash);
         return this.success(res, { date: branchDetails.from_date, cash_expected: cashExpected, currency: 'DA' }, 'Cash expected loaded', 200);
       }
 

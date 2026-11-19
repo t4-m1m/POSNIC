@@ -20,8 +20,8 @@
  * machine that is invisible; at a counter it is a wrong item on a customer's
  * bill, and the cashier gets the blame.
  *
- * So the assertions below are about pointerType, the touch guard, and the
- * timers - each one mutation-verified.
+ * So the assertions below are about pointerType, explicit selection, and
+ * keeping the panel open until a deliberate dismiss - each one mutation-verified.
  */
 const test = require('node:test');
 const assert = require('node:assert');
@@ -90,53 +90,17 @@ test('hover opens for a mouse and never for a finger', () => {
   assert.match(pop, /if \(e\.pointerType !== 'mouse'\) \{ return; \}/);
 });
 
-test('a tap cannot let its own synthesised click choose a row', () => {
-  /*
-   * The failure: tap the tile, the panel opens under the finger, and the click
-   * that follows the same tap lands on whichever row is there. A random size
-   * is added to a real sale and nothing looks wrong.
-   */
-  assert.match(pop, /TOUCH_GUARD/);
-  assert.match(pop, /_byTouch && Date\.now\(\) - \w+\._openedAt < \w+\.TOUCH_GUARD/);
-  assert.match(pop, /return;/);
+test('a tap opens the chooser but requires a second explicit click to select', () => {
+  const tap = between(pop, 'openVariantPicker: function', 'pickVariant: function');
+  assert.match(tap, /self\\.open\\(groupId, tile\\)/);
+  assert.doesNotMatch(pop, /TOUCH_GUARD|_byTouch|_openedAt/);
 });
 
-test('a mouse is never made to wait for the touch guard', () => {
-  /* The guard is conditioned on _byTouch. Applied unconditionally it would
-     swallow the fast click of somebody who hovered and chose in one motion -
-     which is the interaction this whole change exists to enable. */
-  const guard = between(pop, 'TOUCH_GUARD', 'pickVariant');
-  assert.match(guard, /_byTouch &&/);
-});
-
-test('the panel survives the trip from tile to panel', () => {
-  /*
-   * Without a close delay the panel shuts in the few pixels of gap between the
-   * tile and itself, and the list can never be reached with a mouse at all.
-   */
-  assert.match(pop, /CLOSE_DELAY: \d+/);
-  assert.match(pop, /_closeTimer = setTimeout\(/);
-  /* Entering the panel has to cancel that pending close - matched across the
-     whole branch rather than as one line, because that branch grew a second
-     job (previewing a colour on hover) and a single-line pattern would have
-     failed for a reason that has nothing to do with what this test is about. */
-  const enter = between(pop, 'if (inPop(e.target))', 'var tile = tileOf');
-  assert.match(enter, /\w+\.cancelTimers\(\);/);
-  assert.match(enter, /return;/);
-});
-
-test('sweeping across a shelf of tiles does not strobe panels open', () => {
-  assert.match(pop, /OPEN_DELAY: \d+/);
-  assert.match(pop, /_openTimer = setTimeout\(/);
-});
-
-test('re-tapping an open tile does not toggle the list shut', () => {
-  /*
-   * Somebody reaching for a size and clipping the tile on the way would
-   * otherwise lose the list they were aiming at - and then blame the till.
-   */
-  assert.match(pop, /if \(\w+\._gid === groupId && \w+\.isOpen\(\)\)/);
-  assert.match(pop, /\w+\.place\(\);\s*\n\s*return;/);
+test('the panel stays open across the tile-to-panel gap until deliberately dismissed', () => {
+  assert.doesNotMatch(pop, /CLOSE_DELAY|_closeTimer/);
+  const hover = between(pop, "addEventListener('pointerover'", "document.addEventListener('click'");
+  assert.doesNotMatch(hover, /self\\.close\\(\\)/);
+  assert.match(hover, /self\\.open\\(gid, tile\\)/);
 });
 
 test('the panel follows its tile when anything moves', () => {
