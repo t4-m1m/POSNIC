@@ -127,7 +127,7 @@ class WhatsAppService extends EventEmitter {
         // WhatsApp rejects some pairing-code requests when the client
         // advertises a Windows/POSNIC browser identity. Use a valid desktop
         // browser identity for both linking methods.
-        browser: (baileys.Browsers && baileys.Browsers.macOS && baileys.Browsers.macOS('Google Chrome')) || ['Mac OS', 'Google Chrome', '10.15.7'],
+        browser: (baileys.Browsers && baileys.Browsers.macOS && baileys.Browsers.macOS('Chrome')) || ['Mac OS', 'Chrome', '10.15.7'],
         markOnlineOnConnect: false,
         syncFullHistory: false,
         generateHighQualityLinkPreview: false,
