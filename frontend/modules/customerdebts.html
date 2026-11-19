@@ -12,9 +12,19 @@
         </div>
         <div class="card-body">
           <div class="row mb-3"><div class="col-md-4"><div class="border rounded p-3"><small class="text-muted">Total outstanding</small><h3 class="mb-0 text-danger" id="debts_outstanding_total">0.00</h3></div></div></div>
+          <div class="border rounded p-3 mb-3" id="debts_whatsapp_reminder_panel">
+            <div class="d-flex flex-wrap align-items-end">
+              <div class="form-group mr-3 mb-2"><label for="debts_reminder_min_due">Minimum debt (DZD)</label><input id="debts_reminder_min_due" class="form-control" type="number" min="0" step="100" value="0" style="width:150px"></div>
+              <div class="form-group mr-3 mb-2"><label for="debts_reminder_min_days">Debt age (days)</label><input id="debts_reminder_min_days" class="form-control" type="number" min="0" step="1" value="0" style="width:130px"></div>
+              <button type="button" class="btn btn-outline-primary mb-2 mr-2" id="debts_reminder_filter">Apply filters</button>
+              <button type="button" class="btn btn-success mb-2" id="debts_send_whatsapp_reminders"><i class="feather icon-message-circle mr-1"></i>Send WhatsApp reminders to selected</button>
+            </div>
+            <small class="text-muted">Select debtors below. Messages are queued through the store's linked WhatsApp account with a 2–4 second gap. Each result is recorded in the reminder log.</small>
+            <div id="debts_whatsapp_result" class="small mt-2" role="status"></div>
+          </div>
           <div class="table-responsive"><table class="table table-hover">
-            <thead><tr><th>Customer</th><th>Phone</th><th class="text-right">Outstanding</th><th class="text-center">Actions</th></tr></thead>
-            <tbody id="debts_outstanding_body"><tr><td colspan="4" class="text-center text-muted py-3">Loading outstanding customers…</td></tr></tbody>
+            <thead><tr><th><input type="checkbox" id="debts_select_all" aria-label="Select all debtors"> Customer</th><th>Phone</th><th class="text-right">Outstanding</th><th>Oldest debt (days)</th><th class="text-center">Actions</th></tr></thead>
+            <tbody id="debts_outstanding_body"><tr><td colspan="5" class="text-center text-muted py-3">Loading outstanding customers…</td></tr></tbody>
           </table></div>
         </div>
       </div>

@@ -124,6 +124,27 @@ class CreditController extends BaseController {
     }
   }
 
+
+  /** POST /credit/whatsapp-reminders - manually send filtered WhatsApp debt reminders. */
+  async sendWhatsAppReminders(req, res) {
+    try {
+      if (!this._canWrite(req)) return this.error(res, 'Unauthorized', 403);
+      const ctx = this._ctx(req);
+      const body = req.body || {};
+      const result = await this.service.sendWhatsAppReminders(ctx.branchId, {
+        customerIds: Array.isArray(body.customer_ids) ? body.customer_ids : [],
+        minDue: Number(body.min_due) || 0,
+        minAgeDays: Number(body.min_age_days) || 0,
+        ctx,
+        dryRun: body.dryRun === true || body.dryRun === 'true'
+      });
+      return this.success(res, result, 'WhatsApp debt reminder run completed');
+    } catch (error) {
+      console.error('Error in credit.sendWhatsAppReminders:', error);
+      return this.error(res, error.message, 500);
+    }
+  }
+
   /** POST /credit/run-reminders - remind every outstanding customer (cron/manual). */
   async runReminders(req, res) {
     try {

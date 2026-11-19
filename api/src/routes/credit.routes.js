@@ -20,6 +20,7 @@ router.get('/ledger/:customerId', bindController(creditController.ledger));
 router.post('/settle/:customerId', bindController(creditController.settle));
 router.get('/check-limit', bindController(creditController.checkLimit));
 
+router.post('/whatsapp-reminders', bindController(creditController.sendWhatsAppReminders));
 router.post('/run-reminders', bindController(creditController.runReminders));
 router.post('/reminder/:customerId', bindController(creditController.sendReminder));
 

@@ -5228,64 +5228,29 @@ PosnicPro.sales.addSale = {
     },
     
     sendWhatsAppReceipt: function () {
-        
-        // Get form data using jQuery val() directly
-        const phoneNumber = $('#customer_sms_fullphone').val();
-        const selectedTemplate = $('#whatsapp_receipt_template').val();
-        const message = $('#customer_sms_message').val();
-        
-                
-        // Validate phone number
+        const phoneNumber = String($('#customer_sms_fullphone').val() || '').trim();
+        const saleId = (PosnicPro.sales && PosnicPro.sales.currentSaleId) || this.currentSaleId || '';
         if (!phoneNumber) {
-            PosnicPro.alert('error', PosnicPro.i18n.t('lang_enter_a_valid_phone_number', 'Enter a valid phone number'));
+            PosnicPro.alert('error', PosnicPro.i18n.t('lang_enter_a_valid_phone_number', 'Enter a valid customer phone number'));
             return;
         }
-        
-        // Send WhatsApp message using WhatsApp service
-        const params = {
-            url: 'whatsapp/sendMessage',
-            data: {
-                phone_number: phoneNumber.replace(/\D/g, '') // Remove non-digits
-            }
-        };
-        
-        // Use template_id if template is selected, otherwise use message
-        if (selectedTemplate && selectedTemplate !== '') {
-            params.data.template_id = selectedTemplate;
-            // Add sale_id for template variable replacement
-            params.data.sale_id = PosnicPro.sales.currentSaleId || '';
-            console.log('Sending WhatsApp with template:', {
-                template_id: params.data.template_id,
-                sale_id: params.data.sale_id,
-                currentSaleId: PosnicPro.sales.currentSaleId
-            });
-        } else if (message && message.trim() !== '') {
-            params.data.message = message;
-        } else {
-            PosnicPro.alert('error', PosnicPro.i18n.t('lang_please_select_a_template_or_enter_a_messag', 'Please select a template or enter a message'));
+        if (!saleId) {
+            PosnicPro.alert('error', 'The sale has not been saved yet. Save the sale before sending its receipt.');
             return;
         }
-        
-        PosnicPro.post(params, function (response) {
-            if (response.type === 'success') {
+        const button = $('#posnic-send-whatsapp-receipt-payment').prop('disabled', true);
+        PosnicPro.post({ url: 'whatsapp/send-receipt', data: { sale_id: saleId, phone_number: phoneNumber } }, function (response) {
+            button.prop('disabled', false);
+            if (response && response.type === 'success') {
                 $('#smsModal').modal('hide');
-                hasher.changed.active = false;
-                hasher.replaceHash('sales/new');
-                hasher.changed.active = true;
-                PosnicPro.alert(response.type, response.message);
-                
-                // Reset form ID back to original
-                $('#whatsapp_receipt_form').attr('id', 'sms_form');
+                PosnicPro.alert('success', response.message || 'Receipt sent through WhatsApp.');
             } else {
-                PosnicPro.alert(response.type, response.message);
+                PosnicPro.alert('error', (response && response.message) || 'WhatsApp receipt could not be sent.');
             }
         }, function (xhr) {
-            var errorMessage = 'An unknown error occurred.';
-            var response = jQuery.parseJSON(xhr.responseText);
-            if (response.message) {
-                errorMessage = response.message;
-            }
-            PosnicPro.alert('Error', errorMessage);
+            button.prop('disabled', false);
+            const message = xhr && xhr.responseJSON && xhr.responseJSON.message;
+            PosnicPro.alert('error', message || 'WhatsApp receipt could not be sent.');
         });
     },
     sendSalesReceipt: function (sales_id) {

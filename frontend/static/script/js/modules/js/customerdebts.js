@@ -25,22 +25,27 @@
       PosnicPro.customerdebts.load();
     },
     load: function () {
-      $('#debts_outstanding_body').html('<tr><td colspan="4" class="text-center text-muted py-3">Loading outstanding customers…</td></tr>');
+      $('#debts_outstanding_body').html('<tr><td colspan="5" class="text-center text-muted py-3">Loading outstanding customers…</td></tr>');
       PosnicPro.get('credit/outstanding', function (res) {
         if (!res || res.type !== 'success') {
-          $('#debts_outstanding_body').html('<tr><td colspan="4" class="text-center text-danger py-3">' + esc((res && res.message) || 'Could not load customer debts.') + '</td></tr>');
+          $('#debts_outstanding_body').html('<tr><td colspan="5" class="text-center text-danger py-3">' + esc((res && res.message) || 'Could not load customer debts.') + '</td></tr>');
           return;
         }
         var rows = res.data || [], total = 0, body = $('#debts_outstanding_body').empty();
+        var minDue = Number($('#debts_reminder_min_due').val()) || 0;
+        var minDays = Number($('#debts_reminder_min_days').val()) || 0;
+        rows = rows.filter(function (row) {
+          return Number(row.due) >= minDue && Number(row.days_overdue || 0) >= minDays;
+        });
         if (!rows.length) {
-          body.html('<tr><td colspan="4" class="text-center text-muted py-3">No outstanding customer balances.</td></tr>');
+          body.html('<tr><td colspan="5" class="text-center text-muted py-3">No outstanding customer balances.</td></tr>');
           $('#debts_outstanding_total').text(money(0));
           return;
         }
         rows.forEach(function (row) {
           var due = Number(row.due) || 0;
           total += due;
-          body.append('<tr><td><strong>' + esc(row.name || 'Customer') + '</strong></td><td>' + esc(row.phone || '—') + '</td><td class="text-right text-danger">' + money(due) + '</td><td class="text-center text-nowrap"><button type="button" class="btn btn-sm btn-primary debts-open-ledger" data-id="' + esc(row.customer_id) + '" data-name="' + esc(row.name || 'Customer') + '">Debt / Collect</button></td></tr>');
+          body.append('<tr><td><label class="mb-0"><input type="checkbox" class="debts-reminder-select mr-2" value="' + esc(row.customer_id) + '"><strong>' + esc(row.name || 'Customer') + '</strong></label></td><td>' + esc(row.phone || '—') + '</td><td class="text-right text-danger">' + money(due) + '</td><td>' + esc(row.days_overdue || 0) + '</td><td class="text-center text-nowrap"><button type="button" class="btn btn-sm btn-primary debts-open-ledger" data-id="' + esc(row.customer_id) + '" data-name="' + esc(row.name || 'Customer') + '">Debt / Collect</button></td></tr>');
         });
         $('#debts_outstanding_total').text(money(total));
         var pendingCustomer = PosnicPro.sales && PosnicPro.sales._debtCustomerToOpen;
@@ -80,6 +85,33 @@
         $('#debts_ledger_status').text(rows.length + ' unpaid sale balance(s). Payments are applied to the oldest sale first.');
       });
     },
+
+    sendWhatsAppReminders: function () {
+      var ids = $('.debts-reminder-select:checked').map(function () { return String(this.value); }).get();
+      if (!ids.length) return PosnicPro.alert('error', 'Select at least one debtor.');
+      var button = $('#debts_send_whatsapp_reminders').prop('disabled', true);
+      $('#debts_whatsapp_result').text('Sending reminders…');
+      PosnicPro.post({ url: 'credit/whatsapp-reminders', data: {
+        customer_ids: ids,
+        min_due: Number($('#debts_reminder_min_due').val()) || 0,
+        min_age_days: Number($('#debts_reminder_min_days').val()) || 0
+      } }, function (res) {
+        button.prop('disabled', false);
+        if (!res || res.type !== 'success') {
+          $('#debts_whatsapp_result').text((res && res.message) || 'Reminder sending failed.');
+          return;
+        }
+        var data = res.data || {};
+        var log = (data.results || []).map(function (row) {
+          return esc(row.name || row.customer_id) + ' — ' + esc(row.status) + (row.error ? ' (' + esc(row.error) + ')' : '');
+        });
+        $('#debts_whatsapp_result').html('<strong>Sent: ' + (data.sent || 0) + ' · Failed: ' + (data.failed || 0) + ' · Skipped: ' + (data.skipped || 0) + '</strong><br>' + log.join('<br>'));
+        PosnicPro.alert('success', 'WhatsApp reminders: ' + (data.sent || 0) + ' sent, ' + (data.failed || 0) + ' failed.');
+      }, function (xhr) {
+        button.prop('disabled', false);
+        $('#debts_whatsapp_result').text((xhr && xhr.responseJSON && xhr.responseJSON.message) || 'Reminder sending failed.');
+      });
+    },
     settle: function () {
       if (!selectedCustomerId) return PosnicPro.alert('error', 'Select a customer first.');
       var amount = Number($('#debts_settle_amount').val());
@@ -107,6 +139,9 @@
     }
   };
 
+  $(document).on('click', '#debts_send_whatsapp_reminders', function () { PosnicPro.customerdebts.sendWhatsAppReminders(); });
+  $(document).on('click', '#debts_reminder_filter', function () { PosnicPro.customerdebts.load(); });
+  $(document).on('change', '#debts_select_all', function () { $('.debts-reminder-select').prop('checked', this.checked); });
   $(document).on('click', '#credit_debts_refresh', function () { PosnicPro.customerdebts.load(); });
   $(document).on('click', '.debts-open-ledger', function () {
     PosnicPro.customerdebts.openLedger($(this).data('id'), $(this).data('name'));

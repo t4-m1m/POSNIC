@@ -1,7 +1,34 @@
+'use strict';
+
 const EventEmitter = require('events');
-const path = require('path');
 const fs = require('fs');
-const { execFileSync } = require('child_process');
+const path = require('path');
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function safeSegment(value, label) {
+  const text = String(value == null ? '' : value);
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(text)) throw new Error(label + ' is not a valid identifier');
+  return text;
+}
+
+function normalizePhoneNumber(value, defaultCountryCode = '213') {
+  let digits = String(value || '').trim().replace(/[^\d+]/g, '');
+  if (digits.startsWith('00')) digits = '+' + digits.slice(2);
+  digits = digits.replace(/\D/g, '');
+  if (!digits) throw new Error('Customer phone number is missing.');
+  if (digits.startsWith(defaultCountryCode + '0')) {
+    digits = defaultCountryCode + digits.slice(defaultCountryCode.length + 1);
+  } else if (String(value || '').trim().startsWith('+')) {
+    // Explicit international number.
+  } else if (digits.startsWith('0')) {
+    digits = defaultCountryCode + digits.slice(1);
+  } else if (digits.length === 9 && /^[5-7]/.test(digits)) {
+    digits = defaultCountryCode + digits;
+  }
+  if (digits.length < 8 || digits.length > 15) throw new Error('Customer phone number is invalid.');
+  return digits;
+}
 
 class WhatsAppService extends EventEmitter {
   constructor() {
@@ -9,377 +36,208 @@ class WhatsAppService extends EventEmitter {
     this.clients = new Map();
     this.qrCodes = new Map();
     this.connectionStatus = new Map();
-    const legacySessionPath = path.join(__dirname, '../../.wwebjs_auth');
-    // Keep WhatsApp authentication outside the application install directory so
-    // updates/reinstalls do not replace the user's LocalAuth session.
-    const persistentRoot = process.env.POSNIC_WHATSAPP_SESSION_PATH ||
-      (process.env.APPDATA
-        ? path.join(process.env.APPDATA, 'POSNIC', '.wwebjs_auth')
-        : path.join(require('os').homedir(), '.posnic', '.wwebjs_auth'));
-    this.sessionPath = persistentRoot;
+    this.phoneNumbers = new Map();
+    this.connecting = new Map();
+    this.reconnectTimers = new Map();
+    this.queues = new Map();
+    this.lastSentAt = new Map();
+    this.sessionRoot = path.join(
+      process.env.POSNIC_USER_DATA_PATH ||
+        (process.env.APPDATA ? path.join(process.env.APPDATA, 'POSNIC') : path.join(require('os').homedir(), '.posnic')),
+      'whatsapp-auth'
+    );
+    fs.mkdirSync(this.sessionRoot, { recursive: true });
+  }
 
+  _key(deviceId, branchId) {
+    return safeSegment(branchId, 'Branch ID') + '_' + safeSegment(deviceId, 'Device ID');
+  }
+
+  _authDir(deviceId, branchId) {
+    return path.join(this.sessionRoot, this._key(deviceId, branchId));
+  }
+
+  _loadBaileys() {
     try {
-      if (!fs.existsSync(this.sessionPath)) {
-        fs.mkdirSync(path.dirname(this.sessionPath), { recursive: true });
-        if (fs.existsSync(legacySessionPath)) {
-          fs.cpSync(legacySessionPath, this.sessionPath, { recursive: true, errorOnExist: false });
-        } else {
-          fs.mkdirSync(this.sessionPath, { recursive: true });
-        }
-      }
+      return require('@whiskeysockets/baileys');
     } catch (error) {
-      // Fall back to the legacy directory if migration/persistent storage fails.
-      console.warn('[WHATSAPP INIT] Could not prepare persistent session directory:', error?.message || error);
-      this.sessionPath = legacySessionPath;
-      if (!fs.existsSync(this.sessionPath)) fs.mkdirSync(this.sessionPath, { recursive: true });
+      const wrapped = new Error('WhatsApp WebSocket dependency is not installed. Reinstall POSNIC or update its API dependencies.');
+      wrapped.cause = error;
+      throw wrapped;
     }
-  }
-
-  /*
-   * The session key, and the only place it is built.
-   *
-   * clientKey becomes a directory name: path.join(sessionPath,
-   * `session-${clientKey}`), and logout() calls fs.rmSync on that path with
-   * recursive and force. deviceId arrives from req.body, so a device id of
-   * "../../.." resolved to somewhere outside the session folder and deleted
-   * it - an authenticated request able to remove an arbitrary directory tree,
-   * which is as bad as this application gets.
-   *
-   * An allowlist rather than stripping "..": stripping is a filter somebody
-   * has to get exactly right, and "....//" defeats the obvious version. These
-   * are ids we generate, so they can be required to look like ids.
-   */
-  _clientKey(deviceId, branchId) {
-    const safe = (value, what) => {
-      const text = String(value == null ? '' : value);
-      if (!/^[A-Za-z0-9_-]{1,64}$/.test(text)) {
-        throw new Error(`${what} is not a valid identifier`);
-      }
-      return text;
-    };
-    return `${safe(branchId, 'branch id')}_${safe(deviceId, 'device id')}`;
-  }
-
-  resolveBrowserExecutable() {
-    const candidates = [];
-    const add = (value) => {
-      if (typeof value === 'string' && value.trim()) {
-        candidates.push(value.trim().replace(/^"|"$/g, ''));
-      }
-    };
-
-    // Explicit paths are useful for managed, portable, or non-standard installs.
-    add(process.env.PUPPETEER_EXECUTABLE_PATH);
-    add(process.env.CHROME_PATH);
-    add(process.env.CHROMIUM_PATH);
-    add(process.env.EDGE_PATH);
-
-    if (process.platform === 'win32') {
-      const programFiles = process.env.PROGRAMFILES || 'C:\\Program Files';
-      const programFilesX86 = process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)';
-      const localAppData = process.env.LOCALAPPDATA || '';
-      const userProfile = process.env.USERPROFILE || '';
-      [
-        path.join(programFiles, 'Google', 'Chrome', 'Application', 'chrome.exe'),
-        path.join(programFilesX86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
-        path.join(localAppData, 'Google', 'Chrome', 'Application', 'chrome.exe'),
-        path.join(userProfile, 'AppData', 'Local', 'Google', 'Chrome', 'Application', 'chrome.exe'),
-        path.join(programFiles, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
-        path.join(programFilesX86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
-        path.join(localAppData, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
-        path.join(userProfile, 'AppData', 'Local', 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
-      ].forEach(add);
-
-      // Chrome/Edge may be installed in a per-user or custom location. Read
-      // Windows App Paths registration instead of assuming the standard folder.
-      for (const key of [
-        'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe',
-        'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe',
-        'HKLM\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe',
-        'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe',
-        'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe',
-        'HKLM\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe',
-      ]) {
-        try {
-          const output = execFileSync('reg.exe', ['query', key, '/ve'], {
-            encoding: 'utf8',
-            windowsHide: true,
-            stdio: ['ignore', 'pipe', 'ignore'],
-          });
-          const match = output.match(/REG_SZ\s+(.+?)\s*$/im);
-          if (match) add(match[1]);
-        } catch (_) {}
-      }
-
-      // Also honor browser executables available on PATH.
-      for (const executable of ['chrome.exe', 'msedge.exe', 'chromium.exe']) {
-        try {
-          const output = execFileSync('where.exe', [executable], {
-            encoding: 'utf8',
-            windowsHide: true,
-            stdio: ['ignore', 'pipe', 'ignore'],
-          });
-          output.split(/\r?\n/).forEach(add);
-        } catch (_) {}
-      }
-    } else if (process.platform === 'darwin') {
-      [
-        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-        '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
-        '/Applications/Chromium.app/Contents/MacOS/Chromium',
-      ].forEach(add);
-    } else {
-      [
-        '/usr/bin/google-chrome',
-        '/usr/bin/google-chrome-stable',
-        '/usr/bin/chromium',
-        '/usr/bin/chromium-browser',
-        '/usr/bin/microsoft-edge',
-        '/snap/bin/chromium',
-      ].forEach(add);
-    }
-
-    for (const candidate of candidates) {
-      try {
-        if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
-      } catch (_) {}
-    }
-
-    // Use Puppeteer's managed browser only when it actually exists. Do not
-    // silently pass a missing cache path through to whatsapp-web.js.
-    try {
-      const puppeteer = require('puppeteer');
-      const bundled = puppeteer.executablePath();
-      if (bundled && fs.existsSync(bundled)) return bundled;
-    } catch (_) {}
-
-    return null;
   }
 
   async initializeClient(deviceId, branchId) {
+    const key = this._key(deviceId, branchId);
+    if (this.connecting.has(key)) return this.connecting.get(key);
+    if (this.clients.has(key) && this.getConnectionStatus(deviceId, branchId) === 'connected') {
+      return { status: true, connected: true, message: 'WhatsApp is already connected.' };
+    }
+    const promise = this._connect(deviceId, branchId, null).finally(() => this.connecting.delete(key));
+    this.connecting.set(key, promise);
+    return promise;
+  }
+
+  async connectWithPairingCode(deviceId, branchId, phoneNumber) {
+    const key = this._key(deviceId, branchId);
+    const phone = normalizePhoneNumber(phoneNumber);
+    if (this.clients.has(key)) await this._destroySocket(key, false);
+    const result = await this._connect(deviceId, branchId, phone);
+    return result;
+  }
+
+  async _connect(deviceId, branchId, pairingPhone) {
+    const key = this._key(deviceId, branchId);
     try {
-      const { Client, LocalAuth } = require('whatsapp-web.js');
-      const qrcode = require('qrcode');
-      const browserExecutable = this.resolveBrowserExecutable();
-      if (browserExecutable) console.log('[WHATSAPP INIT] Using browser executable:', browserExecutable);
-      else console.warn('[WHATSAPP INIT] No system Chrome/Edge found; checking Puppeteer-managed browser fallback.');
+      const baileys = this._loadBaileys();
+      const makeWASocket = baileys.default || baileys.makeWASocket;
+      const { state, saveCreds } = await baileys.useMultiFileAuthState(this._authDir(deviceId, branchId));
+      const versionInfo = await baileys.fetchLatestBaileysVersion().catch(() => null);
+      const socket = makeWASocket({
+        auth: state,
+        ...(versionInfo && versionInfo.version ? { version: versionInfo.version } : {}),
+        printQRInTerminal: false,
+        browser: (baileys.Browsers && baileys.Browsers.windows && baileys.Browsers.windows('POSNIC')) || ['POSNIC', 'Desktop', '1.0.0'],
+        markOnlineOnConnect: false,
+        syncFullHistory: false,
+        generateHighQualityLinkPreview: false,
+        getMessage: async () => undefined,
+        logger: require('pino')({ level: 'silent' }),
+      });
 
-      const clientKey = this._clientKey(deviceId, branchId);
-
-      if (this.clients.has(clientKey)) {
-        const existingClient = this.clients.get(clientKey);
-        try {
-          const state = await existingClient.getState();
-          if (state === 'CONNECTED') {
-            return { status: true, message: 'Already connected', connected: true };
+      this.clients.set(key, socket);
+      this.connectionStatus.set(key, pairingPhone ? 'pairing_requested' : 'connecting');
+      this.qrCodes.delete(key);
+      socket.ev.on('creds.update', saveCreds);
+      socket.ev.on('connection.update', (update) => {
+        if (update.qr) {
+          this.qrCodes.set(key, update.qr);
+          this.connectionStatus.set(key, 'qr_ready');
+          this.emit('qr', { deviceId, branchId, clientKey: key, qrCode: update.qr });
+        }
+        if (update.connection === 'open') {
+          const userId = socket.user && socket.user.id ? socket.user.id : '';
+          const number = userId.split(':')[0].split('@')[0];
+          this.phoneNumbers.set(key, number || '');
+          this.connectionStatus.set(key, 'connected');
+          this.qrCodes.delete(key);
+          this.emit('ready', { deviceId, branchId, clientKey: key, phoneNumber: number });
+        }
+        if (update.connection === 'close') {
+          const statusCode = update.lastDisconnect && update.lastDisconnect.error &&
+            update.lastDisconnect.error.output && update.lastDisconnect.error.output.statusCode;
+          const loggedOut = statusCode === baileys.DisconnectReason.loggedOut;
+          this.connectionStatus.set(key, loggedOut ? 'logged_out' : 'disconnected');
+          this.qrCodes.delete(key);
+          this.clients.delete(key);
+          this.emit('disconnected', { deviceId, branchId, clientKey: key, reason: statusCode });
+          if (!loggedOut && fs.existsSync(path.join(this._authDir(deviceId, branchId), 'creds.json'))) {
+            const timer = setTimeout(() => {
+              this.reconnectTimers.delete(key);
+              this.initializeClient(deviceId, branchId).catch((error) =>
+                console.warn('[WhatsApp] Reconnect failed:', error.message)
+              );
+            }, 4000);
+            if (timer.unref) timer.unref();
+            this.reconnectTimers.set(key, timer);
           }
-        } catch (err) {
-          console.warn(
-            `[WHATSAPP INIT] Existing client state check failed for ${clientKey}, recreating:`,
-            err?.message || err
-          );
         }
+      });
 
-        // Replace stale/inactive client sessions so a fresh QR can be generated.
-        try {
-          await existingClient.destroy();
-        } catch (err) {
-          console.warn(
-            `[WHATSAPP INIT] Existing client destroy failed for ${clientKey}, continuing:`,
-            err?.message || err
-          );
-        }
-
-        // Do not clear LocalAuth data when replacing a stale client. A transport
-        // or browser startup failure must never force the user to scan a new QR.
-        this.clients.delete(clientKey);
+      if (pairingPhone && !state.creds.registered) {
+        // Pairing codes are requested only after the socket has had a chance to initialize.
+        await wait(1200);
+        const code = await socket.requestPairingCode(pairingPhone);
+        this.connectionStatus.set(key, 'pairing_code_ready');
+        return { status: true, connected: false, pairingCode: code, message: 'Enter this code in WhatsApp Linked Devices.' };
       }
-
-      // Ensure we don't have leftover QR/status from a prior attempt.
-      this.qrCodes.delete(clientKey);
-      this.connectionStatus.delete(clientKey);
-
-      const client = new Client({
-        authStrategy: new LocalAuth({
-          clientId: clientKey,
-          dataPath: this.sessionPath,
-        }),
-        puppeteer: {
-          headless: true,
-          ...(browserExecutable ? { executablePath: browserExecutable } : {}),
-          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-        },
-      });
-
-      client.on('qr', async (qr) => {
-        console.log(`QR Code received for device: ${deviceId}`);
-        this.connectionStatus.set(clientKey, 'qr_ready');
-        this.qrCodes.set(clientKey, qr);
-        this.emit('qr', { deviceId, clientKey, qrCode: qr });
-      });
-
-      client.on('ready', () => {
-        console.log(`WhatsApp ready for device: ${deviceId}`);
-        this.connectionStatus.set(clientKey, 'connected');
-        this.qrCodes.delete(clientKey);
-        this.emit('ready', { deviceId, clientKey });
-      });
-
-      client.on('authenticated', () => {
-        this.connectionStatus.set(clientKey, 'authenticated');
-        this.emit('authenticated', { deviceId, clientKey });
-      });
-
-      client.on('auth_failure', (msg) => {
-        console.error(`Auth failure for ${deviceId}:`, msg);
-        this.connectionStatus.set(clientKey, 'auth_failed');
-        this.qrCodes.delete(clientKey);
-        this.emit('auth_failure', { deviceId, clientKey, error: msg });
-      });
-
-      client.on('disconnected', (reason) => {
-        console.log(`Disconnected ${deviceId}:`, reason);
-        this.connectionStatus.set(clientKey, 'disconnected');
-        this.qrCodes.delete(clientKey);
-        // A transport disconnect must not erase persisted LocalAuth login data.
-        // Explicit logout/removeDevice still calls _safeCleanupClient and clears it.
-        this.clients.delete(clientKey);
-        this.emit('disconnected', { deviceId, clientKey, reason });
-      });
-
-      this.clients.set(clientKey, client);
-      this.connectionStatus.set(clientKey, 'initializing');
-
-      await client.initialize();
-      return {
-        status: true,
-        message: 'Client initialized',
-        connected: false,
-      };
+      return { status: true, connected: false, message: 'WhatsApp connection is starting.' };
     } catch (error) {
-      console.error('Error initializing WhatsApp:', error);
-      const message = /could not find chrome|couldn't find chrome|executable doesn't exist|browser was not found/i.test(String(error && error.message))
-        ? 'WhatsApp could not locate a Chrome/Chromium browser. POSNIC now checks common Chrome and Edge install paths; set CHROME_PATH to the browser executable if it is installed elsewhere.'
-        : (error && error.message ? error.message : 'WhatsApp initialization failed.');
-      return { status: false, message, connected: false };
+      this.connectionStatus.set(key, 'error');
+      console.error('[WhatsApp] Connection initialization failed:', error.message);
+      return { status: false, connected: false, message: error.message };
     }
   }
 
   hasSavedSession(deviceId, branchId) {
     try {
-      const clientKey = this._clientKey(deviceId, branchId);
-      const sessionDir = path.join(this.sessionPath, `session-${clientKey}`);
-      return fs.existsSync(sessionDir) && fs.statSync(sessionDir).isDirectory();
+      const creds = path.join(this._authDir(deviceId, branchId), 'creds.json');
+      return fs.existsSync(creds) && fs.statSync(creds).isFile();
     } catch (_) { return false; }
   }
 
   getQRCode(deviceId, branchId) {
-    const clientKey = this._clientKey(deviceId, branchId);
-    return this.qrCodes.get(clientKey) || null;
+    return this.qrCodes.get(this._key(deviceId, branchId)) || null;
   }
 
   getConnectionStatus(deviceId, branchId) {
-    const clientKey = this._clientKey(deviceId, branchId);
-    return this.connectionStatus.get(clientKey) || 'not_initialized';
+    return this.connectionStatus.get(this._key(deviceId, branchId)) || 'not_initialized';
+  }
+
+  getConnectedPhone(deviceId, branchId) {
+    return this.phoneNumbers.get(this._key(deviceId, branchId)) || '';
+  }
+
+  async _destroySocket(key, logout) {
+    const socket = this.clients.get(key);
+    this.clients.delete(key);
+    this.qrCodes.delete(key);
+    const timer = this.reconnectTimers.get(key);
+    if (timer) clearTimeout(timer);
+    this.reconnectTimers.delete(key);
+    if (socket) {
+      try {
+        if (logout && socket.logout) await socket.logout();
+        else if (socket.end) socket.end(new Error('POSNIC WhatsApp socket closed'));
+      } catch (_) {}
+    }
   }
 
   async logout(deviceId, branchId) {
-    const clientKey = this._clientKey(deviceId, branchId);
-    const client = this.clients.get(clientKey);
-
+    const key = this._key(deviceId, branchId);
+    await this._destroySocket(key, true);
+    this.phoneNumbers.delete(key);
+    this.connectionStatus.set(key, 'disconnected');
     try {
-      if (client) {
-        // whatsapp-web.js / puppeteer can throw errors like
-        // "Attempted to use detached Frame" or "Target closed" if the
-        // underlying Chromium page is already gone. For a "Disconnect"
-        // action in the UI, these are safe to ignore - the user simply
-        // wants the session cleared.
-        try {
-          await client.logout();
-        } catch (err) {
-          console.warn(
-            '[WHATSAPP LOGOUT] Error during client.logout(), ignoring:',
-            err?.message || err
-          );
-        }
-
-        try {
-          await client.destroy();
-        } catch (err) {
-          console.warn(
-            '[WHATSAPP LOGOUT] Error during client.destroy(), ignoring:',
-            err?.message || err
-          );
-        }
-      }
-    } finally {
-      this._safeCleanupClient(clientKey);
+      fs.rmSync(this._authDir(deviceId, branchId), { recursive: true, force: true });
+    } catch (error) {
+      console.warn('[WhatsApp] Could not remove auth directory:', error.message);
+      return { status: false, message: 'Could not remove the saved WhatsApp session.' };
     }
-
-    // From a UX perspective, clicking "Disconnect" should succeed even if
-    // the client was already disconnected or its frame was detached. We
-    // therefore return a success status as long as our cleanup completed.
-    return { status: true, message: 'Logged out successfully' };
-  }
-
-  _safeCleanupClient(clientKey) {
-    // Always clean up our in-memory maps regardless of errors so that
-    // the system sees this device as disconnected.
-    this.clients.delete(clientKey);
-    this.qrCodes.delete(clientKey);
-    this.connectionStatus.delete(clientKey);
-
-    // Also attempt to remove the on-disk session folder. Any failure
-    // here is logged but not surfaced to the user.
-    try {
-      const sessionDir = path.join(this.sessionPath, `session-${clientKey}`);
-      if (fs.existsSync(sessionDir)) {
-        fs.rmSync(sessionDir, { recursive: true, force: true });
-      }
-    } catch (err) {
-      console.warn(
-        '[WHATSAPP LOGOUT] Error removing session directory, ignoring:',
-        err?.message || err
-      );
-    }
+    return { status: true, message: 'WhatsApp disconnected. The saved linked-device session was removed.' };
   }
 
   async sendMessage(deviceId, branchId, phoneNumber, message) {
     if (require('../config/demo-mode').isDemoMode()) {
       return { status: false, message: require('../config/demo-mode').DEMO_BLOCKED_MESSAGE };
     }
-    const clientKey = this._clientKey(deviceId, branchId);
-    const client = this.clients.get(clientKey);
-
-    if (!client) {
-      return {
-        status: false,
-        message:
-          'WhatsApp is not connected. Please go to Settings → WhatsApp Connection and connect your WhatsApp first.',
-      };
+    const key = this._key(deviceId, branchId);
+    const socket = this.clients.get(key);
+    if (!socket || this.getConnectionStatus(deviceId, branchId) !== 'connected') {
+      return { status: false, message: 'WhatsApp is not connected. Open Settings → WhatsApp Connection and link the store account.' };
     }
-
-    const state = await client.getState();
-    if (state !== 'CONNECTED') {
-      return {
-        status: false,
-        message: 'WhatsApp connection lost. Please reconnect from Settings → WhatsApp Connection.',
-      };
-    }
-
-    try {
-      const chatId = phoneNumber.includes('@c.us') ? phoneNumber : `${phoneNumber}@c.us`;
-      const sent = await client.sendMessage(chatId, message);
-      return {
-        status: true,
-        message: 'Message sent successfully',
-        messageId: sent?.id?._serialized,
-      };
-    } catch (error) {
-      console.error('Error sending message:', error);
-      return { status: false, message: error.message };
-    }
+    let phone;
+    try { phone = normalizePhoneNumber(phoneNumber); }
+    catch (error) { return { status: false, message: error.message }; }
+    const jid = phone + '@s.whatsapp.net';
+    const previous = this.queues.get(key) || Promise.resolve();
+    const task = previous.catch(() => undefined).then(async () => {
+      const active = this.clients.get(key);
+      if (!active || this.getConnectionStatus(deviceId, branchId) !== 'connected') {
+        throw new Error('WhatsApp connection was lost before sending.');
+      }
+      const lastSentAt = this.lastSentAt.get(key) || 0;
+      if (lastSentAt) await wait(2000 + Math.floor(Math.random() * 2001));
+      const sent = await active.sendMessage(jid, { text: String(message || '') });
+      this.lastSentAt.set(key, Date.now());
+      return { status: true, message: 'Message sent successfully', messageId: sent && sent.key && sent.key.id };
+    });
+    this.queues.set(key, task);
+    try { return await task; }
+    catch (error) { return { status: false, message: error.message }; }
+    finally { if (this.queues.get(key) === task) this.queues.delete(key); }
   }
 }
 
+WhatsAppService.normalizePhoneNumber = normalizePhoneNumber;
 module.exports = new WhatsAppService();

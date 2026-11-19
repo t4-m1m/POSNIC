@@ -120,7 +120,7 @@ class CreditService {
   }
 
   /** Customers who owe money, most-owed first, with their phone for reminders. */
-  async outstanding(branchId, { minDue = 0 } = {}) {
+  async outstanding(branchId, { minDue = 0, minAgeDays = 0 } = {}) {
     const db = await BaseModel.getDb();
     const outstandingMatch = { license: BaseModel.license };
     if (branchId) outstandingMatch.branch_id = oid(branchId);
@@ -133,6 +133,7 @@ class CreditService {
             _id: '$customer_id',
             name: { $first: '$customer_name' },
             due: { $sum: '$pending' },
+            oldest_debt_date: { $min: '$created_date' },
           },
         },
         { $match: { due: { $gt: Math.max(0, Number(minDue) || 0) } } },
@@ -149,6 +150,8 @@ class CreditService {
         name: g.name || (cust && cust.name) || '',
         phone: (cust && cust.phone) || '',
         due: round2(g.due),
+        oldest_debt_date: g.oldest_debt_date || null,
+        days_overdue: g.oldest_debt_date ? Math.max(0, Math.floor((Date.now() - new Date(g.oldest_debt_date).getTime()) / 86400000)) : 0,
         credit_limit: (cust && Number(cust.creditLimit)) || 0,
       });
     }
@@ -379,7 +382,7 @@ class CreditService {
   }
 
   /** Send one customer their outstanding reminder now (used by the button). */
-  async sendReminder(customerId, { branchId, ctx = {}, dryRun = false, now = null } = {}) {
+  async sendReminder(customerId, { branchId, ctx = {}, dryRun = false, now = null, channelOverride = null } = {}) {
     const db = await BaseModel.getDb();
     const cust = await db
       .collection('customers')
@@ -389,14 +392,21 @@ class CreditService {
     if (due <= 0) return { status: true, data: { sent: 0 }, message: 'Nothing outstanding' };
 
     const settings = await this.getSettings(branchId);
-    const channel = settings.reminder_channel || 'sms';
+    const channel = channelOverride === 'whatsapp' ? 'whatsapp' : (settings.reminder_channel || 'sms');
     const phone = (cust.phone || '').toString().trim();
-    const message = CreditService.renderReminder(settings.reminder_template, {
+    const unpaidRows = channelOverride === 'whatsapp' ? await this.ledger(customerId, branchId) : [];
+    const oldestDate = unpaidRows.length ? new Date(unpaidRows[0].date || now || Date.now()) : null;
+    const daysOverdue = oldestDate ? Math.max(0, Math.floor(((now ? new Date(now) : new Date()).getTime() - oldestDate.getTime()) / 86400000)) : 0;
+    const baseMessage = CreditService.renderReminder(settings.reminder_template, {
       name: cust.name,
       due,
-      currency: settings.currency || ctx.currency || '',
+      days_overdue: daysOverdue,
+      currency: settings.currency || ctx.currency || 'DZD',
       shop: ctx.branchName || settings.branch_name || '',
     });
+    const message = channelOverride === 'whatsapp'
+      ? baseMessage + '\nAncienneté de la dette : ' + daysOverdue + ' jour(s).\nNous vous invitons cordialement à passer au magasin pour régulariser votre solde. Merci.'
+      : baseMessage;
     const dayKey = (now ? new Date(now) : new Date()).toISOString().slice(0, 10);
 
     let status = 'skipped_nophone';
@@ -404,7 +414,18 @@ class CreditService {
     if (phone) {
       if (dryRun) status = 'dry_run';
       else {
-        const r = await this._send(branchId, channel, phone, message);
+        let r;
+        if (channelOverride === 'whatsapp') {
+          const branch = await db.collection('branches').findOne({ _id: oid(branchId) });
+          const deviceId = branch && branch.whatsapp_device_id;
+          if (!deviceId) r = { ok: false, error: 'No linked WhatsApp device is configured for this branch.' };
+          else {
+            const sent = await require('./whatsapp.service').sendMessage(deviceId, branchId, phone, message);
+            r = { ok: !!(sent && sent.status), error: sent && sent.status ? null : (sent && sent.message) || 'WhatsApp send failed.' };
+          }
+        } else {
+          r = await this._send(branchId, channel, phone, message);
+        }
         status = r && r.ok ? 'sent' : 'failed';
         error = r && r.ok ? null : (r && r.error) || 'send failed';
       }
@@ -430,6 +451,58 @@ class CreditService {
           : status === 'dry_run'
             ? 'Dry run'
             : 'Reminder ' + status,
+    };
+  }
+
+
+  /** Manually send WhatsApp reminders to selected debtors; never changes debt balances. */
+  async sendWhatsAppReminders(branchId, { customerIds = [], minDue = 0, minAgeDays = 0, ctx = {}, dryRun = false } = {}) {
+    const db = await BaseModel.getDb();
+    const { data: customers } = await this.outstanding(branchId, { minDue });
+    const selected = new Set((customerIds || []).map(String));
+    const now = new Date();
+    const eligible = customers.filter((customer) => {
+      const days = customer.oldest_debt_date
+        ? Math.max(0, Math.floor((now.getTime() - new Date(customer.oldest_debt_date).getTime()) / 86400000))
+        : 0;
+      return (!selected.size || selected.has(String(customer.customer_id))) &&
+        Number(customer.due) >= Math.max(0, Number(minDue) || 0) &&
+        days >= Math.max(0, Number(minAgeDays) || 0);
+    });
+    const results = [];
+    const dayKey = now.toISOString().slice(0, 10);
+    for (const customer of eligible) {
+      const alreadySent = await db.collection('reminder_sends').findOne({
+        customer_id: oid(customer.customer_id),
+        day_key: dayKey,
+        license: BaseModel.license,
+        branch_id: branchId ? oid(branchId) : null,
+        status: 'sent',
+        channel: 'whatsapp'
+      });
+      if (alreadySent) {
+        results.push({ customer_id: String(customer.customer_id), name: customer.name, phone: customer.phone, due: customer.due, days_overdue: customer.days_overdue, status: 'skipped_already_sent', error: null });
+        continue;
+      }
+      const result = await this.sendReminder(customer.customer_id, {
+        branchId, ctx, dryRun, now, channelOverride: 'whatsapp'
+      });
+      results.push({
+        customer_id: String(customer.customer_id),
+        name: customer.name,
+        phone: customer.phone,
+        due: customer.due,
+        days_overdue: customer.days_overdue,
+        status: result.data?.status || 'failed',
+        error: result.status ? null : result.message
+      });
+    }
+    return {
+      total: eligible.length,
+      sent: results.filter((row) => row.status === 'sent').length,
+      failed: results.filter((row) => row.status === 'failed').length,
+      skipped: results.filter((row) => !['sent', 'failed'].includes(row.status)).length,
+      results
     };
   }
 

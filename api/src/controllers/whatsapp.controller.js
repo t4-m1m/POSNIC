@@ -137,6 +137,80 @@ class WhatsAppController extends BaseController {
     }
   }
 
+  /** Request an eight-character WhatsApp Linked Devices pairing code. */
+  async connectPairingCode(req, res) {
+    try {
+      const branchId = activeBranchId(req);
+      const deviceId = String(req.body?.device_id || '').trim();
+      const phoneNumber = String(req.body?.phone_number || '').trim();
+      if (!branchId || !deviceId || !phoneNumber) return res.status(400).json({ type: 'error', message: 'Branch, device ID and phone number are required.' });
+      const result = await whatsappService.connectWithPairingCode(deviceId, branchId, phoneNumber);
+      if (!result.status) return res.status(400).json({ type: 'error', message: result.message });
+      try {
+        const Branch = require('../models/branch.model');
+        await Branch.updateOne(branchIdentity(req, branchId), { $set: { whatsapp_device_id: deviceId } });
+      } catch (error) { console.warn('[WhatsApp] Could not save linked device id:', error.message); }
+      return res.json({ type: 'success', message: result.message, data: { pairing_code: result.pairingCode || null, status: whatsappService.getConnectionStatus(deviceId, branchId) } });
+    } catch (error) {
+      console.error('Error requesting WhatsApp pairing code:', error);
+      return res.status(400).json({ type: 'error', message: error.message });
+    }
+  }
+
+  /** Send a receipt from the saved sale record, without opening a browser tab. */
+  async sendReceipt(req, res) {
+    try {
+      const branchId = activeBranchId(req);
+      const saleId = String(req.body?.sale_id || '').trim();
+      const phoneNumber = String(req.body?.phone_number || '').trim();
+      if (!branchId || !saleId || !phoneNumber) return res.status(400).json({ type: 'error', message: 'A saved sale and a valid customer phone number are required.' });
+      const Sale = require('../models/sale.model');
+      const sale = await Sale.findOne({ _id: saleId, ...tenantScope(req) });
+      if (!sale) return res.status(404).json({ type: 'error', message: 'Saved sale not found. Save the sale before sending its receipt.' });
+      const money = (value) => (Number(value) || 0).toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const total = Number(sale.sales_total || sale.total || 0);
+      const pending = Math.max(0, Number(sale.payment_pending || sale.pending || 0));
+      const paid = Math.max(0, Number(sale.paid_amount ?? sale.payment_paid ?? (total - pending)));
+      const items = Array.isArray(sale.items) ? sale.items : [];
+      const lines = items.map((item, index) => {
+        const name = item.item_name || item.name || item.product_name || ('Article ' + (index + 1));
+        const qty = Number(item.item_quantity ?? item.quantity ?? 0);
+        const price = Number(item.item_price ?? item.price ?? item.unit_price ?? 0);
+        const lineTotal = Number(item.item_total ?? item.total ?? qty * price);
+        return (index + 1) + '. ' + name + ' — ' + qty + ' × ' + money(price) + ' DA = ' + money(lineTotal) + ' DA';
+      });
+      const date = sale.created_date || sale.date || new Date();
+      const storeName = sale.branch_name || req.tenantContext?.branchName || 'POSNIC';
+      const subtotal = Number(sale.items_subtotal ?? sale.subtotal_amount ?? total);
+      const discount = Number(sale.discount || sale.discount_amount || 0);
+      const receipt = [
+        '🧾 ' + storeName,
+        'Ticket : ' + (sale.sales_id || sale.invoice_number || sale._id),
+        'Date : ' + new Date(date).toLocaleString('fr-DZ'),
+        '',
+        'ARTICLES',
+        ...(lines.length ? lines : ['Détails des articles indisponibles']),
+        '',
+        'Sous-total : ' + money(subtotal) + ' DA',
+        'Remise : ' + money(discount) + ' DA',
+        'TOTAL : ' + money(total) + ' DA',
+        'Payé : ' + money(paid) + ' DA',
+        'Reste à payer : ' + money(pending) + ' DA',
+        '',
+        'Merci pour votre confiance.'
+      ].join('\n');
+      const Branch = require('../models/branch.model');
+      const branch = await Branch.findOne(branchIdentity(req, branchId));
+      const deviceId = branch?.whatsapp_device_id || req.body?.device_id || 'default_device';
+      const result = await whatsappService.sendMessage(deviceId, branchId, phoneNumber, receipt);
+      if (!result.status) return res.status(503).json({ type: 'error', message: result.message });
+      return res.json({ type: 'success', message: 'Receipt sent directly through the linked WhatsApp account.', data: { message_id: result.messageId || null } });
+    } catch (error) {
+      console.error('Error sending WhatsApp receipt:', error);
+      return res.status(500).json({ type: 'error', message: error.message || 'Could not send the WhatsApp receipt.' });
+    }
+  }
+
   /**
    * Get QR code for scanning
    */
@@ -250,6 +324,7 @@ class WhatsAppController extends BaseController {
           status: status,
           device_id: device_id,
           connected: status === 'connected',
+          phone_number: whatsappService.getConnectedPhone(device_id, resolvedBranchId),
         },
       });
     } catch (error) {

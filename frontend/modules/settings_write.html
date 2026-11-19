@@ -350,6 +350,15 @@
                                             <div class="tab-content">
 
                                                 <div class="tab-pane fade show active" id="int-sub-tokens" role="tabpanel">
+                                                    <div class="card border-primary mb-3">
+                                                        <div class="card-body d-flex flex-wrap align-items-center justify-content-between">
+                                                            <div class="mr-3">
+                                                                <h5 class="mb-1"><i class="feather icon-message-circle mr-2"></i>WhatsApp linked account</h5>
+                                                                <p class="text-muted mb-0">Connect the store's WhatsApp using a QR code or an 8-character Linked Devices pairing code. The session is stored in Windows user data and survives POSNIC updates.</p>
+                                                            </div>
+                                                            <button type="button" class="btn btn-outline-primary mt-2" onclick="$('#v-pills-messagingmodule-tab').tab('show'); $('#messagingmodule_subnav a[href=&quot;#msg-sub-whatsapp&quot;]').tab('show');">Open WhatsApp connection</button>
+                                                        </div>
+                                                    </div>
                                                     <div class="d-flex align-items-center justify-content-between mb-2">
                                                         <small class="text-muted"><lang class="lang_a_token_is_a_standing_credential_with_exac">A token is a standing credential with EXACTLY the permissions it was minted with. The secret shows once.</lang></small>
                                                         <button type="button" class="btn btn-primary-rgba btn-sm" onclick="PosnicPro.integrations.openMint();">
@@ -2220,6 +2229,17 @@
                                                     <button type="button" class="btn btn-success" id="whatsapp_connect_btn" onclick="PosnicPro.whatsapp.connect();" style="display:none;">
                                                         <i class="feather icon-link mr-2"></i> <lang class="lang_connect_whatsapp">Connect WhatsApp</lang>
                                                     </button>
+                                                     <div class="form-row mt-3 align-items-end" id="whatsapp_pairing_controls">
+                                                         <div class="col-md-5 form-group mb-2">
+                                                             <label for="whatsapp_pairing_phone">WhatsApp phone number</label>
+                                                             <input type="tel" class="form-control" id="whatsapp_pairing_phone" placeholder="0550 12 34 56 or +213550123456">
+                                                         </div>
+                                                         <div class="col-md-4 form-group mb-2">
+                                                             <button type="button" class="btn btn-outline-primary" id="whatsapp_pairing_btn" onclick="PosnicPro.whatsapp.connectPairingCode();">Get 8-character pairing code</button>
+                                                         </div>
+                                                         <div class="col-md-3 form-group mb-2"><strong id="whatsapp_pairing_code" class="h5 text-primary"></strong></div>
+                                                     </div>
+                                                     <small class="form-text text-muted">WhatsApp → Linked devices → Link with phone number instead.</small>
                                                     <button type="button" class="btn btn-danger" id="whatsapp_disconnect_btn" onclick="PosnicPro.whatsapp.disconnect();" style="display:none;">
                                                         <i class="feather icon-log-out mr-2"></i> <lang class="lang_disconnect">Disconnect</lang>
                                                     </button>
@@ -2235,6 +2255,7 @@
                                                         <div class="alert alert-success">
                                                             <i class="feather icon-check-circle mr-2"></i>
                                                             <lang class="lang_whatsapp_is_connected_and_ready_to_send_me">WhatsApp is connected and ready to send messages!</lang>
+                                                             <div class="mt-2 text-success" id="whatsapp_connected_phone"></div>
                                                         </div>
                                                     </div>
                                                 </div>

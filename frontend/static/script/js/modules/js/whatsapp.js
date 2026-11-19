@@ -15,6 +15,35 @@ PosnicPro.whatsapp = {
     qrCheckInterval: null,
     templates: [],
 
+    connectPairingCode: function() {
+        const deviceId = $('#whatsapp_device_id').val().trim();
+        const phoneNumber = $('#whatsapp_pairing_phone').val().trim();
+        const branchId = PosnicPro.local.get('branch_id_set');
+        if (!deviceId || !phoneNumber || !branchId) {
+            PosnicPro.alert('error', 'Enter the device ID and store WhatsApp phone number, and select a branch.');
+            return;
+        }
+        this.deviceId = deviceId;
+        $('#whatsapp_pairing_btn').prop('disabled', true).text('Requesting code…');
+        PosnicPro.post({ url: 'whatsapp/connect-pairing-code', data: { device_id: deviceId, branch_id: branchId, phone_number: phoneNumber } }, (response) => {
+            $('#whatsapp_pairing_btn').prop('disabled', false).text('Get pairing code');
+            if (response && response.type === 'success') {
+                const code = response.data && response.data.pairing_code;
+                $('#whatsapp_pairing_code').text(code || 'Waiting for WhatsApp…');
+                $('#whatsapp_qr_container').hide();
+                $('#whatsapp_connect_btn').hide();
+                $('#whatsapp_disconnect_btn').show();
+                this.startStatusPolling();
+                if (code) PosnicPro.alert('success', 'Enter the pairing code in WhatsApp → Linked devices.');
+            } else {
+                PosnicPro.alert('error', (response && response.message) || 'Could not request a pairing code.');
+            }
+        }, () => {
+            $('#whatsapp_pairing_btn').prop('disabled', false).text('Get pairing code');
+            PosnicPro.alert('error', 'Could not reach the WhatsApp service.');
+        });
+    },
+
     /**
      * Initialize WhatsApp connection
      */
@@ -137,7 +166,8 @@ PosnicPro.whatsapp = {
 
         PosnicPro.get(params, (response) => {
             if (response.type === 'success' && response.data) {
-                const { status, connected } = response.data;
+                const { status, connected, phone_number } = response.data;
+                if (phone_number) $('#whatsapp_connected_phone').text('+' + phone_number);
                 
                 this.updateStatusBadge(status, connected);
                 
@@ -194,6 +224,9 @@ PosnicPro.whatsapp = {
      */
     showConnectButton: function() {
         $('#whatsapp_qr_container').hide();
+        $('#whatsapp_pairing_controls').show();
+        $('#whatsapp_pairing_code').empty();
+        $('#whatsapp_connected_phone').empty();
         $('#whatsapp_connected_info').hide();
         $('#whatsapp_connect_btn').show();
         $('#whatsapp_disconnect_btn').hide();
@@ -209,6 +242,9 @@ PosnicPro.whatsapp = {
         const statusMap = {
             'not_initialized': { text: 'Not Connected', class: 'badge-secondary' },
             'initializing': { text: 'Initializing...', class: 'badge-info' },
+            'connecting': { text: 'Connecting...', class: 'badge-info' },
+            'pairing_requested': { text: 'Waiting for pairing code', class: 'badge-warning' },
+            'pairing_code_ready': { text: 'Enter pairing code', class: 'badge-warning' },
             'qr_ready': { text: 'QR Ready - Scan Now', class: 'badge-warning' },
             'authenticated': { text: 'Authenticated', class: 'badge-info' },
             'connected': { text: 'Connected', class: 'badge-success' },
@@ -237,6 +273,7 @@ PosnicPro.whatsapp = {
 
         // Update UI
         $('#whatsapp_qr_container').hide();
+        $('#whatsapp_pairing_controls').hide();
         $('#whatsapp_connected_info').show();
         $('#whatsapp_connect_btn').hide();
         $('#whatsapp_disconnect_btn').show();

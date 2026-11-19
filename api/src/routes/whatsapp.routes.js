@@ -9,6 +9,9 @@ router.use(protect);
 // Initialize WhatsApp connection
 router.post('/initialize', (req, res) => whatsappController.initializeConnection(req, res));
 
+router.post('/connect-pairing-code', (req, res) => whatsappController.connectPairingCode(req, res));
+router.post('/send-receipt', (req, res) => whatsappController.sendReceipt(req, res));
+
 // Get QR code
 router.get('/getQRCode', (req, res) => whatsappController.getQRCode(req, res));
 
