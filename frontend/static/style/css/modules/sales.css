@@ -1576,12 +1576,14 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
 }
 
 
-/* POSNIC sale overlays: keep the catalogue as a stable background layer.
-   Search suggestions and function-key dialogs float above it instead of
-   participating in the catalogue's flex/scroll layout. */
-#sales_new #items_view_hide .ui-autocomplete,
-#sales_new #items_view_hide .autocomplete-suggestions,
-#sales_new #items_view_hide .tt-menu {
+/* Autocomplete creates its suggestion panel as a direct child of body
+   (appendTo: document.body), not inside #items_view_hide. Target that portal
+   directly: a descendant selector under #sales_new cannot match it, and the
+   catalogue pane itself uses z-index: 10000. Keep search/customer results
+   above the independently scrolling product and recent-sales panes. */
+body > .ui-autocomplete,
+body > .autocomplete-suggestions,
+body > .tt-menu {
   position: absolute !important;
   z-index: 20010 !important;
   max-height: min(55vh, 420px);
