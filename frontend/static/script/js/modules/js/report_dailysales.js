@@ -1397,23 +1397,43 @@ function loadDay(date){
  if(typeof PosnicPro.quickreport.salereportTable==='function')PosnicPro.quickreport.salereportTable('VIEW');
  else{loadingDay=false;$('#dc-agenda-status').text('Le rapport des ventes est indisponible.');}
 }
-$(function(){
- if(!$('#day-close-ticket-tools').length)return;load();render();renderAgenda();
- $('#dc-studio-palette').on('click','button',function(){add($(this).data('dc-type'));}).on('dragstart','button',function(e){e.originalEvent.dataTransfer.setData('text/plain',$(this).data('dc-type'));});
- $('#day-close-ticket-preview').on('dragover',function(e){e.preventDefault();}).on('drop',function(e){e.preventDefault();var t=e.originalEvent.dataTransfer.getData('text/plain');if(t.indexOf('move:')===0)return;add(t);}).on('click','.dc-studio-block',function(){selected=$(this).data('dc-id');render();}).on('dragstart','.dc-studio-block',function(e){e.originalEvent.dataTransfer.setData('text/plain','move:'+$(this).data('dc-id'));}).on('dragover','.dc-studio-block',function(e){e.preventDefault();}).on('drop','.dc-studio-block',function(e){e.preventDefault();var raw=e.originalEvent.dataTransfer.getData('text/plain'),target=blocks.findIndex(function(b){return b.id===$(this).data('dc-id');}.bind(this));if(raw.indexOf('move:')===0){var from=blocks.findIndex(function(b){return b.id===raw.slice(5);});if(from>=0&&target>=0){var moved=blocks.splice(from,1)[0];blocks.splice(target,0,moved);selected=moved.id;render();}}else add(raw,target);});
- $('#dc-studio-label').on('input',function(){var b=blocks.find(function(x){return x.id===selected;});if(b){b.label=this.value;var pos=this.selectionStart;render();$('#dc-studio-label').trigger('focus').get(0).setSelectionRange(pos,pos);}});
- $('#dc-studio-size').on('change',function(){var b=blocks.find(function(x){return x.id===selected;});if(b){b.size=num(this.value);render();}});
- $('#dc-studio-align').on('change',function(){var b=blocks.find(function(x){return x.id===selected;});if(b){b.align=this.value;render();}});
- $('#dc-studio-delete').on('click',function(){blocks=blocks.filter(function(b){return b.id!==selected;});selected=null;render();});
+function initDayCloseStudio(){
+ var $tools=$('#day-close-ticket-tools');
+ if(!$tools.length||$tools.data('posnicStudioInitialized'))return;
+ $tools.data('posnicStudioInitialized',true);
+ load();render();renderAgenda();
+ $('#dc-studio-palette').off('.posnicDayCloseStudio').on('click.posnicDayCloseStudio','button',function(){add($(this).data('dc-type'));}).on('dragstart.posnicDayCloseStudio','button',function(e){e.originalEvent.dataTransfer.setData('text/plain',$(this).data('dc-type'));});
+ $('#day-close-ticket-preview').off('.posnicDayCloseStudio').on('dragover.posnicDayCloseStudio',function(e){e.preventDefault();}).on('drop.posnicDayCloseStudio',function(e){e.preventDefault();var t=e.originalEvent.dataTransfer.getData('text/plain');if(t.indexOf('move:')===0)return;add(t);}).on('click.posnicDayCloseStudio','.dc-studio-block',function(){selected=$(this).data('dc-id');render();}).on('dragstart.posnicDayCloseStudio','.dc-studio-block',function(e){e.originalEvent.dataTransfer.setData('text/plain','move:'+$(this).data('dc-id'));}).on('dragover.posnicDayCloseStudio','.dc-studio-block',function(e){e.preventDefault();}).on('drop.posnicDayCloseStudio','.dc-studio-block',function(e){e.preventDefault();var raw=e.originalEvent.dataTransfer.getData('text/plain'),target=blocks.findIndex(function(b){return b.id===$(this).data('dc-id');}.bind(this));if(raw.indexOf('move:')===0){var from=blocks.findIndex(function(b){return b.id===raw.slice(5);});if(from>=0&&target>=0){var moved=blocks.splice(from,1)[0];blocks.splice(target,0,moved);selected=moved.id;render();}}else add(raw,target);});
+ $('#dc-studio-label').off('input.posnicDayCloseStudio').on('input.posnicDayCloseStudio',function(){var b=blocks.find(function(x){return x.id===selected;});if(b){b.label=this.value;var pos=this.selectionStart;render();$('#dc-studio-label').trigger('focus').get(0).setSelectionRange(pos,pos);}});
+ $('#dc-studio-size').off('change.posnicDayCloseStudio').on('change.posnicDayCloseStudio',function(){var b=blocks.find(function(x){return x.id===selected;});if(b){b.size=num(this.value);render();}});
+ $('#dc-studio-align').off('change.posnicDayCloseStudio').on('change.posnicDayCloseStudio',function(){var b=blocks.find(function(x){return x.id===selected;});if(b){b.align=this.value;render();}});
+ $('#dc-studio-delete').off('click.posnicDayCloseStudio').on('click.posnicDayCloseStudio',function(){blocks=blocks.filter(function(b){return b.id!==selected;});selected=null;render();});
  function move(n){var i=blocks.findIndex(function(b){return b.id===selected;}),j=i+n;if(i>=0&&j>=0&&j<blocks.length){var x=blocks.splice(i,1)[0];blocks.splice(j,0,x);render();}}
- $('#dc-studio-up').on('click',function(){move(-1);});$('#dc-studio-down').on('click',function(){move(1);});$('#dc-studio-width').on('change',render);$('#dc-studio-save').on('click',save);
- $('#day-close-ticket-print').off('click').on('click',function(){printTicket();});$('#day-close-history-refresh').off('click').on('click',function(){renderAgenda();});
- $('#dc-agenda-prev').on('click',function(){agendaDate=new Date(agendaDate.getFullYear(),agendaDate.getMonth()-1,1);renderAgenda();});
- $('#dc-agenda-next').on('click',function(){agendaDate=new Date(agendaDate.getFullYear(),agendaDate.getMonth()+1,1);renderAgenda();});
- $('#dc-studio-agenda').on('click','.dc-agenda-day[data-date]',function(){loadDay($(this).data('date'));});
- $(document).on('dayCloseReportUpdated',function(e,report){if(!report)return;reportCache=report;render();historySave();$('#dc-agenda-status').text('Rapport chargé pour '+iso(selectedDate)+'. Aperçu actualisé avec les données disponibles.');loadingDay=false;});
- $(document).on('dayCloseReportFailed',function(e,message){loadingDay=false;renderAgenda();$('#dc-agenda-status').text('Impossible de charger le rapport du '+iso(selectedDate)+'. '+String(message||'Vérifiez la connexion et réessayez.'));});
- var original=PosnicPro.quickreport.salereportTable;
- PosnicPro.quickreport.salereportTable=function(){var ret=original.apply(this,arguments);return ret;};
+ $('#dc-studio-up').off('click.posnicDayCloseStudio').on('click.posnicDayCloseStudio',function(){move(-1);});
+ $('#dc-studio-down').off('click.posnicDayCloseStudio').on('click.posnicDayCloseStudio',function(){move(1);});
+ $('#dc-studio-width').off('change.posnicDayCloseStudio').on('change.posnicDayCloseStudio',render);
+ $('#dc-studio-save').off('click.posnicDayCloseStudio').on('click.posnicDayCloseStudio',save);
+ $('#day-close-ticket-print').off('click.posnicDayCloseStudio').on('click.posnicDayCloseStudio',function(){printTicket();});
+ $('#day-close-history-refresh').off('click.posnicDayCloseStudio').on('click.posnicDayCloseStudio',function(){renderAgenda();});
+ $('#dc-agenda-prev').off('click.posnicDayCloseStudio').on('click.posnicDayCloseStudio',function(){agendaDate=new Date(agendaDate.getFullYear(),agendaDate.getMonth()-1,1);renderAgenda();});
+ $('#dc-agenda-next').off('click.posnicDayCloseStudio').on('click.posnicDayCloseStudio',function(){agendaDate=new Date(agendaDate.getFullYear(),agendaDate.getMonth()+1,1);renderAgenda();});
+ $('#dc-studio-agenda').off('click.posnicDayCloseStudio').on('click.posnicDayCloseStudio','.dc-agenda-day[data-date]',function(){loadDay($(this).data('date'));});
+ if(PosnicPro.quickreport&&PosnicPro.quickreport.lastReport){reportCache=PosnicPro.quickreport.lastReport;render();}
+}
+function watchDayCloseStudio(){
+ initDayCloseStudio();
+ if(window.MutationObserver&&document.body&&!window.__posnicDayCloseStudioObserver){
+  window.__posnicDayCloseStudioObserver=new MutationObserver(function(){initDayCloseStudio();});
+  window.__posnicDayCloseStudioObserver.observe(document.body,{childList:true,subtree:true});
+ }
+}
+$(function(){watchDayCloseStudio();});
+$(window).off('hashchange.posnicDayCloseStudio').on('hashchange.posnicDayCloseStudio',watchDayCloseStudio);
+$(document).off('dayCloseReportUpdated.posnicDayCloseStudio').on('dayCloseReportUpdated.posnicDayCloseStudio',function(e,report){
+ if(!report)return;reportCache=report;
+ if($('#day-close-ticket-tools').length){render();historySave();$('#dc-agenda-status').text('Rapport chargé pour '+iso(selectedDate)+'. Aperçu actualisé avec les données disponibles.');loadingDay=false;}
 });
-})(jQuery);
+$(document).off('dayCloseReportFailed.posnicDayCloseStudio').on('dayCloseReportFailed.posnicDayCloseStudio',function(e,message){
+ loadingDay=false;
+ if($('#day-close-ticket-tools').length){renderAgenda();$('#dc-agenda-status').text('Impossible de charger le rapport du '+iso(selectedDate)+'. '+String(message||'Vérifiez la connexion et réessayez.'));}
+});})(jQuery);
