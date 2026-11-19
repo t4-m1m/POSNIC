@@ -1584,3 +1584,10 @@ $(document).off('submit.posnicSalesQuickCustomer','#posnic-sales-quick-customer-
         }
     }, true);
 })();
+
+if (!document.__posnicCustomerModalBackdropBound) {
+    document.__posnicCustomerModalBackdropBound = true;
+    $(document).on('shown.bs.modal.posnicCustomerModalBackdrop', '#posnic-sales-quick-customer', function () {
+        $('.modal-backdrop').last().addClass('posnic-modal-backdrop');
+    });
+}
