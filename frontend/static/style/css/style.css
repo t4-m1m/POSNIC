@@ -30325,11 +30325,27 @@ table.focus-on tfoot tr.focused td {
 }
 
 
-/* Normal application pages use document scrolling. The sales till and its
-   dedicated payment/item workspaces keep their own viewport layout. */
-.rightbar {
+/* Default application scrolling: let the document grow with every page.
+   The only viewport-locked workspaces are explicitly scoped in sales.css
+   (Sales + Payment) and the item editor block below (Add/Edit Item). */
+html, body {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+#containerbar {
+  height: auto !important;
+  min-height: 100vh !important;
   overflow: visible !important;
 }
+.rightbar {
+  height: auto !important;
+  max-height: none !important;
+  min-height: 500px;
+  overflow: visible !important;
+}
+
 
 
 /* Item creation and modification are the other fixed cashier workspaces:
