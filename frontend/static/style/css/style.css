@@ -30420,7 +30420,7 @@ html, body {
   #customerdebts,
   #customercategory,
   #settings,
-  [id$="report_new"]
+  [id*="report"]
 ) > .contentbar,
 .vertical-layout.page_loader:is(
   #sales,
@@ -30434,7 +30434,7 @@ html, body {
   #customerdebts,
   #customercategory,
   #settings,
-  [id$="report_new"]
+  [id*="report"]
 ) > #containerbar > .contentbar {
   padding: 12px 24px 18px !important;
   margin-bottom: 12px !important;
@@ -30451,7 +30451,7 @@ html, body {
   #customerdebts,
   #customercategory,
   #settings,
-  [id$="report_new"]
+  [id*="report"]
 ) .contentbar .card.m-b-30 {
   margin-bottom: 14px !important;
 }
