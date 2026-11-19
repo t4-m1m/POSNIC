@@ -8355,6 +8355,7 @@ PosnicPro.sales.itemsMenu = {
                      */
                     var tiles = [], app;
                     for (var i = 0; i < getItemdata.length; i++) {
+                        try {
                         var familyGid = getItemdata[i]['variant_group_id'];
                         var familyRows = familyGid && families[familyGid];
                         if (familyRows && familyRows.length > 1) {
@@ -8431,9 +8432,16 @@ PosnicPro.sales.itemsMenu = {
                             tiles.push(product);
                             //app = app + '<a style="padding-right:5px;" href="javascript:void(0)" data-searchval="' + list_item_name + '" class="search-product" data-toggle="tooltip" title="' + list_item_name + " ( Available Stock : " + item_stock + ' )" id="' + getItemdata[i]['id'] + '" onclick="PosnicPro.sales.itemsMenu.addToLineItemsList(this.id)"><div class="product color01 flat-box waves-effect waves-block"><h3 id="proname">' + list_item_name.slice(0, 6) + '</h3><img loading="lazy" decoding="async" src=' + image_path + ' alt="no image found"><div class="product_two"><div class="mask"><p> </p><h4>' + currency + '<span class="number">' + getItemdata[i]['selling_price'] + ' </span></h4></div></div></div></a>&nbsp;';
                         }
+                        } catch (tileError) {
+                            if (window.console && console.warn) console.warn('[sales] Skipped an invalid catalogue tile at index ' + i, tileError);
+                        }
                     }
-                    PosnicPro.sales.renderTilePages($('#item-lists'), tiles, { offset: offset, nextOffset: response.nextOffset,
+                    if (tiles.length) {
+                        PosnicPro.sales.renderTilePages($('#item-lists'), tiles, { offset: offset, nextOffset: response.nextOffset,
                         load: function (next) { PosnicPro.sales.itemsMenu.onlineProductList(categoryId, next, brandName); } });
+                    } else {
+                        $('#item-lists').append("<div class='text-center text-dark p-3'><lang class='lang_there_are_no_items_available'>There are no items available ...!!!</lang></div>");
+                    }
                 } else {
                     app = "<div class='row'></div><div class='row'></div><div class='text-center text-dark'><p><lang class='lang_there_are_no_items_available'>There are no items available ...!!!</lang></p><a href='#/items/new'>Add New Item</a></div>";
                     $('#item-lists').append(app);
