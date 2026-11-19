@@ -15282,20 +15282,39 @@ $(document).ready(function () {
             bar.appendChild(add);
         },
         init: function () {
-            if (this.initialized) return;
             var root = currentSalesRoot();
             var toolbar = document.getElementById('sales-function-shortcuts');
             if (!root || !toolbar || !root.contains(toolbar)) return;
-            var bar = document.createElement('div');
-            bar.id = 'posnic-multi-baskets';
-            bar.setAttribute('aria-label', 'Paniers clients simultanés');
-            toolbar.parentNode.insertBefore(bar, toolbar);
-            this.sessions = [{ id: 1, label: 'Client 1', customerName: '', snapshot: null }];
-            this.activeId = 1;
-            this.nextId = 2;
-            this.initialized = true;
-            this.sessions[0].snapshot = this.snapshot();
-            this.render();
+
+            // The SPA can replace the sales workspace after this manager has
+            // initialized. Reattach the tab strip whenever that happens,
+            // without resetting the customer's saved baskets.
+            var bar = document.getElementById('posnic-multi-baskets');
+            var needsRender = false;
+            if (!bar) {
+                bar = document.createElement('div');
+                bar.id = 'posnic-multi-baskets';
+                bar.setAttribute('aria-label', 'Paniers clients simultanés');
+                toolbar.parentNode.insertBefore(bar, toolbar);
+                needsRender = true;
+            } else if (bar.parentNode !== toolbar.parentNode || bar.nextElementSibling !== toolbar) {
+                toolbar.parentNode.insertBefore(bar, toolbar);
+                needsRender = true;
+            }
+
+            if (!this.initialized || !this.sessions.length) {
+                this.sessions = [{ id: 1, label: 'Client 1', customerName: '', snapshot: null }];
+                this.activeId = 1;
+                this.nextId = 2;
+                this.initialized = true;
+                this.sessions[0].snapshot = this.snapshot();
+                needsRender = true;
+            }
+
+            // If another view refresh cleared the strip's children, repaint
+            // it once. Normal catalogue mutations do not trigger needless
+            // rerenders on the cashier's low-powered PC.
+            if (needsRender || !bar.childElementCount) this.render();
         },
         switchTo: function (id) {
             if (id === this.activeId) return;
