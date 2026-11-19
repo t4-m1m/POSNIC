@@ -552,3 +552,40 @@
     display: none !important;
 }
 </style>
+
+
+<style id="iv2-fixed-workspace-final">
+/* Add Item and Edit Item: keep the editor inside the viewport, but let the
+   editor itself scroll so every field and action remains reachable. */
+@media (min-width: 768px) {
+  #items_v2_mount,
+  #items_modify_page {
+    position: fixed !important;
+    inset: 84px 0 0 !important;
+    z-index: 1040 !important;
+    width: auto !important;
+    height: calc(100vh - 84px) !important;
+    min-height: 0 !important;
+    max-height: calc(100vh - 84px) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    box-sizing: border-box !important;
+  }
+  #items_v2 {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  #items_v2 .iv2-workspace,
+  #items_v2 .iv2-layout,
+  #items_v2 #iv2-form,
+  #items_v2 #iv2-fields,
+  #items_v2 .iv2-step-content {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}
+</style>
