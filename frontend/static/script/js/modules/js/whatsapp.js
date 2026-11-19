@@ -129,6 +129,12 @@ PosnicPro.whatsapp = {
             }, (response) => {
                 if (!response || response.type !== 'success' || !response.data) return;
                 const { qr_code, status } = response.data;
+                if (status === 'error' || status === 'logged_out') {
+                    clearInterval(this.qrCheckInterval);
+                    this.qrCheckInterval = null;
+                    this.showConnectButton();
+                    return;
+                }
                 if (qr_code) {
                     $('#whatsapp_qr_container').show();
                     $('#whatsapp_pairing_controls').show();
@@ -185,11 +191,12 @@ PosnicPro.whatsapp = {
                 if (connected) {
                     this.onConnected();
                 } else if (status === 'qr_ready') {
-                    // QR code is ready, fetch and display it
                     this.fetchAndDisplayQR();
-                } else if (status === 'not_initialized' || status === 'disconnected') {
-                    // Only show connect button for truly disconnected states
+                } else if (status === 'not_initialized' || status === 'disconnected' || status === 'logged_out' || status === 'error') {
                     this.showConnectButton();
+                    if (!silent && response.data.connection_error) {
+                        PosnicPro.alert('error', response.data.connection_error);
+                    }
                 }
             }
             // Keep the QR/pairing UI on transient API/network errors; a failed poll
