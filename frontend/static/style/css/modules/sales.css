@@ -1157,7 +1157,7 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
   }
 /* Only the catalogue wrapper may grow. Hidden customer-history/state
      elements are siblings and must never consume vertical flex space. */
-  #sales_new #items_view_hide > div:has(> #defaultTabJustified) {
+  #sales_new #items_view_hide > .sales-catalogue-content {
     display: flex !important; flex: 1 1 0 !important; flex-direction: column !important;
     width: 100% !important; height: 0 !important; min-height: 0 !important;
     overflow: hidden !important; margin: 0 !important;
@@ -1311,7 +1311,7 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
 /* POSNIC catalogue viewport: fixed pane, independently scrollable contents. */
 @media (min-width: 768px) {
   /* The search field and four tabs stay fixed; only this pane's contents scroll. */
-  #sales_new #items_view_hide > div:has(> #defaultTabJustified) {
+  #sales_new #items_view_hide > .sales-catalogue-content {
     display: flex !important;
     flex: 1 1 0 !important;
     flex-direction: column !important;
@@ -1373,6 +1373,19 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
     flex-direction: column !important;
     min-height: 0 !important;
     overflow: hidden !important;
+  }
+  /* The content wrapper is a direct flex child; sales.js supplies the viewport height. */
+  #sales_new #items_view_hide > .sales-catalogue-content {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+  }
+  #sales_new #items_view_hide > .sales-customer-entry {
+    flex: 0 0 auto !important;
   }
   /* The direct .row is ONLY the scanner/search strip. Letting it grow
      to 100% pushed the catalogue heading and all four navigation tabs to
