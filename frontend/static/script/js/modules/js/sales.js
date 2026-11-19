@@ -8377,7 +8377,9 @@ PosnicPro.sales.itemsMenu = {
                         if (!Number.isFinite(price)) price = Number(getItemdata[i].selling_price) || 0;
                         var image_path = (getItemdata[i]['image'] && getItemdata[i]['image'] !== "item.svg") ? getItemdata[i]['image'] : 'static/images/default/item.svg';
                         let items_expiry_date = getItemdata[i]['items_expiry_date'];
-                        if (!PosnicBillingSearch.expired(items_expiry_date)) {
+                        var _isExpired = window.PosnicBillingSearch && typeof PosnicBillingSearch.expired === 'function'
+                            ? PosnicBillingSearch.expired(items_expiry_date) : false;
+                        if (!_isExpired) {
                             // Subtle, light-grey stock count on the card - only when the item
                             // tracks inventory. Fails safe (shows nothing) if the field is absent.
                             var _trackInv = getItemdata[i]['track_inventory'];
