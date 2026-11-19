@@ -14151,18 +14151,9 @@ jQuery.validator.addMethod("international_phone_number", function (phone_number,
 $(document).ready(function () {
 
     $(window).resize(function () {
-        var $catalogue = $('#items_view_hide');
-        var $cataloguePanes = $('#sales_new_productList,#sales_new_categoryList,#sales_new_brandList');
-        if ($catalogue.length && window.innerWidth >= 768) {
-            // Measure from the actual top of the catalogue instead of guessing a fixed offset.
-            var catalogueOffset = $catalogue.offset();
-            var availableHeight = Math.max(220, $(window).height() - (catalogueOffset ? catalogueOffset.top : 220) - 12);
-            $catalogue.height(availableHeight).css({ 'max-height': availableHeight, overflow: 'hidden' });
-            $cataloguePanes.css({ overflow: 'auto' });
-        } else {
-            $catalogue.css({ height: '', 'max-height': '', overflow: '' });
-            $cataloguePanes.css({ height: '', 'max-height': '', overflow: '' });
-        }
+        var height = $(window).height() - 270;
+        $('#sales_new_productList,#sales_new_categoryList,#sales_new_brandList').height(height);
+        $('#sales_new_productList,#sales_new_categoryList,#sales_new_brandList').css({ 'max-height': height, overflow: 'auto' });
         var imgHeight = $(window).height() - 500;
         $('.sales-cart-image').height(imgHeight);
     });
