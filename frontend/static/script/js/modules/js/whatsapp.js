@@ -354,6 +354,9 @@ PosnicPro.whatsapp = {
 
         // Reset UI elements
         $('#whatsapp_qr_container').hide();
+        $('#whatsapp_pairing_controls').show();
+        $('#whatsapp_pairing_code').empty();
+        $('#whatsapp_connected_phone').empty();
         $('#whatsapp_connected_info').hide();
         $('#whatsapp_connect_btn').show().prop('disabled', false).html('<i class="feather icon-link"></i> Connect WhatsApp');
         $('#whatsapp_disconnect_btn').hide().prop('disabled', false).html('<i class="feather icon-log-out"></i> Disconnect');
