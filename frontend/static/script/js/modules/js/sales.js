@@ -2411,7 +2411,11 @@ PosnicPro.sales = {
             $('#newsalespage').show();
         } else {
             $('#tenderpage').show();
-            $('#newsalespage').hide();
+            // Keep the sale workspace mounted beside the payment sidebar. Hiding
+            // newsalespage also collapses the catalogue and removes the cashier's
+            // item/category/brand navigation while payment is open.
+            $('#newsalespage').show();
+            $('#items_view_hide').css('visibility', 'visible').show();
             PosnicPro.sales.bindTenderKeyboardShortcuts();
         }
         if (PosnicPro.sales.SaleAction === 'return') {
