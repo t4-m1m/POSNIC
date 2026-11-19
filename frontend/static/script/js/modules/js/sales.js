@@ -15149,6 +15149,8 @@ $(document).ready(function () {
             var overlay = document.querySelector('.infobar-settings-sidebar-overlay');
             return {
                 controls: controls, leaves: leaves, cartHtml: body ? body.innerHTML : null, values: values,
+                rootClassName: root.className,
+                rootStyle: root.getAttribute('style'),
                 buttons: Array.prototype.map.call(root.querySelectorAll('button'), function (el, index) {
                     return { id: el.id || '', index: index, disabled: !!el.disabled, hidden: !!el.hidden, ariaPressed: el.getAttribute('aria-pressed') };
                 }),
@@ -15171,6 +15173,9 @@ $(document).ready(function () {
             if (!snapshot) return;
             var root = currentSalesRoot();
             if (!root) return;
+            if (snapshot.rootClassName !== undefined) root.className = snapshot.rootClassName;
+            if (snapshot.rootStyle === null) root.removeAttribute('style');
+            else if (snapshot.rootStyle !== undefined) root.setAttribute('style', snapshot.rootStyle);
             Object.keys(snapshot.values || {}).forEach(function (key) { PosnicPro.sales[key] = clone(snapshot.values[key]); });
             if (snapshot.windowState) { window.__posnicVersementDraft = clone(snapshot.windowState.versementDraft); window.__posnicFastPayPending = clone(snapshot.windowState.fastPayPending); window.__posnicFastPrintPending = clone(snapshot.windowState.fastPrintPending); window.__posnicFastCheckoutSubmitting = clone(snapshot.windowState.fastCheckoutSubmitting); }
             var body = root.querySelector('#sales_new_items_table tbody');
