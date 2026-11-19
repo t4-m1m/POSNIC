@@ -1724,6 +1724,15 @@ body[data-theme="warmnight"]{color-scheme:dark}
     window.__posnicWhatsAppReceiptPhone=phone;
     window.__posnicSendWhatsAppReceiptAfterSave=true;
     $('#save_btn').trigger('click');
+    // cartOrderSubmit sets this synchronously before starting its request.
+    // If a client-side guard rejects the sale, disarm the receipt request so
+    // it can never leak into the next customer's checkout.
+    window.setTimeout(function(){
+      if(!PosnicPro.sales || !PosnicPro.sales.submissionInProgress){
+        window.__posnicSendWhatsAppReceiptAfterSave=false;
+        window.__posnicWhatsAppReceiptPhone='';
+      }
+    },0);
   });
   // Only a real cashier edit of the aggregate amount should redistribute
   // it to the selected tender. Programmatic updates from tender switching are
