@@ -8154,8 +8154,33 @@ PosnicPro.sales.loadSalesTilePage = function (offset, categoryId, done, brandNam
         if (isStale()) { finish({ type: 'stale', stale: true }); return; }
         if (!response || response.type !== 'success') { finish(response || { type: 'error' }); return; }
         var data = response.data || {};
-        finish({ type: 'success', data: Array.isArray(data) ? data : data.items || [],
-            nextOffset: Number.isInteger(data.next_offset) && data.next_offset > offset ? data.next_offset : null });
+        var items = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : (Array.isArray(data.data) ? data.data : []));
+        var nextOffset = Number.isInteger(data.next_offset) && data.next_offset > offset ? data.next_offset : null;
+        // If the optimized first-page filter returns nothing for the unfiltered
+        // Articles shelf, retry the original sales-list query. This preserves
+        // the legacy catalogue behaviour for older stock records while keeping
+        // the bounded fast path for normal inventories.
+        if (!items.length && !categoryId && !brandName && offset === 0) {
+            PosnicPro.get({ url: 'items/onlineSalesItemsAjaxLists', data: {
+                paginate: 'true', limit: 48, offset: 0
+            } }, function (legacyResponse) {
+                if (isStale()) { finish({ type: 'stale', stale: true }); return; }
+                if (!legacyResponse || legacyResponse.type !== 'success') {
+                    finish({ type: 'success', data: [], nextOffset: null });
+                    return;
+                }
+                var legacyData = legacyResponse.data || {};
+                var legacyItems = Array.isArray(legacyData) ? legacyData :
+                    (Array.isArray(legacyData.items) ? legacyData.items : []);
+                finish({ type: 'success', data: legacyItems,
+                    nextOffset: Number.isInteger(legacyData.next_offset) && legacyData.next_offset > 0
+                        ? legacyData.next_offset : null });
+            }, function () {
+                finish({ type: 'success', data: [], nextOffset: null });
+            });
+            return;
+        }
+        finish({ type: 'success', data: items, nextOffset: nextOffset });
     }, function () {
         finish(isStale() ? { type: 'stale', stale: true } : { type: 'error' });
     });
