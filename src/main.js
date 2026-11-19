@@ -2073,6 +2073,10 @@ function createWindow(showStartupLoader = !isWarmStartup()) {
     }
   });
 
+  // Start the POS maximized so the cashier workspace uses the full desktop
+  // from the first launch. This is a normal maximized window, not kiosk mode.
+  if (!mainWindow.isMaximized()) mainWindow.maximize();
+
   /*
    * The splash goes as soon as there is a real window to look at.
    *
