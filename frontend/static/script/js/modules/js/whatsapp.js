@@ -112,7 +112,7 @@ PosnicPro.whatsapp = {
 
             const params = {
                 url: 'whatsapp/getQRCode',
-                data: { device_id: this.deviceId }
+                data: { device_id: this.deviceId, branch_id: PosnicPro.local.get('branch_id_set') }
             };
 
             PosnicPro.get(params, (response) => {
@@ -141,6 +141,7 @@ PosnicPro.whatsapp = {
      * Start polling for connection status
      */
     startStatusPolling: function() {
+        if (this.statusCheckInterval) clearInterval(this.statusCheckInterval);
         this.statusCheckInterval = setInterval(() => {
             this.checkStatus(true);
         }, 3000); // Check every 3 seconds
@@ -161,7 +162,7 @@ PosnicPro.whatsapp = {
 
         const params = {
             url: 'whatsapp/getStatus',
-            data: { device_id: deviceId }
+            data: { device_id: deviceId, branch_id: PosnicPro.local.get('branch_id_set') }
         };
 
         PosnicPro.get(params, (response) => {
@@ -180,10 +181,9 @@ PosnicPro.whatsapp = {
                     // Only show connect button for truly disconnected states
                     this.showConnectButton();
                 }
-            } else {
-                // If status check fails, show connect button
-                this.showConnectButton();
             }
+            // Keep the QR/pairing UI on transient API/network errors; a failed poll
+            // must not erase a valid pairing code or hide the QR.
         });
     },
 
@@ -193,7 +193,7 @@ PosnicPro.whatsapp = {
     fetchAndDisplayQR: function() {
         const params = {
             url: 'whatsapp/getQRCode',
-            data: { device_id: this.deviceId }
+            data: { device_id: this.deviceId, branch_id: PosnicPro.local.get('branch_id_set') }
         };
 
         PosnicPro.get(params, (response) => {
