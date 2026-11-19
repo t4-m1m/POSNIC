@@ -1392,13 +1392,30 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
   #sales_new #items_view_hide > .row > .col-12.input-group,
   #sales_new #items_view_hide > .row > .input-group {
     display: flex !important;
-    flex: 0 0 38px !important;
+    flex: 1 1 auto !important;
     width: 100% !important;
+    min-width: 0 !important;
     height: 38px !important;
     min-height: 38px !important;
     max-height: 38px !important;
     overflow: visible !important;
-    margin: 0 0 8px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+  #sales_new #items_view_hide #sales_new_item_name {
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 220px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    box-sizing: border-box !important;
+  }
+  #sales_new #items_view_hide #sales_barcode_ready {
+    flex: 0 0 auto !important;
+    max-width: 132px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    white-space: nowrap !important;
   }
   #sales_new #items_view_hide .sales-catalogue-heading {
     display: flex !important;
@@ -1455,5 +1472,89 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
     height: auto !important;
     min-height: 0 !important;
     overflow: visible !important;
+  }
+}
+
+/* Sales catalogue cards: keep the original item-tile renderer visible inside
+   the fixed viewport instead of allowing Bootstrap row/card defaults to
+   collapse the generated product tiles. */
+@media (min-width: 768px) {
+  #sales_new #items_view_hide .sale-tile-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important;
+    align-items: start !important;
+    align-content: start !important;
+    gap: 10px !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  #sales_new #items_view_hide .sale-tile-grid > .wsk-cp {
+    display: block !important;
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    cursor: pointer !important;
+    border: 1px solid var(--theme-border-color, #e2e8f0) !important;
+    border-radius: 9px !important;
+    background: var(--theme-card-bg, #fff) !important;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, .08) !important;
+  }
+  #sales_new #items_view_hide .sale-tile-grid .wsk-cp-product {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    padding: 8px !important;
+  }
+  #sales_new #items_view_hide .sale-tile-grid .description-prod {
+    display: block !important;
+    width: 100% !important;
+    min-height: 2.6em !important;
+    margin: 0 0 6px !important;
+    overflow: hidden !important;
+  }
+  #sales_new #items_view_hide .sale-tile-grid .description-prod p {
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
+    overflow-wrap: anywhere !important;
+  }
+  #sales_new #items_view_hide .sale-tile-grid .wsk-cp-img {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    min-height: 90px !important;
+    overflow: hidden !important;
+  }
+  #sales_new #items_view_hide .sale-tile-grid .wsk-cp-img img {
+    display: block !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+  }
+  #sales_new #items_view_hide .sale-tile-grid .wsk-cp-text {
+    display: block !important;
+    width: 100% !important;
+    margin-top: 8px !important;
+  }
+  #sales_new #items_view_hide .sale-tile-grid .price {
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+  }
+  #sales_new #items_view_hide .sale-tile-grid .wsk-cp-stock {
+    margin-top: 3px !important;
+    color: var(--theme-text-secondary, #64748b) !important;
+    font-size: 11px !important;
   }
 }
