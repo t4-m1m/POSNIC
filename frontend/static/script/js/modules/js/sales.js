@@ -8071,21 +8071,56 @@ PosnicPro.sales.itemCache = {
     TTL_MS: 60 * 1000,
     _map: {},
     get: function (id, onData) {
+        id = String(id == null ? '' : id).trim();
+        if (!id || typeof onData !== 'function') {
+            PosnicPro.alert('error', 'This product could not be identified. Refresh the catalogue and try again.');
+            return;
+        }
         var hit = PosnicPro.sales.itemCache._map[id];
         if (hit && (Date.now() - hit.at) < PosnicPro.sales.itemCache.TTL_MS) {
             onData(JSON.parse(hit.json));
             return;
         }
-        PosnicPro.get('items/' + id, function (response) {
-            if (response.type === 'success') {
-                PosnicPro.sales.itemCache._map[id] = { at: Date.now(), json: JSON.stringify(response.data) };
-                onData(JSON.parse(JSON.stringify(response.data)));
-            } else {
-                PosnicPro.alert(response.type, response.message);
+
+        function normalize(payload) {
+            if (typeof payload === 'string') {
+                try { payload = JSON.parse(payload); } catch (e) { return null; }
             }
+            if (!payload || typeof payload !== 'object') return null;
+            // The item detail endpoint has returned both a flat item and an
+            // { item: ... } envelope across API versions. Normalize both here,
+            // before the common basket/calculation path receives the item.
+            var item = payload.item && typeof payload.item === 'object' ? payload.item : payload;
+            if (item.data && typeof item.data === 'object' && !item.id && !item.item_id) {
+                item = item.data.item && typeof item.data.item === 'object' ? item.data.item : item.data;
+            }
+            item = $.extend(true, {}, item);
+            var mongoId = item._id && (item._id.$oid || item._id);
+            var resolvedId = item.id || item.item_id || mongoId || id;
+            if (!resolvedId) return null;
+            item.id = String(resolvedId);
+            if (!item.item_id) item.item_id = String(resolvedId);
+            if (!item.item_name && item.name) item.item_name = item.name;
+            return item;
+        }
+
+        PosnicPro.get('items/' + encodeURIComponent(id), function (response) {
+            if (!response || response.type !== 'success') {
+                PosnicPro.alert(response && response.type || 'error',
+                    response && response.message || 'Could not load this product. Please refresh the catalogue and try again.');
+                return;
+            }
+            var item = normalize(response.data);
+            if (!item) {
+                PosnicPro.alert('error', 'The product details were incomplete. Refresh the catalogue and try again.');
+                return;
+            }
+            PosnicPro.sales.itemCache._map[id] = { at: Date.now(), json: JSON.stringify(item) };
+            onData(JSON.parse(JSON.stringify(item)));
         }, function (xhr) {
-            var response = jQuery.parseJSON(xhr.responseText);
-            PosnicPro.alert(response.type, response.message);
+            var response = {};
+            try { response = JSON.parse(xhr && xhr.responseText || '{}'); } catch (e) { /* keep fallback */ }
+            PosnicPro.alert('error', response.message || 'Could not load this product. Check the connection and try again.');
         });
     },
     clear: function () {
@@ -8355,7 +8390,7 @@ PosnicPro.sales.itemsMenu = {
                                     '<div style="width:62%;aspect-ratio:1/1;' + _shapeCss + 'background:' + _tileColor + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:34px;font-weight:700;">' + _initial + '</div>' +
                                     '</div></div>';
                             }
-                            var product = '<div class="wsk-cp cbutton--effect-novak" id="' + getItemdata[i]['id'] + '" onclick="PosnicPro.sales.itemsMenu.addToLineItemsList(this.id)">' +
+                            var product = '<div class="wsk-cp cbutton--effect-novak" id="' + getItemdata[i]['id'] + '" role="button" tabindex="0" aria-label="Add ' + _escName + ' to basket" onclick="PosnicPro.sales.itemsMenu.addToLineItemsList(this.id)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();PosnicPro.sales.itemsMenu.addToLineItemsList(this.id)}">' +
                                 '<div class="wsk-cp-product">' +
                                 '<div class="description-prod">' +
                                 '<p data-searchval="' + _escName + '" data-toggle="tooltip" title="' + _escName + '">' + _escName + '</p>' +
@@ -8938,20 +8973,32 @@ PosnicPro.sales.itemsMenu = {
         PosnicPro.sales.itemsMenu.addToLineItemsList(item_id);
     },
     addToLineItemsList: function (item_id, barcodeScanned) {
+        if (item_id == null || String(item_id).trim() === '') {
+            PosnicPro.alert('error', 'This product has no valid item ID and cannot be added to the basket.');
+            return;
+        }
         PosnicPro.sales.itemCache.get(item_id, function (item) {
-            $("#save_submit").removeClass("disabled");
-            let hash = window.location.hash.slice(1);
-            if (hash === '/sales/new') {
-                window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(true); }, 0);
+            try {
+                // Never let a malformed detail response silently create an
+                // empty/undefined basket row.
+                if (!item || !(item.id || item.item_id) || !(item.item_name || item.name)) {
+                    PosnicPro.alert('error', 'Product details are incomplete. Refresh the catalogue and try again.');
+                    return;
+                }
+                if (barcodeScanned) {
+                    item._barcodeScanned = true;
+                    item.item_quantity = 1;
+                    item._quantityConfirmed = true;
+                }
+                PosnicPro.sales.addSalesLineItems(item);
+                $("#save_submit").removeClass("disabled");
+                if (window.location.hash.slice(1) === '/sales/new') {
+                    window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(true); }, 0);
+                }
+            } catch (error) {
+                if (window.console && console.error) console.error('[sales] Could not add catalogue item to basket:', error);
+                PosnicPro.alert('error', 'Could not add this product to the basket. Please try again.');
             }
-            PosnicPro.sales.itemsMenu.clickEffect();
-            if (barcodeScanned) {
-                item._barcodeScanned = true;
-                item.item_quantity = 1;
-                item._quantityConfirmed = true;
-            }
-            PosnicPro.sales.addSalesLineItems(item);
-            if (barcodeScanned) window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(true); }, 0);
         });
     },
     clickEffect: function () {
