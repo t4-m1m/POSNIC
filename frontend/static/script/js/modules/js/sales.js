@@ -13442,6 +13442,7 @@ PosnicPro.sales.applyCustomerPick = function (data) {
     PosnicPro.local.set('customerAddress', data.address);
     $('#sales_new_customer_id').val(data.id);
     $('#sales_new_customer_name').val(data.name);
+    if (PosnicPro.sales.multiBasket && PosnicPro.sales.multiBasket.updateActiveLabel) PosnicPro.sales.multiBasket.updateActiveLabel(data.name);
     if (PosnicPro.sales.syncCustomerHeader) PosnicPro.sales.syncCustomerHeader();
     $('#sales_new_customer_address').val(data.address);
     $('#sales_new_customer_phone').val(data.phone);
@@ -15089,7 +15090,7 @@ $(document).ready(function () {
         'selectedTable', 'selectedPerson', 'currentItemNoteId', 'dineType',
         'defaultCustomer', 'SaleAction', 'salesExchange', '_selectedPriceTierLineId',
         'editSaleId', 'paymentOnlyMode', 'originalSaleData', 'kotPaymentMode',
-        'refundSaleAction', 'recentSaleAction', 'addSalesItemChars', 'EditRecentSaleParams', '_lineModifiers', '_orderRequestId', 'saleProcess', 'editSaleAction', 'salesId', '_sourceQuoteId', '_quoteHonoured', '_pendingPaymentRequest', 'currentSaleId'
+        'refundSaleAction', 'recentSaleAction', 'addSalesItemChars', 'EditRecentSaleParams', '_lineModifiers', '_orderRequestId', 'submissionInProgress', 'denominationCounts', '_customerCategoryId', '_customerPriceTier', 'saleProcess', 'editSaleAction', 'salesId', '_sourceQuoteId', '_quoteHonoured', '_pendingPaymentRequest', 'currentSaleId'
     ];
     function clone(value) {
         if (value === undefined) return undefined;
@@ -15163,7 +15164,7 @@ $(document).ready(function () {
                     overlayClass: overlay ? overlay.className : '',
                     overlayStyle: overlay ? overlay.getAttribute('style') : null
                 },
-                windowState: { versementDraft: clone(window.__posnicVersementDraft), fastPayPending: clone(window.__posnicFastPayPending) }
+                windowState: { versementDraft: clone(window.__posnicVersementDraft), fastPayPending: clone(window.__posnicFastPayPending), fastPrintPending: clone(window.__posnicFastPrintPending), fastCheckoutSubmitting: clone(window.__posnicFastCheckoutSubmitting) }
             };
         },
         restore: function (snapshot) {
@@ -15171,7 +15172,7 @@ $(document).ready(function () {
             var root = currentSalesRoot();
             if (!root) return;
             Object.keys(snapshot.values || {}).forEach(function (key) { PosnicPro.sales[key] = clone(snapshot.values[key]); });
-            if (snapshot.windowState) { window.__posnicVersementDraft = clone(snapshot.windowState.versementDraft); window.__posnicFastPayPending = clone(snapshot.windowState.fastPayPending); }
+            if (snapshot.windowState) { window.__posnicVersementDraft = clone(snapshot.windowState.versementDraft); window.__posnicFastPayPending = clone(snapshot.windowState.fastPayPending); window.__posnicFastPrintPending = clone(snapshot.windowState.fastPrintPending); window.__posnicFastCheckoutSubmitting = clone(snapshot.windowState.fastCheckoutSubmitting); }
             var body = root.querySelector('#sales_new_items_table tbody');
             if (body && snapshot.cartHtml !== null) body.innerHTML = snapshot.cartHtml;
             var allControls = Array.prototype.slice.call(root.querySelectorAll('input,select,textarea'));
@@ -15318,6 +15319,11 @@ $(document).ready(function () {
         },
         switchTo: function (id) {
             if (id === this.activeId) return;
+            // Keep the active basket stable until its payment request completes.
+            if (PosnicPro.sales.submissionInProgress || window.__posnicFastCheckoutSubmitting || window.__posnicFastPayPending) {
+                PosnicPro.alert('warning', 'Terminez le paiement en cours avant de changer de client.');
+                return;
+            }
             // Each tab snapshots its own cart and tender panel. Cashiers may
             // switch away from unpaid baskets or an open payment panel at any time.
             var current = this.sessions.find(function (item) { return item.id === this.activeId; }, this);
@@ -15368,6 +15374,10 @@ $(document).ready(function () {
             this.render();
         },
         create: function () {
+            if (PosnicPro.sales.submissionInProgress || window.__posnicFastCheckoutSubmitting || window.__posnicFastPayPending) {
+                PosnicPro.alert('warning', 'Terminez le paiement en cours avant de créer un autre client.');
+                return;
+            }
             if (this.sessions.length >= 8) {
                 PosnicPro.alert('warning', 'Maximum 8 paniers clients simultanés.');
                 return;
