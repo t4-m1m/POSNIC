@@ -47,7 +47,10 @@
                             </div>
                         </div>
                     </div>
-                    <div id="posnic-multi-baskets" class="posnic-multi-baskets" aria-label="Paniers clients simultanés"></div>
+                    <div id="posnic-multi-baskets" class="posnic-multi-baskets" aria-label="Paniers clients simultanés">
+                        <div class="posnic-basket-tab-wrap is-active"><button type="button" class="posnic-basket-tab is-active" aria-pressed="true">Client 1</button></div>
+                        <button type="button" class="posnic-basket-add" onclick="if(PosnicPro.sales&&PosnicPro.sales.multiBasket)PosnicPro.sales.multiBasket.create();">+ Nouveau client</button>
+                    </div>
                     <div id="sales-function-shortcuts" class="sales-function-shortcuts" role="toolbar" aria-label="Raccourcis de vente">
 <button type="button" class="sales-function-key sales-key-fast" onclick="PosnicPro.sales.runFunctionShortcut('F1')" title="F1 — Encaissement rapide"><kbd>F1</kbd><i class="feather icon-zap"></i><span>Encaissement rapide</span></button>
 <button type="button" class="sales-function-key sales-key-pay" onclick="PosnicPro.sales.runFunctionShortcut('F2')" title="F2 — Encaisser"><kbd>F2</kbd><i class="feather icon-dollar-sign"></i><span>Encaisser</span></button>
@@ -1716,6 +1719,9 @@ body[data-theme="warmnight"]{color-scheme:dark}
   $(document).off('click.posnicWhatsAppReceipt','#posnic-send-whatsapp-receipt-payment').on('click.posnicWhatsAppReceipt','#posnic-send-whatsapp-receipt-payment',function(){
     if(PosnicPro.sales&&PosnicPro.sales.SaleAction!=='add'){PosnicPro.alert('warning','Le ticket WhatsApp depuis cet écran est disponible uniquement pour une nouvelle vente.');return;}
     if($('#save_btn').prop('disabled')){PosnicPro.alert('warning','Vérifiez les montants et les modes de paiement avant de valider la vente.');return;}
+    var phone=String($('#sales_new_customer_phone').val()||'').trim();
+    if(!phone){PosnicPro.alert('warning','Ajoutez le numéro WhatsApp du client dans les détails du client avant de valider la vente.');return;}
+    window.__posnicWhatsAppReceiptPhone=phone;
     window.__posnicSendWhatsAppReceiptAfterSave=true;
     $('#save_btn').trigger('click');
   });

@@ -137,11 +137,18 @@ class WhatsAppController extends BaseController {
     try {
       const branchId = activeBranchId(req);
       const saleId = String(req.body?.sale_id || '').trim();
-      const phoneNumber = String(req.body?.phone_number || '').trim();
-      if (!branchId || !saleId || !phoneNumber) return res.status(400).json({ type: 'error', message: 'A saved sale and a valid customer phone number are required.' });
+      if (!branchId || !saleId) return res.status(400).json({ type: 'error', message: 'A saved sale is required before sending its receipt.' });
       const Sale = require('../models/sale.model');
-      const sale = await Sale.findOne({ _id: saleId, ...tenantScope(req) });
-      if (!sale) return res.status(404).json({ type: 'error', message: 'Saved sale not found. Save the sale before sending its receipt.' });
+      const scope = tenantScope(req);
+      // Checkout can provide the human-readable invoice number or a Mongo id.
+      // Accept both, while keeping every lookup scoped to the active tenant.
+      let sale = await Sale.findOne({ sales_id: saleId, ...scope });
+      if (!sale && /^[a-f\\d]{24}$/i.test(saleId)) {
+        sale = await Sale.findOne({ _id: saleId, ...scope });
+      }
+      if (!sale) return res.status(404).json({ type: 'error', message: 'Saved sale not found in this branch. Save the sale before sending its receipt.' });
+      const phoneNumber = String(req.body?.phone_number || sale.customer_phone || '').trim();
+      if (!phoneNumber) return res.status(400).json({ type: 'error', message: 'This customer has no phone number on the saved sale. Add a WhatsApp number in Customer details and try again.' });
       const money = (value) => (Number(value) || 0).toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const total = Number(sale.sales_total || sale.total || 0);
       const pending = Math.max(0, Number(sale.payment_pending || sale.pending || 0));

@@ -5045,13 +5045,15 @@ PosnicPro.sales.addSale = {
                         });
                     }
                     var sendWhatsAppReceiptAfterSave = window.__posnicSendWhatsAppReceiptAfterSave === true;
+                    var receiptPhone = String(window.__posnicWhatsAppReceiptPhone || response.data.phone || response.data.customer_phone || '').trim();
                     window.__posnicSendWhatsAppReceiptAfterSave = false;
+                    window.__posnicWhatsAppReceiptPhone = '';
                     if (sendWhatsAppReceiptAfterSave) {
-                        try {
-                            PosnicPro.sales.showWhatsAppReceipt(response.data.sales_id, response.data.phone || $('#sales_new_customer_phone').val() || '', response.data.name || $('#sales_new_customer_name').val() || '');
-                        } catch (whatsAppReceiptError) {
-                            console.error('[WHATSAPP RECEIPT] Could not open receipt dialog:', whatsAppReceiptError);
-                            PosnicPro.alert('warning', 'Vente enregistrée, mais impossible d’ouvrir l’envoi du ticket WhatsApp. Ouvrez le ticket depuis les ventes.');
+                        var savedReceiptId = response.data._id || response.data.id || response.data.sale_id || response.data.sales_id;
+                        if (savedReceiptId && receiptPhone && typeof PosnicPro.sales.sendSavedWhatsAppReceipt === 'function') {
+                            PosnicPro.sales.sendSavedWhatsAppReceipt(savedReceiptId, receiptPhone);
+                        } else {
+                            PosnicPro.alert('error', 'Vente enregistrée, mais le ticket WhatsApp n’a pas été envoyé : identifiant du ticket ou numéro client manquant.');
                         }
                     }
                     var fastSaleSucceeded = window.__posnicFastPayPending === true;
@@ -5148,6 +5150,8 @@ PosnicPro.sales.addSale = {
                         }
                     }
                 } else {
+                    window.__posnicSendWhatsAppReceiptAfterSave = false;
+                    window.__posnicWhatsAppReceiptPhone = '';
                     loader.find(".loadingSpinner").remove();
                     if (PosnicPro.businessApproval && PosnicPro.businessApproval.failed({ responseJSON: response })) return;
                     // ✅ Re-enable on error response
@@ -5156,6 +5160,8 @@ PosnicPro.sales.addSale = {
                     PosnicPro.alert(response.type, response.message);
                 }
             }, function (xhr) {
+                window.__posnicSendWhatsAppReceiptAfterSave = false;
+                window.__posnicWhatsAppReceiptPhone = '';
                 if (window.__posnicZrDraft) { var failedZr = window.__posnicZrDraft; window.__posnicZrDraft = null; if (window.electronAPI && window.electronAPI.zr && window.electronAPI.zr.cancelParcel) window.electronAPI.zr.cancelParcel(window.__zrCredentials, failedZr.parcel.id).catch(function(){ console.warn('[ZR Express] Parcel cancellation needs manual review.'); }); }
                 window.__posnicSendWhatsAppReceiptAfterSave = false;
                 loader.find(".loadingSpinner").remove();
@@ -13797,6 +13803,41 @@ PosnicPro.sales.markLockedActions = function () {
     mark('#sale_add_discount', 'discount_apply', 'Applying a discount');
     mark('#sale_add_charge', 'discount_apply', 'Adding a charge');
 };
+/* Send the exact saved sale receipt through the already-linked local WhatsApp session. */
+PosnicPro.sales.sendSavedWhatsAppReceipt = function (saleId, phoneNumber) {
+    var $button = $('#posnic-send-whatsapp-receipt-payment');
+    var oldHtml = $button.data('posnic-original-html') || $button.html();
+    if (!$button.data('posnic-original-html')) $button.data('posnic-original-html', oldHtml);
+    $button.prop('disabled', true).attr('aria-busy', 'true')
+        .html('<i class="feather icon-loader mr-2"></i>Envoi WhatsApp…');
+    var restore = function () {
+        $button.prop('disabled', false).removeAttr('aria-busy').html(oldHtml);
+    };
+    PosnicPro.post({
+        url: 'whatsapp/send-receipt',
+        data: {
+            sale_id: String(saleId || ''),
+            phone_number: String(phoneNumber || ''),
+            branch_id: PosnicPro.local.get('branch_id_set')
+        }
+    }, function (response) {
+        restore();
+        if (response && response.type === 'success') {
+            PosnicPro.alert('success', response.message || 'Ticket envoyé avec succès sur WhatsApp.');
+        } else {
+            PosnicPro.alert('error', (response && response.message) || 'WhatsApp n’a pas pu envoyer le ticket.');
+        }
+    }, function (xhr) {
+        restore();
+        var body = xhr && xhr.responseJSON;
+        var reason = body && body.message;
+        if (!reason && xhr && xhr.responseText) {
+            try { reason = JSON.parse(xhr.responseText).message; } catch (_) {}
+        }
+        PosnicPro.alert('error', reason || 'Échec de l’envoi WhatsApp. Vérifiez la connexion, le numéro client et réessayez.');
+    });
+};
+
 PosnicPro.sales.noteEdit = {
     open: function (linkId, fieldId, placeholder, maxLen) {
         var $link = $('#' + linkId);
@@ -15254,21 +15295,26 @@ $(document).ready(function () {
         },
         init: function () {
             var root = currentSalesRoot();
+            if (!root) return;
             var toolbar = document.getElementById('sales-function-shortcuts');
-            if (!root || !toolbar || !root.contains(toolbar)) return;
 
-            // The SPA can replace the sales workspace after this manager has
-            // initialized. Reattach the tab strip whenever that happens,
-            // without resetting the customer's saved baskets.
+            // The tab strip belongs to the sale workspace. Do not make it
+            // depend on the shortcut toolbar staying in its original parent:
+            // the sticky-toolbar handler can move that toolbar while scrolling.
             var bar = document.getElementById('posnic-multi-baskets');
             var needsRender = false;
             if (!bar) {
                 bar = document.createElement('div');
                 bar.id = 'posnic-multi-baskets';
                 bar.setAttribute('aria-label', 'Paniers clients simultanés');
-                toolbar.parentNode.insertBefore(bar, toolbar);
+                var form = root.querySelector('#touchsales_page');
+                var anchor = toolbar && root.contains(toolbar) ? toolbar : null;
+                if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor);
+                else if (form) form.insertBefore(bar, form.firstChild);
+                else root.insertBefore(bar, root.firstChild);
                 needsRender = true;
-            } else if (bar.parentNode !== toolbar.parentNode || bar.nextElementSibling !== toolbar) {
+            } else if (toolbar && root.contains(toolbar) &&
+                       (bar.parentNode !== toolbar.parentNode || bar.nextElementSibling !== toolbar)) {
                 toolbar.parentNode.insertBefore(bar, toolbar);
                 needsRender = true;
             }
