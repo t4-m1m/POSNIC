@@ -1610,3 +1610,16 @@ body > .modal-backdrop {
 
 /* Checkout is exclusive: hide the complete sale workspace, overriding the catalogue's desktop flex rule. */
 #sales_new.posnic-payment-screen > .contentbar { display: none !important; }
+
+
+/* Keep catalogue panes below the application header and its theme/notification
+   menus. The legacy product list z-index of 10000 created a stacking layer
+   above the top-bar dropdowns; body-level autocomplete portals keep their
+   own higher z-index independently. */
+#sales_new #items_view_hide,
+#sales_new #items_view_hide > .sales-catalogue-content,
+#sales_new #items_view_hide #sales_new_productList,
+#sales_new #items_view_hide #sales_new_categoryList,
+#sales_new #items_view_hide #sales_new_brandList {
+    z-index: auto !important;
+}
