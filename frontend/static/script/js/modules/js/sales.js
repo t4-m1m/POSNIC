@@ -245,6 +245,9 @@ PosnicPro.sales = {
         /*New Sales*/
         var displayPage = 'sales';
         $('#' + displayPage + '_new').show();
+        // The sales page may have been hidden when the document-ready resize ran.
+        // Re-measure now that the catalogue is visible, before its first request.
+        $(window).trigger('resize');
         PosnicPro.sales.pinFunctionToolbar();
         // Barcode scanners are keyboard wedges: keep the scan field ready
         // whenever the cashier enters the New Sale workspace. The old optional
@@ -5186,9 +5189,12 @@ PosnicPro.sales.addSale = {
                 hasher.changed.active = true;
                 PosnicPro.alert(response.type, response.message);
             } else {
-                PosnicPro.alert(response.type, response.message);
+                recentSpinner.remove();
+                $('#recent_sales_list').html('<div class="text-center text-danger p-3">Could not load recent sales. Please try again.</div>');
+                PosnicPro.alert((response && response.type) || 'error', (response && response.message) || 'Could not load recent sales.');
             }
         }, function (xhr) {
+            if (generation !== PosnicPro.sales._catalogueGeneration) { recentSpinner.remove(); return; }
             var errorMessage = 'An unknown error occurred.';
             var response = jQuery.parseJSON(xhr.responseText);
             if (response.message) {
@@ -9168,17 +9174,22 @@ PosnicPro.sales.categoryMenu = {
      * GET SALES CATEGORY TAGS (OLD FORMAT)
      * -------------------------- */
     listCategories: function () {
-        PosnicPro.sales._catalogueGeneration = (PosnicPro.sales._catalogueGeneration || 0) + 1;
+        var generation = (PosnicPro.sales._catalogueGeneration || 0) + 1;
+        PosnicPro.sales._catalogueGeneration = generation;
         var loader = $("#sales_new_categoryList");
-        $("<div class='loadingSpinner'></div>").appendTo(loader);
+        loader.empty();
+        var categorySpinner = $("<div class='loadingSpinner'></div>").appendTo(loader);
 
         $('#sales_new_productList, #sales_new_brandList').hide();
         $('#sales_new_categoryList').show();
 
         PosnicPro.get('categories/getCategoriesWithValidItems', function (response) {
-            if (response.type === 'success') {
-                loader.find(".loadingSpinner:first").remove();
-                var categorydata = response.data;
+            if (generation !== PosnicPro.sales._catalogueGeneration) { categorySpinner.remove(); return; }
+            categorySpinner.remove();
+            if (response && response.type === 'success') {
+                var categoryPayload = response.data || [];
+                var categorydata = Array.isArray(categoryPayload) ? categoryPayload :
+                    (Array.isArray(categoryPayload.items) ? categoryPayload.items : (Array.isArray(categoryPayload.data) ? categoryPayload.data : []));
 
                 $('#item-lists').remove();
                 $('#category-lists').remove();
@@ -9222,7 +9233,8 @@ PosnicPro.sales.categoryMenu = {
                 PosnicPro.sales.itemsMenu.clickEffect();
 
             } else {
-                PosnicPro.alert(response.type, response.message);
+                loader.html('<div class="text-center text-danger p-3">Could not load categories. Please try again.</div>');
+                PosnicPro.alert((response && response.type) || 'error', (response && response.message) || 'Could not load categories.');
             }
 
         }, 'json');
@@ -9238,7 +9250,8 @@ PosnicPro.sales.categoryMenu = {
 PosnicPro.sales.recentMenu = {
     /*Touchsale recent Sales details*/
     salesList: function () {
-        PosnicPro.sales._catalogueGeneration = (PosnicPro.sales._catalogueGeneration || 0) + 1;
+        var generation = (PosnicPro.sales._catalogueGeneration || 0) + 1;
+        PosnicPro.sales._catalogueGeneration = generation;
         var loader = $("#sales_new_productList");
         var recentSpinner = $("<div class='loadingSpinner'></div>").appendTo(loader);
         $('#sales_new_productList').show();
@@ -9247,7 +9260,8 @@ PosnicPro.sales.recentMenu = {
         $('#sales_new_productList').append(' <div id="item-lists" style="margin-left: 7px;"/>');
         $('#item-lists').append("<div id='recent_sales_list' class='m-b-30'></div>");
         PosnicPro.get('sales/getLatestSales', function (response) {
-            if (response.type === 'success') {
+            if (generation !== PosnicPro.sales._catalogueGeneration) { recentSpinner.remove(); return; }
+            if (response && response.type === 'success') {
                 PosnicPro.sales.recentSaleAction = true;
                 recentSpinner.remove();
                 var item_data = Array.isArray(response.data) ? response.data : (typeof response.data === 'string' ? (function () { try { return JSON.parse(response.data); } catch (e) { return []; } })() : []);
