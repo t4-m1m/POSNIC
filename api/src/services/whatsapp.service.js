@@ -37,6 +37,7 @@ class WhatsAppService extends EventEmitter {
     this.qrCodes = new Map();
     this.connectionStatus = new Map();
     this.phoneNumbers = new Map();
+    this.connectionErrors = new Map();
     this.connecting = new Map();
     this.reconnectTimers = new Map();
     this.queues = new Map();
@@ -73,7 +74,10 @@ class WhatsAppService extends EventEmitter {
     if (this.clients.has(key) && this.getConnectionStatus(deviceId, branchId) === 'connected') {
       return { status: true, connected: true, message: 'WhatsApp is already connected.' };
     }
-    const promise = this._connect(deviceId, branchId, null).finally(() => this.connecting.delete(key));
+    const promise = (async () => {
+      if (this.clients.has(key)) await this._destroySocket(key, false);
+      return this._connect(deviceId, branchId, null);
+    })().finally(() => this.connecting.delete(key));
     this.connecting.set(key, promise);
     return promise;
   }
@@ -81,23 +85,49 @@ class WhatsAppService extends EventEmitter {
   async connectWithPairingCode(deviceId, branchId, phoneNumber) {
     const key = this._key(deviceId, branchId);
     const phone = normalizePhoneNumber(phoneNumber);
-    if (this.clients.has(key)) await this._destroySocket(key, false);
-    const result = await this._connect(deviceId, branchId, phone);
-    return result;
+    if (this.connecting.has(key)) return this.connecting.get(key);
+    if (this.clients.has(key) && this.getConnectionStatus(deviceId, branchId) === 'connected') {
+      return { status: true, connected: true, message: 'WhatsApp is already connected.' };
+    }
+
+    const authDir = this._authDir(deviceId, branchId);
+    let registered = false;
+    try {
+      const saved = JSON.parse(fs.readFileSync(path.join(authDir, 'creds.json'), 'utf8'));
+      registered = saved.registered === true;
+    } catch (_) {}
+
+    const promise = (async () => {
+      if (this.clients.has(key)) await this._destroySocket(key, false);
+      // A failed, unregistered pairing attempt leaves a partial creds.json.
+      // Never reuse that half-created identity for the next code request.
+      if (!registered) fs.rmSync(authDir, { recursive: true, force: true });
+      return this._connect(deviceId, branchId, registered ? null : phone);
+    })().finally(() => this.connecting.delete(key));
+    this.connecting.set(key, promise);
+    return promise;
   }
 
   async _connect(deviceId, branchId, pairingPhone) {
     const key = this._key(deviceId, branchId);
+    let socket;
+    let pairingTimer;
+    let pairingCodeReady;
     try {
       const baileys = this._loadBaileys();
       const makeWASocket = baileys.default || baileys.makeWASocket;
       const { state, saveCreds } = await baileys.useMultiFileAuthState(this._authDir(deviceId, branchId));
-      const versionInfo = await baileys.fetchLatestBaileysVersion().catch(() => null);
-      const socket = makeWASocket({
+
+      // Keep Baileys' package-pinned WhatsApp Web version. Fetching a version
+      // at every launch can select a revision incompatible with the bundled
+      // protobufs and cause WhatsApp to reject otherwise valid device links.
+      socket = makeWASocket({
         auth: state,
-        ...(versionInfo && versionInfo.version ? { version: versionInfo.version } : {}),
         printQRInTerminal: false,
-        browser: (baileys.Browsers && baileys.Browsers.windows && baileys.Browsers.windows('POSNIC')) || ['POSNIC', 'Desktop', '1.0.0'],
+        // WhatsApp rejects some pairing-code requests when the client
+        // advertises a Windows/POSNIC browser identity. Use a valid desktop
+        // browser identity for both linking methods.
+        browser: (baileys.Browsers && baileys.Browsers.macOS && baileys.Browsers.macOS('Google Chrome')) || ['Mac OS', 'Google Chrome', '10.15.7'],
         markOnlineOnConnect: false,
         syncFullHistory: false,
         generateHighQualityLinkPreview: false,
@@ -107,56 +137,111 @@ class WhatsAppService extends EventEmitter {
 
       this.clients.set(key, socket);
       this.connectionStatus.set(key, pairingPhone ? 'pairing_requested' : 'connecting');
+      this.connectionErrors.delete(key);
       this.qrCodes.delete(key);
+
+      let pairingRequested = false;
+      let resolvePairingCode;
+      let rejectPairingCode;
+      if (pairingPhone && !state.creds.registered) {
+        pairingCodeReady = new Promise((resolve, reject) => {
+          resolvePairingCode = resolve;
+          rejectPairingCode = reject;
+        });
+        // The socket must emit its first QR/connection.update before the
+        // pairing-code IQ is sent. A fixed sleep is not a readiness signal.
+        pairingTimer = setTimeout(() => {
+          rejectPairingCode(new Error('WhatsApp did not become ready for pairing. Check the internet connection and try again.'));
+        }, 30000);
+      }
+
       socket.ev.on('creds.update', saveCreds);
       socket.ev.on('connection.update', (update) => {
         if (update.qr) {
           this.qrCodes.set(key, update.qr);
           this.connectionStatus.set(key, 'qr_ready');
           this.emit('qr', { deviceId, branchId, clientKey: key, qrCode: update.qr });
+
+          if (pairingCodeReady && !pairingRequested) {
+            pairingRequested = true;
+            Promise.resolve(socket.requestPairingCode(pairingPhone)).then((code) => {
+              clearTimeout(pairingTimer);
+              this.connectionStatus.set(key, 'pairing_code_ready');
+              resolvePairingCode(code);
+            }).catch((error) => rejectPairingCode(error));
+          }
         }
+
         if (update.connection === 'open') {
           const userId = socket.user && socket.user.id ? socket.user.id : '';
           const number = userId.split(':')[0].split('@')[0];
           this.phoneNumbers.set(key, number || '');
           this.connectionStatus.set(key, 'connected');
           this.qrCodes.delete(key);
+          this.connectionErrors.delete(key);
           this.emit('ready', { deviceId, branchId, clientKey: key, phoneNumber: number });
         }
+
         if (update.connection === 'close') {
-          const statusCode = update.lastDisconnect && update.lastDisconnect.error &&
-            update.lastDisconnect.error.output && update.lastDisconnect.error.output.statusCode;
+          const disconnectError = update.lastDisconnect && update.lastDisconnect.error;
+          const statusCode = disconnectError && disconnectError.output && disconnectError.output.statusCode;
           const loggedOut = statusCode === baileys.DisconnectReason.loggedOut;
-          this.connectionStatus.set(key, loggedOut ? 'logged_out' : 'disconnected');
+          const intentional = this.getConnectionStatus(deviceId, branchId) === 'closing';
+          const reason = disconnectError && disconnectError.message ? disconnectError.message : 'WhatsApp connection closed';
+          this.connectionErrors.set(key, { code: statusCode || null, message: reason });
           this.qrCodes.delete(key);
           this.clients.delete(key);
-          this.emit('disconnected', { deviceId, branchId, clientKey: key, reason: statusCode });
-          if (!loggedOut && fs.existsSync(path.join(this._authDir(deviceId, branchId), 'creds.json'))) {
+
+          if (pairingCodeReady && !pairingRequested) {
+            rejectPairingCode(new Error(reason + (statusCode ? ' (code ' + statusCode + ')' : '')));
+          }
+
+          const hasCredentials = fs.existsSync(path.join(this._authDir(deviceId, branchId), 'creds.json'));
+          if (!intentional && !loggedOut && hasCredentials) {
+            this.connectionStatus.set(key, 'reconnecting');
+            const existingTimer = this.reconnectTimers.get(key);
+            if (existingTimer) clearTimeout(existingTimer);
             const timer = setTimeout(() => {
               this.reconnectTimers.delete(key);
               this.initializeClient(deviceId, branchId).catch((error) =>
                 console.warn('[WhatsApp] Reconnect failed:', error.message)
               );
-            }, 4000);
+            }, statusCode === (baileys.DisconnectReason.restartRequired || 515) ? 1000 : 4000);
             if (timer.unref) timer.unref();
             this.reconnectTimers.set(key, timer);
+          } else {
+            this.connectionStatus.set(key, loggedOut ? 'logged_out' : 'disconnected');
           }
+          this.emit('disconnected', { deviceId, branchId, clientKey: key, reason: statusCode });
         }
       });
 
-      if (pairingPhone && !state.creds.registered) {
-        // Pairing codes are requested only after the socket has had a chance to initialize.
-        await wait(1200);
-        const code = await socket.requestPairingCode(pairingPhone);
-        this.connectionStatus.set(key, 'pairing_code_ready');
-        return { status: true, connected: false, pairingCode: code, message: 'Enter this code in WhatsApp Linked Devices.' };
+      if (pairingCodeReady) {
+        const code = await pairingCodeReady;
+        return { status: true, connected: false, pairingCode: code, message: 'Enter this code in WhatsApp → Linked devices → Link with phone number instead.' };
       }
       return { status: true, connected: false, message: 'WhatsApp connection is starting.' };
     } catch (error) {
+      if (pairingTimer) clearTimeout(pairingTimer);
       this.connectionStatus.set(key, 'error');
+      this.connectionErrors.set(key, { code: error.output && error.output.statusCode || null, message: error.message });
       console.error('[WhatsApp] Connection initialization failed:', error.message);
+      if (socket) {
+        this.connectionStatus.set(key, 'closing');
+        try { socket.end(new Error('POSNIC pairing initialization failed')); } catch (_) {}
+        if (this.clients.get(key) === socket) this.clients.delete(key);
+      }
+      // A rejected pairing attempt must not leave corrupt/incomplete auth
+      // material that can poison the next QR or pairing attempt.
+      if (pairingPhone) {
+        try { fs.rmSync(this._authDir(deviceId, branchId), { recursive: true, force: true }); } catch (_) {}
+      }
       return { status: false, connected: false, message: error.message };
     }
+  }
+
+  getConnectionError(deviceId, branchId) {
+    return this.connectionErrors.get(this._key(deviceId, branchId)) || null;
   }
 
   hasSavedSession(deviceId, branchId) {
@@ -180,6 +265,7 @@ class WhatsAppService extends EventEmitter {
 
   async _destroySocket(key, logout) {
     const socket = this.clients.get(key);
+    this.connectionStatus.set(key, 'closing');
     this.clients.delete(key);
     this.qrCodes.delete(key);
     const timer = this.reconnectTimers.get(key);
