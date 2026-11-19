@@ -446,6 +446,36 @@ body.posnic-nonadmin-icon-rail .posnic-cashier-shortcuts > a.posnic-rail-action,
 body.posnic-cashier-minimal .posnic-cashier-shortcuts > a.posnic-rail-action,
 body.posnic-nonadmin-icon-rail .posnic-cashier-shortcuts > a#posnic-new-sale-quicklink,
 body.posnic-cashier-minimal .posnic-cashier-shortcuts > a#posnic-new-sale-quicklink { box-sizing:border-box !important; width:76px !important; min-width:76px !important; max-width:76px !important; height:56px !important; min-height:56px !important; flex:0 0 56px !important; margin:0 !important; padding:0 !important; }
+
+/* Native cashier shortcuts: each full tile is a real, keyboard-focusable button. */
+.vertical-menu-icon > .posnic-cashier-shortcuts {
+  display:flex !important; flex-direction:column !important; align-items:center !important;
+  justify-content:flex-start !important; position:relative !important; z-index:10030 !important;
+  flex:0 0 auto !important; pointer-events:auto !important;
+}
+.posnic-cashier-shortcuts > button.posnic-rail-action {
+  appearance:none !important; -webkit-appearance:none !important; box-sizing:border-box !important;
+  display:flex !important; align-items:center !important; justify-content:center !important;
+  flex:0 0 56px !important; width:76px !important; min-width:76px !important; max-width:76px !important;
+  height:56px !important; min-height:56px !important; margin:0 !important; padding:0 !important;
+  border:0 !important; border-radius:0 !important; background:transparent !important; color:#fff !important;
+  position:relative !important; z-index:10031 !important; cursor:pointer !important;
+  pointer-events:auto !important; touch-action:manipulation !important;
+  -webkit-app-region:no-drag !important;
+}
+.posnic-cashier-shortcuts > button.posnic-rail-action:hover,
+.posnic-cashier-shortcuts > button.posnic-rail-action:focus-visible { background:rgba(255,255,255,.15) !important; outline:2px solid rgba(255,255,255,.7); outline-offset:-3px; }
+.posnic-cashier-shortcuts > button.posnic-rail-action > * { pointer-events:none !important; }
+#posnic-cashier-history-quicklink,#posnic-cashier-versements-quicklink { display:none !important; }
+body.posnic-nonadmin-icon-rail #posnic-cashier-history-quicklink,
+body.posnic-nonadmin-icon-rail #posnic-cashier-versements-quicklink,
+body.posnic-cashier-minimal #posnic-cashier-history-quicklink,
+body.posnic-cashier-minimal #posnic-cashier-versements-quicklink { display:flex !important; }
+body.posnic-nonadmin-icon-rail .posnic-cashier-shortcuts > button.posnic-rail-action,
+body.posnic-cashier-minimal .posnic-cashier-shortcuts > button.posnic-rail-action {
+  width:76px !important; min-width:76px !important; max-width:76px !important;
+}
+
 </style>
 <div class="leftbar">
     <!-- Start Sidebar -->
@@ -454,19 +484,18 @@ body.posnic-cashier-minimal .posnic-cashier-shortcuts > a#posnic-new-sale-quickl
         <div class="navigationbar scroll_width">
             <div class="vertical-menu-icon">
                 <div class="posnic-cashier-shortcuts" aria-label="Navigation rapide">
-                    <a class="posnic-rail-action posnic-new-sale-quicklink" id="posnic-new-sale-quicklink"
-                        href="#/sales/new" aria-label="Nouvelle vente" title="Nouvelle vente" data-toggle="tooltip" data-placement="right">
+                    <button type="button" class="posnic-rail-action posnic-new-sale-quicklink" id="posnic-new-sale-quicklink"
+                        data-posnic-shortcut="new-sale" aria-label="Nouvelle vente" title="Nouvelle vente">
                         <i class="feather icon-plus" aria-hidden="true"></i>
-                    </a>
-                    <a class="posnic-rail-action posnic-cashier-history-quicklink" id="posnic-cashier-history-quicklink"
-                        href="#/sales" aria-label="Historique des ventes" title="Historique des ventes" data-toggle="tooltip" data-placement="right">
+                    </button>
+                    <button type="button" class="posnic-rail-action posnic-cashier-history-quicklink" id="posnic-cashier-history-quicklink"
+                        data-posnic-shortcut="sales-history" aria-label="Historique des ventes" title="Historique des ventes">
                         <i class="feather icon-clock" aria-hidden="true"></i>
-                    </a>
-                    <a class="posnic-rail-action posnic-cashier-versements-quicklink" id="posnic-cashier-versements-quicklink"
-                        href="#/itemreport" aria-label="Versements" title="Versements" data-toggle="tooltip" data-placement="right"
-                        onclick="window.__posnicOpenVersements=true;window.__posnicOpenStockHealth=false;">
+                    </button>
+                    <button type="button" class="posnic-rail-action posnic-cashier-versements-quicklink" id="posnic-cashier-versements-quicklink"
+                        data-posnic-shortcut="versements" aria-label="Versements" title="Versements">
                         <i class="feather icon-credit-card" aria-hidden="true"></i>
-                    </a>
+                    </button>
                 </div>
                 <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
                     <div class="logobar">

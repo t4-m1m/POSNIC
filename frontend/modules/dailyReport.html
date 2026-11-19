@@ -195,7 +195,7 @@
   height:auto !important; min-height:0 !important; max-height:none !important;
   overflow:visible !important;
 }
-#dailyreport_new { position:relative !important; display:block !important; padding-bottom:28px !important; }
+#dailyreport_new { position:relative !important; padding-bottom:28px !important; }
 #dailyreport_new .dc-studio-layout {
   display:grid !important;
   grid-template-columns:minmax(280px,1fr) minmax(260px,380px) !important;
@@ -212,6 +212,25 @@
 }
 @media (max-width:1024px) {
   #dailyreport_new .dc-studio-layout { grid-template-columns:minmax(0,1fr) !important; }
+}
+
+
+/* The application shell clips tall report pages; make this route the scroll owner. */
+body.posnic-dayclose-report-active .rightbar {
+  height:100vh !important; min-height:0 !important;
+  overflow-x:hidden !important; overflow-y:auto !important;
+  overscroll-behavior-y:contain;
+}
+body.posnic-dayclose-report-active #containerbar,
+body.posnic-dayclose-report-active #dailyreport_new,
+body.posnic-dayclose-report-active #dailyreport_new .contentbar {
+  height:auto !important; min-height:0 !important; max-height:none !important;
+  overflow:visible !important;
+}
+#day-close-ticket-tools .dc-agenda-day.has-report { position:relative; font-weight:750; }
+#day-close-ticket-tools .dc-agenda-day.has-report:after {
+  content:""; display:block; width:5px; height:5px; margin:3px auto 0;
+  border-radius:50%; background:currentColor; opacity:.8;
 }
 
 </style>

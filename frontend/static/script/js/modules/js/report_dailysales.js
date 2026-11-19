@@ -1352,7 +1352,7 @@ function metrics(){
  var cashExpected=expensesAvailable?pay.cash-debtCashTotal+deliveryPayoutCashTotal-expenses-salaryCashTotal-salaryAdvanceCashTotal-salaryPrimeCashTotal:null;
  var outstanding=num(r.outstanding_amount);
  var date=r.from||r.starting_date||iso(selectedDate), rawCount=r.sales_count!=null?r.sales_count:(r.number_of_sales!=null?r.number_of_sales:(r.total_sales_count!=null?r.total_sales_count:(Array.isArray(r.sales)?r.sales.length:null))), count=rawCount==null?null:num(rawCount);
- return {date:date,sales:total,cost:cost,gross:gross,expenses:expenses,expensesAvailable:expensesAvailable,salaryPayments:salaryPayments,salaryPaymentsTotal:salaryPaymentsTotal,salaryAdvances:salaryAdvances,salaryAdvancesTotal:salaryAdvancesTotal,salaryPrimes:salaryPrimes,salaryPrimesTotal:salaryPrimesTotal,salaryPrimeCashTotal:salaryPrimeCashTotal,salaryAdvanceCashTotal:salaryAdvanceCashTotal,salaryCashTotal:salaryCashTotal,versementCashTotal:versementCashTotal,deliveryPayoutCashTotal:deliveryPayoutCashTotal,cashExpected:cashExpected,outstanding:outstanding,net:gross-expenses-salaryPaymentsTotal-salaryAdvancesTotal-salaryPrimesTotal,count:count,pay:pay,payments:payments,debtPayments:debtDetails,debtTotal:debtTotal,versementTotal:num(r.versement_payment_total),report:r};
+ return {date:date,sales:total,cost:cost,gross:gross,expenses:expenses,expensesAvailable:expensesAvailable,salaryPayments:salaryPayments,salaryPaymentsTotal:salaryPaymentsTotal,salaryAdvances:salaryAdvances,salaryAdvancesTotal:salaryAdvancesTotal,salaryPrimes:salaryPrimes,salaryPrimesTotal:salaryPrimesTotal,salaryPrimeCashTotal:salaryPrimeCashTotal,salaryAdvanceCashTotal:salaryAdvanceCashTotal,salaryCashTotal:salaryCashTotal,deliveryPayoutCashTotal:deliveryPayoutCashTotal,cashExpected:cashExpected,outstanding:outstanding,net:gross-expenses-salaryPaymentsTotal-salaryAdvancesTotal-salaryPrimesTotal,count:count,pay:pay,payments:payments,debtPayments:debtDetails,debtTotal:debtTotal,versementTotal:num(r.versement_payment_total),report:r};
 }
 function money(v){return num(v).toLocaleString('fr-DZ',{minimumFractionDigits:2,maximumFractionDigits:2})+' DA';}
 function value(b,m){switch(b.type){case'date':return m.date;case'sales':return money(m.sales);case'cost':return m.report.cost_of_goods!=null||m.report.cost_of_goods_total!=null||m.report.total_cost!=null?money(m.cost):'Non disponible dans le rapport';case'gross':return m.report.gross_profit!=null||m.report.gross_profit_total!=null||m.report.profit!=null?money(m.gross):'Non disponible dans le rapport';case'expenses':return m.expensesAvailable?money(m.expenses):'Non disponible dans le rapport';case'salary':var salaryRows=m.salaryPayments.map(function(row){return String(row.worker_name||'Employé')+' ('+String(row.method||'cash')+'): '+money(row.amount)+(row.notes?' — '+String(row.notes):'');});return salaryRows.length?money(m.salaryPaymentsTotal)+'\n'+salaryRows.join('\n'):money(m.salaryPaymentsTotal);case'advance':var advanceRows=m.salaryAdvances.map(function(row){return String(row.worker_name||'Employé')+' ('+String(row.method||'cash')+'): -'+money(row.amount)+(row.notes?' — '+String(row.notes):'');});return (m.salaryAdvancesTotal>0?'-':'')+money(m.salaryAdvancesTotal)+(advanceRows.length?'\n'+advanceRows.join('\n'):'');case'prime':var primeRows=m.salaryPrimes.map(function(row){var label=row.type==='prime_monthly'?'Prime mensuelle':'Prime hebdomadaire';return label+' — '+String(row.worker_name||'Employé')+' ('+String(row.method||'cash')+'): -'+money(row.amount)+(row.notes?' — '+String(row.notes):'');});return (m.salaryPrimesTotal>0?'-':'')+money(m.salaryPrimesTotal)+(primeRows.length?'\n'+primeRows.join('\n'):'');case'net':return (m.report.gross_profit!=null||m.report.gross_profit_total!=null||m.report.profit!=null)?money(m.net):'Non disponible dans le rapport';case'count':return m.count==null?'Non disponible dans le rapport':String(m.count);case'payments':var rows=m.payments.map(function(p){return String(p.label||p.name||'Autre')+': '+money(p.amount!=null?p.amount:p.total);});if(!m.payments.length){rows=['Cash: '+money(m.pay.cash),'Crédit: '+money(m.pay.credit),'TPE: '+money(m.pay.tpe),'BaridiMob: '+money(m.pay.baridimob)];if(m.pay.other)rows.push('Autres: '+money(m.pay.other));}if(m.debtTotal>0&&!m.debtPayments.length){rows.push('Mode non enregistré (dette): '+money(m.debtTotal));}return rows.join('\n');case'versement':var versementRows=Array.isArray(m.report.versement_payments)?m.report.versement_payments.map(function(row){return String(row.payment_mode||'Autre')+': '+money(row.amount);}):[];return money(m.versementTotal)+(versementRows.length?'\n'+versementRows.join('\n'):'');case'debt':var debtRows=m.debtPayments.map(function(row){return String(row.payment_mode||'Autre')+': '+money(row.amount);});return money(m.debtTotal)+' (inclus dans le détail des paiements ci-dessus)'+(debtRows.length?'\n'+debtRows.join('\n'):'');case'cashhand':return m.cashExpected==null?'Non disponible dans le rapport':money(m.cashExpected);case'outstanding':return money(m.outstanding);default:return '';}}
@@ -1375,12 +1375,15 @@ function printTicket(snapshot){
 }
 function renderAgenda(){
  var $a=$('#dc-studio-agenda').empty(),y=agendaDate.getFullYear(),mo=agendaDate.getMonth(),first=new Date(y,mo,1),days=new Date(y,mo+1,0).getDate(),offset=(first.getDay()+6)%7;
+ var saved={};
+ try{var history=JSON.parse(localStorage.getItem(historyKey)||'[]');if(Array.isArray(history))history.forEach(function(entry){if(entry&&/^\d{4}-\d{2}-\d{2}$/.test(String(entry.date||'')))saved[entry.date]=true;});}catch(_){}
  $('#dc-agenda-month').text(agendaDate.toLocaleDateString('fr-FR',{month:'long',year:'numeric'}));
  ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].forEach(function(w){$a.append($('<div class="dc-agenda-weekday">').text(w));});
  for(var i=0;i<offset;i++)$a.append('<button type="button" class="dc-agenda-day is-empty" tabindex="-1" aria-hidden="true"></button>');
  var today=iso(new Date()),chosen=iso(selectedDate);
- for(var d=1;d<=days;d++){var date=new Date(y,mo,d),keyDate=iso(date),$btn=$('<button type="button" class="dc-agenda-day">').text(d).attr('data-date',keyDate);if(keyDate===today)$btn.addClass('is-today');if(keyDate===chosen)$btn.addClass('is-selected');$a.append($btn);}
+ for(var d=1;d<=days;d++){var date=new Date(y,mo,d),keyDate=iso(date),$btn=$('<button type="button" class="dc-agenda-day">').text(d).attr('data-date',keyDate);if(keyDate===today)$btn.addClass('is-today');if(keyDate===chosen)$btn.addClass('is-selected');if(saved[keyDate])$btn.addClass('has-report').attr({'title':'Clôture enregistrée','aria-label':d+' — clôture enregistrée'});$a.append($btn);}
 }
+function historyEntry(date){try{var history=JSON.parse(localStorage.getItem(historyKey)||'[]');if(!Array.isArray(history))return null;for(var i=history.length-1;i>=0;i--){if(history[i]&&history[i].date===date)return history[i];}}catch(_){}return null;}
 function loadDay(date){
  var parsed=moment(date,'YYYY-MM-DD',true);
  if(!parsed.isValid()){loadingDay=false;$('#dc-agenda-status').text('Date invalide. Sélectionnez une autre journée.');return;}
@@ -1418,9 +1421,16 @@ function initDayCloseStudio(){
  $('#dc-agenda-prev').off('click.posnicDayCloseStudio').on('click.posnicDayCloseStudio',function(){agendaDate=new Date(agendaDate.getFullYear(),agendaDate.getMonth()-1,1);renderAgenda();});
  $('#dc-agenda-next').off('click.posnicDayCloseStudio').on('click.posnicDayCloseStudio',function(){agendaDate=new Date(agendaDate.getFullYear(),agendaDate.getMonth()+1,1);renderAgenda();});
  $('#dc-studio-agenda').off('click.posnicDayCloseStudio').on('click.posnicDayCloseStudio','.dc-agenda-day[data-date]',function(){loadDay($(this).data('date'));});
- if(PosnicPro.quickreport&&PosnicPro.quickreport.lastReport){reportCache=PosnicPro.quickreport.lastReport;render();}
+ if(PosnicPro.quickreport&&PosnicPro.quickreport.lastReport){reportCache=PosnicPro.quickreport.lastReport;render();historySave();renderAgenda();}else{loadDay(iso(new Date()));}
+}
+function syncDayClosePageScroll(){
+ var root=document.getElementById('dailyreport_new'),active=!!(root&&(root.offsetWidth||root.offsetHeight||root.getClientRects().length)&&window.getComputedStyle(root).display!=='none');
+ if(document.body)document.body.classList.toggle('posnic-dayclose-report-active',active);
 }
 function watchDayCloseStudio(){
+ syncDayClosePageScroll();
+ var reportRoot=document.getElementById('dailyreport_new');
+ if(reportRoot&&!window.__posnicDayCloseRootObserver&&window.MutationObserver){window.__posnicDayCloseRootObserver=new MutationObserver(syncDayClosePageScroll);window.__posnicDayCloseRootObserver.observe(reportRoot,{attributes:true,attributeFilter:['style','class']});}
  initDayCloseStudio();
  if(window.MutationObserver&&document.body&&!window.__posnicDayCloseStudioObserver){
   window.__posnicDayCloseStudioObserver=new MutationObserver(function(){initDayCloseStudio();});
@@ -1428,12 +1438,12 @@ function watchDayCloseStudio(){
  }
 }
 $(function(){watchDayCloseStudio();});
-$(window).off('hashchange.posnicDayCloseStudio').on('hashchange.posnicDayCloseStudio',watchDayCloseStudio);
+$(window).off('hashchange.posnicDayCloseStudio').on('hashchange.posnicDayCloseStudio',function(){watchDayCloseStudio();syncDayClosePageScroll();});
 $(document).off('dayCloseReportUpdated.posnicDayCloseStudio').on('dayCloseReportUpdated.posnicDayCloseStudio',function(e,report){
  if(!report)return;reportCache=report;
- if($('#day-close-ticket-tools').length){render();historySave();$('#dc-agenda-status').text('Rapport chargé pour '+iso(selectedDate)+'. Aperçu actualisé avec les données disponibles.');loadingDay=false;}
+ if($('#day-close-ticket-tools').length){render();historySave();renderAgenda();$('#dc-agenda-status').text('Rapport chargé pour '+iso(selectedDate)+'. Aperçu actualisé avec les données disponibles.');loadingDay=false;}
 });
 $(document).off('dayCloseReportFailed.posnicDayCloseStudio').on('dayCloseReportFailed.posnicDayCloseStudio',function(e,message){
  loadingDay=false;
- if($('#day-close-ticket-tools').length){renderAgenda();$('#dc-agenda-status').text('Impossible de charger le rapport du '+iso(selectedDate)+'. '+String(message||'Vérifiez la connexion et réessayez.'));}
+ if($('#day-close-ticket-tools').length){var cached=historyEntry(iso(selectedDate));if(cached&&cached.report){reportCache=cached.report;if(Array.isArray(cached.blocks))blocks=cached.blocks;if(cached.width)$('#dc-studio-width').val(cached.width);render();$('#dc-agenda-status').text('Rapport enregistré restauré pour '+iso(selectedDate)+'. Aperçu local disponible.');}else{$('#dc-agenda-status').text('Impossible de charger le rapport du '+iso(selectedDate)+'. '+String(message||'Vérifiez la connexion et réessayez.'));}renderAgenda();}
 });})(jQuery);
