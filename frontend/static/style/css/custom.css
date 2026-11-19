@@ -7967,15 +7967,3 @@ tr.s-doc-purchase-row:hover td { background: rgba(9, 105, 218, 0.05); }
 #day-close-ticket-tools #day-close-save-status {
     color: var(--theme-success-color, #247044);
 }
-
-
-/* Persistent catalogue variant picker: keep it above the sale tiles and
-   preserve pointer/touch interaction on every choice row. */
-.variant-pop { z-index:21010 !important; pointer-events:auto !important; touch-action:manipulation; }
-.variant-pop .vp-head,
-.variant-pop .vp-list,
-.variant-pop .vp-matrix,
-.variant-pop .vp-row,
-.variant-pop .vp-axis { pointer-events:auto !important; }
-.variant-pop .vp-row,
-.variant-pop .vp-axis { -webkit-tap-highlight-color:transparent; }

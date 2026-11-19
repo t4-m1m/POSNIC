@@ -92,15 +92,15 @@ test('hover opens for a mouse and never for a finger', () => {
 
 test('a tap opens the chooser but requires a second explicit click to select', () => {
   const tap = between(pop, 'openVariantPicker: function', 'pickVariant: function');
-  assert.match(tap, /self\\.open\\(groupId, tile\\)/);
+  assert.match(tap, /self\.open\(groupId, tile\)/);
   assert.doesNotMatch(pop, /TOUCH_GUARD|_byTouch|_openedAt/);
 });
 
 test('the panel stays open across the tile-to-panel gap until deliberately dismissed', () => {
   assert.doesNotMatch(pop, /CLOSE_DELAY|_closeTimer/);
   const hover = between(pop, "addEventListener('pointerover'", "document.addEventListener('click'");
-  assert.doesNotMatch(hover, /self\\.close\\(\\)/);
-  assert.match(hover, /self\\.open\\(gid, tile\\)/);
+  assert.doesNotMatch(hover, /self\.close\(\)/);
+  assert.match(hover, /self\.open\(gid, tile\)/);
 });
 
 test('the panel follows its tile when anything moves', () => {
