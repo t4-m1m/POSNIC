@@ -150,6 +150,17 @@ html, body {
     overflow: hidden;
   }
 
+  /* The current two-step editor has separate Add and Edit mounts. Lock
+     the document only while one of those two editor workspaces is active. */
+  html:has(#items_v2_mount:not([style*="display: none"]):not([style*="display:none"])),
+  body:has(#items_v2_mount:not([style*="display: none"]):not([style*="display:none"])),
+  html:has(#items_modify_page:not([style*="display: none"]):not([style*="display:none"])),
+  body:has(#items_modify_page:not([style*="display: none"]):not([style*="display:none"])) {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
   /* Add Item and Edit Item are the standalone #items_new page loader.
      Do not scope this to #items (the catalogue/list page). */
   html:has(.vertical-layout.page_loader#items_new:not([style*="display: none"]):not([style*="display:none"])),
