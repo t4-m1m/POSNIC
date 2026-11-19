@@ -24,17 +24,28 @@ PosnicPro.whatsapp = {
             return;
         }
         this.deviceId = deviceId;
+        if (this.qrCheckInterval) clearInterval(this.qrCheckInterval);
+        if (this.statusCheckInterval) clearInterval(this.statusCheckInterval);
+        $('#whatsapp_pairing_code').text('Preparing secure connection…');
+        $('#whatsapp_pairing_controls').show();
         $('#whatsapp_pairing_btn').prop('disabled', true).text('Requesting code…');
         PosnicPro.post({ url: 'whatsapp/connect-pairing-code', data: { device_id: deviceId, branch_id: branchId, phone_number: phoneNumber } }, (response) => {
             $('#whatsapp_pairing_btn').prop('disabled', false).text('Get pairing code');
             if (response && response.type === 'success') {
                 const code = response.data && response.data.pairing_code;
-                $('#whatsapp_pairing_code').text(code || 'Waiting for WhatsApp…');
+                if (!code) {
+                    PosnicPro.alert('error', 'WhatsApp did not return a pairing code. Please retry with a new code.');
+                    this.showConnectButton();
+                    return;
+                }
+                $('#whatsapp_pairing_code').text(code);
                 $('#whatsapp_qr_container').hide();
+                $('#whatsapp_pairing_controls').show();
                 $('#whatsapp_connect_btn').hide();
-                $('#whatsapp_disconnect_btn').show();
+                $('#whatsapp_disconnect_btn').hide();
+                $('#whatsapp_device_id').prop('disabled', true);
                 this.startStatusPolling();
-                if (code) PosnicPro.alert('success', 'Enter the pairing code in WhatsApp → Linked devices.');
+                PosnicPro.alert('success', 'Enter this code in WhatsApp → Linked devices → Link with phone number instead.');
             } else {
                 PosnicPro.alert('error', (response && response.message) || 'Could not request a pairing code.');
             }
@@ -56,6 +67,8 @@ PosnicPro.whatsapp = {
         }
 
         this.deviceId = deviceId;
+        if (this.qrCheckInterval) clearInterval(this.qrCheckInterval);
+        if (this.statusCheckInterval) clearInterval(this.statusCheckInterval);
         
         // Show loading state
         $('#whatsapp_connect_btn').prop('disabled', true).html('<i class="feather icon-loader"></i> Connecting...');
@@ -82,8 +95,10 @@ PosnicPro.whatsapp = {
                 $('#whatsapp_qr_container').show();
                 $('#whatsapp_connect_btn').hide();
                 
-                // Start polling for QR code
+                // Poll QR and connection state together.
+                $('#whatsapp_qr_code').html('<div class="spinner-border text-primary" role="status"></div><p class="mt-2">Waiting for WhatsApp QR code…</p>');
                 this.startQRPolling();
+                this.startStatusPolling();
                 
                 PosnicPro.alert('success', PosnicPro.i18n.t('lang_connecting_to_whatsapp', 'Connecting to WhatsApp...'));
             } else {
@@ -98,48 +113,43 @@ PosnicPro.whatsapp = {
      */
     startQRPolling: function() {
         let attempts = 0;
-        const maxAttempts = 60; // Poll for 60 seconds
-        
+        const maxAttempts = 120;
+        if (this.qrCheckInterval) clearInterval(this.qrCheckInterval);
         this.qrCheckInterval = setInterval(() => {
             attempts++;
-            
             if (attempts > maxAttempts) {
                 clearInterval(this.qrCheckInterval);
-                PosnicPro.alert('error', PosnicPro.i18n.t('lang_qr_code_generation_timeout_please_try_agai', 'QR code generation timeout. Please try again.'));
-                this.resetUI();
+                this.qrCheckInterval = null;
+                PosnicPro.alert('error', 'WhatsApp did not provide a QR code. Check the connection status and try again.');
                 return;
             }
-
-            const params = {
+            PosnicPro.get({
                 url: 'whatsapp/getQRCode',
                 data: { device_id: this.deviceId, branch_id: PosnicPro.local.get('branch_id_set') }
-            };
-
-            PosnicPro.get(params, (response) => {
-                if (response.type === 'success' && response.data) {
-                    const { qr_code, status } = response.data;
-                    
-                    if (qr_code) {
-                        // Display QR code
-                        $('#whatsapp_qr_code').html(`<img loading="lazy" decoding="async" src="${qr_code}" alt="WhatsApp QR Code" style="max-width:300px;">`);
-                        
-                        // Start status checking
-                        clearInterval(this.qrCheckInterval);
-                        this.startStatusPolling();
-                    }
-                    
-                    if (status === 'connected') {
-                        clearInterval(this.qrCheckInterval);
-                        this.onConnected();
-                    }
+            }, (response) => {
+                if (!response || response.type !== 'success' || !response.data) return;
+                const { qr_code, status } = response.data;
+                if (qr_code) {
+                    $('#whatsapp_qr_container').show();
+                    $('#whatsapp_pairing_controls').show();
+                    $('#whatsapp_connect_btn').hide();
+                    $('#whatsapp_device_id').prop('disabled', true);
+                    $('#whatsapp_qr_code').html(
+                        '<img loading="eager" decoding="async" src="' + qr_code + '" alt="WhatsApp QR Code" style="display:block;max-width:300px;width:100%;border:1px solid #ddd;padding:10px;border-radius:8px;">' +
+                        '<p class="mt-3 text-muted">Scan this QR code with WhatsApp → Linked devices.</p>'
+                    );
+                    clearInterval(this.qrCheckInterval);
+                    this.qrCheckInterval = null;
                 }
-            });
-        }, 1000); // Check every second
+                if (status === 'connected') {
+                    if (this.qrCheckInterval) clearInterval(this.qrCheckInterval);
+                    this.qrCheckInterval = null;
+                    this.onConnected();
+                }
+            }, () => {});
+        }, 1000);
     },
 
-    /**
-     * Start polling for connection status
-     */
     startStatusPolling: function() {
         if (this.statusCheckInterval) clearInterval(this.statusCheckInterval);
         this.statusCheckInterval = setInterval(() => {
@@ -246,6 +256,9 @@ PosnicPro.whatsapp = {
             'pairing_requested': { text: 'Waiting for pairing code', class: 'badge-warning' },
             'pairing_code_ready': { text: 'Enter pairing code', class: 'badge-warning' },
             'qr_ready': { text: 'QR Ready - Scan Now', class: 'badge-warning' },
+            'reconnecting': { text: 'Reconnecting…', class: 'badge-info' },
+            'error': { text: 'Connection error', class: 'badge-danger' },
+            'logged_out': { text: 'Device unlinked', class: 'badge-danger' },
             'authenticated': { text: 'Authenticated', class: 'badge-info' },
             'connected': { text: 'Connected', class: 'badge-success' },
             'disconnected': { text: 'Disconnected', class: 'badge-danger' },
