@@ -130,6 +130,15 @@ html, body {
   min-height: 100vh;
   overflow: visible;
 }
+
+/* A module's own #containerbar contains its heading, not the outer app shell.
+   Keep that header at its natural content height so the following sibling
+   .contentbar starts immediately below it instead of after one full viewport.
+   Sales/Payment, the item editor and Dashboard retain their dedicated layouts. */
+.vertical-layout.page_loader:not(#sales_new):not(#items_new):not(#dashboard) > #containerbar {
+  min-height: 0;
+}
+
 .rightbar {
   height: auto;
   max-height: none;
