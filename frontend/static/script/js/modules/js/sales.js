@@ -8371,8 +8371,10 @@ PosnicPro.sales.itemsMenu = {
                         var _escName = $('<i>').text(list_item_name == null ? '' : list_item_name).html();
                         var taxEnabled = true;
                         try { taxEnabled = JSON.parse(PosnicPro.local.get('general_settings') || '{}').module_tax_enable !== false; } catch (e) {}
-                        var pricing = PosnicBillingSearch.price(getItemdata[i], taxEnabled);
-                        var price = pricing.price;
+                        var pricing = (window.PosnicBillingSearch && typeof PosnicBillingSearch.price === 'function')
+                            ? PosnicBillingSearch.price(getItemdata[i], taxEnabled) : null;
+                        var price = Number(pricing && pricing.price);
+                        if (!Number.isFinite(price)) price = Number(getItemdata[i].selling_price) || 0;
                         var image_path = (getItemdata[i]['image'] && getItemdata[i]['image'] !== "item.svg") ? getItemdata[i]['image'] : 'static/images/default/item.svg';
                         let items_expiry_date = getItemdata[i]['items_expiry_date'];
                         if (!PosnicBillingSearch.expired(items_expiry_date)) {
@@ -8401,13 +8403,13 @@ PosnicPro.sales.itemsMenu = {
                             var _isPlaceholder = getItemdata[i]['image'] === 'item.svg';
                             var _tileHtml = '<div class="wsk-cp-img' + (_isPlaceholder ? ' wsk-cp-img-placeholder' : '') + '">'
                                 + '<img loading="lazy" decoding="async" src="' + image_path + '" alt="Product" class="img-responsive" /></div>';
-                            var _rt = PosnicPro.resolveTile(getItemdata[i]);
-                            var _tileColor = _rt.color;
+                            var _rt = (typeof PosnicPro.resolveTile === 'function') ? PosnicPro.resolveTile(getItemdata[i]) : {};
+                            var _tileColor = _rt && _rt.color;
                             if (getItemdata[i]['image'] === 'item.svg' && _tileColor) {
                                 var _initial = getItemdata[i]['plu_code']
                                     ? String(getItemdata[i]['plu_code'])
                                     : String(list_item_name || '?').trim().charAt(0).toUpperCase();
-                                var _shapeCss = PosnicPro.tileShapeCss(_rt.shape || '', '8px');
+                                var _shapeCss = (typeof PosnicPro.tileShapeCss === 'function') ? PosnicPro.tileShapeCss((_rt && _rt.shape) || '', '8px') : '';
                                 // Same square slot the product image fills, but the shape
                                 // sits centered at ~62% with breathing room - the default
                                 // illustration has built-in whitespace, and the tile should
