@@ -1571,3 +1571,26 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
     font-size: 11px !important;
   }
 }
+
+
+/* POSNIC sale overlays: keep the catalogue as a stable background layer.
+   Search suggestions and function-key dialogs float above it instead of
+   participating in the catalogue's flex/scroll layout. */
+#sales_new #items_view_hide .ui-autocomplete,
+#sales_new #items_view_hide .autocomplete-suggestions,
+#sales_new #items_view_hide .tt-menu {
+  position: absolute !important;
+  z-index: 20010 !important;
+  max-height: min(55vh, 420px);
+  overflow-y: auto;
+}
+#posnic-customer-picker,
+#posnic-versement-checkout,
+#posnic-zr-modal {
+  position: fixed !important;
+  z-index: 20000 !important;
+  inset: 0 !important;
+}
+body > .modal-backdrop {
+  z-index: 19990 !important;
+}

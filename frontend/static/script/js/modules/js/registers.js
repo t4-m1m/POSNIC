@@ -775,6 +775,12 @@ PosnicPro.registers = {
                 '<p><strong>Entrées espèces :</strong> <span data-closing-value="cash-in">' + moneyText(cashIn) + '</span></p>' +
                 '<p><strong>Sorties espèces :</strong> <span data-closing-value="cash-out">' + moneyText(cashOut) + '</span></p>' +
                 '<p><strong>Net :</strong> <span data-closing-value="net">' + esc(netAmount) + '</span></p>' +
+                '<hr><h3>Contrôle de la caisse</h3>' +
+                '<p><strong>Espèces ventes nettes (après remboursements) :</strong> <span data-closing-value="cash-sales-net">' + moneyText((Number(data.paymentTally && (data.paymentTally.Cash || data.paymentTally.cash)) || 0) - (Number(data.opening_float) || 0) - cashIn + cashOut) + '</span></p>' +
+                '<p><strong>Espèces attendues :</strong> <span data-closing-value="cash-expected">' + moneyText(data.closing_expected != null ? data.closing_expected : (data.paymentTally && (data.paymentTally.Cash || data.paymentTally.cash))) + '</span></p>' +
+                '<p><strong>Espèces comptées :</strong> <span data-closing-value="cash-counted">' + moneyText(data.closing_counted != null ? data.closing_counted : 0) + '</span></p>' +
+                '<p><strong>Écart (compté − attendu) :</strong> <span data-closing-value="cash-over-short">' + moneyText(data.over_short != null ? data.over_short : ((Number(data.closing_counted) || 0) - (Number(data.closing_expected) || 0))) + '</span></p>' +
+                '<small>Espèces attendues = fond initial + ventes espèces + entrées manuelles − sorties manuelles − remboursements espèces. Les encaissements de crédit et les paiements de versements sont exclus.</small>' +
                 (tallyRows ? '<hr><h3>Récapitulatif par mode de paiement</h3><table style="width:100%;border-collapse:collapse"><thead><tr><th>Mode</th><th style="text-align:right">Montant attendu</th></tr></thead><tbody>' + tallyRows + '</tbody></table>' : '') +
                 '<hr><p contenteditable="true" data-pcs-block="1">Signature / remarques :</p></div>';
             PosnicPro.registers.openClosingStudio(contents);

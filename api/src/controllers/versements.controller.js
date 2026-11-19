@@ -1,4 +1,5 @@
 const { ObjectId } = require('mongodb');
+const crypto = require('crypto');
 const COLLECTION = 'sale_versements';
 const money = (v) => Math.round((Number(v) || 0) * 100) / 100;
 const actor = (req) => String(req.user?.username || req.user?.name || req.user?.email || req.user?._id || 'unknown');
@@ -200,10 +201,41 @@ exports.cancel = async (req,res) => {
           String(line.item_status||'').toLowerCase()!=='instant')
         quantities.set(itemId,(quantities.get(itemId)||0)+qty);
     }
-    const items=req.db.collection('items'), restoreKey=String(current.sale_key||saleKey(sale))+':versement-cancel';
+    const items=req.db.collection('items'), stockLogs=req.db.collection('stocklogs');
+    const restoreKey=String(current.sale_key||saleKey(sale))+':versement-cancel';
     for (const [itemId,qty] of quantities) {
-      await items.updateOne({_id:new ObjectId(itemId),track_inventory:{$in:[true,'true']},versement_stock_restore_keys:{$ne:restoreKey}},
-        {$inc:{available_quantity:qty},$addToSet:{versement_stock_restore_keys:restoreKey}});
+      const itemObjectId=new ObjectId(itemId);
+      const itemBefore=await items.findOne({_id:itemObjectId,track_inventory:{$in:[true,'true']}});
+      if (!itemBefore) continue;
+      const alreadyRestored=Array.isArray(itemBefore.versement_stock_restore_keys)&&itemBefore.versement_stock_restore_keys.includes(restoreKey);
+      if (!alreadyRestored) {
+        await items.updateOne({_id:itemObjectId,track_inventory:{$in:[true,'true']},versement_stock_restore_keys:{$ne:restoreKey}},
+          {$inc:{available_quantity:qty},$addToSet:{versement_stock_restore_keys:restoreKey}});
+      }
+      // A deterministic log id makes the journal write safely retryable if
+      // stock was restored but the request was interrupted before logging.
+      const logId=new ObjectId(crypto.createHash('sha256').update(restoreKey+':'+itemId).digest('hex').slice(0,24));
+      const currentBalance=Number(itemBefore.available_quantity)||0;
+      const openingBalance=alreadyRestored?currentBalance-qty:currentBalance;
+      const closingBalance=openingBalance+qty;
+      const logDate=new Date();
+      const log={
+        branch_id:current.branch_id,
+        view_item_id:itemObjectId,
+        item_barcode_id:String(itemBefore.item_barcode_id||itemBefore.barcode_id||''),
+        item_name:String(itemBefore.item_name||itemBefore.name||'Article'),
+        item_quantity:String(qty),
+        process:'Versement annulé',
+        reference:String(current.versement_number||current.sale_key||saleKey(sale)),
+        note:'Restitution du stock après annulation du versement',
+        date:logDate,created_date:logDate,updated_date:logDate,
+        action:'Add',stocklog:true,
+        opening_balance:String(openingBalance),closing_balance:String(closingBalance),
+        count:String(qty),changed_by:actor(req),
+        ...(ObjectId.isValid(String(req.user?._id||''))?{changed_by_userid:new ObjectId(String(req.user._id))}:{}),
+        ...(sale.license?{license:sale.license}:{}),
+      };
+      await stockLogs.updateOne({_id:logId},{$setOnInsert:log},{upsert:true});
     }
     await req.db.collection('sales').deleteOne({_id:sale._id,versement_checkout:{$exists:true}});
     await collection.deleteOne({_id:id,status:'cancelling'});

@@ -868,7 +868,7 @@ class RegisterRepository {
    * cash slice of multi-payments) + Σ cash-in − Σ cash-out. Mirrors the tally
    * cashRegisterOpenManualModel shows live.
    */
-  _expectedCashAtClose(document, settledVersementCash = 0) {
+  _expectedCashAtClose(document, cashRefunds = 0) {
     let cashSales = 0;
     for (const regSale of document.register_sales || []) {
       let multiPayment = regSale.multi_payment;
@@ -898,7 +898,7 @@ class RegisterRepository {
       cashOut += parseFloat(entry.cashout_amount) || 0;
     }
     const openingFloat = parseFloat(document.opening_float) || 0;
-    return Math.round((openingFloat + cashSales + cashIn + (parseFloat(settledVersementCash) || 0) - cashOut) * 100) / 100;
+    return Math.round((openingFloat + cashSales + cashIn - cashOut - (parseFloat(cashRefunds) || 0)) * 100) / 100;
   }
 
   async registercloseUpdate(data) {
@@ -944,25 +944,10 @@ class RegisterRepository {
               message: 'Finish the pending payment correction before closing this register.',
             };
           correctionRevision = session.payment_correction_revision;
-          let settledVersementCash = 0;
+          let cashRefunds = 0;
           if (session.register_id && session.branch_id && session.register_opendate) {
-            const versements = await this.model.getCollection('sale_versements');
-            const settledRows = await versements.find({
-              branch_id: session.branch_id,
-              status: 'settled',
-              settled_at: { $gte: new Date(session.register_opendate), $lte: mongoDate },
-              $or: [
-                { settlement_register_id: session.register_id },
-                { settlement_register_id: { $exists: false }, register_id: session.register_id },
-              ],
-            }).toArray();
-            settledVersementCash = settledRows.reduce((sum, row) => {
-              const initialCash = String(row.initial_method || 'cash').toLowerCase() === 'cash' ? Number(row.initial_amount) || 0 : 0;
-              const finalCash = String(row.settlement && row.settlement.method || '').toLowerCase() === 'cash' ? Number(row.settlement && row.settlement.amount) || 0 : 0;
-              return sum + initialCash + finalCash;
-            }, 0);
-            // Cash refunds are money-out on the actual return day. Do not
-            // rewrite the original sale's register amount or original date.
+            // Cash refunds leave the drawer on the return date. Versement
+            // advances and later settlements are deliberately not sales cash.
             const salesCollection = await this.model.getCollection('sales');
             const refundRows = await salesCollection.aggregate([
               { $match: { branch_id: session.branch_id, 'return_refund_transactions.cashregister_id': { $in: [session.register_id, null] } } },
@@ -980,10 +965,9 @@ class RegisterRepository {
               ] } } },
               { $group: { _id: null, total: { $sum: '$refundAmount' } } },
             ]).toArray();
-            const cashRefunds = refundRows.length ? Number(refundRows[0].total) || 0 : 0;
-            settledVersementCash -= cashRefunds;
+            cashRefunds = refundRows.length ? Number(refundRows[0].total) || 0 : 0;
           }
-          const expected = this._expectedCashAtClose(session, settledVersementCash);
+          const expected = this._expectedCashAtClose(session, cashRefunds);
           const countedEntry = (session.countedAmount || []).find(
             (c) => String(c.paymenttype || '').toLowerCase() === 'cash'
           );
@@ -1141,21 +1125,6 @@ class RegisterRepository {
       if (document.register_id && document.branch_id && document.register_opendate) {
         const periodStart = new Date(document.register_opendate);
         const periodEnd = new Date();
-        const versementCollection = await this.model.getCollection('sale_versements');
-        const settledRows = await versementCollection.find({
-          branch_id: document.branch_id,
-          status: 'settled',
-          settled_at: { $gte: periodStart, $lte: periodEnd },
-          $or: [
-            { settlement_register_id: document.register_id },
-            { settlement_register_id: { $exists: false }, register_id: document.register_id },
-          ],
-        }).toArray();
-        cashInAmount += settledRows.reduce((sum, row) => {
-          const initialCash = String(row.initial_method || 'cash').toLowerCase() === 'cash' ? Number(row.initial_amount) || 0 : 0;
-          const finalCash = String(row.settlement && row.settlement.method || '').toLowerCase() === 'cash' ? Number(row.settlement && row.settlement.amount) || 0 : 0;
-          return sum + initialCash + finalCash;
-        }, 0);
         const salesCollection = await this.model.getCollection('sales');
         const refundRows = await salesCollection.aggregate([
           { $match: { branch_id: document.branch_id, 'return_refund_transactions.cashregister_id': { $in: [document.register_id, null] } } },
