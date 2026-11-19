@@ -88,7 +88,7 @@
     "web-push": "^3.6.7",
     "xss": "^1.0.15",
     "yauzl": "^3.4.0",
-    "@whiskeysockets/baileys": "6.7.18"
+    "@whiskeysockets/baileys": "6.7.24"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
