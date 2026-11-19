@@ -2233,6 +2233,12 @@ PosnicPro.sales = {
         PosnicPro.sales.customerViewDisplay();
     },
     openTenderModel: function (methodsReady, focusTender) {
+        // The variant chooser is rendered under <body> to escape catalogue overflow.
+        // Keyboard checkout (F2) does not generate an outside click, so close it
+        // explicitly before changing to the payment view or loading payment methods.
+        if (PosnicPro.sales.itemsMenu && PosnicPro.sales.itemsMenu.variantPop) {
+            PosnicPro.sales.itemsMenu.variantPop.close();
+        }
         if (!PosnicPro.sales.paymentOnlyMode && PosnicPro.sales.saleProcess !== 'KOT' && PosnicPro.saleExtensions?.dispatch('checkout')) return;
 
         // Load methods from this till's API each time. Startup may still be
@@ -12288,6 +12294,10 @@ document.addEventListener('keydown',function(event){if(event.key!=='F6'||event.r
     function askCashier(key) {
         ensureCashierModal();
         var $modal = $('#posnic-vendeur-modal');
+        // Keep the cashier dialog above POS sidebars and any overlay left by the
+        // previous checkout. Bootstrap's default z-index is too low for the
+        // full-screen tender overlay used by this page.
+        $modal.appendTo(document.body).css('z-index', '20020');
         // A hidden event can be missed when Bootstrap is interrupted during checkout.
         // Never let a stale in-memory guard block F2 on the next sale: the modal's
         // actual visibility is the source of truth for whether the picker is open.
@@ -12300,6 +12310,15 @@ document.addEventListener('keydown',function(event){if(event.key!=='F6'||event.r
         cashierPromptOpen = true;
         var names = cashierNames();
         $modal.data('pending-key', key).data('pending-name', selectedCashier || '');
+        // Bootstrap appends its backdrop after the modal. Keep the newest backdrop
+        // below the cashier dialog so it cannot intercept the selection clicks.
+        $modal.off('shown.bs.modal.cashierLayer').on('shown.bs.modal.cashierLayer', function () {
+            var backdrops = document.querySelectorAll('.modal-backdrop');
+            if (backdrops.length) backdrops[backdrops.length - 1].style.zIndex = '20010';
+            this.style.zIndex = '20020';
+            var firstOption = this.querySelector('.posnic-vendeur-option');
+            if (firstOption) firstOption.focus();
+        });
         var $options = $('#posnic-vendeur-options');
         $options.html(names.map(function (name) {
             return '<button type="button" class="posnic-vendeur-option" data-vendor="' + escapeText(name) + '"><i class="feather icon-user"></i><span>' + escapeText(name) + '</span></button>';
