@@ -30351,12 +30351,12 @@ html, body {
 /* Item creation and modification are the other fixed cashier workspaces:
    keep their tabbed form and sticky save area inside the viewport. */
 @media (min-width: 768px) {
-  html:has(.vertical-layout.page_loader:not([style*="display: none"]):not([style*="display:none"]) #items_new),
-  body:has(.vertical-layout.page_loader:not([style*="display: none"]):not([style*="display:none"]) #items_new) {
+  html:has(.vertical-layout.page_loader#items:not([style*="display: none"]):not([style*="display:none"]) #items_new),
+  body:has(.vertical-layout.page_loader#items:not([style*="display: none"]):not([style*="display:none"]) #items_new) {
     height:100% !important;
     overflow:hidden !important;
   }
-  .rightbar:has(.vertical-layout.page_loader:not([style*="display: none"]):not([style*="display:none"]) #items_new) {
+  .rightbar:has(.vertical-layout.page_loader#items:not([style*="display: none"]):not([style*="display:none"]) #items_new) {
     height:calc(100vh - var(--titlebar-h, 44px)) !important;
     max-height:calc(100vh - var(--titlebar-h, 44px)) !important;
     overflow:hidden !important;
