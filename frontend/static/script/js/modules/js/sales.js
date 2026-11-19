@@ -8979,10 +8979,6 @@ PosnicPro.sales.itemsMenu = {
                 }
                 var row = e.target && e.target.closest ? e.target.closest('#variant_pop .vp-row') : null;
                 if (row) {
-                    /* A tap on the tile synthesises a click here a moment
-                       later. Honouring it would add whichever size the panel
-                       happened to open under the finger. */
-                    if (self._byTouch && Date.now() - self._openedAt < self.TOUCH_GUARD) { return; }
                     PosnicPro.sales.itemsMenu.pickVariant(row.getAttribute('data-item-id'));
                     return;
                 }
