@@ -50,14 +50,21 @@ class WhatsAppService extends EventEmitter {
     this.sessionRoot = path.join(userDataPath, 'whatsapp-auth');
 
     // Older builds used APPDATA/POSNIC even when Electron had a custom
-    // userData directory. Copy (never move or delete) those sessions once.
+    // userData directory. Merge missing session entries; never move, overwrite,
+    // or delete existing credentials.
     const legacySessionRoot = path.join(legacyUserDataPath, 'whatsapp-auth');
     const sameSessionRoot = path.resolve(legacySessionRoot).toLowerCase() ===
       path.resolve(this.sessionRoot).toLowerCase();
-    if (!sameSessionRoot && fs.existsSync(legacySessionRoot) && !fs.existsSync(this.sessionRoot)) {
+    if (!sameSessionRoot && fs.existsSync(legacySessionRoot)) {
       try {
-        fs.mkdirSync(path.dirname(this.sessionRoot), { recursive: true });
-        fs.cpSync(legacySessionRoot, this.sessionRoot, { recursive: true, errorOnExist: false, force: false });
+        fs.mkdirSync(this.sessionRoot, { recursive: true });
+        for (const entry of fs.readdirSync(legacySessionRoot, { withFileTypes: true })) {
+          const source = path.join(legacySessionRoot, entry.name);
+          const target = path.join(this.sessionRoot, entry.name);
+          if (!fs.existsSync(target)) {
+            fs.cpSync(source, target, { recursive: true, errorOnExist: false, force: false });
+          }
+        }
       } catch (error) {
         console.warn('[WhatsApp] Could not copy the legacy session into userData:', error.message);
       }
