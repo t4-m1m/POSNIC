@@ -143,7 +143,7 @@ class WhatsAppController extends BaseController {
       // Checkout can provide the human-readable invoice number or a Mongo id.
       // Accept both, while keeping every lookup scoped to the active tenant.
       let sale = await Sale.findOne({ sales_id: saleId, ...scope });
-      if (!sale && /^[a-f\\d]{24}$/i.test(saleId)) {
+      if (!sale && /^[a-f\d]{24}$/i.test(saleId)) {
         sale = await Sale.findOne({ _id: saleId, ...scope });
       }
       if (!sale) return res.status(404).json({ type: 'error', message: 'Saved sale not found in this branch. Save the sale before sending its receipt.' });
