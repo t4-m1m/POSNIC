@@ -1596,8 +1596,7 @@ body > .modal-backdrop {
 }
 
 
-/* Payment lives in its own sidebar; never hide or disable the sale catalogue. */
-#sales_new #items_view_hide { visibility:visible; }
+/* Keep the dedicated tender screen above the sale workspace during checkout. */
 #sales_new #tenderpage {
     position:relative !important;
     z-index:20020 !important;
