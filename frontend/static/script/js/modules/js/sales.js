@@ -13164,6 +13164,9 @@ $(function () {
     var itemLookupSeq = 0;
     $('#sales_new_item_name').autocomplete({
         deferRequestBy: 0,
+        // The autocomplete plugin portals suggestions to document.body by default.
+        // Keep them above the catalogue panes, whose stacking layer is 10000.
+        zIndex: 20010,
         lookup: function (query, done) {
             var seq = ++itemLookupSeq;
             var result = {};
@@ -13619,6 +13622,8 @@ $(function () {
     var customerLookupSeq = 0;
     $('#sales_new_customer_name').autocomplete({
         deferRequestBy: 120,
+        // Customer suggestions use the same body-level portal as item search.
+        zIndex: 20010,
         lookup: function (query, done) {
             var seq = ++customerLookupSeq;
             var result = {};
