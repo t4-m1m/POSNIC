@@ -79,31 +79,6 @@ class WhatsAppController extends BaseController {
         });
       }
 
-      if (await this._connectorTransport(req, branchId)) {
-        // Ask the connector, not Chromium: record the request where the
-        // connector polls, and the QR arrives via its state mirror.
-        const outbox = require('../services/whatsapp-outbox');
-        await outbox.recordState(req.db, req.user && req.user.license, {
-          branch_id: branchId,
-          device_id,
-          status: 'init_requested',
-          qr: null,
-        });
-        try {
-          const Branch = require('../models/branch.model');
-          await Branch.updateOne(branchIdentity(req, branchId), {
-            $set: { whatsapp_device_id: device_id },
-          });
-        } catch (error) {
-          console.error('Error saving device_id:', error);
-        }
-        return res.json({
-          type: 'success',
-          message: 'Link requested - the connector will show a QR code shortly',
-          data: { connected: false, device_id, qr_code: null, qr_status: 'init_requested' },
-        });
-      }
-
       const result = await whatsappService.initializeClient(device_id, branchId);
 
       // Save device_id to branch settings
@@ -228,20 +203,6 @@ class WhatsAppController extends BaseController {
         });
       }
 
-      if (await this._connectorTransport(req, branchId)) {
-        const outbox = require('../services/whatsapp-outbox');
-        const state = await outbox.getState(req.db, branchId);
-        const raw = state && state.qr;
-        return res.json({
-          type: 'success',
-          data: {
-            qr_code: raw ? (raw.startsWith('data:') ? raw : await qrcode.toDataURL(raw)) : null,
-            status: (state && state.status) || 'not_initialized',
-            device_id,
-          },
-        });
-      }
-
       const rawQrCode = whatsappService.getQRCode(device_id, branchId);
       const qrCode = rawQrCode
         ? rawQrCode.startsWith && rawQrCode.startsWith('data:')
@@ -297,16 +258,6 @@ class WhatsAppController extends BaseController {
         });
       }
 
-      if (await this._connectorTransport(req, resolvedBranchId)) {
-        const outbox = require('../services/whatsapp-outbox');
-        const state = await outbox.getState(req.db, resolvedBranchId);
-        const s = (state && state.status) || 'not_initialized';
-        return res.json({
-          type: 'success',
-          data: { status: s, device_id, connected: s === 'connected' },
-        });
-      }
-
       // Rehydrate a previously QR-linked session after an application restart.
       // Only restore when LocalAuth data exists; never create a QR session for a never-linked device.
       if (whatsappService.hasSavedSession(device_id, resolvedBranchId) &&
@@ -325,6 +276,8 @@ class WhatsAppController extends BaseController {
           device_id: device_id,
           connected: status === 'connected',
           phone_number: whatsappService.getConnectedPhone(device_id, resolvedBranchId),
+          connection_error: whatsappService.getConnectionError(device_id, resolvedBranchId)?.message || null,
+          disconnect_code: whatsappService.getConnectionError(device_id, resolvedBranchId)?.code || null,
         },
       });
     } catch (error) {
