@@ -1,3 +1,17 @@
+
+// Keep report dialogs above report/sidebar stacking contexts. Moving the modal
+// to body before Bootstrap creates its backdrop prevents a grey overlay from
+// covering the ZR Express delivery dialog itself.
+if (!document.__posnicReportModalPortalBound) {
+  document.__posnicReportModalPortalBound = true;
+  $(document).on('show.bs.modal.posnicReportModalPortal', '.modal', function () {
+    $(this).addClass('posnic-modal-portal').appendTo(document.body);
+  });
+  $(document).on('shown.bs.modal.posnicReportModalPortal', '.modal', function () {
+    $('.modal-backdrop').last().addClass('posnic-modal-backdrop');
+  });
+}
+
 PosnicPro.salereport = {
     loadPeriods: function () {
         PosnicPro.mountServingPeriodFilter({ host: '#sales-report-period-filter', select: '#sales-report-period', hint: '#sales-report-period-hint', branch: $('.sale_branch_value').val(),
