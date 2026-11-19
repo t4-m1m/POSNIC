@@ -383,6 +383,47 @@ body:not(.posnic-cashier-minimal) #posnic-cashier-versements-quicklink { display
     .navigationbar > .vertical-menu-icon > .nav > a * { pointer-events:none !important; }
 }
 
+
+/* The new-sale action is a real button: the complete rounded square owns the hit target. */
+#posnic-new-sale-quicklink {
+    box-sizing:border-box !important;
+    display:flex !important;
+    flex:0 0 44px !important;
+    align-items:center !important;
+    justify-content:center !important;
+    width:44px !important;
+    min-width:44px !important;
+    max-width:44px !important;
+    height:44px !important;
+    min-height:44px !important;
+    margin:6px auto !important;
+    padding:0 !important;
+    border:0 !important;
+    border-radius:12px !important;
+    background:rgba(255,255,255,.12) !important;
+    color:#fff !important;
+    cursor:pointer !important;
+    user-select:none !important;
+    -webkit-user-select:none !important;
+    -webkit-app-region:no-drag !important;
+    position:relative !important;
+    z-index:10000 !important;
+    pointer-events:auto !important;
+    touch-action:manipulation !important;
+    appearance:none !important;
+    -webkit-appearance:none !important;
+}
+#posnic-new-sale-quicklink:hover,
+#posnic-new-sale-quicklink:focus-visible {
+    background:rgba(255,255,255,.2) !important;
+}
+#posnic-new-sale-quicklink > * {
+    pointer-events:none !important;
+    user-select:none !important;
+    -webkit-user-select:none !important;
+    cursor:pointer !important;
+}
+
 </style>
 <div class="leftbar">
     <!-- Start Sidebar -->
@@ -391,11 +432,11 @@ body:not(.posnic-cashier-minimal) #posnic-cashier-versements-quicklink { display
         <div class="navigationbar scroll_width">
             <div class="vertical-menu-icon">
                 <div class="posnic-cashier-shortcuts" aria-label="Navigation rapide">
-                    <a class="posnic-new-sale-quicklink" id="posnic-new-sale-quicklink"
-                        href="#/sales/new" role="button" aria-label="Nouvelle vente"
-                        title="Nouvelle vente" data-toggle="tooltip" data-placement="right">
+                    <button type="button" class="posnic-new-sale-quicklink" id="posnic-new-sale-quicklink"
+                        aria-label="Nouvelle vente" title="Nouvelle vente" data-toggle="tooltip" data-placement="right"
+                        onclick="window.location.hash='#/sales/new';">
                         <i class="feather icon-plus" aria-hidden="true"></i>
-                    </a>
+                    </button>
                     <a class="posnic-cashier-history-quicklink" id="posnic-cashier-history-quicklink"
                         href="#/sales" role="button" aria-label="Historique des ventes"
                         title="Historique des ventes" data-toggle="tooltip" data-placement="right">
