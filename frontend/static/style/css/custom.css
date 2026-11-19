@@ -7983,3 +7983,8 @@ tr.s-doc-purchase-row:hover td { background: rgba(9, 105, 218, 0.05); }
 /* Portalled POSNIC modals must sit above application sidebars and backdrops. */
 .modal.posnic-modal-portal { z-index:20050 !important; }
 .modal-backdrop.posnic-modal-backdrop { z-index:20040 !important; }
+
+
+/* ZR Express report modal sits above POS sidebars and their overlays. */
+.modal#posnic-zr-tracking { z-index: 30050 !important; }
+.modal-backdrop.posnic-zr-modal-backdrop { z-index: 30040 !important; }
