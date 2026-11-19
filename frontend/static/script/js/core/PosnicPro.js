@@ -7222,3 +7222,80 @@ PosnicPro.itemStockPreference = {
     document.addEventListener('pointerdown', show, true);
     document.addEventListener('keydown', show, true);
 })();
+
+
+/*
+ * One modal layer manager for every POSNIC module.
+ *
+ * Some modules render their Bootstrap dialogs inside positioned application
+ * panes, while others append them to body. A backdrop can then sit above the
+ * dialog and make the whole screen look disabled. Portal every Bootstrap
+ * modal to body before Bootstrap creates its backdrop, and assign paired,
+ * ordered layers so nested dialogs always remain clickable.
+ */
+(function installPosnicGlobalModalLayerManager($) {
+    if (!$ || !$.fn || !$.fn.modal || document.__posnicGlobalModalLayerManager) return;
+    document.__posnicGlobalModalLayerManager = true;
+
+    var stack = [];
+    var baseBackdrop = 40040;
+    var baseModal = 40050;
+    var layerStep = 20;
+
+    function inDocument(el) {
+        return !!(el && document.documentElement.contains(el));
+    }
+
+    function reflowLayers() {
+        stack = stack.filter(function (el) {
+            return inDocument(el) && (el.classList.contains('show') || el.__posnicModalOpening);
+        });
+
+        stack.forEach(function (el, index) {
+            el.classList.add('posnic-global-modal-layer');
+            el.style.setProperty('z-index', String(baseModal + index * layerStep), 'important');
+        });
+
+        var backdrops = Array.prototype.slice.call(document.querySelectorAll('.modal-backdrop'));
+        backdrops.forEach(function (backdrop, index) {
+            backdrop.classList.add('posnic-global-modal-backdrop');
+            backdrop.style.setProperty('z-index', String(baseBackdrop + index * layerStep), 'important');
+        });
+
+        var hasOpenModal = stack.length > 0 || !!document.querySelector('.modal.show');
+        if (document.body) document.body.classList.toggle('modal-open', hasOpenModal);
+    }
+
+    $(document)
+        .on('show.bs.modal.posnicGlobalModalLayer', '.modal', function () {
+            var modal = this;
+            modal.__posnicModalOpening = true;
+            if (stack.indexOf(modal) === -1) stack.push(modal);
+            // Detach from sidebar/report stacking contexts before Bootstrap
+            // inserts the backdrop into body.
+            if (modal.parentNode !== document.body) $(modal).appendTo(document.body);
+            reflowLayers();
+        })
+        .on('shown.bs.modal.posnicGlobalModalLayer', '.modal', function () {
+            this.__posnicModalOpening = false;
+            if (stack.indexOf(this) === -1) stack.push(this);
+            reflowLayers();
+        })
+        .on('hidden.bs.modal.posnicGlobalModalLayer', '.modal', function () {
+            var modal = this;
+            stack = stack.filter(function (el) { return el !== modal; });
+            modal.__posnicModalOpening = false;
+            modal.classList.remove('posnic-global-modal-layer');
+            modal.style.removeProperty('z-index');
+            reflowLayers();
+        });
+
+    // A modal may be restored from the SPA cache already open.
+    $(function () {
+        $('.modal.show').each(function () {
+            if (stack.indexOf(this) === -1) stack.push(this);
+            this.classList.add('posnic-global-modal-layer');
+        });
+        reflowLayers();
+    });
+})(window.jQuery);
