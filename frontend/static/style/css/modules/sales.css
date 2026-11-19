@@ -1063,15 +1063,15 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
 /* Sales workspace final layout: keep the scanner row measurable, tabs directly
    beneath it, catalogue independently scrollable, and basket rows reachable. */
 @media (min-width: 768px) {
-  html:has(#sales_new:not([style*="display: none"])),
-  body:has(#sales_new:not([style*="display: none"])) {
+  html:has(.vertical-layout.page_loader:not([style*="display: none"]):not([style*="display:none"]) #sales_new),
+  body:has(.vertical-layout.page_loader:not([style*="display: none"]):not([style*="display:none"]) #sales_new) {
     height: 100% !important;
     min-height: 0 !important;
     overflow: hidden !important;
   }
   /* Do not position:fixed the body: Bootstrap modals are body children and
      would inherit a clipped containing block from the fixed body. */
-  body:has(#sales_new:not([style*="display: none"])) {
+  body:has(.vertical-layout.page_loader:not([style*="display: none"]):not([style*="display:none"]) #sales_new) {
     position: static !important;
     inset: auto !important;
     width: auto !important;
