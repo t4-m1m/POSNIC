@@ -424,6 +424,23 @@ body:not(.posnic-cashier-minimal) #posnic-cashier-versements-quicklink { display
     cursor:pointer !important;
 }
 
+
+/* Fresh native button hit targets for the three compact navigation actions. */
+.posnic-cashier-shortcuts > button.posnic-rail-action {
+  appearance:none !important; -webkit-appearance:none !important;
+  display:flex !important; flex:0 0 56px !important; align-items:center !important; justify-content:center !important;
+  box-sizing:border-box !important; width:76px !important; min-width:76px !important; max-width:76px !important;
+  height:56px !important; min-height:56px !important; margin:0 !important; padding:0 !important;
+  border:0 !important; border-radius:0 !important; background:transparent !important; color:#fff !important;
+  position:relative !important; z-index:10020 !important; cursor:pointer !important;
+  pointer-events:auto !important; touch-action:manipulation !important;
+  user-select:none !important; -webkit-user-select:none !important; -webkit-app-region:no-drag !important;
+}
+.posnic-cashier-shortcuts > button.posnic-rail-action:hover,
+.posnic-cashier-shortcuts > button.posnic-rail-action:focus-visible { background:rgba(255,255,255,.14) !important; outline:none !important; }
+.posnic-cashier-shortcuts > button.posnic-rail-action > * { pointer-events:none !important; user-select:none !important; -webkit-user-select:none !important; }
+body.posnic-nonadmin-icon-rail #posnic-cashier-history-quicklink,
+body.posnic-nonadmin-icon-rail #posnic-cashier-versements-quicklink { display:flex !important; }
 </style>
 <div class="leftbar">
     <!-- Start Sidebar -->
@@ -432,22 +449,21 @@ body:not(.posnic-cashier-minimal) #posnic-cashier-versements-quicklink { display
         <div class="navigationbar scroll_width">
             <div class="vertical-menu-icon">
                 <div class="posnic-cashier-shortcuts" aria-label="Navigation rapide">
-                    <button type="button" class="posnic-new-sale-quicklink" id="posnic-new-sale-quicklink"
+                    <button type="button" class="posnic-rail-action posnic-new-sale-quicklink" id="posnic-new-sale-quicklink"
                         aria-label="Nouvelle vente" title="Nouvelle vente" data-toggle="tooltip" data-placement="right"
                         onclick="window.location.hash='#/sales/new';">
                         <i class="feather icon-plus" aria-hidden="true"></i>
                     </button>
-                    <a class="posnic-cashier-history-quicklink" id="posnic-cashier-history-quicklink"
-                        href="#/sales" role="button" aria-label="Historique des ventes"
-                        title="Historique des ventes" data-toggle="tooltip" data-placement="right">
+                    <button type="button" class="posnic-rail-action posnic-cashier-history-quicklink" id="posnic-cashier-history-quicklink"
+                        aria-label="Historique des ventes" title="Historique des ventes" data-toggle="tooltip" data-placement="right"
+                        onclick="window.location.hash='#/sales';">
                         <i class="feather icon-clock" aria-hidden="true"></i>
-                    </a>
-                    <a class="posnic-cashier-versements-quicklink" id="posnic-cashier-versements-quicklink"
-                        href="#/itemreport" role="button" aria-label="Versements"
-                        title="Versements" data-toggle="tooltip" data-placement="right"
-                        onclick="window.__posnicOpenVersements=true;window.__posnicOpenStockHealth=false;if((window.location.hash||'').toLowerCase().indexOf('itemreport')!==-1&&PosnicPro.itemreport&&PosnicPro.itemreport.activateCustomPanel)PosnicPro.itemreport.activateCustomPanel('versements');">
+                    </button>
+                    <button type="button" class="posnic-rail-action posnic-cashier-versements-quicklink" id="posnic-cashier-versements-quicklink"
+                        aria-label="Versements" title="Versements" data-toggle="tooltip" data-placement="right"
+                        onclick="window.__posnicOpenVersements=true;window.__posnicOpenStockHealth=false;if((window.location.hash||'').toLowerCase().indexOf('itemreport')!==-1&&PosnicPro.itemreport&&PosnicPro.itemreport.activateCustomPanel)PosnicPro.itemreport.activateCustomPanel('versements');else window.location.hash='#/itemreport';">
                         <i class="feather icon-credit-card" aria-hidden="true"></i>
-                    </a>
+                    </button>
                 </div>
                 <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
                     <div class="logobar">
