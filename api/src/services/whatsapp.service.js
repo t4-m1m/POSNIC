@@ -159,7 +159,15 @@ class WhatsAppService extends EventEmitter {
         }, 30000);
       }
 
-      socket.ev.on('creds.update', saveCreds);
+      // Serialize credential writes. A successful pairing is followed by a
+      // restart-required close; reconnect only after the pair-success creds
+      // have been durably written to disk.
+      let credsSavePromise = Promise.resolve();
+      socket.ev.on('creds.update', (update) => {
+        credsSavePromise = credsSavePromise
+          .then(() => saveCreds(update))
+          .catch((error) => console.warn('[WhatsApp] Could not persist credentials:', error.message));
+      });
       socket.ev.on('connection.update', (update) => {
         if (update.qr) {
           this.qrCodes.set(key, update.qr);
@@ -205,8 +213,9 @@ class WhatsAppService extends EventEmitter {
             this.connectionStatus.set(key, 'reconnecting');
             const existingTimer = this.reconnectTimers.get(key);
             if (existingTimer) clearTimeout(existingTimer);
-            const timer = setTimeout(() => {
+            const timer = setTimeout(async () => {
               this.reconnectTimers.delete(key);
+              await credsSavePromise;
               this.initializeClient(deviceId, branchId).catch((error) =>
                 console.warn('[WhatsApp] Reconnect failed:', error.message)
               );
