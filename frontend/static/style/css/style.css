@@ -30385,10 +30385,25 @@ html, body {
 }
 
 
-/* Keep ordinary scrollable pages close to the top of their content.
-   Preserve the existing spacing on viewport-locked cashier workspaces. */
-@media (min-width: 768px) {
-  .vertical-layout.page_loader:not(#sales_new):not(#dashboard):not(#items) .breadcrumbbar {
-    margin-top: 12px;
+/* Compact the start of document-scrolling pages.
+   #containerbar used to reserve a full viewport even when it contained only
+   the page heading, pushing the actual content below a large blank region.
+   Keep the fixed Sales/Payment workspace untouched. */
+.vertical-layout.page_loader:not(#sales_new) > #containerbar {
+  min-height: 0 !important;
+}
+.vertical-layout.page_loader:not(#sales_new) > #containerbar > .breadcrumbbar {
+  margin: 14px 30px 10px !important;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+@media (max-width: 767px) {
+  .vertical-layout.page_loader:not(#sales_new) > #containerbar {
+    min-height: 0 !important;
+  }
+  .vertical-layout.page_loader:not(#sales_new) > #containerbar > .breadcrumbbar {
+    margin: 12px 15px 8px !important;
+    padding-top: 8px;
+    padding-bottom: 8px;
   }
 }
