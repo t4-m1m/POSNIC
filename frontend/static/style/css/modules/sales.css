@@ -1594,3 +1594,18 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
 body > .modal-backdrop {
   z-index: 19990 !important;
 }
+
+
+/* POSNIC payment screen must own the interaction layer. */
+
+/* While the inline PAIEMENT card is active, the catalogue must not paint
+   above it or intercept clicks. The payment card itself is raised above the
+   catalogue stacking context; no payment or shortcut behavior is changed. */
+#sales_new:has(#tenderpage[style*="display: block"]) #items_view_hide {
+    visibility:hidden !important;
+    pointer-events:none !important;
+}
+#sales_new #tenderpage {
+    position:relative !important;
+    z-index:20020 !important;
+}
