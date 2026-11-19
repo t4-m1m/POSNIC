@@ -2410,12 +2410,12 @@ PosnicPro.sales = {
             $('.infobar-settings-sidebar-overlay').css({ background: 'none', position: 'relative' });
             $('#newsalespage').show();
         } else {
+            // Checkout is a dedicated screen: hide the complete sale workspace
+            // (catalogue, basket and customer area) while payment is open.
+            // The tender/payment view is the only visible workspace until closed.
+            $('#newsalespage').hide();
+            $('#items_view_hide').hide();
             $('#tenderpage').show();
-            // Keep the sale workspace mounted beside the payment sidebar. Hiding
-            // newsalespage also collapses the catalogue and removes the cashier's
-            // item/category/brand navigation while payment is open.
-            $('#newsalespage').show();
-            $('#items_view_hide').css('visibility', 'visible').show();
             PosnicPro.sales.bindTenderKeyboardShortcuts();
         }
         if (PosnicPro.sales.SaleAction === 'return') {
@@ -2423,9 +2423,12 @@ PosnicPro.sales = {
         } else {
             $('.cancel-save-hide-show').show();
         }
-        // Keep the sale workspace visible while the payment sidebar is open.
-        // Fast-pay already has its own branch above and keeps the normal sale view.
-        if (!fastPayRequested) $('#newsalespage').show();
+        // Normal checkout must remain payment-only. Fast-pay is the exception:
+        // it submits directly and keeps the sale workspace available.
+        if (!fastPayRequested) {
+            $('#newsalespage').hide();
+            $('#items_view_hide').hide();
+        }
         PosnicPro.sales.saleDoneTimer.stop();
         $('#tendered_subtotal').text($('#sales_new_subtotal').text());
         $('#tendered_discount').text($('#discount_sale_amount').text());
