@@ -12456,8 +12456,28 @@ document.addEventListener('keydown',function(event){if(event.key!=='F6'||event.r
           '<div class="modal-body"><input type="search" class="form-control mb-3" id="posnic-customer-picker-search" placeholder="Rechercher par nom ou téléphone" autocomplete="off">' +
           '<div class="posnic-customer-picker-list" id="posnic-customer-picker-list"><div class="p-3 text-muted">Chargement des clients…</div></div>' +
           '<div class="posnic-customer-debt-preview" id="posnic-customer-debt-preview">Survolez un client pour afficher ses dettes en cours.</div></div>' +
-          '<div class="modal-footer"><button type="button" class="btn btn-light" data-dismiss="modal">Annuler</button></div></div></div></div>';
+          '<div class="modal-footer"><button type="button" class="btn btn-primary" id="posnic-customer-picker-new"><i class="feather icon-user-plus mr-2"></i>Nouveau client</button><button type="button" class="btn btn-light" data-dismiss="modal">Annuler</button></div></div></div></div>';
         $('body').append(markup);
+        $(document).on('click.posnicCustomerPicker', '#posnic-customer-picker-new', function () {
+            var customerIdBefore = String($('#sales_new_customer_id').val() || '');
+            var $picker = $('#posnic-customer-picker');
+            // Close the picker before opening the creation dialog. If creation is
+            // cancelled, restore F5; if it succeeds, the new customer is selected.
+            $picker.one('hidden.bs.modal.posnicCustomerQuickCreate', function () {
+                var $quickCreate = $('#posnic-sales-quick-customer');
+                if (!$quickCreate.length || !PosnicPro.customers ||
+                    typeof PosnicPro.customers.openSalesQuickCreate !== 'function') {
+                    PosnicPro.sales.openCustomerPicker();
+                    return;
+                }
+                $quickCreate.one('hidden.bs.modal.posnicCustomerQuickCreate', function () {
+                    var customerIdAfter = String($('#sales_new_customer_id').val() || '');
+                    if (customerIdAfter === customerIdBefore) PosnicPro.sales.openCustomerPicker();
+                });
+                PosnicPro.customers.openSalesQuickCreate();
+            });
+            $picker.modal('hide');
+        });
         $(document).on('input.posnicCustomerPicker', '#posnic-customer-picker-search', function () { paintRows($(this).val()); });
         $(document).on('mouseenter.posnicCustomerPicker', '.posnic-customer-picker-row', function () { previewDebt($(this).data('id'), $(this).data('name')); });
         $(document).on('dblclick.posnicCustomerPicker', '.posnic-customer-picker-row', function () {
