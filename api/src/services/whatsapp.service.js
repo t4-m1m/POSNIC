@@ -76,6 +76,10 @@ class WhatsAppService extends EventEmitter {
     }
     const promise = (async () => {
       if (this.clients.has(key)) await this._destroySocket(key, false);
+      // Ignore and replace incomplete, never-registered pairing credentials.
+      if (!this.hasSavedSession(deviceId, branchId)) {
+        fs.rmSync(this._authDir(deviceId, branchId), { recursive: true, force: true });
+      }
       return this._connect(deviceId, branchId, null);
     })().finally(() => this.connecting.delete(key));
     this.connecting.set(key, promise);
@@ -247,7 +251,9 @@ class WhatsAppService extends EventEmitter {
   hasSavedSession(deviceId, branchId) {
     try {
       const creds = path.join(this._authDir(deviceId, branchId), 'creds.json');
-      return fs.existsSync(creds) && fs.statSync(creds).isFile();
+      if (!fs.existsSync(creds) || !fs.statSync(creds).isFile()) return false;
+      const saved = JSON.parse(fs.readFileSync(creds, 'utf8'));
+      return saved.registered === true;
     } catch (_) { return false; }
   }
 
