@@ -15874,13 +15874,7 @@ PosnicPro.sales.openZrTracking=function(){
   if(!window.JsBarcode){$.getScript('static/script/js/JsBarcode.all.min.js');}
   ensureZrTracking();
   var $zr=$('#posnic-zr-tracking');
-  $zr.appendTo(document.body).off('.posnicZrLayer')
-    .on('show.bs.modal.posnicZrLayer',function(){ $(this).appendTo(document.body); })
-    .on('shown.bs.modal.posnicZrLayer',function(){
-      var backdrops=document.querySelectorAll('.modal-backdrop');
-      if(backdrops.length)backdrops[backdrops.length-1].classList.add('posnic-zr-modal-backdrop');
-      this.style.zIndex='30050';
-    });
+  $zr.appendTo(document.body);
   $zr.modal('show');
   loadZrRows();
 };
