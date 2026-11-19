@@ -7979,3 +7979,7 @@ tr.s-doc-purchase-row:hover td { background: rgba(9, 105, 218, 0.05); }
 .variant-pop .vp-axis { pointer-events:auto !important; }
 .variant-pop .vp-row,
 .variant-pop .vp-axis { -webkit-tap-highlight-color:transparent; }
+
+/* Portalled POSNIC modals must sit above application sidebars and backdrops. */
+.modal.posnic-modal-portal { z-index:20050 !important; }
+.modal-backdrop.posnic-modal-backdrop { z-index:20040 !important; }
