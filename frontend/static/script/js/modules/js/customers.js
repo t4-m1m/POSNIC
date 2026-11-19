@@ -11,7 +11,9 @@ PosnicPro.customers = {
         $('#posnic-sales-quick-customer-form')[0].reset();
         $('#posnic_quick_customer_price_tier').val('1');
         $('#posnic_quick_customer_error').hide().text('');
-        $('#posnic-sales-quick-customer').modal('show');
+        // Bootstrap modals must be direct children of body, not nested inside
+        // the sales workspace's transformed/overflow layout.
+        $('#posnic-sales-quick-customer').addClass('posnic-modal-portal').appendTo(document.body).modal('show');
         window.setTimeout(function () { $('#posnic_quick_customer_name').trigger('focus'); }, 180);
     },
     saveSalesQuickCreate: function () {
