@@ -2423,7 +2423,9 @@ PosnicPro.sales = {
         } else {
             $('.cancel-save-hide-show').show();
         }
-        if (!fastPayRequested) $('#newsalespage').hide();
+        // Keep the sale workspace visible while the payment sidebar is open.
+        // Fast-pay already has its own branch above and keeps the normal sale view.
+        if (!fastPayRequested) $('#newsalespage').show();
         PosnicPro.sales.saleDoneTimer.stop();
         $('#tendered_subtotal').text($('#sales_new_subtotal').text());
         $('#tendered_discount').text($('#discount_sale_amount').text());
