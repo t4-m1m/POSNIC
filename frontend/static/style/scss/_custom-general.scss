@@ -106,9 +106,14 @@ code {
 }
 .rightbar {
   margin-left: 280px;
-  overflow: hidden;
+  /* Ordinary modules must expand the document instead of being clipped at
+     the viewport. The four fixed cashier workspaces opt into clipping in
+     the final page-scope rules in style.scss. */
+  height: auto;
+  max-height: none;
+  overflow: visible;
   min-height: 500px;
-  transition: all 0.3s ease;
+  transition: margin-left 0.3s ease;
 }
 .contentbar{
     padding: 30px;
