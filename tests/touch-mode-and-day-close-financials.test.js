@@ -64,3 +64,12 @@ test('cash expected for the day subtracts only cash salary payments and active c
   assert.match(controller, /const cashExpected = roundToTwo\(salesCash \+ deliveryPayoutCash - expensesTotal - salaryCash - advanceCash - primeCash\);/);
   assert.match(controller, /branch_id: branchObjectId,[\s\S]{0,100}is_deleted: \{ \$ne: true \}/);
 });
+
+
+test('cashier selector stays above the checkout overlay and catalogue variant picker closes before payment', () => {
+  const sales = read('frontend/static/script/js/modules/js/sales.js');
+  assert.match(sales, /openTenderModel: function \(methodsReady, focusTender\) \{[\s\S]{0,550}itemsMenu\.variantPop\.close\(\)/);
+  assert.match(sales, /\$modal\.appendTo\(document\.body\)\.css\('z-index', '20020'\)/);
+  assert.match(sales, /backdrops\[backdrops\.length - 1\]\.style\.zIndex = '20010'/);
+  assert.match(sales, /shown\.bs\.modal\.cashierLayer/);
+});
