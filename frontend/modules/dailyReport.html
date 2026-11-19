@@ -215,15 +215,9 @@
 }
 
 
-/* The application shell clips tall report pages; make this route the scroll owner. */
-body.posnic-dayclose-report-active .rightbar {
-  height:100vh !important; min-height:0 !important;
-  overflow-x:hidden !important; overflow-y:auto !important;
-  overscroll-behavior-y:contain;
-}
-body.posnic-dayclose-report-active #containerbar,
-body.posnic-dayclose-report-active #dailyreport_new,
-body.posnic-dayclose-report-active #dailyreport_new .contentbar {
+/* The report remains in normal document flow and scrolls with the page. */
+#dailyreport_new,
+#dailyreport_new .contentbar {
   height:auto !important; min-height:0 !important; max-height:none !important;
   overflow:visible !important;
 }

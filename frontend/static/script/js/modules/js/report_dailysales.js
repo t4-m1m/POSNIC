@@ -1423,14 +1423,7 @@ function initDayCloseStudio(){
  $('#dc-studio-agenda').off('click.posnicDayCloseStudio').on('click.posnicDayCloseStudio','.dc-agenda-day[data-date]',function(){loadDay($(this).data('date'));});
  if(PosnicPro.quickreport&&PosnicPro.quickreport.lastReport){reportCache=PosnicPro.quickreport.lastReport;render();historySave();renderAgenda();}else{loadDay(iso(new Date()));}
 }
-function syncDayClosePageScroll(){
- var root=document.getElementById('dailyreport_new'),active=!!(root&&(root.offsetWidth||root.offsetHeight||root.getClientRects().length)&&window.getComputedStyle(root).display!=='none');
- if(document.body)document.body.classList.toggle('posnic-dayclose-report-active',active);
-}
 function watchDayCloseStudio(){
- syncDayClosePageScroll();
- var reportRoot=document.getElementById('dailyreport_new');
- if(reportRoot&&!window.__posnicDayCloseRootObserver&&window.MutationObserver){window.__posnicDayCloseRootObserver=new MutationObserver(syncDayClosePageScroll);window.__posnicDayCloseRootObserver.observe(reportRoot,{attributes:true,attributeFilter:['style','class']});}
  initDayCloseStudio();
  if(window.MutationObserver&&document.body&&!window.__posnicDayCloseStudioObserver){
   window.__posnicDayCloseStudioObserver=new MutationObserver(function(){initDayCloseStudio();});
@@ -1438,7 +1431,7 @@ function watchDayCloseStudio(){
  }
 }
 $(function(){watchDayCloseStudio();});
-$(window).off('hashchange.posnicDayCloseStudio').on('hashchange.posnicDayCloseStudio',function(){watchDayCloseStudio();syncDayClosePageScroll();});
+$(window).off('hashchange.posnicDayCloseStudio').on('hashchange.posnicDayCloseStudio',function(){watchDayCloseStudio();});
 $(document).off('dayCloseReportUpdated.posnicDayCloseStudio').on('dayCloseReportUpdated.posnicDayCloseStudio',function(e,report){
  if(!report)return;reportCache=report;
  if($('#day-close-ticket-tools').length){render();historySave();renderAgenda();$('#dc-agenda-status').text('Rapport chargé pour '+iso(selectedDate)+'. Aperçu actualisé avec les données disponibles.');loadingDay=false;}

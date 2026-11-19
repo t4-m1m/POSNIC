@@ -30323,3 +30323,47 @@ table.focus-on tfoot tr.focused td {
     display: none !important;
   }
 }
+
+
+/* Normal application pages use document scrolling. The sales till and its
+   dedicated payment/item workspaces keep their own viewport layout. */
+.rightbar {
+  overflow: visible !important;
+}
+
+
+/* Item creation and modification are the other fixed cashier workspaces:
+   keep their tabbed form and sticky save area inside the viewport. */
+@media (min-width: 768px) {
+  html:has(#items_new:not([style*="display: none"])),
+  body:has(#items_new:not([style*="display: none"])) {
+    height:100% !important;
+    overflow:hidden !important;
+  }
+  .rightbar:has(#items_new:not([style*="display: none"])) {
+    height:calc(100vh - var(--titlebar-h, 44px)) !important;
+    max-height:calc(100vh - var(--titlebar-h, 44px)) !important;
+    overflow:hidden !important;
+  }
+  #items_new {
+    display:flex !important;
+    flex-direction:column !important;
+    height:100% !important;
+    max-height:100% !important;
+    min-height:0 !important;
+    overflow:hidden !important;
+  }
+  #items_new > #containerbar { flex:0 0 auto !important; }
+  #items_new > .contentbar {
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    overflow:hidden !important;
+  }
+  #items_new form.item_add,
+  #items_new form.item_add > .row,
+  #items_new .loader-item {
+    height:100% !important;
+    min-height:0 !important;
+    overflow:hidden !important;
+  }
+}
