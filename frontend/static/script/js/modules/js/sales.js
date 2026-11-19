@@ -13875,7 +13875,7 @@ PosnicPro.sales.setPaymentWhatsAppButtonLoading = function (label) {
         $button.data('posnic-original-html', $button.html());
     }
     $button.prop('disabled', true).attr('aria-busy', 'true')
-        .html('<i class="feather icon-loader mr-2"></i>' + String(label || 'Envoi WhatsApp…'));
+        .html('<i class="feather icon-loader fa-spin mr-2"></i>' + String(label || 'Envoi WhatsApp…'));
 };
 
 PosnicPro.sales.restorePaymentWhatsAppButton = function () {
