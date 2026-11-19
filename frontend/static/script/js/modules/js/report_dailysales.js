@@ -1,3 +1,16 @@
+
+// Report popups (including ZR Express delivery dialogs) must escape report
+// containers that create stacking contexts or clip their modal/backdrop.
+if (!document.__posnicReportModalPortalBound) {
+  document.__posnicReportModalPortalBound = true;
+  $(document).on('show.bs.modal.posnicReportModalPortal', '.modal', function () {
+    $(this).addClass('posnic-modal-portal').appendTo(document.body);
+  });
+  $(document).on('shown.bs.modal.posnicReportModalPortal', '.modal', function () {
+    $('.modal-backdrop').last().addClass('posnic-modal-backdrop');
+  });
+}
+
 PosnicPro.quickreport = {
   meal: 'full',
   chooseRange: function (preset) {
