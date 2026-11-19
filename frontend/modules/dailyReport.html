@@ -187,6 +187,33 @@
 #day-close-ticket-tools .dc-history-row button{white-space:nowrap}
 @media(max-width:1024px){#day-close-ticket-tools .dc-studio-layout{grid-template-columns:minmax(0,1fr)}#day-close-ticket-tools .dc-studio-paper{width:80mm;max-width:100%}}
 @media print{body.dc-print-dayclose *{visibility:hidden!important}body.dc-print-dayclose #day-close-ticket-preview,body.dc-print-dayclose #day-close-ticket-preview *{visibility:visible!important}body.dc-print-dayclose #day-close-ticket-preview{position:absolute;left:0;top:0;width:72mm;box-shadow:none;margin:0;padding:0}}
+
+/* Reports page: keep the complete A4 report in document flow and scrollable. */
+#dailyreport_new,
+#dailyreport_new #containerbar,
+#dailyreport_new .contentbar {
+  height:auto !important; min-height:0 !important; max-height:none !important;
+  overflow:visible !important;
+}
+#dailyreport_new { position:relative !important; display:block !important; padding-bottom:28px !important; }
+#dailyreport_new .dc-studio-layout {
+  display:grid !important;
+  grid-template-columns:minmax(280px,1fr) minmax(260px,380px) !important;
+  align-items:start !important; gap:18px !important; min-width:0 !important;
+}
+#dailyreport_new .dc-studio-history,
+#dailyreport_new .dc-studio-preview-area {
+  display:block !important; min-width:0 !important;
+  max-height:none !important; overflow:visible !important;
+}
+#dailyreport_new #day-close-ticket-preview {
+  max-width:80mm !important; min-height:220px !important;
+  height:auto !important; overflow:visible !important;
+}
+@media (max-width:1024px) {
+  #dailyreport_new .dc-studio-layout { grid-template-columns:minmax(0,1fr) !important; }
+}
+
 </style>
     <!-- Start Contentbar -->
     <div class="contentbar">
