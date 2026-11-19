@@ -114,3 +114,75 @@
 @import "custom-tour";
 @import "custom-widgets";
 @import "custom-responsive";
+
+/* Page scrolling policy.
+   The rightbar is the document-flow container for ordinary modules: never
+   clip it to the viewport. Only Sales/Payment and the Add/Edit Item editor
+   opt into a viewport-sized workspace on desktop. */
+html, body {
+  height: auto;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+#containerbar {
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+}
+.rightbar {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+@media (min-width: 768px) {
+  /* Sales and its Payment screen share #sales_new. */
+  html:has(.vertical-layout.page_loader#sales_new:not([style*="display: none"]):not([style*="display:none"])),
+  body:has(.vertical-layout.page_loader#sales_new:not([style*="display: none"]):not([style*="display:none"])) {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .rightbar:has(.vertical-layout.page_loader#sales_new:not([style*="display: none"]):not([style*="display:none"])) {
+    height: calc(100vh - var(--titlebar-h, 0px));
+    max-height: calc(100vh - var(--titlebar-h, 0px));
+    overflow: hidden;
+  }
+
+  /* Add Item and Edit Item are the standalone #items_new page loader.
+     Do not scope this to #items (the catalogue/list page). */
+  html:has(.vertical-layout.page_loader#items_new:not([style*="display: none"]):not([style*="display:none"])),
+  body:has(.vertical-layout.page_loader#items_new:not([style*="display: none"]):not([style*="display:none"])) {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .rightbar:has(.vertical-layout.page_loader#items_new:not([style*="display: none"]):not([style*="display:none"])) {
+    display: block;
+    height: calc(100vh - var(--titlebar-h, 0px));
+    max-height: calc(100vh - var(--titlebar-h, 0px));
+    overflow: hidden;
+  }
+  #items_new {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+  #items_new > #containerbar { flex: 0 0 auto; }
+  #items_new > .contentbar {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+  #items_new form.item_add,
+  #items_new form.item_add > .row,
+  #items_new .loader-item {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+}
