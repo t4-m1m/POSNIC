@@ -30383,3 +30383,12 @@ html, body {
     overflow:hidden !important;
   }
 }
+
+
+/* Keep ordinary scrollable pages close to the top of their content.
+   Preserve the existing spacing on viewport-locked cashier workspaces. */
+@media (min-width: 768px) {
+  .vertical-layout.page_loader:not(#sales_new):not(#dashboard):not(#items) .breadcrumbbar {
+    margin-top: 12px;
+  }
+}
