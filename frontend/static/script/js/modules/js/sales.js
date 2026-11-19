@@ -9102,7 +9102,8 @@ PosnicPro.sales.brandMenu = {
                 return;
             }
             var data = response.data || {};
-            var rows = Array.isArray(data.items) ? data.items : [];
+            // Accept both legacy array responses and the paginated { items } envelope.
+            var rows = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : (Array.isArray(data.data) ? data.data : []));
             var brands = [], seen = Object.create(null);
             rows.forEach(function (item) {
                 var brand = String(item.brand || '').trim();
@@ -9201,8 +9202,8 @@ PosnicPro.sales.recentMenu = {
     /*Touchsale recent Sales details*/
     salesList: function () {
         PosnicPro.sales._catalogueGeneration = (PosnicPro.sales._catalogueGeneration || 0) + 1;
-        var loader = $(".loader-product");
-        $("<div class='loadingSpinner'></div>").appendTo(loader);
+        var loader = $("#sales_new_productList");
+        var recentSpinner = $("<div class='loadingSpinner'></div>").appendTo(loader);
         $('#sales_new_productList').show();
         $('#sales_new_categoryList, #sales_new_brandList').hide();
         $('#item-lists').remove();
@@ -9211,8 +9212,9 @@ PosnicPro.sales.recentMenu = {
         PosnicPro.get('sales/getLatestSales', function (response) {
             if (response.type === 'success') {
                 PosnicPro.sales.recentSaleAction = true;
-                loader.find(".loadingSpinner:first").remove();
-                var item_data = jQuery.parseJSON(response.data);
+                recentSpinner.remove();
+                var item_data = Array.isArray(response.data) ? response.data : (typeof response.data === 'string' ? (function () { try { return JSON.parse(response.data); } catch (e) { return []; } })() : []);
+                if (!Array.isArray(item_data)) item_data = [];
                 var currency = PosnicPro.local.get('currencySign');
                 var esc = function (v) { return $('<i>').text(v == null ? '' : v).html(); };
                 var ago = function (d) {
@@ -9276,8 +9278,11 @@ PosnicPro.sales.recentMenu = {
                 PosnicPro.alert(response.type, response.message);
             }
         }, function (xhr) {
-            var response = jQuery.parseJSON(xhr.responseText);
-            PosnicPro.alert(response.type, response.message);
+            recentSpinner.remove();
+            var response = {};
+            try { response = JSON.parse(xhr && xhr.responseText || '{}'); } catch (e) { /* keep fallback */ }
+            $('#recent_sales_list').html('<div class="text-center text-danger p-3">Could not load recent sales. Please try again.</div>');
+            PosnicPro.alert(response.type || 'error', response.message || 'Could not load recent sales.');
         });
     },
     editItems: function (id, data, sale) {
