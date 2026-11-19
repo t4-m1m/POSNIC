@@ -21174,13 +21174,14 @@ html.is-electron .topbar { top: var(--titlebar-h, 44px); }
   margin-top: -1px;
 }
 
-#sales_new .breadcrumbbar,
-#dashboard .breadcrumbbar {
+/* Sales keeps its established cashier header spacing. Scrollable pages
+   use a compact heading offset instead of a large viewport-sized top gap. */
+#sales_new .breadcrumbbar {
   margin-top: 100px;
 }
 
 .breadcrumbbar {
-  margin: 75px 30px 0 30px;
+  margin: 18px 30px 12px 30px;
 }
 
 .breadcrumbbar .page-title {
@@ -30214,8 +30215,8 @@ table.focus-on tfoot tr.focused td {
   }
 
   .breadcrumbbar {
-    margin: 100px 0 0 0;
-    padding: 20px 0 20px 0;
+    margin: 12px 15px 8px 15px;
+    padding: 8px 0;
   }
 
   .breadcrumbbar .page-title {
@@ -30336,7 +30337,7 @@ html, body {
 }
 #containerbar {
   height: auto !important;
-  min-height: 100vh !important;
+  min-height: 0 !important;
   overflow: visible !important;
 }
 .rightbar {
@@ -30381,29 +30382,5 @@ html, body {
     height:100% !important;
     min-height:0 !important;
     overflow:hidden !important;
-  }
-}
-
-
-/* Compact the start of document-scrolling pages.
-   #containerbar used to reserve a full viewport even when it contained only
-   the page heading, pushing the actual content below a large blank region.
-   Keep the fixed Sales/Payment workspace untouched. */
-.vertical-layout.page_loader:not(#sales_new) > #containerbar {
-  min-height: 0 !important;
-}
-.vertical-layout.page_loader:not(#sales_new) > #containerbar > .breadcrumbbar {
-  margin: 14px 30px 10px !important;
-  padding-top: 8px;
-  padding-bottom: 8px;
-}
-@media (max-width: 767px) {
-  .vertical-layout.page_loader:not(#sales_new) > #containerbar {
-    min-height: 0 !important;
-  }
-  .vertical-layout.page_loader:not(#sales_new) > #containerbar > .breadcrumbbar {
-    margin: 12px 15px 8px !important;
-    padding-top: 8px;
-    padding-bottom: 8px;
   }
 }
