@@ -288,6 +288,23 @@ function companionReportPeriod(req) {
   const period = require('../helpers/daily-report-period').dailyReportPeriod({ starting_date, ending_date }, timezone);
   return { period, start: period.start, end: period.end };
 }
+router.get('/reports/purchases', async (req, res) => {
+  try {
+    if (!ownerAllowed(req.companion.user)) return fail(res, 403, 'Accès aux rapports réservé au propriétaire ou responsable.');
+    const c = req.companion, timezone = c.branch.time_zone || process.env.DEFAULT_TIMEZONE || 'UTC';
+    const moment = require('moment-timezone'), today = moment().tz(moment.tz.zone(timezone) ? timezone : 'UTC').format('YYYY-MM-DD');
+    const reportReq = Object.create(req);
+    Object.defineProperty(reportReq, 'query', { value: Object.assign({}, req.query, {
+      branch: sid(c.branchId),
+      starting_date: req.query.starting_date || today,
+      ending_date: req.query.ending_date || req.query.starting_date || today
+    }), writable: true, configurable: true });
+    return require('../controllers/receivings.controller').receivingsGraphicalReports(reportReq, res);
+  } catch (error) {
+    console.error('[Samarina Companion] purchase report failed:', error);
+    return fail(res, 500, 'Impossible de charger le rapport des achats.');
+  }
+});
 router.get('/reports/tickets', async (req, res) => {
   try {
     if (!ownerAllowed(req.companion.user)) return fail(res, 403, 'Accès aux rapports réservé au propriétaire ou responsable.');
