@@ -1,1 +1,14 @@
-{"name":"POSNIC Mobile","short_name":"POSNIC","start_url":"/mobile/","display":"standalone","background_color":"#f7f9fc","theme_color":"#2563eb","icons":[]}
+{
+  "id": "/mobile/",
+  "name": "POSNIC Web Companion",
+  "short_name": "POSNIC",
+  "description": "Catalogue and stock receiving for your POSNIC shop",
+  "start_url": "/mobile/",
+  "scope": "/mobile/",
+  "display": "standalone",
+  "background_color": "#f7f9fc",
+  "theme_color": "#155eef",
+  "icons": [
+    { "src": "/mobile/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
