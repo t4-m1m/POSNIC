@@ -34,8 +34,17 @@ const branchFilter = branchId => ({ branch_id: oid(branchId) || branchId });
 const licenseFilter = license => license ? { license: oid(license) || license } : {};
 const bearer = req => {
   const value = String(req.headers.authorization || '');
-  return /^Bearer\s+/i.test(value) ? value.replace(/^Bearer\s+/i, '').trim() : '';
+  if (/^Bearer\s+/i.test(value)) return value.replace(/^Bearer\s+/i, '').trim();
+  const cookies = String(req.headers.cookie || '');
+  const match = cookies.match(/(?:^|;\\s*)samarina_companion=([^;]+)/);
+  try { return match ? decodeURIComponent(match[1]) : ''; } catch (_) { return ''; }
 };
+function setCompanionCookie(res, req, token, maxAgeSeconds) {
+  const secure = req.secure || String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';
+  const parts = ['samarina_companion=' + encodeURIComponent(token || ''), 'Path=/api/samarina/v1', 'HttpOnly', 'SameSite=Lax', 'Max-Age=' + Math.max(0, Number(maxAgeSeconds) || 0)];
+  if (secure) parts.push('Secure');
+  res.append('Set-Cookie', parts.join('; '));
+}
 async function findBranch(req, branchId) {
   const query = { _id: oid(branchId) || branchId };
   if (req.user?.license) query.license = oid(req.user.license) || req.user.license;
@@ -57,6 +66,7 @@ router.post('/pair', async (req, res) => {
     if (!user || !branch || (grant.license && sid(user.license) !== sid(grant.license)) || !userCanAccessBranch(user, grant.branchId)) return fail(res, 403, 'Ce compte ou ce magasin n’est plus autorisé.');
     const token = crypto.randomBytes(36).toString('base64url');
     const expiresAt = new Date(Date.now() + 30 * 86400000);
+    setCompanionCookie(res, req, token, 30 * 86400);
     await req.db.collection('samarina_companion_sessions').insertOne({
       tokenHash: hash(token), userId: user._id, branchId: grant.branchId,
       license: grant.license || user.license || branch.license || null,
@@ -161,6 +171,7 @@ async function companionAuth(req, res, next) {
     req.user = user;
     const activityAt = new Date();
     await sessions.updateOne({ _id: session._id }, { $set: { lastSeenAt: activityAt, expiresAt: new Date(activityAt.getTime() + 30 * 86400000) } });
+    if (bearer(req)) setCompanionCookie(res, req, bearer(req), 30 * 86400);
     return runWithRequestContext({
       currentBranch: session.branchId,
       currentBranchName: branch.branch_name || branch.name || '',
@@ -214,6 +225,7 @@ router.get('/bootstrap', (req, res) => {
 });
 router.post('/logout', async (req, res) => {
   await req.db.collection('samarina_companion_sessions').updateOne({ _id: req.companion.session._id }, { $set: { revokedAt: new Date() } });
+  setCompanionCookie(res, req, '', 0);
   res.json({ ok: true });
 });
 router.post('/expenses/quick', async (req, res) => {

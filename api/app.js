@@ -813,6 +813,10 @@ app.get('/', (req, res, next) => {
 // Express's default non-strict routing makes '/mobile' also match '/mobile/'.
 // Match only the slashless URL, otherwise the canonical redirect loops forever.
 app.get(/^\/mobile$/, (_req, res) => res.redirect(308, '/mobile/'));
+app.get(/^\\/mobile\\/login\\/?$/, (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.sendFile(path.join(SAMARINA_COMPANION_DIR, 'login.html'));
+});
 app.use('/mobile', express.static(SAMARINA_COMPANION_DIR, {
   index: 'index.html',
   fallthrough: true,

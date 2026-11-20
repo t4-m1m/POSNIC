@@ -10,14 +10,8 @@
 <body>
 <div class="shell">
 <header class="top"><a class="brand" href="/mobile/"><span class="brand-mark">S</span><span><b>SAMARINA</b><small>COMPANION</small></span></a><div class="top-right"><span id="network" class="network">Connexion…</span><button id="quick-expense-open" class="icon-btn" hidden>＋ Dépense</button><button id="logout" class="icon-btn" hidden>Déconnexion</button></div></header>
-<section id="connect" class="connect">
-  <div class="connect-card"><span class="eyebrow">ACCÈS MAGASIN SÉCURISÉ</span><h1>Votre magasin, dans votre poche.</h1>
-  <p>Connectez ce téléphone au serveur Samarina de votre magasin. Le code est à usage unique et le téléphone reste associé après une coupure Wi-Fi.</p>
-  <form id="pair-form"><label>Adresse du serveur<input id="server" type="url" placeholder="http://192.168.1.10:5555" required></label><label>Code de jumelage<input id="code" maxlength="14" autocomplete="one-time-code" placeholder="XXXX-XXXX-XXXX" required></label><button class="primary full">Connecter le téléphone</button></form>
-  <p id="connect-error" class="error"></p><div class="hint">Scannez le QR code depuis Paramètres → Compagnon Samarina, ou saisissez le code affiché sur le PC.</div>
-  </div>
-</section>
-<main id="workspace" hidden>
+
+<main id="workspace">
 <section class="welcome"><div><span class="eyebrow">ESPACE MAGASIN</span><h1 id="hello">Bonjour</h1><p id="branch">Votre magasin</p></div><span class="live"><i></i> <span id="live-text">En ligne</span></span></section>
 <nav class="tabs" aria-label="Fonctions du compagnon">
 <button class="tab active" data-tab="catalogue">Catalogue</button><button class="tab" data-tab="basket">Panier <span id="basket-badge" class="basket-badge" hidden>0</span></button><button class="tab" data-tab="items">Articles</button><button class="tab owner-only" data-tab="dashboard" hidden>Tableau de bord</button><button class="tab owner-only" data-tab="owner" hidden>Propriétaire</button>
