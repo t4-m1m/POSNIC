@@ -12,6 +12,13 @@ const oid = value => ObjectId.isValid(String(value || '')) ? new ObjectId(String
 const sid = value => value == null ? '' : String(value);
 const activeBranchId = req => req.tenantContext?.branchId || req.session?.selectedBranchId || req.session?.branch_id || req.user?.branch_id || req.user?.branch?._id || req.user?.default_branch_id || req.user?.branch_access?.[0]?.branch_id;
 const fail = (res, status, message) => res.status(status).json({ error: { message } });
+function userCanAccessBranch(user, branchId) {
+  const target = sid(branchId);
+  const role = String(user?.usertype || user?.user_type || user?.role || '').toLowerCase();
+  if (['super_admin', 'superadmin', 'super admin'].includes(role)) return true;
+  if ([user?.branch_id, user?.branch, user?.default_branch_id].some(value => sid(value?._id || value) === target)) return true;
+  return Array.isArray(user?.branch_access) && user.branch_access.some(entry => sid(entry?.branch_id || entry?._id) === target);
+}
 const ownerAllowed = user => {
   const role = String(user?.usertype || user?.user_type || user?.role || '').toLowerCase();
   return ['owner','admin','administrator','manager','superadmin','super_admin','super admin'].includes(role) || user?.access?.settings?.write === true || user?.access?.branch?.write === true;
@@ -40,7 +47,7 @@ router.post('/pair', async (req, res) => {
     if (!grant?.userId || !grant?.branchId) return fail(res, 401, 'Code expiré ou déjà utilisé. Générez un nouveau QR code sur le PC.');
     const user = await req.db.collection('users').findOne({ _id: grant.userId, activate: true });
     const branch = await req.db.collection('branches').findOne({ _id: grant.branchId });
-    if (!user || !branch || (grant.license && sid(user.license) !== sid(grant.license))) return fail(res, 403, 'Ce compte ou ce magasin n’est plus autorisé.');
+    if (!user || !branch || (grant.license && sid(user.license) !== sid(grant.license)) || !userCanAccessBranch(user, grant.branchId)) return fail(res, 403, 'Ce compte ou ce magasin n’est plus autorisé.');
     const token = crypto.randomBytes(36).toString('base64url');
     const expiresAt = new Date(Date.now() + 30 * 86400000);
     await req.db.collection('samarina_companion_sessions').insertOne({
@@ -139,7 +146,7 @@ async function companionAuth(req, res, next) {
     if (!session) return fail(res, 401, 'Session expirée. Reconnectez le téléphone depuis Paramètres.');
     const user = await req.db.collection('users').findOne({ _id: session.userId, activate: true });
     const branch = await req.db.collection('branches').findOne({ _id: session.branchId });
-    if (!user || !branch) return fail(res, 403, 'Accès au magasin retiré.');
+    if (!user || !branch || !userCanAccessBranch(user, session.branchId)) return fail(res, 403, 'Accès au magasin retiré.');
     req.companion = { session, user, branch, branchId: session.branchId };
     req.user = user;
     await sessions.updateOne({ _id: session._id }, { $set: { lastSeenAt: new Date() } });
