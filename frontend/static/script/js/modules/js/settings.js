@@ -10380,7 +10380,7 @@ $(document).on('click', '#v-pills-companion-tab', function (e) {
 });
 
 window.addEventListener('message', function (event) {
-    var frames = ['mobile_pos_frame', 'branch_payments_frame'].map(function (id) { return document.getElementById(id); });
+    var frames = ['mobile_pos_frame', 'mobile_companion_frame', 'branch_payments_frame'].map(function (id) { return document.getElementById(id); });
     if (!frames.some(function (frame) { return frame && frame.contentWindow === event.source && frame.src && new URL(frame.src, location.href).origin === event.origin; })) return;
     var data = event.data || {};
     if (data.type !== 'posnic-settings-nav' || ['modules', 'devices', 'branchpayments'].indexOf(data.section) < 0) return;
