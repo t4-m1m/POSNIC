@@ -267,12 +267,13 @@ router.get('/reports', async (req, res) => {
     const timezone = c.branch.time_zone || process.env.DEFAULT_TIMEZONE || 'UTC';
     const moment = require('moment-timezone');
     const today = moment().tz(moment.tz.zone(timezone) ? timezone : 'UTC').format('YYYY-MM-DD');
-    req.query = Object.assign({}, req.query, {
+    const reportReq = Object.create(req);
+    Object.defineProperty(reportReq, 'query', { value: Object.assign({}, req.query, {
       branch: sid(c.branchId), type: 'VIEW',
       starting_date: req.query.starting_date || today,
       ending_date: req.query.ending_date || req.query.starting_date || today
-    });
-    return require('../controllers/sales.controller').dailySalesReports(req, res);
+    }), writable: true, configurable: true });
+    return require('../controllers/sales.controller').dailySalesReports(reportReq, res);
   } catch (error) {
     console.error('[Samarina Companion] reports failed:', error);
     return fail(res, 500, 'Impossible de charger les rapports POSNIC.');
