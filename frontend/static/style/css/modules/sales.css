@@ -1240,7 +1240,35 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
   #sales_new .sales-function-shortcuts button,
   #sales_new button,
   #sales_new a { position: relative; z-index: 2; }
-  #sales_new .sales-function-toolbar-placeholder { display: none !important; }
+  /* The F-key toolbar is fixed to the viewport, so its measured spacer must
+     remain a real flex row inside contentbar. Hiding it made the scanner,
+     catalogue and basket start underneath the pinned toolbar. */
+  #sales_new > .contentbar > .sales-function-toolbar-placeholder {
+    display: block !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    pointer-events: none !important;
+  }
+  #sales_new #touchsales_page > #posnic-multi-baskets-header-host {
+    display: block !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 40px !important;
+    overflow: visible !important;
+  }
+  #sales_new #posnic-multi-baskets-header-host #posnic-multi-baskets {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    min-height: 40px !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
 
   /* Popups overlay the sales workspace; keep the catalogue visible underneath. */
   #sales_new .sales-customer-entry,

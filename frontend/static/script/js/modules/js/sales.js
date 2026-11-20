@@ -145,7 +145,7 @@ PosnicPro.sales = {
             toolbar.style.right = 'auto';
             toolbar.style.width = width + 'px';
             toolbar.style.margin = '0';
-            toolbar.style.zIndex = '1020';
+            toolbar.style.zIndex = '8';
             toolbar.style.pointerEvents = 'auto';
             toolbar.style.boxSizing = 'border-box';
             document.body.classList.add('posnic-sales-toolbar-active');
