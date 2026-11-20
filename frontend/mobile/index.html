@@ -20,7 +20,7 @@
 <main id="workspace" hidden>
 <section class="welcome"><div><span class="eyebrow">ESPACE MAGASIN</span><h1 id="hello">Bonjour</h1><p id="branch">Votre magasin</p></div><span class="live"><i></i> <span id="live-text">En ligne</span></span></section>
 <nav class="tabs" aria-label="Fonctions du compagnon">
-<button class="tab active" data-tab="catalogue">Catalogue</button><button class="tab" data-tab="receiving">Réception</button><button class="tab" data-tab="items">Articles</button><button class="tab owner-only" data-tab="dashboard" hidden>Tableau de bord</button><button class="tab owner-only" data-tab="owner" hidden>Propriétaire</button>
+<button class="tab active" data-tab="catalogue">Catalogue</button><button class="tab" data-tab="basket">Panier <span id="basket-badge" class="basket-badge" hidden>0</span></button><button class="tab" data-tab="items">Articles</button><button class="tab owner-only" data-tab="dashboard" hidden>Tableau de bord</button><button class="tab owner-only" data-tab="owner" hidden>Propriétaire</button>
 </nav>
 <section id="page-catalogue" class="page active">
 <div class="heading"><div><h2>Prix & disponibilité</h2><p>Recherchez par nom, référence ou code-barres.</p></div><span class="glyph">⌕</span></div>
@@ -28,14 +28,7 @@
 <div class="actions"><button class="secondary" id="scan-catalogue">Scanner un code-barres</button><button class="secondary" id="refresh">Actualiser</button></div>
 <div id="catalogue-results" class="results empty">Le catalogue du magasin s’affichera ici.</div>
 </section>
-<section id="page-receiving" class="page">
-<div class="heading"><div><h2>Réception de marchandises</h2><p>Scannez les articles reçus puis envoyez la liste au poste Achats.</p></div><span class="glyph">▣</span></div>
-<form id="receive-form" class="search"><input id="receive-code" placeholder="Code-barres ou référence" autocomplete="off" required><button class="primary">Ajouter +1</button></form>
-<div class="actions"><button class="secondary" id="scan-receiving">Scanner</button><button class="secondary" id="clear-queue">Vider la liste</button></div>
-<div id="receive-queue" class="results empty">Aucun article scanné.</div>
-<div class="queue-footer"><span id="queue-count">0 article</span><button id="send-queue" class="primary" disabled>Envoyer au poste Achats</button></div>
-<p id="receive-status" class="status"></p>
-</section>
+<section id="page-basket" class="page"><div class="heading"><div><h2>Mon panier</h2><p>Les articles scannés sont ajoutés directement ici.</p></div><span class="glyph">▣</span></div><form id="basket-form" class="search"><input id="basket-code" placeholder="Code-barres ou référence" autocomplete="off" required><button class="primary">Ajouter</button></form><div class="actions"><button class="secondary" id="scan-basket">Scanner et ajouter</button><button class="secondary" id="clear-basket">Vider le panier</button></div><div id="basket-items" class="results empty">Scannez un article pour commencer.</div><div class="basket-summary"><span id="basket-count">0 article</span><strong id="basket-total">0 DA</strong></div><p id="basket-status" class="status"></p></section>
 <section id="page-items" class="page">
 <div class="heading"><div><h2>Gestion des articles</h2><p>Créer un article ou modifier sa fiche et sa photo.</p></div><span class="glyph">✎</span></div>
 <button id="new-item" class="primary">＋ Nouvel article</button>
@@ -43,7 +36,7 @@
 <input id="item-id" type="hidden"><label>Nom de l’article *<input id="item-name" required maxlength="200"></label>
 <div class="two"><label>Prix de vente (DA) *<input id="item-price" type="number" min="0" step=".01" required></label><label>Code-barres<input id="item-barcode"></label></div>
 <label>SKU / Référence<input id="item-sku"></label>
-<label>Photo (caméra ou galerie)<input id="item-photo" type="file" accept="image/*" capture="environment"></label>
+<label>Photo depuis la galerie ou les fichiers<input id="item-photo" type="file" accept="image/*"></label>
 <label class="check"><input id="remove-photo" type="checkbox"> Supprimer la photo actuelle</label><p id="item-photo-state" class="muted"></p>
 <div class="actions"><button id="cancel-item" class="secondary" type="button">Annuler</button><button class="primary">Enregistrer</button></div><p id="item-error" class="error"></p>
 </form>
@@ -52,7 +45,7 @@
 </section>
 <section id="page-dashboard" class="page owner-only" hidden>
 <div class="heading"><div><h2>Vue propriétaire</h2><p>Indicateurs du jour, synchronisés avec le serveur du magasin.</p></div><button id="reload-dashboard" class="secondary">Actualiser</button></div>
-<div id="dashboard-cards" class="metrics"><div class="metric"><small>Chiffre d’affaires</small><b>—</b></div></div><p id="dashboard-error" class="error"></p>
+<div id="dashboard-cards" class="metrics"><div class="metric"><small>Chiffre d’affaires</small><b>—</b></div></div><div class="daily-report"><div class="daily-head"><div><h3>Rapport détaillé par jour</h3><p>Ventes, encaissements et dettes par date.</p></div><select id="daily-days"><option value="7">7 jours</option><option value="30" selected>30 jours</option><option value="90">90 jours</option></select></div><div id="daily-report" class="daily-list">Chargement…</div></div><p id="dashboard-error" class="error"></p>
 </section>
 <section id="page-owner" class="page owner-only" hidden>
 <div class="heading"><div><h2>Rapport Z WhatsApp</h2><p>Envoyez le récapitulatif de fermeture au propriétaire.</p></div></div>
@@ -61,9 +54,9 @@
 </section>
 <footer>Compagnon Samarina · Connexion locale sécurisée</footer>
 </main>
-<div id="camera" class="camera" hidden><div class="camera-card"><div class="camera-head"><b>Scanner</b><button id="close-camera" class="icon-btn">Fermer</button></div><video id="video" playsinline muted></video><p id="camera-status">Autorisez la caméra et pointez vers le code-barres.</p><button id="retry-camera" class="primary full" type="button" hidden>Réessayer l’autorisation</button></div></div>
-<input id="scan-image" type="file" accept="image/*" capture="environment" hidden>
+<div id="camera" class="camera" hidden><div class="camera-card"><div class="camera-head"><b>Scanner</b><button id="close-camera" class="icon-btn">Fermer</button></div><video id="video" playsinline muted></video><p id="camera-status">Pointez la caméra vers le code-barres. L’article sera ajouté automatiquement.</p><div class="scan-guide" aria-hidden="true"></div><button id="retry-camera" class="primary full" type="button" hidden>Réessayer l’autorisation</button></div></div>
+
 <div id="toast" class="toast" role="status"></div>
 </div>
-<script src="/mobile/app.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js" defer></script><script src="/mobile/app.js" defer></script>
 </body></html>

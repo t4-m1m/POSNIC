@@ -384,6 +384,33 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
+router.get('/dashboard/daily', async (req, res) => {
+  try {
+    if (!ownerAllowed(req.companion.user)) return fail(res, 403, 'Tableau de bord réservé au propriétaire ou administrateur.');
+    const days = Math.min(90, Math.max(1, Number(req.query.days) || 30));
+    const start = new Date(); start.setHours(0,0,0,0); start.setDate(start.getDate()-days+1);
+    const branchId = oid(req.companion.branchId) || req.companion.branchId;
+    const sales = await req.db.collection('sales').find({ branch_id: branchId, $or: [{created_date:{$gte:start}},{date:{$gte:start}}] }).limit(15000).toArray();
+    const grouped = new Map();
+    for (const sale of sales) {
+      const raw = sale.created_date || sale.date || sale.createdAt, date = raw ? new Date(raw) : null;
+      if (!date || Number.isNaN(date.getTime())) continue;
+      const key = [date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
+      if (!grouped.has(key)) grouped.set(key,{date:key,revenue:0,cash:0,electronic:0,debt:0,discounts:0,salesCount:0,voids:0});
+      const day=grouped.get(key),state=String(sale.sale_status||sale.status||'').toLowerCase();
+      if(state.includes('void')||state.includes('cancel')){day.voids++;continue;}
+      day.salesCount++;
+      const total=Number(sale.sales_total??sale.total??sale.grand_total??0)||0;day.revenue+=total;
+      const payments=Array.isArray(sale.payments)?sale.payments:[];let paid=0;
+      if(payments.length) payments.forEach(p=>{const method=String(p.method||'').toLowerCase(),amount=Number(p.amount||0);if(method==='cash')day.cash+=amount;else if(['card','tpe','bank_transfer','baridimob','baridi mob','baridi_mob'].includes(method))day.electronic+=amount;if(method!=='credit')paid+=amount;});
+      else {paid=Number(sale.paid_amount??sale.amount_paid??sale.total_paid??0)||0;const method=String(sale.payment_method||sale.payment_mode||'').toLowerCase();if(method==='cash')day.cash+=paid;else if(['card','tpe','bank_transfer','baridimob','baridi mob','baridi_mob'].includes(method))day.electronic+=paid;}
+      day.debt+=Math.max(0,Number(sale.payment_pending??sale.pending??(total-paid))||0);
+      day.discounts+=Number(sale.discount_amount??sale.discount??sale.discount_total??0)||0;
+    }
+    return res.json({days:Array.from(grouped.values()).sort((a,b)=>b.date.localeCompare(a.date)),period:days,currency:req.companion.branch.currency||'DA'});
+  } catch(error) { console.error('[Samarina Companion] daily dashboard report failed:',error); return fail(res,500,'Impossible de charger le rapport détaillé par jour.'); }
+});
+
 router.get('/owner/settings', async (req, res) => {
   if (!ownerAllowed(req.companion.user)) return fail(res, 403, 'Accès propriétaire requis.');
   const row = await req.db.collection('samarina_companion_settings').findOne({ branchId: oid(req.companion.branchId) || req.companion.branchId }) || {};
