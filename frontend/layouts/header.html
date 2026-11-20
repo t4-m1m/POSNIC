@@ -146,6 +146,14 @@
                             </div>
                         </div>
                     </li>
+                    <li class="list-inline-item mobile-hide" id="posnic-whatsapp-connector-wrap">
+                        <button type="button" id="posnic-whatsapp-connector" class="btn btn-sm btn-outline-success"
+                            style="font-weight:700;white-space:nowrap;"
+                            onclick="if(window.PosnicPro&&PosnicPro.whatsapp)PosnicPro.whatsapp.refreshSavedConnection();"
+                            title="Reconnect the saved WhatsApp linked device" aria-label="WhatsApp Connector">
+                            <i class="feather icon-message-circle mr-1" aria-hidden="true"></i> WhatsApp Connector
+                        </button>
+                    </li>
                     <li class="list-inline-item" id="posnic-cashier-day-close-wrap" style="display:none;">
                         <button type="button" id="posnic-cashier-day-close" class="btn btn-danger btn-sm" style="font-weight:700;white-space:nowrap;"><i class="feather icon-lock mr-1"></i> Fermeture de journée</button>
                     </li>

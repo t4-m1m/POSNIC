@@ -1113,12 +1113,19 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
     flex: 0 0 auto !important; min-height: 0 !important;
   }
   #sales_new #touchsales_page > #posnic-multi-baskets {
+    display: flex !important;
+    order: 1 !important;
+    position: relative !important;
     flex: 0 0 auto !important;
     min-height: 40px !important;
     min-width: 0 !important;
     max-width: 100% !important;
   }
-  #sales_new #touchsales_page > #sales-function-shortcuts { margin: 4px 0 8px !important; }
+  #sales_new #touchsales_page > #sales-function-shortcuts {
+    order: 2 !important;
+    flex: 0 0 auto !important;
+    margin: 4px 0 8px !important;
+  }
   #sales_new #touchsales_page > .row:has(#instance-view) {
     display: flex !important; flex: 1 1 0 !important; height: 0 !important;
     min-height: 0 !important; overflow: hidden !important;
@@ -1240,7 +1247,6 @@ a[href="#/sales/new"]:not(#posnic-new-sale-quicklink){display:none!important;}
   #sales_new .sales-function-shortcuts button,
   #sales_new button,
   #sales_new a { position: relative; z-index: 2; }
-  #sales_new .sales-function-toolbar-placeholder { display: none !important; }
 
   /* Popups overlay the sales workspace; keep the catalogue visible underneath. */
   #sales_new .sales-customer-entry,

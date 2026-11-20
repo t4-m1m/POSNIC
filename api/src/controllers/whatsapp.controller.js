@@ -240,7 +240,7 @@ class WhatsAppController extends BaseController {
    */
   async getConnectionStatus(req, res) {
     try {
-      const { device_id } = req.query;
+      let deviceId = String(req.query.device_id || '').trim();
 
       // Debug session data
       console.log('WhatsApp status check - Session data:', {
@@ -258,33 +258,46 @@ class WhatsAppController extends BaseController {
 
       console.log('Resolved branch ID:', resolvedBranchId);
 
-      if (!device_id || !resolvedBranchId) {
-        return res.json({
-          type: 'error',
-          message: 'Device ID and Branch ID are required',
-        });
+      if (!resolvedBranchId) {
+        return res.json({ type: 'error', message: 'Branch ID not found. Please select a store.' });
       }
 
-      // Rehydrate a previously QR-linked session after an application restart.
-      // Only restore when LocalAuth data exists; never create a QR session for a never-linked device.
-      if (whatsappService.hasSavedSession(device_id, resolvedBranchId) &&
-          whatsappService.getConnectionStatus(device_id, resolvedBranchId) === 'not_initialized') {
-        const restored = await whatsappService.initializeClient(device_id, resolvedBranchId);
+      // The branch is the source of truth for the linked-device identifier.
+      // This lets the Settings page and topbar connector recover it without
+      // generating a replacement ID or asking the cashier to type it again.
+      if (!deviceId) {
+        const Branch = require('../models/branch.model');
+        const branch = await Branch.findOne(branchIdentity(req, resolvedBranchId))
+          .select('whatsapp_device_id').lean();
+        deviceId = String(branch && branch.whatsapp_device_id || '').trim();
+      }
+      if (!deviceId) {
+        return res.json({ type: 'error', message: 'Aucun identifiant WhatsApp enregistré pour ce magasin.' });
+      }
+
+      const hasSavedSession = typeof whatsappService.hasSavedSession === 'function' &&
+        whatsappService.hasSavedSession(deviceId, resolvedBranchId);
+      // Rehydrate a previously linked device after restart or an interrupted
+      // disconnect. Never create a fresh QR session for a device without creds.
+      const currentStatus = whatsappService.getConnectionStatus(deviceId, resolvedBranchId);
+      if (hasSavedSession && ['not_initialized', 'disconnected', 'error'].includes(currentStatus)) {
+        const restored = await whatsappService.initializeClient(deviceId, resolvedBranchId);
         if (!restored.status) {
-          return res.json({ type: 'error', message: restored.message, data: { status: 'disconnected', device_id, connected: false } });
+          return res.json({ type: 'error', message: restored.message, data: { status: 'disconnected', device_id: deviceId, connected: false, has_saved_session: true } });
         }
       }
-      const status = whatsappService.getConnectionStatus(device_id, resolvedBranchId);
+      const status = whatsappService.getConnectionStatus(deviceId, resolvedBranchId);
 
       return res.json({
         type: 'success',
         data: {
           status: status,
-          device_id: device_id,
+          device_id: deviceId,
+          has_saved_session: hasSavedSession,
           connected: status === 'connected',
-          phone_number: whatsappService.getConnectedPhone(device_id, resolvedBranchId),
-          connection_error: whatsappService.getConnectionError(device_id, resolvedBranchId)?.message || null,
-          disconnect_code: whatsappService.getConnectionError(device_id, resolvedBranchId)?.code || null,
+          phone_number: whatsappService.getConnectedPhone(deviceId, resolvedBranchId),
+          connection_error: whatsappService.getConnectionError(deviceId, resolvedBranchId)?.message || null,
+          disconnect_code: whatsappService.getConnectionError(deviceId, resolvedBranchId)?.code || null,
         },
       });
     } catch (error) {

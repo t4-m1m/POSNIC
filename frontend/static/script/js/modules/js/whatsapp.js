@@ -13,7 +13,99 @@ PosnicPro.whatsapp = {
     deviceId: null,
     statusCheckInterval: null,
     qrCheckInterval: null,
+    _connectorRefreshTimer: null,
+    _connectorRefreshBusy: false,
     templates: [],
+
+    // Load the branch's saved linked-device ID. The API resolves it from the
+    // branch record when device_id is omitted, so the UI never invents a new ID.
+    loadSavedDeviceId: function(silent, callback) {
+        const branchId = PosnicPro.local.get('branch_id_set');
+        if (!branchId) {
+            if (callback) callback(null, { message: 'Aucun magasin sélectionné.' });
+            return;
+        }
+        PosnicPro.get({ url: 'whatsapp/getStatus', data: { branch_id: branchId } }, (response) => {
+            const data = response && response.type === 'success' && response.data;
+            if (!data || !data.device_id) {
+                if (!silent) PosnicPro.alert('error', (response && response.message) || 'Aucun identifiant WhatsApp enregistré pour ce magasin.');
+                if (callback) callback(null, response);
+                return;
+            }
+            this.deviceId = String(data.device_id);
+            $('#whatsapp_device_id').val(this.deviceId);
+            this.updateStatusBadge(data.status, !!data.connected);
+            if (data.phone_number) $('#whatsapp_connected_phone').text('+' + data.phone_number);
+            if (data.connected) this.onConnected(false);
+            else if (data.status === 'qr_ready') this.fetchAndDisplayQR();
+            if (callback) callback(data, response);
+        }, (error) => {
+            if (!silent) PosnicPro.alert('error', 'Impossible de récupérer l’identifiant WhatsApp enregistré.');
+            if (callback) callback(null, error);
+        });
+    },
+
+    // Reuse the saved device ID and the same status-refresh path as the
+    // Settings → WhatsApp Connection → Refresh button.
+    refreshSavedConnection: function() {
+        if (this._connectorRefreshBusy) return;
+        const button = $('#posnic-whatsapp-connector');
+        const branchId = PosnicPro.local.get('branch_id_set');
+        if (!branchId) {
+            PosnicPro.alert('error', 'Sélectionnez un magasin avant de reconnecter WhatsApp.');
+            return;
+        }
+        this._connectorRefreshBusy = true;
+        if (this._connectorRefreshTimer) clearTimeout(this._connectorRefreshTimer);
+        button.prop('disabled', true).html('<i class="feather icon-loader fa-spin mr-1"></i> Connexion…');
+        const finish = (success, message) => {
+            if (this._connectorRefreshTimer) clearTimeout(this._connectorRefreshTimer);
+            this._connectorRefreshTimer = null;
+            this._connectorRefreshBusy = false;
+            button.prop('disabled', false).html('<i class="feather icon-message-circle mr-1"></i> WhatsApp Connector');
+            PosnicPro.alert(success ? 'success' : 'error', message);
+        };
+        this.loadSavedDeviceId(true, (data) => {
+            if (!data || !data.device_id) {
+                finish(false, 'Aucun appareil WhatsApp enregistré. Connectez-le une première fois dans Paramètres → Intégrations → WhatsApp.');
+                return;
+            }
+            if (data.connected) {
+                this.onConnected(false);
+                finish(true, 'WhatsApp est déjà connecté au compte enregistré.');
+                return;
+            }
+            if (!data.has_saved_session || data.status === 'logged_out') {
+                finish(false, 'La session WhatsApp enregistrée n’est plus valide. Reconnectez le compte avec le QR code.');
+                return;
+            }
+            let attempts = 0;
+            const poll = () => {
+                this.checkStatus(true, (current) => {
+                    if (current && current.connected) {
+                        this.onConnected(false);
+                        finish(true, 'WhatsApp a été reconnecté avec succès.');
+                        return;
+                    }
+                    if (current && (current.status === 'logged_out' || current.status === 'error')) {
+                        finish(false, current.connection_error || 'Échec de la reconnexion WhatsApp. Ouvrez la page du QR code pour reconnecter le compte.');
+                        return;
+                    }
+                    attempts += 1;
+                    if (attempts >= 20) {
+                        finish(false, 'WhatsApp ne répond pas. La reconnexion a échoué ; vérifiez Internet ou reconnectez le compte avec le QR code.');
+                        return;
+                    }
+                    this._connectorRefreshTimer = setTimeout(poll, 1200);
+                });
+            };
+            if (data.status === 'logged_out') {
+                finish(false, 'Le compte WhatsApp a été délié. Scannez un nouveau QR code pour le reconnecter.');
+                return;
+            }
+            poll();
+        });
+    },
 
     connectPairingCode: function() {
         const deviceId = $('#whatsapp_device_id').val().trim();
@@ -166,13 +258,12 @@ PosnicPro.whatsapp = {
     /**
      * Check connection status
      */
-    checkStatus: function(silent = false) {
+    checkStatus: function(silent = false, callback) {
         const deviceId = this.deviceId || $('#whatsapp_device_id').val().trim();
-        
+
         if (!deviceId) {
-            if (!silent) {
-                PosnicPro.alert('error', PosnicPro.i18n.t('lang_please_enter_a_device_id', 'Please enter a Device ID'));
-            }
+            if (!silent) PosnicPro.alert('error', PosnicPro.i18n.t('lang_please_enter_a_device_id', 'Please enter a Device ID'));
+            if (callback) callback(null, { message: 'Identifiant WhatsApp manquant.' });
             return;
         }
 
@@ -182,25 +273,24 @@ PosnicPro.whatsapp = {
         };
 
         PosnicPro.get(params, (response) => {
-            if (response.type === 'success' && response.data) {
+            if (response && response.type === 'success' && response.data) {
                 const { status, connected, phone_number } = response.data;
                 if (phone_number) $('#whatsapp_connected_phone').text('+' + phone_number);
-                
                 this.updateStatusBadge(status, connected);
-                
                 if (connected) {
-                    this.onConnected();
+                    this.onConnected(!silent);
                 } else if (status === 'qr_ready') {
                     this.fetchAndDisplayQR();
                 } else if (status === 'not_initialized' || status === 'disconnected' || status === 'logged_out' || status === 'error') {
                     this.showConnectButton();
-                    if (!silent && response.data.connection_error) {
-                        PosnicPro.alert('error', response.data.connection_error);
-                    }
+                    if (!silent && response.data.connection_error) PosnicPro.alert('error', response.data.connection_error);
                 }
+                if (callback) callback(response.data, response);
+            } else if (callback) {
+                callback(null, response);
             }
-            // Keep the QR/pairing UI on transient API/network errors; a failed poll
-            // must not erase a valid pairing code or hide the QR.
+        }, (error) => {
+            if (callback) callback(null, error);
         });
     },
 
@@ -282,7 +372,7 @@ PosnicPro.whatsapp = {
     /**
      * Handle successful connection
      */
-    onConnected: function() {
+    onConnected: function(notify = true) {
         // Clear intervals
         if (this.qrCheckInterval) {
             clearInterval(this.qrCheckInterval);
@@ -304,7 +394,7 @@ PosnicPro.whatsapp = {
         
         this.updateStatusBadge('connected', true);
         
-        PosnicPro.alert('success', PosnicPro.i18n.t('lang_whatsapp_connected', 'WhatsApp connected'));
+        if (notify) PosnicPro.alert('success', 'WhatsApp est connecté et prêt à envoyer des messages.');
     },
 
     /**
@@ -1158,15 +1248,7 @@ $(document).ready(function() {
     $('a[href="#v-pills-whatsapp"]').on('shown.bs.tab', function() {
         console.log('WhatsApp main tab shown, initializing...');
         PosnicPro.whatsapp.init();
-        
-        // Also check status after a short delay to ensure device ID is loaded
-        setTimeout(() => {
-            const deviceId = $('#whatsapp_device_id').val().trim();
-            console.log('Checking WhatsApp status on tab switch, device ID:', deviceId);
-            if (deviceId) {
-                PosnicPro.whatsapp.checkStatus(true);
-            }
-        }, 1500);
+        PosnicPro.whatsapp.loadSavedDeviceId(true);
     });
     
     // Handle WhatsApp sub-tab events
@@ -1182,14 +1264,7 @@ $(document).ready(function() {
         
         // Check connection status when connection tab is shown
         if (target === '#whatsapp-connection') {
-            console.log('WhatsApp connection sub-tab shown, checking status...');
-            const deviceId = $('#whatsapp_device_id').val().trim();
-            console.log('Device ID for status check:', deviceId);
-            if (deviceId) {
-                PosnicPro.whatsapp.checkStatus(true);
-            } else {
-                console.log('No device ID found, cannot check status');
-            }
+            PosnicPro.whatsapp.loadSavedDeviceId(true);
         }
     });
     
