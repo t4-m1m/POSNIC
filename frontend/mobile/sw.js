@@ -1,6 +1,6 @@
 'use strict';
-const CACHE = 'samarina-companion-shell-v1';
-const SHELL = ['/mobile/','/mobile/index.html','/mobile/mobile.css','/mobile/app.js','/mobile/manifest.webmanifest','/mobile/icon.svg'];
+const CACHE = 'samarina-companion-shell-v2';
+const SHELL = ['/mobile/','/mobile/index.html','/mobile/mobile.css','/mobile/app.js','/mobile/login.html','/mobile/login.js','/mobile/login.css','/mobile/manifest.webmanifest','/mobile/icon.svg'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
 });
