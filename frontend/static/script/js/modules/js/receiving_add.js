@@ -80,6 +80,59 @@ PosnicPro.receivings = {
         loader.find(".loadingSpinner:first").remove();
         if (PosnicPro.receivings._restockDraft) PosnicPro.lowstockitems.applyPurchaseDraft();
     },
+    _samarinaQueueTimer: null,
+    _samarinaQueueBusy: false,
+    startSamarinaReceivingBridge: function () {
+        if (this._samarinaQueueTimer) return;
+        var self = this;
+        this._samarinaQueueTimer = setInterval(function () { self.pollSamarinaReceivingQueue(); }, 8000);
+        setTimeout(function () { self.pollSamarinaReceivingQueue(); }, 1800);
+    },
+    pollSamarinaReceivingQueue: function () {
+        var self = this;
+        if (self._samarinaQueueBusy || !PosnicPro.local || !PosnicPro.local.get('branch_id_set')) return;
+        self._samarinaQueueBusy = true;
+        PosnicPro.get({ url: 'samarina/v1/desktop/receiving-queue', data: {} }, function (response) {
+            var rows = response && response.rows ? response.rows : (response && response.data && response.data.rows) || [];
+            if (!rows.length) return;
+            var hash = String(window.location.hash || '').slice(1);
+            var onNewReceiving = /^\\/?receivings\\/new$/.test(hash);
+            if (!onNewReceiving) {
+                var hasDraftLines = $('#receiving_print tbody tr').not('#cart_content_area').length > 0;
+                var hasSupplier = !!String($('#receiving_add_supplier_name').val() || '').trim();
+                if (hasDraftLines || hasSupplier) return;
+                if (typeof hasher !== 'undefined' && hasher.setHash) hasher.setHash('receivings/new');
+                else window.location.hash = '#/receivings/new';
+                return;
+            }
+            if (!$('#receiving_add').length || !PosnicPro.receivings.addReceivingLineItems) return;
+            var imported = 0;
+            rows.forEach(function (row) {
+                var itemId = String(row.itemId || '');
+                if (!itemId || !row.quantity) return;
+                PosnicPro.receivings.addReceivingLineItems({
+                    item_id: itemId,
+                    item_name: row.name || 'Article',
+                    item_quantity: row.quantity,
+                    company_price: Number(row.companyPrice) || 0,
+                    tax: Number(row.tax) || 0,
+                    tax_type: row.taxType || 'exclusive',
+                    available_quantity: Number(row.availableQuantity) || 0,
+                    itemid: row.itemid || row.barcode || '',
+                    item_unit: row.unit || 'qty',
+                    purchase_unit: row.purchaseUnit || '',
+                    conversion_factor: Number(row.conversionFactor) || 0
+                });
+                PosnicPro.post({
+                    url: 'samarina/v1/desktop/receiving-queue/' + encodeURIComponent(row.id) + '/ack',
+                    data: JSON.stringify({})
+                }, function () {});
+                imported++;
+            });
+            if (imported) PosnicPro.alert('success', imported + ' article(s) reçus depuis le Compagnon Samarina. Vérifiez le fournisseur et les quantités avant d’enregistrer.');
+        }, function () {}).always && null;
+        setTimeout(function () { self._samarinaQueueBusy = false; }, 2500);
+    },
     showEdit: function (id) {
         $('#receiving_add_date').removeClass('commonDate');
         $('#receiving_add_date').addClass('commonEditDate');
@@ -1727,6 +1780,7 @@ $(document).on('click', '#receiving_charges_rows .charge-remove', function () {
     PosnicPro.receivings.addReceivingTableRowCalc();
 });
 $(document).ready(function () {
+    if (PosnicPro.receivings && PosnicPro.receivings.startSamarinaReceivingBridge) PosnicPro.receivings.startSamarinaReceivingBridge();
     $('#receiving_print tbody').children("tr").remove();
     $("#receiving_print").find("tr:not(:first)").remove();
     $('#receiviing_img_hide').show();
