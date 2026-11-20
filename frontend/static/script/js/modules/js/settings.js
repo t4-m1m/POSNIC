@@ -10372,7 +10372,9 @@ $(document).on('click', '#ai_remove_all', function () {
 $(document).on('click', '#v-pills-companion-tab', function (e) {
     e.preventDefault();
     var base = (typeof API_URL === 'string' && API_URL) || '/api';
-    $('#mobile_companion_frame').attr('src', base.replace(/\/+$/, '') + '/mobile-pos-setup?view=companion');
+    var origin = base.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+    var selectedBranch = PosnicPro.local && PosnicPro.local.get('branch_id_set') || '';
+    $('#mobile_companion_frame').attr('src', origin + '/samarina-companion-setup?branch_id=' + encodeURIComponent(selectedBranch));
 });
 
 window.addEventListener('message', function (event) {
