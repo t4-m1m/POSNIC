@@ -384,7 +384,9 @@ module.exports = async function startServer(options = {}) {
 
     // Start Express server
     const PORT = process.env.PORT || 5555;
-    const server = app.listen(PORT);
+    // The desktop Companion is used from phones on the shop LAN; bind IPv4 on
+    // every interface instead of relying on Node's platform-dependent default.
+    const server = app.listen(PORT, '0.0.0.0');
     const serverReady = new Promise((resolve, reject) => {
       server.once('listening', resolve);
       server.once('error', reject);
