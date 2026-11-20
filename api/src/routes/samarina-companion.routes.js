@@ -172,7 +172,9 @@ router.get('/catalogue', async (req, res) => {
         { name: { $regex: safe, $options: 'i' } },
         { barcode_id: { $regex: safe, $options: 'i' } },
         { sku: { $regex: safe, $options: 'i' } },
-        { itemid: { $regex: safe, $options: 'i' } }
+        { itemid: { $regex: safe, $options: 'i' } },
+        { variant_value: { $regex: safe, $options: 'i' } },
+        { variant_parent_name: { $regex: safe, $options: 'i' } }
       ];
     }
     const rows = await req.db.collection('items').find(filter, { projection: { name: 1, barcode_id: 1, sku: 1, quantity: 1, available_quantity: 1, selling_price: 1, image: 1, track_inventory: 1, brand_abbreviation: 1, variant_group_id: 1, variant_axis: 1, variant_value: 1, variant_parent_name: 1 } }).sort({ name: 1 }).limit(60).toArray();
@@ -194,7 +196,7 @@ router.post('/items', async (req, res) => {
     const item = {
       name, selling_price: price, barcode_id: String(req.body?.barcode_id || '').trim(),
       sku: String(req.body?.sku || '').trim(), quantity: 0, available_quantity: 0,
-      track_inventory: req.body?.track_inventory !== false, image: '',
+      track_inventory: req.body?.track_inventory !== false, image: String(req.body?.image || '').trim(),
       branch_id: oid(c.branchId) || c.branchId, branch_name: c.branch.branch_name || c.branch.name || '',
       license: oid(c.session.license) || c.session.license, createdAt: now, updatedAt: now, is_active: true
     };
