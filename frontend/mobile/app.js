@@ -2,7 +2,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 const params=new URLSearchParams(location.hash.slice(1));
-let apiBase=localStorage.getItem('samarina_server')||params.get('server')||'';
+let apiBase=localStorage.getItem('samarina_server')||params.get('server')||(location.origin+'/api/samarina/v1');
 let token=localStorage.getItem('samarina_token')||'';
 let profile=null,queue=JSON.parse(localStorage.getItem('samarina_receive_queue')||'[]'),cameraStream=null,scanFrame=0,detector=null,scanTarget='catalogue';
 function cleanBase(value){let v=String(value||'').trim().replace(/\/+$/,'');if(!/^https?:\/\//i.test(v))throw new Error('Adresse serveur invalide.');if(!/\/api\/samarina\/v1$/i.test(v))v=v.replace(/\/api$/i,'')+'/api/samarina/v1';return v;}
