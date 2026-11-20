@@ -127,7 +127,7 @@ function admit({
    * and register its IP so the following authenticated bootstrap is served.
    * The mobile-pos handset registry remains the authority for device access.
    */
-  if (/^\/(?:api\/)?mobile\/v1\/pair(?:\?|$)/.test(String(url || '')))
+  if (/^\/(?:api\/)?mobile(?:\/|\?|$)/.test(String(url || '')))
     return { allow: true, register: true, code: '', message: '' };
 
   // Business uses its own scoped, revocable sessions, not selling-handset slots.
