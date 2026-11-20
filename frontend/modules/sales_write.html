@@ -386,6 +386,9 @@
                                                 id="return_button">
                                                 <lang class="lang_returnall_title">Return All</lang>
                                             </button>
+                                            <button type="button" id="posnic-cancel-return" class="btn btn-outline-secondary btn-block mt-2" style="display:none;">
+                                                <i class="feather icon-x-circle mr-1"></i>Annuler le retour
+                                            </button>
                                         </td>
                                         <tbody>
                                             <tr>
@@ -871,10 +874,12 @@
                                             <div class="row btn-group-toggle" data-toggle="buttons" id="payment_id"><!-- payment methods fields --></div>
                                         </div>
 <div class="posnic-pay-due">Reste à payer : <strong><span class="display-currency"></span> <span class="balanceDue font-18">0.00</span></strong></div>
-                                        <button type="button" id="posnic-send-whatsapp-receipt-payment" class="btn btn-outline-success btn-block mt-2"><i class="feather icon-message-circle mr-2"></i>Envoyer le ticket par WhatsApp</button>
-                                        <div class="posnic-quick-cash-actions" aria-label="Opérations rapides">
-                                            <button type="button" class="posnic-quick-cash-btn" id="posnic-quick-expense-open"><i class="feather icon-minus-circle"></i><span>Dépense</span></button>
-                                            <button type="button" class="posnic-quick-cash-btn" id="posnic-quick-advance-open"><i class="feather icon-wallet"></i><span>Acompte</span></button>
+                                        <div class="posnic-payment-actions" id="posnic-payment-actions" aria-label="Actions de caisse">
+                                            <div class="posnic-quick-cash-actions" aria-label="Opérations rapides">
+                                                <button type="button" class="posnic-quick-cash-btn" id="posnic-quick-expense-open"><i class="feather icon-minus-circle"></i><span>Dépense</span></button>
+                                                <button type="button" class="posnic-quick-cash-btn" id="posnic-quick-advance-open"><i class="feather icon-wallet"></i><span>Acompte</span></button>
+                                            </div>
+                                            <button type="button" id="posnic-send-whatsapp-receipt-payment" class="btn btn-outline-success"><i class="feather icon-message-circle mr-2"></i>Envoyer le ticket par WhatsApp</button>
                                         </div>
                                         <div class="profilebox text-center" style="display:none">
                                             <div class="row mb-3">
