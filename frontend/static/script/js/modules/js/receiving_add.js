@@ -92,7 +92,7 @@ PosnicPro.receivings = {
         var self = this;
         if (self._samarinaQueueBusy || !PosnicPro.local || !PosnicPro.local.get('branch_id_set')) return;
         self._samarinaQueueBusy = true;
-        PosnicPro.get({ url: 'samarina/v1/desktop/receiving-queue', data: {} }, function (response) {
+        PosnicPro.get({ url: 'samarina/v1/desktop/receiving-queue', data: { branch_id: PosnicPro.local.get('branch_id_set') } }, function (response) {
             try {
                 var rows = response && response.rows ? response.rows : (response && response.data && response.data.rows) || [];
                 if (!rows.length) return;
@@ -131,7 +131,7 @@ PosnicPro.receivings = {
                     if (queueId) po._samarinaImportedQueueIds[queueId] = true;
                     PosnicPro.post({
                         url: 'samarina/v1/desktop/receiving-queue/' + encodeURIComponent(queueId) + '/ack',
-                        data: JSON.stringify({})
+                        data: JSON.stringify({ branch_id: PosnicPro.local.get('branch_id_set') })
                     }, function () {}, function () { if (queueId) delete po._samarinaImportedQueueIds[queueId]; });
                 });
                 if (imported) {
