@@ -15672,23 +15672,38 @@ $(document).ready(function () {
             }, function () {});
         }
         function generatePairing() {
-            $('#posnic-mobile-companion-status').text('Génération du code…');
-            PosnicPro.request({ url: 'samarina/v1/setup/pairing-code', method: 'POST', data: JSON.stringify({}) }, function (data) {
-                var rows = data && data.pairingQr || [], row = rows.find(function (candidate) { return candidate.protocol === 'https'; }) || rows[0];
-                $('#posnic-mobile-companion-code').text(data.code || '—');
-                $('#posnic-mobile-companion-expiry').text('Expire le ' + (data.expiresAt ? new Date(data.expiresAt).toLocaleTimeString() : 'dans 5 minutes'));
-                if (row && row.qr) {
-                    $('#posnic-mobile-companion-qr').attr('src', row.qr).prop('hidden', false);
-                    $('#posnic-mobile-companion-qr-empty').prop('hidden', true);
-                    $('#posnic-mobile-companion-url').attr('href', row.url).text(row.url);
-                    if (row.certificateUrl) {
-                        $('#posnic-mobile-companion-trust').prop('hidden', false);
-                        $('#posnic-mobile-companion-cert').attr('href', row.certificateUrl);
-                    } else $('#posnic-mobile-companion-trust').prop('hidden', true);
-                    $('#posnic-mobile-companion-status').text(row.protocol === 'https' ? 'QR HTTPS prêt. Installez le certificat sur le téléphone avant le premier scan caméra.' : 'QR HTTP prêt. Utilisez Photo du code ou la saisie manuelle si la caméra vidéo est bloquée.');
-                } else $('#posnic-mobile-companion-status').text('Aucune adresse de connexion disponible.');
-                refreshCount();
-            }, function (error) { $('#posnic-mobile-companion-status').text(error && error.message || 'Impossible de générer le code.'); });
+            var button = $('#posnic-mobile-companion-generate').prop('disabled', true);
+            $('#posnic-mobile-companion-status').text('Vérification de la session et génération du code…');
+            function createCode() {
+                PosnicPro.request({ url: 'samarina/v1/setup/pairing-code', method: 'POST', data: JSON.stringify({}) }, function (data) {
+                    var rows = data && data.pairingQr || [], row = rows.find(function (candidate) { return candidate.protocol === 'https'; }) || rows[0];
+                    $('#posnic-mobile-companion-code').text(data.code || '—');
+                    $('#posnic-mobile-companion-expiry').text('Expire le ' + (data.expiresAt ? new Date(data.expiresAt).toLocaleTimeString() : 'dans 5 minutes'));
+                    if (row && row.qr) {
+                        $('#posnic-mobile-companion-qr').attr('src', row.qr).prop('hidden', false);
+                        $('#posnic-mobile-companion-qr-empty').prop('hidden', true);
+                        $('#posnic-mobile-companion-url').attr('href', row.url).text(row.url);
+                        if (row.certificateUrl) {
+                            $('#posnic-mobile-companion-trust').prop('hidden', false);
+                            $('#posnic-mobile-companion-cert').attr('href', row.certificateUrl);
+                        } else $('#posnic-mobile-companion-trust').prop('hidden', true);
+                        $('#posnic-mobile-companion-status').text(row.protocol === 'https' ? 'QR HTTPS prêt. Installez le certificat sur le téléphone avant le premier scan caméra.' : 'QR HTTP prêt. Utilisez Photo du code ou la saisie manuelle si la caméra vidéo est bloquée.');
+                    } else $('#posnic-mobile-companion-status').text('Aucune adresse de connexion disponible.');
+                    button.prop('disabled', false);
+                    refreshCount();
+                }, function (error) {
+                    $('#posnic-mobile-companion-status').text(error && (error.message || error.responseJSON && error.responseJSON.message) || 'Impossible de générer le code.');
+                    button.prop('disabled', false);
+                });
+            }
+            // The GET response carries the CSRF token bound to the active POSNIC
+            // cookie. Wait for it before sending the one-use pairing-code POST.
+            PosnicPro.request({ url: 'samarina/v1/setup/status', method: 'GET', data: {} }, function () {
+                createCode();
+            }, function (error) {
+                $('#posnic-mobile-companion-status').text(error && (error.message || error.responseJSON && error.responseJSON.message) || 'Session POSNIC indisponible. Actualisez puis réessayez.');
+                button.prop('disabled', false);
+            });
         }
         $(document).on('click', '#posnic-mobile-companion-open', function () {
             $('#posnic-mobile-companion-modal').modal('show');
