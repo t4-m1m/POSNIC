@@ -7988,314 +7988,93 @@ tr.s-doc-purchase-row:hover td { background: rgba(9, 105, 218, 0.05); }
 .jconfirm,
 .swal2-container { z-index: 40120 !important; }
 
-/* POSNIC build #1004 header restoration: cashier baskets live beside the language selector. */
-#posnic-multi-baskets-header-wrap { display:none; vertical-align:middle; margin:0 4px 0 0; }
-body:has(#sales_new:not([style*="display: none"])) #posnic-multi-baskets-header-wrap { display:inline-block !important; }
-#posnic-multi-baskets-header-host { display:block; min-width:0; }
+
+/* Build #1004 page baseline: retain only the WhatsApp quick-connect control
+   and the multi-basket strip mounted in the topbar. */
+#posnic-multi-baskets-header-wrap { display:none; vertical-align:middle; min-width:0; margin:0 4px 0 0; }
+body:has(#sales_new:not([style*="display: none"])) #posnic-multi-baskets-header-wrap { display:inline-flex !important; }
+#posnic-multi-baskets-header-host { display:flex; align-items:center; width:100%; min-width:0; overflow:hidden; }
 #posnic-multi-baskets-header-wrap #posnic-multi-baskets {
-    display:flex !important; align-items:center; flex-wrap:nowrap !important;
-    gap:4px; width:auto !important; max-width:min(34vw, 420px); min-width:0;
-    min-height:34px; margin:0; padding:2px 4px; overflow-x:auto; overflow-y:hidden;
-    white-space:nowrap; border:1px solid var(--theme-border-color, #dbe3ef);
-    border-radius:9px; background:var(--theme-card-bg, #f8fafc); box-sizing:border-box;
+  display:flex !important; align-items:center; flex-wrap:nowrap !important;
+  gap:4px; width:100% !important; max-width:none !important; min-width:0;
+  min-height:34px; margin:0; padding:2px 4px; overflow-x:auto; overflow-y:hidden;
+  white-space:nowrap; border:1px solid var(--theme-border-color, #dbe3ef);
+  border-radius:9px; background:var(--theme-card-bg, #f8fafc); box-sizing:border-box;
+  scrollbar-width:none;
 }
+#posnic-multi-baskets-header-wrap #posnic-multi-baskets::-webkit-scrollbar { display:none; }
 #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-tab-wrap,
 #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-add { flex:0 0 auto; }
 #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-tab,
 #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-add {
-    min-height:27px; padding:3px 8px; font-size:11px; border-radius:6px; line-height:1.2;
+  min-height:27px; padding:3px 8px; font-size:11px; border-radius:6px; line-height:1.2;
 }
-#posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-tab { min-width:0; }
 #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-close {
-    width:23px; min-height:27px; font-size:16px; border-radius:0 6px 6px 0;
+  width:23px; min-height:27px; font-size:16px; border-radius:0 6px 6px 0;
 }
 #posnic-whatsapp-connector-wrap { margin-left:2px; }
 #posnic-whatsapp-connector.posnic-whatsapp-icon-btn {
-    display:inline-flex; align-items:center; justify-content:center;
-    width:34px; height:34px; min-width:34px; padding:0;
-    border:1px solid #25d366; border-radius:50%;
-    background:#25d366; color:#fff; box-shadow:none;
+  display:inline-flex; align-items:center; justify-content:center;
+  width:34px; height:34px; min-width:34px; padding:0;
+  border:1px solid #25d366; border-radius:50%;
+  background:#25d366; color:#fff; box-shadow:none;
 }
 #posnic-whatsapp-connector.posnic-whatsapp-icon-btn:hover,
 #posnic-whatsapp-connector.posnic-whatsapp-icon-btn:focus {
-    background:#1fb85a; border-color:#1fb85a; color:#fff;
+  background:#1fb85a; border-color:#1fb85a; color:#fff;
 }
 #posnic-whatsapp-connector.posnic-whatsapp-icon-btn svg { display:block; width:20px; height:20px; }
-#sales_new #touchsales_page > #sales-function-shortcuts { order:2 !important; }
-#sales_new #touchsales_page > .row:has(#instance-view, #items_view_hide) { order:3 !important; }
+
+@media (min-width:768px) {
+  body:has(#sales_new:not([style*="display: none"])) .topbar > .row > .col-md-12 {
+    display:flex !important; align-items:center !important; min-width:0 !important;
+  }
+  body:has(#sales_new:not([style*="display: none"])) .topbar > .row > .col-md-12 > .togglebar {
+    display:flex !important; align-items:center !important; flex:1 1 auto !important;
+    min-width:0 !important; width:0 !important;
+  }
+  body:has(#sales_new:not([style*="display: none"])) .topbar .togglebar > ul.list-inline {
+    display:flex !important; align-items:center !important; flex:1 1 auto !important;
+    flex-wrap:nowrap !important; min-width:0 !important; width:100% !important;
+    gap:8px; margin:0 !important;
+  }
+  body:has(#sales_new:not([style*="display: none"])) .topbar .togglebar .add_dropdown {
+    margin-top:0 !important;
+  }
+  body:has(#sales_new:not([style*="display: none"])) .topbar .togglebar > ul.list-inline > li#posnic-multi-baskets-header-wrap {
+    display:inline-flex !important; align-items:center; flex:1 1 0 !important;
+    width:auto !important; min-width:0 !important; max-width:none !important;
+    margin-inline-start:10px !important; overflow:hidden !important;
+  }
+  body:has(#sales_new:not([style*="display: none"])) .topbar > .row > .col-md-12 > .infobar {
+    flex:0 0 auto !important; margin-inline-start:12px !important; white-space:nowrap !important;
+  }
+}
 @media (max-width:767.98px) {
-    #posnic-multi-baskets-header-wrap { max-width:42vw; }
-    #posnic-multi-baskets-header-wrap #posnic-multi-baskets { max-width:42vw; }
+  .topbar .togglebar #posnic-multi-baskets-header-wrap { display:none !important; }
 }
 
-
-
-/* POSNIC cashier topbar alignment: baskets follow Add; shortcut row clears the fixed header. */
-@media (min-width: 768px) {
-  /* The cashier's Add dropdown is the first control in .togglebar.
-     Keep the basket tabs directly after it, before the right-side controls. */
-  .topbar .togglebar #posnic-multi-baskets-header-wrap {
-    display: none;
-    vertical-align: middle;
-    margin: 0 0 0 12px;
-    max-width: min(36vw, 480px);
-  }
-  body:has(#sales_new:not([style*="display: none"])) .topbar .togglebar #posnic-multi-baskets-header-wrap {
-    display: inline-block !important;
-  }
-  .topbar .togglebar #posnic-multi-baskets-header-host { display: block; min-width: 0; }
-  .topbar .togglebar #posnic-multi-baskets-header-wrap #posnic-multi-baskets {
-    display: flex !important;
-    align-items: center;
-    flex-wrap: nowrap !important;
-    gap: 4px;
-    width: auto !important;
-    max-width: min(36vw, 480px);
-    min-width: 0;
-    min-height: 36px;
-    margin: 0;
-    padding: 2px 4px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    white-space: nowrap;
-    box-sizing: border-box;
-  }
-  .topbar .togglebar #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-tab-wrap,
-  .topbar .togglebar #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-add {
-    flex: 0 0 auto;
-  }
-}
-/* Align Add, customer baskets and the right-side language controls on one header row.
-   The Add dropdown's legacy -30px offset was pulling it out of the shared line. */
-@media (min-width: 768px) {
-  .topbar .togglebar { display: inline-flex !important; align-items: center !important; vertical-align: middle; }
-  .topbar .togglebar > ul.list-inline { display: inline-flex !important; align-items: center !important; flex-wrap: nowrap !important; gap: 8px; margin: 0 !important; }
-  .topbar .togglebar .add_dropdown { margin-top: 0 !important; }
-  .topbar .togglebar #posnic-multi-baskets-header-wrap {
-    display: none;
-    flex: 0 1 auto;
-    align-items: center;
-    vertical-align: middle;
-    margin: 0 0 0 4px;
-    max-width: min(25vw, 360px);
-  }
-  body:has(#sales_new:not([style*="display: none"])) .topbar .togglebar #posnic-multi-baskets-header-wrap {
-    display: inline-flex !important;
-  }
-  .topbar .togglebar #posnic-multi-baskets-header-host { display: flex; align-items: center; min-width: 0; }
-  .topbar .togglebar #posnic-multi-baskets-header-wrap #posnic-multi-baskets {
-    display: flex !important; align-items: center; flex-wrap: nowrap !important; gap: 4px;
-    width: auto !important; max-width: min(25vw, 360px); min-width: 0;
-    min-height: 34px; margin: 0; padding: 2px 4px; overflow-x: auto; overflow-y: hidden;
-    white-space: nowrap; box-sizing: border-box;
-  }
-  .topbar .togglebar #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-tab-wrap,
-  .topbar .togglebar #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-add { flex: 0 0 auto; }
-
-  /* The fixed header is 70px tall; Electron adds its native titlebar offset.
-     Move the whole sales workspace below it instead of adding a huge inner gap. */
-  #sales_new {
-    margin-top: calc(var(--titlebar-h, 0px) + 70px) !important;
-    height: calc(100vh - var(--titlebar-h, 0px) - 70px) !important;
-    max-height: calc(100vh - var(--titlebar-h, 0px) - 70px) !important;
-  }
-  @supports (height: 100dvh) {
-    #sales_new {
-      height: calc(100dvh - var(--titlebar-h, 0px) - 70px) !important;
-      max-height: calc(100dvh - var(--titlebar-h, 0px) - 70px) !important;
-    }
-  }
-  #sales_new > .contentbar { padding-top: 8px !important; }
-  #sales_new #touchsales_page > #sales-function-shortcuts {
-    order: 2 !important;
-    display: flex !important;
-    flex: 0 0 auto !important;
-    flex-shrink: 0 !important;
-    min-height: 48px !important;
-    margin: 2px 0 8px !important;
-    position: relative !important;
-    z-index: 2 !important;
-  }
-  #sales_new #touchsales_page > .row:has(#instance-view, #items_view_hide) {
-    order: 3 !important;
-    flex: 1 1 0 !important;
-    min-height: 0 !important;
-  }
-}
-/* Keep the touch-mode glyph optically and geometrically centered. */
-#posnic-touch-mode-entry {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  vertical-align: middle;
-}
-#posnic-touch-mode-toggle {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 34px !important;
-  height: 34px !important;
-  min-width: 34px !important;
-  min-height: 34px !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  line-height: 1 !important;
-  box-sizing: border-box !important;
-}
-#posnic-touch-mode-toggle > i {
-  display: block !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  line-height: 1 !important;
-  font-size: 19px !important;
-}
-@media (max-width: 767.98px) {
-  .topbar .togglebar #posnic-multi-baskets-header-wrap { display: none !important; }
-}
-
-
-
-/* Hard-align the cashier shortcut strip to the actual fixed topbar bottom.
-   Topbar geometry: 15px top + 40px controls + 15px bottom = 70px.
-   Electron's native titlebar offset is included by the same CSS variable
-   used by html.is-electron .topbar. */
-@media (min-width: 768px) {
-  #sales_new #touchsales_page > #sales-function-shortcuts {
-    position: fixed !important;
-    top: calc(var(--titlebar-h, 0px) + 70px) !important;
-    left: 250px !important;
-    right: 0 !important;
-    width: auto !important;
-    height: 52px !important;
-    min-height: 52px !important;
-    max-height: 52px !important;
-    margin: 0 !important;
-    padding: 4px 18px !important;
-    box-sizing: border-box !important;
-    display: flex !important;
-    align-items: center !important;
-    flex-wrap: nowrap !important;
-    overflow: visible !important;
-    background: var(--theme-card-bg, #fff) !important;
-    border-bottom: 1px solid var(--theme-border-color, #dbe3ef) !important;
-    z-index: 8 !important;
-  }
-  .toggle-menu #sales_new #touchsales_page > #sales-function-shortcuts {
-    left: 60px !important;
-  }
-  #sales_new > .contentbar {
-    padding-top: 60px !important;
-  }
-}
-
-
-/* Cashier header spacing, search visibility and flexible basket strip. */
-@media (min-width: 768px) {
-  /* Let the basket strip consume the available header width, stopping before
-     the language/settings area instead of using a fixed vw cap. */
-  .topbar > .row > .col-md-12 {
-    display: flex !important;
-    align-items: center !important;
-    min-width: 0 !important;
-  }
-  .topbar > .row > .col-md-12 > .togglebar {
-    display: flex !important;
-    align-items: center !important;
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
-    width: 0 !important;
-  }
-  .topbar .togglebar > ul.list-inline {
-    display: flex !important;
-    align-items: center !important;
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
-    width: 100% !important;
-  }
-  .topbar .togglebar > ul.list-inline > li#posnic-multi-baskets-header-wrap {
-    flex: 1 1 0 !important;
-    width: auto !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    margin-inline-start: 10px !important;
-    overflow: hidden !important;
-  }
-  .topbar .togglebar #posnic-multi-baskets-header-host {
-    display: flex !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    overflow: hidden !important;
-  }
-  .topbar .togglebar #posnic-multi-baskets-header-wrap #posnic-multi-baskets {
-    width: 100% !important;
-    max-width: none !important;
-    min-width: 0 !important;
-    justify-content: flex-start !important;
-    overflow-x: auto !important;
-    scrollbar-width: none !important;
-  }
-  .topbar .togglebar #posnic-multi-baskets-header-wrap #posnic-multi-baskets::-webkit-scrollbar {
-    display: none !important;
-  }
-  .topbar > .row > .col-md-12 > .infobar {
-    flex: 0 0 auto !important;
-    margin-inline-start: 12px !important;
-    white-space: nowrap !important;
-  }
-
-  /* Keep the shortcut bar separated from the topbar and give its controls
-     breathing room. The workspace starts below the entire strip, so scanner
-     input and catalogue tabs cannot be covered by the fixed bar. */
-  #sales_new #touchsales_page > #sales-function-shortcuts {
-    top: calc(var(--titlebar-h, 0px) + 76px) !important;
-    height: 62px !important;
-    min-height: 62px !important;
-    max-height: 62px !important;
-    padding: 9px 22px !important;
-    margin: 0 !important;
-    gap: 9px !important;
-    border: 1px solid var(--theme-border-color, #dbe3ef) !important;
-    border-radius: 10px !important;
-    box-shadow: 0 3px 10px rgba(15, 23, 42, .08) !important;
-    background: var(--theme-card-bg, #fff) !important;
-  }
-  #sales_new > .contentbar {
-    padding-top: 150px !important;
-  }
-}
-
-/* Neutral grey inactive baskets; blue is reserved for the selected basket. */
+/* Inactive baskets stay neutral grey; only the selected basket is blue. */
 .topbar #posnic-multi-baskets .posnic-basket-tab-wrap {
-  background: #f1f3f5 !important;
-  border-color: #d0d7de !important;
-  box-shadow: none !important;
+  background:#f1f3f5 !important; border-color:#d0d7de !important; box-shadow:none !important;
 }
 .topbar #posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-tab {
-  background: #f1f3f5 !important;
-  color: #57606a !important;
+  background:#f1f3f5 !important; color:#57606a !important;
 }
 .topbar #posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-close {
-  background: #e9ecef !important;
-  color: #6e7781 !important;
-  border-left-color: #d0d7de !important;
+  background:#e9ecef !important; color:#6e7781 !important; border-left-color:#d0d7de !important;
 }
 .topbar #posnic-multi-baskets .posnic-basket-tab-wrap.is-active {
-  background: #eaf2ff !important;
-  border-color: #2563eb !important;
-  box-shadow: 0 0 0 1px rgba(37,99,235,.12) !important;
+  background:#eaf2ff !important; border-color:#2563eb !important;
+  box-shadow:0 0 0 1px rgba(37,99,235,.12) !important;
 }
 .topbar #posnic-multi-baskets .posnic-basket-tab-wrap.is-active .posnic-basket-tab,
 .topbar #posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-tab.is-active {
-  background: #2563eb !important;
-  color: #fff !important;
+  background:#2563eb !important; color:#fff !important;
 }
 .topbar #posnic-multi-baskets .posnic-basket-tab-wrap.is-active .posnic-basket-close {
-  background: #1d4ed8 !important;
-  color: #fff !important;
-  border-left-color: rgba(255,255,255,.25) !important;
+  background:#1d4ed8 !important; color:#fff !important; border-left-color:rgba(255,255,255,.25) !important;
 }
 .topbar #posnic-multi-baskets .posnic-basket-add {
-  background: #f1f3f5 !important;
-  color: #57606a !important;
-  border-color: #d0d7de !important;
+  background:#f1f3f5 !important; color:#57606a !important; border-color:#d0d7de !important;
 }
