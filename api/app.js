@@ -1181,7 +1181,7 @@ for (const extension of ['html', 'js', 'css']) {
 // companion setup itself is no longer mounted or used by Samarina.
 for (const extension of ['html', 'js', 'css']) {
   const suffix = extension === 'html' ? '' : '.' + extension;
-  app.get('/mobile-pos-setup' + suffix, (req, res, next) => {
+  app.get(['/api/mobile-pos-setup' + suffix, '/mobile-pos-setup' + suffix], (req, res, next) => {
     if (extension === 'html' && req.query.view !== 'payments') return next();
     res.set('Cache-Control', 'no-store');
     res.sendFile('mobile-pos-setup.' + extension, { root: require('path').join(__dirname, 'src/routes') });
