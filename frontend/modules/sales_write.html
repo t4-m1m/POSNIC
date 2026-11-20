@@ -1772,3 +1772,25 @@ body[data-theme="warmnight"]{color-scheme:dark}
 .add-disc-row .editable-input input,
 .add-disc-row input[name="extraDiscVal"]{min-width:150px!important;width:150px!important;min-height:44px!important;font-size:20px!important;font-weight:700;padding:9px 12px!important;}
 </style>
+
+<style id="posnic-sales-shortcuts-viewport-layout">
+/* The cashier shortcut strip is portalled to BODY by sales.js so dashboard
+   transforms cannot make it overlap the fixed application header. */
+#sales-function-shortcuts.sales-function-toolbar-pinned {
+  display:flex!important; flex-flow:row nowrap!important; align-items:center!important;
+  gap:8px!important; min-height:58px!important; height:auto!important;
+  padding:8px 12px!important; background:var(--theme-card-bg,#fff)!important;
+  border-bottom:1px solid var(--theme-border-color,#e2e8f0)!important;
+  box-shadow:0 4px 12px rgba(15,23,42,.08)!important;
+  overflow-x:auto!important; overflow-y:hidden!important; white-space:nowrap!important;
+}
+#sales-function-shortcuts.sales-function-toolbar-pinned .sales-function-key {
+  flex:0 0 auto!important; min-height:40px!important; white-space:nowrap!important;
+}
+#sales-function-shortcuts.sales-function-toolbar-pinned .sales-current-customer,
+#sales-function-shortcuts.sales-function-toolbar-pinned .sales-customer-credit-inline,
+#sales-function-shortcuts.sales-function-toolbar-pinned .sales-shortcut-total {
+  flex:0 0 auto!important; min-height:40px!important;
+}
+.sales-function-toolbar-placeholder { display:block!important; width:100%; min-height:58px; }
+</style>
