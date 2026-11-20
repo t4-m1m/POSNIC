@@ -8065,24 +8065,59 @@ body:has(#sales_new:not([style*="display: none"])) #posnic-multi-baskets-header-
     flex: 0 0 auto;
   }
 }
-/* Keep only a compact topbar clearance; do not consume the cashier workspace. */
+/* Align Add, customer baskets and the right-side language controls on one header row.
+   The Add dropdown's legacy -30px offset was pulling it out of the shared line. */
 @media (min-width: 768px) {
-  #sales_new > .contentbar {
-    padding-top: 56px !important;
+  .topbar .togglebar { display: inline-flex !important; align-items: center !important; vertical-align: middle; }
+  .topbar .togglebar > ul.list-inline { display: inline-flex !important; align-items: center !important; flex-wrap: nowrap !important; gap: 8px; margin: 0 !important; }
+  .topbar .togglebar .add_dropdown { margin-top: 0 !important; }
+  .topbar .togglebar #posnic-multi-baskets-header-wrap {
+    display: none;
+    flex: 0 1 auto;
+    align-items: center;
+    vertical-align: middle;
+    margin: 0 0 0 4px;
+    max-width: min(25vw, 360px);
   }
-  /* Basket and shortcut bars must keep their natural height. The catalogue/cart
-     workspace below them receives the remaining height instead of shrinking them. */
+  body:has(#sales_new:not([style*="display: none"])) .topbar .togglebar #posnic-multi-baskets-header-wrap {
+    display: inline-flex !important;
+  }
+  .topbar .togglebar #posnic-multi-baskets-header-host { display: flex; align-items: center; min-width: 0; }
+  .topbar .togglebar #posnic-multi-baskets-header-wrap #posnic-multi-baskets {
+    display: flex !important; align-items: center; flex-wrap: nowrap !important; gap: 4px;
+    width: auto !important; max-width: min(25vw, 360px); min-width: 0;
+    min-height: 34px; margin: 0; padding: 2px 4px; overflow-x: auto; overflow-y: hidden;
+    white-space: nowrap; box-sizing: border-box;
+  }
+  .topbar .togglebar #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-tab-wrap,
+  .topbar .togglebar #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-add { flex: 0 0 auto; }
+
+  /* The fixed header is 70px tall; Electron adds its native titlebar offset.
+     Move the whole sales workspace below it instead of adding a huge inner gap. */
+  #sales_new {
+    margin-top: calc(var(--titlebar-h, 0px) + 70px) !important;
+    height: calc(100vh - var(--titlebar-h, 0px) - 70px) !important;
+    max-height: calc(100vh - var(--titlebar-h, 0px) - 70px) !important;
+  }
+  @supports (height: 100dvh) {
+    #sales_new {
+      height: calc(100dvh - var(--titlebar-h, 0px) - 70px) !important;
+      max-height: calc(100dvh - var(--titlebar-h, 0px) - 70px) !important;
+    }
+  }
+  #sales_new > .contentbar { padding-top: 8px !important; }
   #sales_new #touchsales_page > #sales-function-shortcuts {
+    order: 2 !important;
+    display: flex !important;
     flex: 0 0 auto !important;
-    min-height: 44px !important;
-    margin: 2px 0 6px !important;
+    flex-shrink: 0 !important;
+    min-height: 48px !important;
+    margin: 2px 0 8px !important;
     position: relative !important;
-    z-index: 1 !important;
-  }
-  #sales_new #touchsales_page > #posnic-multi-baskets {
-    flex: 0 0 auto !important;
+    z-index: 2 !important;
   }
   #sales_new #touchsales_page > .row:has(#instance-view, #items_view_hide) {
+    order: 3 !important;
     flex: 1 1 0 !important;
     min-height: 0 !important;
   }
