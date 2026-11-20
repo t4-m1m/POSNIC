@@ -788,22 +788,15 @@ function withTimeout(label, operation, timeoutMs) {
 
 function closeApiServer() {
   process.emit('posnic:api-shutdown');
-  const server = global.apiServer || apiServer;
-  if (!server || typeof server.close !== 'function') return Promise.resolve();
-
-  return new Promise((resolve, reject) => {
-    server.close(error => {
-      if (error) reject(error);
-      else resolve();
-    });
-
-    // Stop waiting for persistent keep-alive connections where supported.
-    if (typeof server.closeIdleConnections === 'function') {
-      server.closeIdleConnections();
-    }
-  });
+  const servers = [global.companionHttpsServer, global.apiServer || apiServer]
+    .filter((server, index, all) => server && typeof server.close === 'function' && all.indexOf(server) === index);
+  if (!servers.length) return Promise.resolve();
+  return Promise.all(servers.map(server => new Promise((resolve, reject) => {
+    if (!server.listening) return resolve();
+    server.close(error => error ? reject(error) : resolve());
+    if (typeof server.closeIdleConnections === 'function') server.closeIdleConnections();
+  })));
 }
-
 /*
  * The shutdown, as a list, so it can be walked and counted.
  *

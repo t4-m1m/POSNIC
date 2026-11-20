@@ -566,6 +566,20 @@ module.exports = async function startServer(options = {}) {
 
     // Do not redirect the Electron window until Express accepts requests.
     await serverReady;
+    // Companion HTTPS is a separate listener on the same Express app. The
+    // certificate/key live in Electron userData and the listener is closed
+    // alongside the ordinary API server during application shutdown.
+    try {
+      const companionHttpsServer = await require(path.join(apiPath, 'src/utils/companion-https')).start(app, {
+        userDataPath,
+        preferredPort: Number(PORT) + 1,
+      });
+      global.companionHttpsServer = companionHttpsServer;
+      console.log(`[Samarina Companion] Local HTTPS ready on https://0.0.0.0:${companionHttpsServer.companionHttpsPort}`);
+    } catch (httpsError) {
+      global.companionHttpsServer = null;
+      console.warn('[Samarina Companion] Local HTTPS unavailable; HTTP and native photo/manual scan fallback remain available:', httpsError.message);
+    }
     if (process.env.POSNIC_BUSINESS_LOCAL_REPORTING === '1') {
       try {
         const stopNotifications = require(path.join(apiPath, 'src/services/business-notification-worker')).startNotifications({
