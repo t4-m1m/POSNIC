@@ -808,7 +808,9 @@ app.get('/', (req, res, next) => {
   if (process.env.POSNIC_DESKTOP === '1' && !isLoopback) return res.redirect(302, '/mobile/');
   return next();
 });
-app.get('/mobile', (_req, res) => res.redirect(308, '/mobile/'));
+// Express's default non-strict routing makes '/mobile' also match '/mobile/'.
+// Match only the slashless URL, otherwise the canonical redirect loops forever.
+app.get(/^\\/mobile$/, (_req, res) => res.redirect(308, '/mobile/'));
 app.use('/mobile', express.static(MOBILE_COMPANION_DIR, {
   index: 'index.html',
   fallthrough: true,
