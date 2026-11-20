@@ -35,7 +35,7 @@ async function sendSamarinaZReportAfterClose(req, closeData) {
       'Compté : ' + (Number(closeData?.closing_counted) || 0).toLocaleString('fr-DZ') + ' DA',
       'Écart : ' + (Number(closeData?.over_short) || 0).toLocaleString('fr-DZ') + ' DA',
       'Fermeture : ' + new Date().toLocaleString('fr-DZ')
-    ].join('\\n');
+    ].join('\n');
     const sent = await require('../services/whatsapp.service').sendMessage(deviceId, rawBranchId, config.ownerPhone, message);
     if (!sent.status) console.warn('[Samarina Companion] Automatic Z report was not sent:', sent.message);
   } catch (error) {
