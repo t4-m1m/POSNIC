@@ -307,8 +307,22 @@ router.post(
         }),
       }))
     );
+    // A second QR opens the browser Companion directly and completes pairing
+    // from the URL. Keep the existing JSON QR unchanged for native clients.
+    const companionQr = await Promise.all(
+      pairingQr.map(async (target) => {
+        const url = new URL('/mobile/', target.url);
+        url.searchParams.set('server', target.url);
+        url.searchParams.set('code', code);
+        return {
+          url: target.url,
+          qr: await require('qrcode').toDataURL(url.toString(), { width: 260, margin: 2 }),
+        };
+      })
+    );
     return {
       pairingQr,
+      companionQr,
       code: code.match(/.{4}/g).join('-'),
       expires,
       staffId: String(target._id),
