@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2563eb"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>POSNIC Mobile</title><link rel="manifest" href="/mobile/manifest.webmanifest"><link rel="stylesheet" href="/mobile/mobile.css">
+</head>
+<body>
+<div class="app-shell">
+<header class="app-header"><div class="brand"><span class="brand-mark">P</span><div><strong>POSNIC</strong><small>Compagnon mobile</small></div></div><button id="logout" class="icon-button" hidden aria-label="Déconnexion">↗</button></header>
+<section id="login-screen" class="login-screen">
+<div class="login-card"><div class="eyebrow">COMPAGNON WI-FI</div><h1>Connectez votre magasin</h1><p>Utilisez votre compte POSNIC. Votre session reste sur cet appareil.</p>
+<form id="login-form"><label>Identifiant<input id="login-user" name="username" autocomplete="username" required placeholder="Email ou nom d'utilisateur"></label><label>Mot de passe<input id="login-password" name="password" type="password" autocomplete="current-password" required></label><button class="primary full" type="submit">Se connecter</button><p id="login-error" class="error" role="alert"></p></form></div>
+</section>
+<main id="workspace" hidden>
+<div class="welcome"><div><span class="eyebrow">ESPACE MAGASIN</span><h1 id="welcome-name">Bonjour</h1><p>Votre magasin, dans votre poche.</p></div><span class="live-dot">Connecté</span></div>
+<nav class="tabs" aria-label="Fonctions"><button class="tab active" data-tab="scan">Scanner</button><button class="tab" data-tab="create">Nouvel article</button><button class="tab" data-tab="receive">Réception</button></nav>
+<section class="panel active" id="tab-scan"><div class="section-heading"><div><h2>Prix & stock</h2><p>Scannez un code ou recherchez un article.</p></div><span class="section-icon">⌕</span></div>
+<form id="lookup-form" class="search-row"><input id="lookup-query" placeholder="Code-barres, SKU ou nom" autocomplete="off" required><button class="primary" type="submit">Chercher</button></form>
+<label class="camera-action">Lire avec la caméra / galerie<input id="barcode-photo" type="file" accept="image/*" capture="environment"></label>
+<div id="lookup-results" class="results empty-state">Aucun article recherché.</div></section>
+<section class="panel" id="tab-create"><div class="section-heading"><div><h2>Ajouter un article</h2><p>Création directe dans le catalogue POSNIC.</p></div><span class="section-icon">＋</span></div>
+<form id="create-form" class="form-card">
+<label>Nom de l'article *<input name="items_name" required maxlength="200" placeholder="Ex. Ballerine femme"></label>
+<div class="two"><label>Prix de vente (DA) *<input name="items_selling_price" required inputmode="decimal" type="number" min="0" step="0.01"></label><label>Stock initial<input name="quantity" type="number" min="0" step="1" value="0"></label></div>
+<div class="two"><label>SKU / Référence<input name="item_code" maxlength="80"></label><label>Code-barres<input name="barcode" maxlength="100"></label></div>
+<label>Photo de l'article<input name="photo" id="new-item-photo" type="file" accept="image/*" capture="environment"></label>
+<div id="create-error" class="error" role="alert"></div><button class="primary full" type="submit">Enregistrer l'article</button></form></section>
+<section class="panel" id="tab-receive"><div class="section-heading"><div><h2>Réception achats</h2><p>Préparez les scans des cartons.</p></div><span class="section-icon">▣</span></div>
+<div class="notice"><strong>Mode réception</strong><p>Connectez-vous au POS sur le même magasin et ouvrez une facture d'achat. La liaison en direct avec le brouillon desktop doit être activée côté serveur avant d'appliquer les quantités.</p></div>
+<form id="receive-form" class="search-row"><input id="receive-code" placeholder="Code-barres de l'article" required><button class="primary" type="submit">Ajouter +1</button></form><div id="receive-queue" class="results empty-state">Aucun scan en attente sur ce téléphone.</div></section>
+<footer>POSNIC · Réseau local du magasin</footer>
+</main>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+</div><script src="/mobile/app.js" defer></script>
+</body></html>
