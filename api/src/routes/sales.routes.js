@@ -470,6 +470,35 @@ router.post(
 
 router.use(protect);
 
+// Read-only Zakat snapshot, scoped to the active branch and tenant.
+router.get('/zakatSnapshot', async (req, res) => {
+  try {
+    salesController.setRequestContext(req);
+    const context = salesController.resolveBranchContext(req);
+    const branchId = context && context.branch_id;
+    if (!branchId) return res.status(400).json({ type: 'error', message: 'Sélectionnez un magasin.' });
+    const license = req.user && (req.user.license || req.user.license_id);
+    const scope = { branch_id: branchId, ...(license ? { license } : {}) };
+    const db = req.db;
+    if (!db || typeof db.collection !== 'function') return res.status(500).json({ type: 'error', message: 'Base de données indisponible.' });
+    const [items, debts] = await Promise.all([
+      db.collection('items').find(scope, { projection: { selling_price: 1, available_quantity: 1, quantity: 1, inventory: 1, track_inventory: 1, item_kind: 1 } }).toArray(),
+      db.collection('sales').find({ ...scope, payment_pending: { $gt: 0 }, ...require('../helpers/reportable-sales')() }, { projection: { payment_pending: 1 } }).toArray()
+    ]);
+    const stockValue = items.reduce((sum, item) => {
+      if (item.item_kind === 'service' || item.inventory === false || item.track_inventory === false) return sum;
+      const quantity = Math.max(0, Number(item.available_quantity != null ? item.available_quantity : item.quantity) || 0);
+      return sum + Math.max(0, Number(item.selling_price) || 0) * quantity;
+    }, 0);
+    const receivables = debts.reduce((sum, sale) => sum + Math.max(0, Number(sale.payment_pending) || 0), 0);
+    return res.json({ type: 'success', data: { stockValue: Math.round(stockValue * 100) / 100, receivables: Math.round(receivables * 100) / 100 } });
+  } catch (error) {
+    console.error('[Zakat] snapshot failed:', error);
+    return res.status(500).json({ type: 'error', message: 'Impossible de calculer le stock et les créances.' });
+  }
+});
+
+
 // Payment corrections are a separate workflow: never collect money again.
 const paymentCorrection = require('../services/payment-correction');
 const correctionRoute = (handler) => async (req, res) => {
