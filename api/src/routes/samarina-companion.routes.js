@@ -245,7 +245,19 @@ router.put('/items/:id', async (req, res) => {
     if (!existing) return fail(res, 404, 'Article introuvable dans ce magasin.');
     const set = { updated_date: new Date() };
     if (Object.prototype.hasOwnProperty.call(req.body || {}, 'name')) set.name = String(req.body.name || '').trim();
-    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'barcode_id')) set.barcode_id = String(req.body.barcode_id || '').trim();
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'barcode_id')) {
+      const barcode = String(req.body.barcode_id || '').trim();
+      if (barcode) {
+        const itemBarcodes = require('../utils/item-barcodes');
+        const conflict = await itemBarcodes.findConflict(req.db.collection('items'), [barcode], {
+          branchId: oid(c.branchId) || c.branchId,
+          licenseId: oid(c.session.license) || c.session.license,
+          selfId: id
+        });
+        if (conflict) return fail(res, 409, conflict.message || 'Ce code-barres est déjà attribué.');
+      }
+      set.barcode_id = barcode;
+    }
     if (Object.prototype.hasOwnProperty.call(req.body || {}, 'sku')) {
       const sku = String(req.body.sku || '').trim();
       if (sku) {
