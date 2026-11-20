@@ -91,7 +91,8 @@ PosnicPro.sales = {
         var state = PosnicPro.sales._functionToolbarPinState;
         if (!state) state = PosnicPro.sales._functionToolbarPinState = {
             placeholder: null, originalParent: null, originalNext: null,
-            installed: false, frame: false, observer: null
+            installed: false, frame: false, observer: null,
+            anchorLeft: null, anchorWidth: null, anchorViewportWidth: 0
         };
 
         function headerRect() {
@@ -139,10 +140,16 @@ PosnicPro.sales = {
             if (!header || !Number.isFinite(header.bottom)) return;
             if (toolbar.parentNode !== document.body) document.body.appendChild(toolbar);
 
-            // The workspace width changes when the blue navigation rail expands on hover.
-            var workspaceRect = contentBar.getBoundingClientRect();
-            var left = Math.max(0, workspaceRect.left);
-            var width = Math.max(0, workspaceRect.width);
+            // Freeze horizontal geometry to the collapsed workspace. The white
+            // flyout is an overlay and must never push the F-key toolbar.
+            if (state.anchorLeft === null || state.anchorViewportWidth !== window.innerWidth) {
+                var workspaceRect = contentBar.getBoundingClientRect();
+                state.anchorLeft = Math.max(0, workspaceRect.left);
+                state.anchorWidth = Math.max(0, Math.min(workspaceRect.width, window.innerWidth - state.anchorLeft));
+                state.anchorViewportWidth = window.innerWidth;
+            }
+            var left = state.anchorLeft;
+            var width = state.anchorWidth;
             toolbar.classList.add('sales-function-toolbar-pinned');
             toolbar.style.position = 'fixed';
             toolbar.style.top = Math.max(0, header.bottom) + 'px';
@@ -180,19 +187,18 @@ PosnicPro.sales = {
             window.addEventListener('resize', schedulePin);
             if (window.MutationObserver) {
                 state.observer = new MutationObserver(schedulePin);
-                state.observer.observe(document.querySelector('.topbar') || document.body, { childList: true, subtree: true, attributes: true });
-                var sideRail = document.querySelector('.vertical-menu-detail') || document.querySelector('.vertical-menu');
-                if (sideRail) state.observer.observe(sideRail, { attributes: true, childList: true, subtree: true });
+                // Observe only the fixed top header. The expanding white flyout
+                // beside the blue rail must never trigger a toolbar re-measure.
+                var fixedHeader = document.querySelector('.topbar');
+                if (fixedHeader) state.observer.observe(fixedHeader, { childList: true, subtree: true, attributes: true });
                 state.observer.observe(salesPage, { attributes: true, attributeFilter: ['style', 'class'] });
-                ['mouseenter','mouseleave','transitionend'].forEach(function (eventName) {
-                    if (sideRail) sideRail.addEventListener(eventName, schedulePin, true);
-                });
             }
             state.installed = true;
         }
         schedulePin();
     },
     showAdd: function () {
+        $('#posnic-cancel-return').hide();
         PosnicPro.sales.resetOrderRequest();
         // A drawer opened by the previous screen must never leave its full-screen
         // scrim intercepting the fresh sale workspace. HideSideBarModal resets
@@ -9532,6 +9538,7 @@ PosnicPro.sales.recentMenu = {
         var EditRecentSaleItems = result.items;
         var lineItem = [];
         PosnicPro.sales.SaleAction = sale;
+        $('#posnic-cancel-return').toggle(sale === 'return');
         if (sale === 'return') {
             PosnicPro.commonDate();
             /*For checking Recent Sale action in addline items*/
@@ -15518,6 +15525,9 @@ $(document).ready(function () {
         },
         switchTo: function (id) {
             if (id === this.activeId) return;
+            // A return is a temporary history view, never a basket. Restore
+            // the saved basket before switchTo snapshots or changes sessions.
+            if (PosnicPro.sales.SaleAction === 'return') PosnicPro.sales.showAdd();
             // Keep the active basket stable until its payment request completes.
             if (PosnicPro.sales.submissionInProgress || window.__posnicFastCheckoutSubmitting || window.__posnicFastPayPending) {
                 PosnicPro.alert('warning', 'Terminez le paiement en cours avant de changer de client.');
@@ -16327,3 +16337,42 @@ PosnicPro.sales.openZrTracking=function(){
         });
     });
 }());
+
+
+/* Explicitly cancel a return from Recent Sales and restore the untouched basket. */
+$(document).off('click.posnicCancelReturn', '#posnic-cancel-return')
+    .on('click.posnicCancelReturn', '#posnic-cancel-return', function () {
+        if (PosnicPro.sales && PosnicPro.sales.SaleAction === 'return') PosnicPro.sales.showAdd();
+    });
+
+/* Place quick cash controls before day-close for staff, or before WhatsApp for admins. */
+(function installPosnicPaymentActionOrder() {
+    function isAdmin() {
+        var values = ['usertype', 'role', 'role_name', 'user_type'].map(function (key) {
+            return String(PosnicPro.local.get(key) || '').trim().toLowerCase();
+        });
+        return values.some(function (value) {
+            return ['admin', 'super_admin', 'administrator', 'owner'].indexOf(value) !== -1;
+        }) || PosnicPro.local.get('is_admin') === true || PosnicPro.local.get('is_admin') === 'true';
+    }
+    function arrange() {
+        var row = document.getElementById('posnic-payment-actions');
+        var whatsapp = document.getElementById('posnic-send-whatsapp-receipt-payment');
+        if (!row || !whatsapp || isAdmin()) return;
+        var root = document.getElementById('infobar-settings-sidebar-tender-details') || document.getElementById('tenderpage');
+        var candidates = root ? root.querySelectorAll('button,a,[role="button"]') : [];
+        for (var i = 0; i < candidates.length; i++) {
+            var candidate = candidates[i];
+            if (candidate === whatsapp || row.contains(candidate)) continue;
+            var label = String(candidate.innerText || candidate.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+            if (/fermeture de journée|clôture de journée|fermeture de caisse|clôture de caisse/.test(label)) {
+                candidate.classList.add('posnic-close-day-action');
+                row.insertBefore(candidate, whatsapp);
+                break;
+            }
+        }
+    }
+    $(document).ready(arrange);
+    var observerRoot = document.getElementById('infobar-settings-sidebar-tender-details');
+    if (observerRoot && window.MutationObserver) new MutationObserver(arrange).observe(observerRoot, { childList: true, subtree: true });
+})();
