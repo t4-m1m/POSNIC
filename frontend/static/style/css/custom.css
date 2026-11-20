@@ -7987,3 +7987,15 @@ tr.s-doc-purchase-row:hover td { background: rgba(9, 105, 218, 0.05); }
 .sweet-alert,
 .jconfirm,
 .swal2-container { z-index: 40120 !important; }
+
+/* POS cashier page: the shared #containerbar is an empty breadcrumb spacer here.
+   The global application rule gives it a 100vh minimum height, which pushes the
+   actual sales content (basket tabs, F-key bar and workspace) below the viewport.
+   Keep the existing 100px cashier top offset, but never let this spacer consume
+   the full screen. Scope this correction to #sales_new so other pages are untouched. */
+#sales_new > #containerbar {
+  height: 100px !important;
+  min-height: 100px !important;
+  max-height: 100px !important;
+  overflow: hidden !important;
+}
