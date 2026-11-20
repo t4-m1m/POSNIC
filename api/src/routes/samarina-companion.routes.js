@@ -4,6 +4,8 @@ const crypto = require('crypto');
 const { ObjectId } = require('mongodb');
 const { protect } = require('../middleware/auth');
 const ItemService = require('../services/item.service');
+const ExpenseService = require('../services/expense.service');
+const expenseService = new ExpenseService();
 const itemService = new ItemService();
 const { runWithRequestContext } = require('../utils/request-context');
 const router = express.Router();
@@ -224,19 +226,20 @@ router.post('/expenses/quick', async (req, res) => {
     if (!Number.isFinite(amount) || amount <= 0 || amount > 100000000 || !categories.has(category) || description.length < 3)
       return fail(res, 400, 'Montant, catégorie ou description invalide.');
     const c = req.companion, now = new Date();
-    const document = {
+    const createdBy = c.user.username || c.user.name || c.user.email || 'Samarina Companion';
+    const result = await expenseService.createExpense({
       amount, type: 'debit', date: now, category, recipientname: '', approvedby: '',
       description, branch_id: oid(c.branchId) || c.branchId,
       branch_name: c.branch.branch_name || c.branch.name || '',
-      license: oid(c.session.license) || c.session.license || null,
-      created_date: now, updated_date: now,
-      created_by: c.user.username || c.user.name || c.user.email || 'Samarina Companion',
-      created_by_id: c.user._id || null, updated_by: c.user.username || c.user.name || c.user.email || '',
-      updated_by_id: c.user._id || null, is_deleted: false,
-      payment_source: source, cash_drawer_impact: source !== 'personal', source_channel: 'samarina_companion'
-    };
-    const result = await req.db.collection('expenses').insertOne(document);
-    return res.status(201).json({ ok: true, id: sid(result.insertedId), amount, category, paymentSource: source, date: now });
+      created_by: createdBy, created_by_id: c.user._id || null
+    });
+    if (!result.status || !result.data) return fail(res, 400, result.message || 'Impossible d’enregistrer la dépense.');
+    const expenseId = oid(result.data);
+    await req.db.collection('expenses').updateOne(
+      { _id: expenseId, branch_id: oid(c.branchId) || c.branchId, license: oid(c.session.license) || c.session.license },
+      { $set: { payment_source: source, cash_drawer_impact: source !== 'personal', source_channel: 'samarina_companion' } }
+    );
+    return res.status(201).json({ ok: true, id: sid(result.data), amount, category, paymentSource: source, date: now });
   } catch (error) {
     console.error('[Samarina Companion] quick expense failed:', error);
     return fail(res, 500, 'Impossible d’enregistrer la dépense.');
