@@ -56,6 +56,15 @@ router.post('/pair', async (req, res) => {
   }
 });
 
+/* GET also supplies the CSRF response header used by the following setup POST. */
+router.get('/setup/status', protect, async (req, res) => {
+  const branchId = activeBranchId(req);
+  if (!branchId) return fail(res, 400, 'Sélectionnez un magasin dans POSNIC.');
+  const branch = await findBranch(req, branchId);
+  if (!branch) return fail(res, 404, 'Magasin introuvable.');
+  return res.json({ branch: branch.branch_name || branch.name || 'Magasin', canPair: ownerAllowed(req.user) });
+});
+
 /* Desktop setup is protected by the ordinary POSNIC login, but issues its own
    one-use grants and opaque Samarina session tokens. */
 router.post('/setup/pairing-code', protect, async (req, res) => {
@@ -184,6 +193,17 @@ router.post('/items', async (req, res) => {
     console.error('[Samarina Companion] item creation failed:', error);
     fail(res, 500, 'Impossible de créer cet article.');
   }
+});
+router.get('/items/:id', async (req, res) => {
+  try {
+    const id = oid(req.params.id);
+    if (!id) return fail(res, 400, 'Référence article invalide.');
+    const row = await req.db.collection('items').findOne({
+      _id: id, ...branchFilter(req.companion.branchId), ...licenseFilter(req.companion.session.license)
+    }, { projection: { name: 1, barcode_id: 1, sku: 1, selling_price: 1, image: 1, quantity: 1, available_quantity: 1, track_inventory: 1 } });
+    if (!row) return fail(res, 404, 'Article introuvable.');
+    return res.json({ id: sid(row._id), name: row.name || '', barcode: row.barcode_id || '', sku: row.sku || '', selling_price: Number(row.selling_price || 0), image: row.image || '', quantity: Number(row.available_quantity ?? row.quantity ?? 0), track_inventory: row.track_inventory !== false });
+  } catch (error) { return fail(res, 500, 'Impossible de charger cet article.'); }
 });
 router.put('/items/:id', async (req, res) => {
   try {
