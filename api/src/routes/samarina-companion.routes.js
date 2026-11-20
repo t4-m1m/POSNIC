@@ -188,9 +188,19 @@ router.get('/desktop/basket-jobs', protect, async (req, res) => {
   try {
     const branchId = activeBranchId(req);
     if (!branchId || !requestCanAccessBranch(req, branchId)) return fail(res, 403, 'Accès au magasin refusé.');
-    const rows = await req.db.collection('samarina_companion_basket_jobs')
-      .find({ branchId: oid(branchId) || branchId, state: 'pending', expiresAt: { $gt: new Date() } })
-      .sort({ createdAt: 1 }).limit(30).toArray();
+    const collection = req.db.collection('samarina_companion_basket_jobs'), now = new Date();
+    const candidates = await collection.find({
+      branchId: oid(branchId) || branchId, expiresAt: { $gt: now },
+      $or: [{ state: 'pending' }, { state: 'processing', claimExpiresAt: { $lt: now } }]
+    }).sort({ createdAt: 1 }).limit(30).toArray();
+    const rows = [];
+    for (const row of candidates) {
+      const claimed = await collection.updateOne(
+        { _id: row._id, $or: [{ state: 'pending' }, { state: 'processing', claimExpiresAt: { $lt: now } }] },
+        { $set: { state: 'processing', claimedAt: now, claimExpiresAt: new Date(now.getTime() + 5 * 60000) } }
+      );
+      if (claimed.modifiedCount === 1) rows.push(row);
+    }
     return res.json({ rows: rows.map(row => ({ id: sid(row._id), itemId: sid(row.itemId), quantity: row.quantity })) });
   } catch (error) {
     console.error('[Samarina Companion] desktop basket queue failed:', error);
@@ -203,8 +213,8 @@ router.post('/desktop/basket-jobs/:id/ack', protect, async (req, res) => {
     if (!branchId || !id || !requestCanAccessBranch(req, branchId)) return fail(res, 403, 'Accès au magasin refusé.');
     const state = req.body?.state === 'failed' ? 'failed' : 'added';
     await req.db.collection('samarina_companion_basket_jobs').updateOne(
-      { _id: id, branchId: oid(branchId) || branchId, state: 'pending' },
-      { $set: { state, completedAt: new Date(), result: String(req.body?.message || '').slice(0, 300) } }
+      { _id: id, branchId: oid(branchId) || branchId, state: 'processing' },
+      { $set: { state, completedAt: new Date(), result: String(req.body?.message || '').slice(0, 300) }, $unset: { claimExpiresAt: '' } }
     );
     return res.json({ ok: true });
   } catch (_) { return fail(res, 500, 'Impossible de confirmer l’ajout au panier.'); }
@@ -214,9 +224,19 @@ router.get('/desktop/print-jobs', protect, async (req, res) => {
   try {
     const branchId = activeBranchId(req);
     if (!branchId || !requestCanAccessBranch(req, branchId)) return fail(res, 403, 'Accès au magasin refusé.');
-    const rows = await req.db.collection('samarina_companion_print_jobs')
-      .find({ branchId: oid(branchId) || branchId, state: 'pending', expiresAt: { $gt: new Date() } })
-      .sort({ createdAt: 1 }).limit(20).toArray();
+    const collection = req.db.collection('samarina_companion_print_jobs'), now = new Date();
+    const candidates = await collection.find({
+      branchId: oid(branchId) || branchId, expiresAt: { $gt: now },
+      $or: [{ state: 'pending' }, { state: 'processing', claimExpiresAt: { $lt: now } }]
+    }).sort({ createdAt: 1 }).limit(20).toArray();
+    const rows = [];
+    for (const row of candidates) {
+      const claimed = await collection.updateOne(
+        { _id: row._id, $or: [{ state: 'pending' }, { state: 'processing', claimExpiresAt: { $lt: now } }] },
+        { $set: { state: 'processing', claimedAt: now, claimExpiresAt: new Date(now.getTime() + 5 * 60000) } }
+      );
+      if (claimed.modifiedCount === 1) rows.push(row);
+    }
     return res.json({ rows: rows.map(row => ({ id: sid(row._id), itemId: sid(row.itemId), copies: row.copies })) });
   } catch (error) {
     console.error('[Samarina Companion] desktop print queue failed:', error);
@@ -229,8 +249,8 @@ router.post('/desktop/print-jobs/:id/ack', protect, async (req, res) => {
     if (!branchId || !id || !requestCanAccessBranch(req, branchId)) return fail(res, 403, 'Accès au magasin refusé.');
     const state = req.body?.state === 'failed' ? 'failed' : 'printed';
     await req.db.collection('samarina_companion_print_jobs').updateOne(
-      { _id: id, branchId: oid(branchId) || branchId, state: 'pending' },
-      { $set: { state, completedAt: new Date(), result: String(req.body?.message || '').slice(0, 300) } }
+      { _id: id, branchId: oid(branchId) || branchId, state: 'processing' },
+      { $set: { state, completedAt: new Date(), result: String(req.body?.message || '').slice(0, 300) }, $unset: { claimExpiresAt: '' } }
     );
     return res.json({ ok: true });
   } catch (_) { return fail(res, 500, 'Impossible de confirmer l’impression.'); }
