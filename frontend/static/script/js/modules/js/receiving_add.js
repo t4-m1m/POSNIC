@@ -96,34 +96,43 @@ PosnicPro.receivings = {
             try {
                 var rows = response && response.rows ? response.rows : (response && response.data && response.data.rows) || [];
                 if (!rows.length) return;
-                var hash = String(window.location.hash || '').slice(1);
-                var onNewReceiving = /^\/?receivings\/new$/.test(hash);
-                if (!onNewReceiving) {
-                    var hasDraftLines = $('#receiving_print tbody tr').not('#cart_content_area').length > 0;
-                    if (hasDraftLines) return;
-                    if (typeof hasher !== 'undefined' && hasher.setHash) hasher.setHash('receivings/new');
-                    else window.location.hash = '#/receivings/new';
+                var po = PosnicPro.purchaseorders;
+                if (!po || !po.addLine) return;
+                if (!$('#po_form_section').is(':visible')) {
+                    // Start a clean Achats purchase invoice without disturbing
+                    // a form that is already open; the next poll imports rows.
+                    po.showAdd();
                     return;
                 }
-                if (!$('#receiving_add').length || !PosnicPro.receivings.addReceivingLineItems) return;
                 var imported = 0;
                 rows.forEach(function (row) {
                     var itemId = String(row.itemId || '');
-                    if (!itemId || !row.quantity) return;
-                    PosnicPro.receivings.addReceivingLineItems({
-                        item_id: itemId, item_name: row.name || 'Article', item_quantity: row.quantity,
-                        company_price: Number(row.companyPrice) || 0, tax: Number(row.tax) || 0,
-                        tax_type: row.taxType || 'exclusive', available_quantity: Number(row.availableQuantity) || 0,
-                        itemid: row.itemid || row.barcode || '', item_unit: row.unit || 'qty',
-                        purchase_unit: row.purchaseUnit || '', conversion_factor: Number(row.conversionFactor) || 0
-                    });
+                    var quantity = Number(row.quantity) || 0;
+                    if (!itemId || quantity <= 0) return;
+                    var key = itemId;
+                    if (!po._lines[key]) {
+                        po.addLine({
+                            item_id: itemId,
+                            item_name: row.name || 'Article',
+                            barcode_id: row.barcode || '',
+                            available_quantity: Number(row.availableQuantity) || 0,
+                            company_price: Number(row.companyPrice) || 0,
+                            incoming: ''
+                        });
+                        if (po._lines[key]) po._lines[key].qty = quantity;
+                    } else {
+                        po._lines[key].qty = (Number(po._lines[key].qty) || 0) + quantity;
+                    }
+                    imported++;
                     PosnicPro.post({
                         url: 'samarina/v1/desktop/receiving-queue/' + encodeURIComponent(row.id) + '/ack',
                         data: JSON.stringify({})
                     }, function () {});
-                    imported++;
                 });
-                if (imported) PosnicPro.alert('success', imported + ' article(s) reçus depuis le Compagnon Samarina. Vérifiez le fournisseur et les quantités avant d’enregistrer.');
+                if (imported) {
+                    po.renderLines();
+                    PosnicPro.alert('success', imported + ' article(s) scannés ajoutés à la facture Achats Samarina. Vérifiez le fournisseur, les coûts et les quantités avant de créer le document.');
+                }
             } finally {
                 self._samarinaQueueBusy = false;
             }
