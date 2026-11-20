@@ -483,7 +483,7 @@ router.get('/zakatSnapshot', async (req, res) => {
     if (!db || typeof db.collection !== 'function') return res.status(500).json({ type: 'error', message: 'Base de données indisponible.' });
     const [items, debts] = await Promise.all([
       db.collection('items').find(scope, { projection: { selling_price: 1, available_quantity: 1, quantity: 1, inventory: 1, track_inventory: 1, item_kind: 1 } }).toArray(),
-      db.collection('sales').find({ ...scope, payment_pending: { $gt: 0 }, ...require('../helpers/reportable-sales')() }, { projection: { payment_pending: 1 } }).toArray()
+      db.collection('sales').find({ ...scope, payment_pending: { $gt: 0 }, ...require('../helpers/reportable-sales').reportableSales() }, { projection: { payment_pending: 1 } }).toArray()
     ]);
     const stockValue = items.reduce((sum, item) => {
       if (item.item_kind === 'service' || item.inventory === false || item.track_inventory === false) return sum;
