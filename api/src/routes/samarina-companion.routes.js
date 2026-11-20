@@ -460,27 +460,42 @@ router.get('/catalogue', async (req, res) => {
 
 router.post('/items', async (req, res) => {
   try {
-    const name = String(req.body?.name || '').trim();
-    const price = Number(req.body?.selling_price);
-    if (!name || !Number.isFinite(price) || price < 0) return fail(res, 400, 'Nom et prix de vente valides obligatoires.');
-    const c = req.companion;
-    const photo = String(req.body?.image || '').trim();
-    const data = {
-      name, selling_price: price, barcode_id: String(req.body?.barcode_id || '').trim(),
-      sku_id: String(req.body?.sku || '').trim(), mrp_price: price, company_price: 0,
-      available_quantity: 0, track_inventory: req.body?.track_inventory !== false,
-      tax: 0, tax_type: 'exclusive', discount_amount: 0, discount_percentage: 0,
-      cover_image: photo, image: photo ? [{ name: photo, size: 0, cover: 'yes' }] : [],
-      category_name: '', category_id: '', supplier_name: '', supplier_id: ''
-    };
-    const result = await itemService.addItem({
-      data, branchId: c.branchId, licenseId: c.session.license, user: c.user
-    });
+    const c = req.companion, data = Object.assign({}, req.body || {});
+    data.name = String(data.name || '').trim();
+    data.selling_price = Number(data.selling_price);
+    if (!data.name || !Number.isFinite(data.selling_price) || data.selling_price < 0)
+      return fail(res, 400, 'Nom et prix de vente valides obligatoires.');
+    data.barcode_id = String(data.barcode_id || '').trim();
+    data.sku_id = String(data.sku_id || data.sku || '').trim();
+    data.company_price = Number(data.company_price ?? data.purchase_cost_dzd ?? 0) || 0;
+    data.available_quantity = Math.max(0, Number(data.available_quantity ?? data.quantity ?? 0) || 0);
+    data.inventory = data.inventory !== false && data.track_inventory !== false;
+    data.tax = Number(data.tax || 0); data.tax_type = data.tax_type || 'inclusive';
+    data.discount_amount = Number(data.discount_amount || 0); data.discount_percentage = Number(data.discount_percentage || 0);
+    if (typeof data.image === 'string') data.image = data.image ? [{ name: data.image, size: 0, cover: 'yes' }] : [];
+    if (!Array.isArray(data.image)) data.image = [];
+    data.cover_image = String(data.cover_image || data.image.find(photo => photo && photo.cover === 'yes')?.name || 'item.svg');
+    const result = await itemService.addItem({ data, branchId: c.branchId, licenseId: c.session.license, user: c.user });
     if (!result || result.status !== true) return fail(res, 409, result?.message || 'Impossible de créer cet article.');
-    return res.status(201).json({ id: result.data?.id || result.data?._id || '', name, selling_price: price, barcode: result.data?.barcode_id || data.barcode_id });
+    const created = result.data?.id || result.data?._id || result.data?.created?.[0] || result.data;
+    return res.status(201).json({ id: sid(created), data: { id: sid(created), name: data.name, selling_price: data.selling_price, barcode: data.barcode_id } });
   } catch (error) {
     console.error('[Samarina Companion] item creation failed:', error);
     return fail(res, 500, 'Impossible de créer cet article.');
+  }
+});
+router.post('/items/createFamily', async (req, res) => {
+  try {
+    const c = req.companion, data = req.body || {};
+    if (!String(data.variant_parent_name || data.name || '').trim() || !Array.isArray(data.items) || !data.items.length)
+      return fail(res, 400, 'Nom du groupe et variantes obligatoires.');
+    data.variant_parent_name = String(data.variant_parent_name || data.name).trim();
+    const result = await itemService.createItemFamily({ data, branchId: c.branchId, licenseId: c.session.license, user: c.user });
+    if (!result || result.status !== true) return fail(res, 409, result?.message || 'Impossible de créer les variantes.');
+    return res.status(201).json({ id: sid(result.data?.[0]?.id || result.data?.[0]?._id || result.data?.created?.[0] || ''), data: result.data });
+  } catch (error) {
+    console.error('[Samarina Companion] item family creation failed:', error);
+    return fail(res, 500, 'Impossible de créer la famille d’articles.');
   }
 });
 router.get('/items/:id', async (req, res) => {
@@ -489,10 +504,34 @@ router.get('/items/:id', async (req, res) => {
     if (!id) return fail(res, 400, 'Référence article invalide.');
     const row = await req.db.collection('items').findOne({
       _id: id, ...branchFilter(req.companion.branchId), ...licenseFilter(req.companion.session.license)
-    }, { projection: { name: 1, barcode_id: 1, sku: 1, itemid: 1, selling_price: 1, image: 1, quantity: 1, available_quantity: 1, track_inventory: 1 } });
+    });
     if (!row) return fail(res, 404, 'Article introuvable.');
-    return res.json({ id: sid(row._id), name: row.name || '', barcode: row.barcode_id || '', sku: row.sku || row.itemid || '', selling_price: Number(row.selling_price || 0), image: row.image || '', quantity: Number(row.available_quantity ?? row.quantity ?? 0), track_inventory: row.track_inventory !== false });
+    const safe = Object.assign({}, row);
+    delete safe.license; delete safe.branch_id; delete safe.created_by_id; delete safe.updated_by_id;
+    return res.json(Object.assign(safe, { id: sid(row._id), name: row.name || '', barcode: row.barcode_id || '', sku: row.sku || row.itemid || '', selling_price: Number(row.selling_price || 0), image: row.image || '', quantity: Number(row.available_quantity ?? row.quantity ?? 0), track_inventory: row.track_inventory !== false }));
   } catch (error) { return fail(res, 500, 'Impossible de charger cet article.'); }
+});
+router.put('/items/:id/details', async (req, res) => {
+  try {
+    const id = oid(req.params.id), c = req.companion;
+    if (!id) return fail(res, 400, 'Référence article invalide.');
+    const filter = { _id: id, ...branchFilter(c.branchId), ...licenseFilter(c.session.license) };
+    const existing = await req.db.collection('items').findOne(filter, { projection: { _id: 1 } });
+    if (!existing) return fail(res, 404, 'Article introuvable dans ce magasin.');
+    const data = Object.assign({}, req.body || {});
+    data.name = String(data.name || '').trim();
+    data.selling_price = Number(data.selling_price);
+    if (!data.name || !Number.isFinite(data.selling_price) || data.selling_price < 0)
+      return fail(res, 400, 'Nom et prix de vente valides obligatoires.');
+    if (typeof data.image === 'string') data.image = data.image ? [{ name: data.image, size: 0, cover: 'yes' }] : [];
+    if (!Array.isArray(data.image)) data.image = [];
+    const result = await itemService.updateItem({ id: sid(id), data, branchId: c.branchId, licenseId: c.session.license, user: c.user });
+    if (!result || result.status !== true) return fail(res, 409, result?.message || 'Impossible de modifier cet article.');
+    return res.json({ ok: true, id: sid(id) });
+  } catch (error) {
+    console.error('[Samarina Companion] item detail update failed:', error);
+    return fail(res, 500, 'Impossible de modifier cet article.');
+  }
 });
 router.put('/items/:id', async (req, res) => {
   try {
