@@ -63,6 +63,11 @@
     <label class="reason-label">Motif de réception<input id="receive-reason" maxlength="500" value="Réception marchandises depuis POSNIC Companion" required></label>
     <div class="queue-footer"><span id="queue-count">0 article</span><button id="apply-receive" class="primary" type="button" disabled>Vérifier et appliquer le stock</button></div>
     <div id="receive-status" class="status-message" role="status"></div>
+    <div id="pending-operations" class="pending-operations" hidden>
+      <h3>Réceptions en attente de validation</h3>
+      <p class="muted-note">Un responsable autorisé peut confirmer ici les mouvements qui nécessitent son approbation.</p>
+      <div id="pending-operation-list"></div>
+    </div>
   </section>
 
   <section class="panel" id="tab-create">
