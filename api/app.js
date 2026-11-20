@@ -195,10 +195,36 @@ const helmetOptions = (directives) => ({
 });
 const helmetBase = helmet(helmetOptions(cspDirectives));
 const helmetGa = helmet(helmetOptions(gaCspDirectives));
+
+// The Samarina Companion is intentionally reachable from phones over the
+// shop's private Wi-Fi using the PC's plain-HTTP LAN address. In production,
+// Helmet's default upgrade-insecure-requests directive otherwise rewrites
+// /mobile assets and same-origin API calls to HTTPS, where the local HTTP
+// listener has no TLS endpoint. Keep the normal production policy everywhere
+// else, but omit that one directive for HTTP Companion requests.
+const companionHttpCspDirectives = {
+  ...cspDirectives,
+  'upgrade-insecure-requests': null,
+};
+const companionHttpGaCspDirectives = {
+  ...gaCspDirectives,
+  'upgrade-insecure-requests': null,
+};
+const helmetCompanionHttp = helmet(helmetOptions(companionHttpCspDirectives));
+const helmetCompanionHttpGa = helmet(helmetOptions(companionHttpGaCspDirectives));
 app.use((req, res, next) => {
+  const isCompanionRequest =
+    /^\\/mobile(?:\\/|$)/.test(req.path) ||
+    /^\\/(?:api\\/)?samarina\\/v1(?:\\/|$)/.test(req.path);
+  const policyForRequest = (analyticsEnabled) => {
+    if (isCompanionRequest && !req.secure) {
+      return analyticsEnabled ? helmetCompanionHttpGa : helmetCompanionHttp;
+    }
+    return analyticsEnabled ? helmetGa : helmetBase;
+  };
   getAnalytics()
-    .then((a) => (a.enabled ? helmetGa : helmetBase)(req, res, next))
-    .catch(() => helmetBase(req, res, next));
+    .then((a) => policyForRequest(a.enabled)(req, res, next))
+    .catch(() => policyForRequest(false)(req, res, next));
 });
 
 /*
