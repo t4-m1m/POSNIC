@@ -1592,12 +1592,7 @@ app.use('/suppliers', suppliersRoutes);
 
 // Serve frontend static files
 const frontendPath = path.join(__dirname, '..', 'frontend');
-// POSNIC Mobile Companion: a self-contained local bundle, served from the
-// existing Express origin so phones on shop Wi-Fi use the same authenticated API.
-app.use('/mobile', express.static(path.join(frontendPath, 'mobile'), {
-  fallthrough: true,
-  setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache'),
-}));
+// The independent Samarina Companion static bundle is mounted once above at /mobile.
 app.use('/static', express.static(path.join(frontendPath, 'static'), { maxAge: STATIC_MAX_AGE }));
 app.use(
   '/images',
