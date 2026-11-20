@@ -156,7 +156,6 @@ async function companionAuth(req, res, next) {
       license: session.license || null,
       loggedUser: user._id,
       loggedUserName: user.username || user.email || user.name || 'Samarina Companion',
-      saleOrigin: 'samarina-companion'
     }, next);
   } catch (error) {
     console.error('[Samarina Companion] authentication failed:', error);
