@@ -315,17 +315,26 @@ router.post('/receiving/queue', async (req, res) => {
       projection: { name: 1, barcode_id: 1, itemid: 1, company_price: 1, cost_price: 1, tax: 1, tax_type: 1, quantity: 1, available_quantity: 1, unit: 1, item_unit: 1, purchase_unit: 1, conversion_factor: 1 }
     });
     if (!item) return fail(res, 404, 'Article introuvable dans ce magasin.');
-    await req.db.collection('samarina_receiving_queue').insertOne({
-      itemId, branchId: oid(c.branchId) || c.branchId, license: oid(c.session.license) || c.session.license,
-      name: item.name || 'Article', barcode: item.barcode_id || '', quantity,
-      companyPrice: Number(item.company_price || item.cost_price || 0),
-      tax: Number(item.tax || 0), taxType: item.tax_type || 'exclusive',
-      availableQuantity: Number(item.available_quantity ?? item.quantity ?? 0),
-      unit: item.unit || item.item_unit || 'qty', itemid: item.itemid || item.barcode_id || '',
-      purchaseUnit: item.purchase_unit || '', conversionFactor: Number(item.conversion_factor || 0),
-      deviceId: c.session.deviceId, state: 'pending', createdAt: new Date(), updatedAt: new Date(), staffId: c.user._id
-    });
-    res.json({ ok: true, message: 'Article ajouté à la file de réception.' });
+    const entryId = String(req.body?.entryId || '').trim();
+    if (!/^[A-Za-z0-9_-]{12,100}$/.test(entryId)) return fail(res, 400, 'Identifiant de scan invalide.');
+    const queueCollection = req.db.collection('samarina_receiving_queue');
+    await queueCollection.createIndex({ deviceId: 1, entryId: 1 }, { unique: true });
+    const now = new Date();
+    const result = await queueCollection.updateOne(
+      { deviceId: c.session.deviceId, entryId, branchId: oid(c.branchId) || c.branchId },
+      { $setOnInsert: {
+        itemId, branchId: oid(c.branchId) || c.branchId, license: oid(c.session.license) || c.session.license,
+        name: item.name || 'Article', barcode: item.barcode_id || '', quantity,
+        companyPrice: Number(item.company_price || item.cost_price || 0),
+        tax: Number(item.tax || 0), taxType: item.tax_type || 'exclusive',
+        availableQuantity: Number(item.available_quantity ?? item.quantity ?? 0),
+        unit: item.unit || item.item_unit || 'qty', itemid: item.itemid || item.barcode_id || '',
+        purchaseUnit: item.purchase_unit || '', conversionFactor: Number(item.conversion_factor || 0),
+        deviceId: c.session.deviceId, entryId, state: 'pending', createdAt: now, updatedAt: now, staffId: c.user._id
+      } },
+      { upsert: true }
+    );
+    res.json({ ok: true, id: String(result.upsertedId || ''), message: 'Article ajouté à la file de réception.' });
   } catch (error) {
     console.error('[Samarina Companion] receive queue failed:', error);
     fail(res, 500, 'Impossible d’ajouter cet article à la réception.');
