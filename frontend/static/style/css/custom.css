@@ -8074,3 +8074,98 @@ tr.s-doc-purchase-row:hover td { background: rgba(9, 105, 218, 0.05); }
 .topbar #posnic-multi-baskets .posnic-basket-add {
   background:#f1f3f5 !important; color:#57606a !important; border:1px solid #d0d7de !important;
 }
+
+
+/* Samarina Companion launcher and compact topbar controls */
+#posnic-mobile-companion-topbar-wrap,
+#posnic-touch-mode-entry {
+    vertical-align: middle;
+}
+#posnic-mobile-companion-topbar-wrap .posnic-mobile-companion-icon-btn,
+#posnic-touch-mode-entry #posnic-touch-mode-toggle {
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 !important;
+    margin: 0 2px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 9px !important;
+    line-height: 1 !important;
+    box-shadow: none !important;
+}
+#posnic-mobile-companion-topbar-wrap .posnic-mobile-companion-icon-btn {
+    color: #172b4d !important;
+    background: #f1f4f8 !important;
+    border: 1px solid #dce4ee !important;
+}
+#posnic-mobile-companion-topbar-wrap .posnic-mobile-companion-icon-btn i {
+    font-size: 15px !important;
+    line-height: 1 !important;
+}
+#posnic-touch-mode-entry #posnic-touch-mode-toggle {
+    color: #172b4d !important;
+    background: #f7f8fa !important;
+    border: 1px solid #e1e6ed !important;
+}
+#posnic-touch-mode-entry #posnic-touch-mode-toggle .posnic-touch-hand-icon {
+    width: 16px !important;
+    height: 16px !important;
+}
+#posnic-touch-mode-entry #posnic-touch-mode-toggle.posnic-touch-mode-active {
+    color: #155eef !important;
+    background: #eaf1ff !important;
+    border-color: #cbdcff !important;
+}
+@media (max-width: 767.98px) {
+    .topbar-mobile {
+        position: relative !important;
+        min-height: 64px;
+    }
+    .topbar-mobile .row,
+    .topbar-mobile .col-md-12 {
+        position: static !important;
+    }
+    .topbar-mobile .mobile-logobar {
+        position: absolute !important;
+        left: 50% !important;
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        display: block !important;
+        width: 100px !important;
+        margin: 0 !important;
+        text-align: center !important;
+        z-index: 1;
+    }
+    .topbar-mobile .mobile-logobar .mobile-logo {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+    }
+    .topbar-mobile .mobile-logobar img {
+        display: block !important;
+        width: 100px !important;
+        max-width: 100% !important;
+        height: 36px !important;
+        object-fit: contain !important;
+        margin: 0 auto !important;
+    }
+    .topbar-mobile .mobile-togglebar {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+        float: none !important;
+        display: block !important;
+        margin: 0 !important;
+    }
+    .topbar-mobile .mobile-togglebar > ul {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        min-height: 40px;
+    }
+}
