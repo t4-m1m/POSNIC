@@ -240,27 +240,38 @@ router.put('/items/:id', async (req, res) => {
     const id = oid(req.params.id);
     if (!id) return fail(res, 400, 'Référence article invalide.');
     const c = req.companion;
-    const existing = await req.db.collection('items').findOne({
-      _id: id, ...branchFilter(c.branchId), ...licenseFilter(c.session.license)
-    });
+    const filter = { _id: id, ...branchFilter(c.branchId), ...licenseFilter(c.session.license) };
+    const existing = await req.db.collection('items').findOne(filter, { projection: { itemid: 1 } });
     if (!existing) return fail(res, 404, 'Article introuvable dans ce magasin.');
-    const data = {
-      ...existing,
-      name: Object.prototype.hasOwnProperty.call(req.body || {}, 'name') ? String(req.body.name || '').trim() : existing.name,
-      selling_price: Object.prototype.hasOwnProperty.call(req.body || {}, 'selling_price') ? Number(req.body.selling_price) : existing.selling_price,
-      barcode_id: Object.prototype.hasOwnProperty.call(req.body || {}, 'barcode_id') ? String(req.body.barcode_id || '').trim() : existing.barcode_id,
-      sku_id: Object.prototype.hasOwnProperty.call(req.body || {}, 'sku') ? String(req.body.sku || '').trim() : (existing.itemid || existing.sku_id || ''),
-      cover_image: Object.prototype.hasOwnProperty.call(req.body || {}, 'image') ? String(req.body.image || '').trim() : (existing.image || ''),
-      image: Object.prototype.hasOwnProperty.call(req.body || {}, 'image')
-        ? (String(req.body.image || '').trim() ? [{ name: String(req.body.image).trim(), size: 0, cover: 'yes' }] : [])
-        : (Array.isArray(existing.multi_image) ? existing.multi_image : [])
-    };
-    if (!Number.isFinite(Number(data.selling_price)) || Number(data.selling_price) < 0) return fail(res, 400, 'Prix invalide.');
-    const result = await itemService.updateItem({
-      id: sid(existing._id), data, branchId: c.branchId,
-      licenseId: c.session.license, user: c.user
-    });
-    if (!result || result.status !== true) return fail(res, 409, result?.message || 'Impossible de modifier cet article.');
+    const set = { updated_date: new Date() };
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'name')) set.name = String(req.body.name || '').trim();
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'barcode_id')) set.barcode_id = String(req.body.barcode_id || '').trim();
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'sku')) {
+      const sku = String(req.body.sku || '').trim();
+      if (sku) {
+        const duplicate = await req.db.collection('items').findOne({
+          ...branchFilter(c.branchId), ...licenseFilter(c.session.license),
+          itemid: sku, _id: { $ne: id }
+        }, { projection: { _id: 1 } });
+        if (duplicate) return fail(res, 409, 'Cette référence SKU existe déjà dans ce magasin.');
+      }
+      set.itemid = sku;
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'selling_price')) {
+      const price = Number(req.body.selling_price);
+      if (!Number.isFinite(price) || price < 0) return fail(res, 400, 'Prix invalide.');
+      set.selling_price = price;
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'image')) {
+      const image = String(req.body.image || '').trim();
+      set.image = image;
+      set.multi_image = image ? [{ name: image, size: 0, cover: 'yes' }] : [];
+    }
+    if (c.user?._id) set.updated_by_id = c.user._id;
+    if (c.user?.username || c.user?.name) set.updated_by = c.user.username || c.user.name;
+    const result = await req.db.collection('items').updateOne(filter, { $set: set });
+    if (!result.matchedCount) return fail(res, 404, 'Article introuvable dans ce magasin.');
+    try { require('../sync/nudge').nudgeSyncAgent(); } catch (_) {}
     return res.json({ ok: true });
   } catch (error) {
     console.error('[Samarina Companion] item update failed:', error);
