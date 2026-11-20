@@ -73,14 +73,14 @@ jobs:
           if ($installers.Count -ne 1) {
             throw "Expected exactly one Windows installer, found $($installers.Count)."
           }
-          Move-Item -LiteralPath $installers[0].FullName -Destination "dist/Posnic-Windows-Installer.exe" -Force
+          Move-Item -LiteralPath $installers[0].FullName -Destination "dist/SamarinaPOS-Windows-Installer.exe" -Force
 
       - name: Mirror installer to GoFile (free third-party host)
         id: gofile
         continue-on-error: true
         shell: pwsh
         run: |
-          $installer = Get-Item "dist/Posnic-Windows-Installer.exe"
+          $installer = Get-Item "dist/SamarinaPOS-Windows-Installer.exe"
           $response = Invoke-RestMethod -Uri "https://upload.gofile.is/uploadfile" -Method Post -Form @{ file = $installer }
           if ($response.status -ne "ok") {
             throw "GoFile upload failed: $($response.status)"
@@ -99,8 +99,8 @@ jobs:
       - name: Upload Windows installer artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Posnic-Windows-Installer
-          path: dist/Posnic-Windows-Installer.exe
+          name: SamarinaPOS-Windows-Installer
+          path: dist/SamarinaPOS-Windows-Installer.exe
           if-no-files-found: error
           retention-days: 7
 
@@ -108,14 +108,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: installer-${{ github.run_number }}
-          name: POSNIC Windows Installer (build ${{ github.run_number }})
+          name: SamarinaPOS Windows Installer (build ${{ github.run_number }})
           body: |
-            Automatically published Windows installer from the successful POSNIC installer build.
+            Automatically published Windows installer from the successful SamarinaPOS installer build.
 
             **Alternative download (GoFile):** ${{ steps.gofile.outputs.download_url || 'GoFile mirror unavailable for this build; use the GitHub asset below.' }}
 
-            Download **Posnic-Windows-Installer.exe** below. This release contains the installer only.
-          files: dist/Posnic-Windows-Installer.exe
+            Download **SamarinaPOS-Windows-Installer.exe** below. This release contains the installer only.
+          files: dist/SamarinaPOS-Windows-Installer.exe
           draft: false
           prerelease: false
           make_latest: true

@@ -1,7 +1,7 @@
 {
   "name": "posnic",
   "version": "1.9.3",
-  "description": "Free, offline-first point-of-sale software for retail and restaurants, with open source POS code and billing workflows. Posnic source is AGPL-3.0-only; packages contain separately licensed components.",
+  "description": "SamarinaPOS point-of-sale software for retail and restaurants, with offline-first billing and inventory workflows.",
   "main": "src/main.js",
   "desktopName": "com.posnic.app.desktop",
   "scripts": {
@@ -68,10 +68,10 @@
   },
   "build": {
     "appId": "com.posnic.app",
-    "productName": "Posnic",
+    "productName": "SamarinaPOS",
     "protocols": [
       {
-        "name": "Posnic",
+        "name": "SamarinaPOS",
         "schemes": [
           "posnic"
         ]
@@ -524,7 +524,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
-      "shortcutName": "Posnic",
+      "shortcutName": "SamarinaPOS",
       "deleteAppDataOnUninstall": false,
       "runAfterFinish": true,
       "include": "builds/installer.nsh",

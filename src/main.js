@@ -64,7 +64,7 @@ const hasSingleInstanceLock = app.requestSingleInstanceLock({
  * away - or the previous instance is still closing and has not let go yet.
  *
  * The second case used to be handled as if it were the first: exit(0), no
- * window, no message. Closing Posnic and immediately reopening it is an
+ * window, no message. Closing SamarinaPOS and immediately reopening it is an
  * ordinary thing to do, and for the ten seconds mongod takes to close its
  * files the icon simply did nothing. Clicking again did nothing again.
  *
@@ -81,7 +81,7 @@ if (!hasSingleInstanceLock) {
   }
 
   if (!waitingForPreviousShutdown) {
-    console.log('[Main] Another Posnic instance is already running');
+    console.log('[Main] Another SamarinaPOS instance is already running');
     app.exit(0);
   } else {
     console.log(
@@ -103,7 +103,7 @@ if (!hasSingleInstanceLock) {
  * The installer registers the scheme properly through build.protocols in
  * package.json, which is where a shop's machine gets it. This line is for the
  * case where the app has been moved or the registration lost, and it can only
- * ever point at a real installed Posnic.
+ * ever point at a real installed SamarinaPOS.
  *
  * A second launch via the protocol lands in the existing second-instance
  * handler, which focuses the window; a cold start just opens the app normally.
@@ -249,7 +249,7 @@ function ensureDailyLog() {
   if (activeDate !== today || !fs.existsSync(LOG_FILE)) {
     fs.writeFileSync(
       LOG_FILE,
-      `=== Posnic Daily Log: ${today} ===\n`,
+      `=== SamarinaPOS Daily Log: ${today} ===\n`,
       'utf8'
     );
     fs.writeFileSync(LOG_DATE_FILE, today, 'utf8');
@@ -270,7 +270,7 @@ function rotateLogIfNeeded(incomingBytes = 0) {
 
     fs.writeFileSync(
       LOG_FILE,
-      `=== Posnic Daily Log: ${getLocalDateKey()} ===\n` +
+      `=== SamarinaPOS Daily Log: ${getLocalDateKey()} ===\n` +
       `=== Log rotated at ${new Date().toISOString()} | previous=${path.basename(OLD_LOG_FILE)} | maxSizeMB=10 ===\n`,
       'utf8'
     );
@@ -280,7 +280,7 @@ function rotateLogIfNeeded(incomingBytes = 0) {
       // the active file and recording the rotation problem.
       fs.writeFileSync(
         LOG_FILE,
-        `=== Posnic Daily Log: ${getLocalDateKey()} ===\n` +
+        `=== SamarinaPOS Daily Log: ${getLocalDateKey()} ===\n` +
         `=== Log rotation fallback at ${new Date().toISOString()} | error=${redactSecrets(error.message)} ===\n`,
         'utf8'
       );
@@ -525,7 +525,7 @@ updateHealthStatus({
  * life of the process. resolveLocalPorts then derived the real port from the
  * app name, wrote it to .ports.json, printed it at startup... and startServer()
  * set process.env.PORT back to the captured 5555 before handing over to
- * server.js. Stock Posnic advertised 42590 and served 5555.
+ * server.js. Stock SamarinaPOS advertised 42590 and served 5555.
  *
  * Two things fell out of that. Derived ports exist so two brands can be
  * installed side by side without colliding, and both would have collided on
@@ -629,7 +629,7 @@ function focusPrimaryWindow() {
   mainWindow.focus();
   mainWindow.setAlwaysOnTop(false);
   pendingSecondInstanceFocus = false;
-  console.info('[Main] Existing Posnic window focused');
+  console.info('[Main] Existing SamarinaPOS window focused');
 }
 
 if (hasSingleInstanceLock) {
@@ -811,7 +811,7 @@ function closeApiServer() {
  * but cannot be reported on: nothing could say which step was running or how
  * many were left. Written this way, the progress on screen is generated from
  * the same list that does the work, so the two cannot disagree about what
- * Posnic is doing - a screen that says "closing the database" while something
+ * SamarinaPOS is doing - a screen that says "closing the database" while something
  * else is happening would be worse than no screen.
  *
  * The labels are what a shopkeeper would call these things. "Bundled MongoDB
@@ -1155,7 +1155,7 @@ ipcMain.handle('startup:retry', () => {
 ipcMain.handle('startup:open-log', () => shell.openPath(LOG_FILE));
 
 // ---------------------------------------------------------------------------
-// Posnic Cloud activation (used by the install wizard and the settings window)
+// SamarinaPOS Cloud activation (used by the install wizard and the settings window)
 // ---------------------------------------------------------------------------
 const CLOUD_CONFIG_FILE = path.join(app.getPath('userData'), 'posnic-cloud.json');
 
@@ -1332,7 +1332,7 @@ async function connectVerifiedCloudDevice(activation, base) {
   } catch (error) {
     if (error.code !== 'EEXIST') throw error;
     const binding = JSON.parse(fs.readFileSync(identityFile, 'utf8'));
-    if (binding.tenantDb !== verifiedIdentity.tenantDb) throw new Error('The local shop connection changed. Restart Posnic and try again.');
+    if (binding.tenantDb !== verifiedIdentity.tenantDb) throw new Error('The local shop connection changed. Restart SamarinaPOS and try again.');
   }
 
   fs.writeFileSync(CLOUD_CONFIG_FILE, JSON.stringify({
@@ -1653,7 +1653,7 @@ ipcMain.handle('cloud:pair', async (_event, { serverUrl, code, waitForShopMs } =
     }
     return await connectCloudDevice(await response.json(), base);
   } catch (e) {
-    return { ok: false, error: 'Could not reach Posnic. Check the internet connection.' };
+    return { ok: false, error: 'Could not reach SamarinaPOS. Check the internet connection.' };
   }
 });
 
@@ -1703,7 +1703,7 @@ ipcMain.handle('cloud:authorize-browser', async (_event, { intent = 'login' } = 
     return await connectCloudDevice(activation, 'https://gateway.posnic.com');
   } catch (error) {
     return { ok: false, error: /fetch failed|ENOTFOUND|abort/i.test(error.message)
-      ? 'Could not reach Posnic Cloud. Check your internet connection and try again.' : error.message };
+      ? 'Could not reach SamarinaPOS Cloud. Check your internet connection and try again.' : error.message };
   }
 });
 ipcMain.handle('cloud:cancel-authorization', () => { browserCloudAuth.cancel(); return { ok: true }; });
@@ -1718,7 +1718,7 @@ ipcMain.handle('cloud:captcha', async () => {
     if (!r.ok) return { ok: false, error: `spam check unavailable (${r.status})` };
     return { ok: true, challenge: await r.json() };
   } catch (e) {
-    return { ok: false, error: 'Could not reach Posnic. Check the internet connection.' };
+    return { ok: false, error: 'Could not reach SamarinaPOS. Check the internet connection.' };
   }
 });
 
@@ -1750,7 +1750,7 @@ ipcMain.handle('cloud:create-account', async (_event, details = {}) => {
     }
     return { ok: true, subdomain: body.subdomain, webUrl: body.webUrl };
   } catch (e) {
-    return { ok: false, error: 'Could not reach Posnic. Check the internet connection.' };
+    return { ok: false, error: 'Could not reach SamarinaPOS. Check the internet connection.' };
   }
 });
 
@@ -1802,7 +1802,7 @@ ipcMain.handle('connectors:enable', async (event, payload) => {
       return { ok: false, error: 'Not a valid connector name' };
     }
     if (typeof token !== 'string' || !token.startsWith('posnic_')) {
-      return { ok: false, error: 'That does not look like a Posnic API token' };
+      return { ok: false, error: 'That does not look like a SamarinaPOS API token' };
     }
     if (!connectorSupervisor) return { ok: false, error: 'Connector runtime unavailable' };
     const file = path.join(app.getPath('userData'), 'connector-runtime', name + '.config.json');
@@ -1897,7 +1897,7 @@ ipcMain.handle('desktop:open', (_event, target) => {
     /* The renderer names an intent and this decides the address. Letting a page
        pass its own URL here would turn an allowlist into an open redirect for
        anything that can reach this channel. */
-    case 'releases': shell.openExternal('https://github.com/Posnic/POS/releases'); break;
+    case 'releases': shell.openExternal('https://github.com/SamarinaPOS/POS/releases'); break;
     /*
      * WHERE MORE VOICES COME FROM.
      *
@@ -1951,7 +1951,7 @@ ipcMain.handle('desktop:behaviour-save', (_event, patch) => {
     return { success: false, error: 'Manage startup applications in your operating system settings.' };
   }
   if (!patch || typeof patch.openAtLogin !== 'boolean') {
-    return { success: false, error: 'Choose whether to start Posnic at login.' };
+    return { success: false, error: 'Choose whether to start SamarinaPOS at login.' };
   }
   app.setLoginItemSettings({ openAtLogin: patch.openAtLogin, args: ['--hidden'] });
   return { success: true };
@@ -2171,7 +2171,7 @@ function createWindow(showStartupLoader = !isWarmStartup()) {
         console.error('[Renderer] Automatic recovery failed:', error);
         if (!mainWindow || mainWindow.isDestroyed()) return;
         mainWindow.loadFile(path.join(__dirname, 'loading.html'), {
-          query: { startupError: 'The POSNIC interface stopped unexpectedly', details: String(error.message || error) }
+          query: { startupError: 'The SamarinaPOS interface stopped unexpectedly', details: String(error.message || error) }
         }).then(() => {
           if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) mainWindow.show();
         }).catch(loadError => console.error('[Renderer] Recovery screen failed:', loadError));
@@ -2222,7 +2222,7 @@ function createWindow(showStartupLoader = !isWarmStartup()) {
       closeToTrayHintShown = true;
       try {
         tray.displayBalloon({
-          title: 'Posnic is still running',
+          title: 'SamarinaPOS is still running',
           content: 'Billing and sync continue in the background. Right-click this icon to open or quit.'
         });
       } catch (e) { /* balloon unsupported - fine */ }
@@ -2645,7 +2645,7 @@ function createMenu() {
           }
         },
         // Local file backup/export is a local-edition feature; cloud
-        // subscribers' data is backed up by Posnic Cloud.
+        // subscribers' data is backed up by SamarinaPOS Cloud.
         ...(fs.existsSync(CLOUD_CONFIG_FILE) ? [] : [{
           label: 'Backup Manager',
           accelerator: 'CmdOrCtrl+B',
@@ -2661,7 +2661,7 @@ function createMenu() {
           }
         },
         {
-          label: 'Posnic Cloud...',
+          label: 'SamarinaPOS Cloud...',
           click: () => {
             openCloudManager();
           }
@@ -2933,7 +2933,7 @@ function applyWindowChrome(theme) {
 /*
  * About: what build is this, and where do I get help.
  *
- * The old one was a hardcoded "Posnic" gradient with a version number, which
+ * The old one was a hardcoded "SamarinaPOS" gradient with a version number, which
  * told a white-labelled shop the wrong product name and told support nothing
  * it could act on. This carries the brand the build actually shipped with, the
  * numbers a support call opens with, and the one button that saves the call
@@ -3069,7 +3069,7 @@ ipcMain.handle('support:open-issue', (_event, details) => {
       '',
       '### This computer',
       '```',
-      `Posnic   ${s.app}`,
+      `SamarinaPOS   ${s.app}`,
       `System   ${s.osName} ${s.platform}`,
       `Memory   ${s.memoryGB} GB`,
       `Electron ${s.electron} / Node ${s.node}`,
@@ -3081,7 +3081,7 @@ ipcMain.handle('support:open-issue', (_event, details) => {
       '_Paste the log here — the Contact Support window has a button that copies it._',
     ].join('\n');
 
-    const url = 'https://github.com/Posnic/POS/issues/new'
+    const url = 'https://github.com/SamarinaPOS/POS/issues/new'
       + '?title=' + encodeURIComponent(String(d.subject || '').slice(0, 120))
       + '&body=' + encodeURIComponent(body);
 
@@ -3325,7 +3325,7 @@ function openAboutWindow() {
     })
     .join('');
 
-  const REPO = 'https://github.com/Posnic/POS';
+  const REPO = 'https://github.com/SamarinaPOS/POS';
 
   // About has no privileged preload. Inline only bundled styles and validated
   // colour tokens so it still follows the shop without granting it IPC access.
@@ -3391,16 +3391,16 @@ function openAboutWindow() {
       ${logoTag}
       <h1>${esc(d.app.name)}</h1>
       <div class="ver">Version ${esc(d.app.version)}</div>
-      ${d.app.name === 'Posnic'
-        ? '<p class="by">by Posnic Innovations Private Limited &middot; Tamil Nadu, India</p>'
-        : `<p class="by">powered by Posnic &middot; ${esc(new URL(provider).hostname)}</p>`}
+      ${d.app.name === 'SamarinaPOS'
+        ? '<p class="by">by SamarinaPOS Innovations Private Limited &middot; Tamil Nadu, India</p>'
+        : `<p class="by">powered by SamarinaPOS &middot; ${esc(new URL(provider).hostname)}</p>`}
     </div>
 
     <div class="body">
       <div class="sec">
         <h2>Your licence</h2>
         <table>${rows([
-          ['Edition', d.cloud.connected ? 'Posnic Cloud' : 'Community Edition (free)'],
+          ['Edition', d.cloud.connected ? 'SamarinaPOS Cloud' : 'Community Edition (free)'],
           ['Cloud sync', asHtml(d.cloud.connected
             ? '<span class="pill on">connected</span>'
             : '<span class="pill off">not connected</span>')],
@@ -3424,7 +3424,7 @@ function openAboutWindow() {
       </div>
       <div class="repo">
         <div class="u">${esc(REPO)}</div>
-        <div class="n">Posnic is free software under the <b>GNU AGPL-3.0</b>. Every line running
+        <div class="n">SamarinaPOS is free software under the <b>GNU AGPL-3.0</b>. Every line running
           on this computer is published there — you may read it, change it and pass it on.
           Select the address above to copy it.</div>
       </div>
@@ -3439,7 +3439,7 @@ function openAboutWindow() {
       </div>
       <div class="foot">
         Your sales and customers stay on this computer. Nothing here is sent anywhere
-        unless you connect Posnic Cloud.<br>
+        unless you connect SamarinaPOS Cloud.<br>
         <b>Help &rarr; Contact Support</b> gathers all of this for you when you report a problem.
       </div>
     </div>
@@ -3799,8 +3799,8 @@ function confirmFullAccountRemoval() {
     defaultId: 0,
     cancelId: 0,
     title: 'Remove Account & Reset Installation',
-    message: 'Remove this Posnic account and database?',
-    detail: 'This will permanently remove the local Posnic database, login/session data, and installation setup state. Backup folders in Documents\\Posnic-Backups will not be deleted.'
+    message: 'Remove this SamarinaPOS account and database?',
+    detail: 'This will permanently remove the local SamarinaPOS database, login/session data, and installation setup state. Backup folders in Documents\\Posnic-Backups will not be deleted.'
   }).then(first => {
     if (first.response !== 1) return;
 
@@ -3811,7 +3811,7 @@ function confirmFullAccountRemoval() {
       cancelId: 0,
       title: 'Final Confirmation',
       message: 'This action cannot be undone.',
-      detail: 'After removal, Posnic will restart and show the installation wizard again. Use this only when you intentionally want a fresh account.'
+      detail: 'After removal, SamarinaPOS will restart and show the installation wizard again. Use this only when you intentionally want a fresh account.'
     });
   }).then(second => {
     if (!second || second.response !== 1) return;
@@ -4208,7 +4208,7 @@ function createTray() {
     if (!fs.existsSync(iconPath)) return;
 
     tray = new Tray(iconPath);
-    tray.setToolTip('Posnic');
+    tray.setToolTip('SamarinaPOS');
 
     const rebuild = () => {
       const branchItems = trayBranches.branches.length
@@ -4236,7 +4236,7 @@ function createTray() {
 
       tray.setContextMenu(Menu.buildFromTemplate([
         {
-          label: 'Open Posnic',
+          label: 'Open SamarinaPOS',
           click: () => { global.__posnicStartHidden = false; if (mainWindow) { mainWindow.show(); mainWindow.focus(); } }
         },
         { type: 'separator' },
@@ -4248,7 +4248,7 @@ function createTray() {
           { label: 'Backup Manager', click: () => openBackupManager() }
         ]),
         { label: 'Updates & Recovery', click: () => openUpdateManager() },
-        { label: 'Posnic Cloud...', click: () => openCloudManager() },
+        { label: 'SamarinaPOS Cloud...', click: () => openCloudManager() },
         { type: 'separator' },
         {
           label: 'Restart App',
@@ -4257,7 +4257,7 @@ function createTray() {
              at the end of it on the quit path that actually honours it. */
           click: () => { relaunchAfterQuit = true; app.quit(); }
         },
-        { label: 'Quit Posnic', click: () => app.quit() }
+        { label: 'Quit SamarinaPOS', click: () => app.quit() }
       ]));
     };
     rebuild();
@@ -4280,7 +4280,7 @@ function openCloudManager() {
     minWidth: 480,
     minHeight: 560,
     icon: appIconPath(),
-    title: 'Posnic Cloud',
+    title: 'SamarinaPOS Cloud',
     autoHideMenuBar: true,
     resizable: true,
     webPreferences: {
@@ -4297,7 +4297,7 @@ function openCloudManager() {
   cloudWindow.setMenuBarVisibility(false);
   cloudWindow.on('closed', () => { cloudWindow = null; });
   cloudWindow.loadFile('src/cloud-setup.html').catch((error) => {
-    console.error('Failed to load Posnic Cloud window:', error);
+    console.error('Failed to load SamarinaPOS Cloud window:', error);
   });
 }
 
@@ -4334,7 +4334,7 @@ function openBackupManager() {
           <body style="font-family:Arial;padding:40px;background:#f5f6fa">
             <h2>Backup Manager could not be opened</h2>
             <p>${String(error.message || error)}</p>
-            <p>Please install the latest Posnic build.</p>
+            <p>Please install the latest SamarinaPOS build.</p>
           </body>
         </html>
       `)}`);
@@ -4478,7 +4478,7 @@ app.whenReady().then(async () => {
      reader doubt everything under it. */
   const PLATFORM_NAME = { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform]
     || process.platform;
-  console.log(`   Posnic for ${PLATFORM_NAME}`);
+  console.log(`   SamarinaPOS for ${PLATFORM_NAME}`);
   console.log('='.repeat(55));
   console.log('');
 
@@ -4588,7 +4588,7 @@ app.whenReady().then(async () => {
       { program: process.execPath, arguments: '--open=hardware', title: 'Hardware Manager', description: 'Printers, scanners, scales', iconPath: process.execPath, iconIndex: 0 },
       { program: process.execPath, arguments: '--open=backup', title: 'Backup Manager', description: 'Local backups', iconPath: process.execPath, iconIndex: 0 },
       { program: process.execPath, arguments: '--open=update', title: 'Software Update', description: 'Check for updates', iconPath: process.execPath, iconIndex: 0 },
-      { program: process.execPath, arguments: '--open=cloud', title: 'Posnic Cloud', description: 'Sync status', iconPath: process.execPath, iconIndex: 0 }
+      { program: process.execPath, arguments: '--open=cloud', title: 'SamarinaPOS Cloud', description: 'Sync status', iconPath: process.execPath, iconIndex: 0 }
     ]);
   } catch (e) { /* non-Windows or unsupported */ }
 
@@ -4662,7 +4662,7 @@ app.whenReady().then(async () => {
           'error',
           'Database could not be started',
           error.code === 'MONGODB_PROFILE_MISMATCH' ? error.message :
-            'Automatic repair was attempted. Click Restart App; if this repeats, open the log file and contact Posnic support.'
+            'Automatic repair was attempted. Click Restart App; if this repeats, open the log file and contact SamarinaPOS support.'
         );
         return; // do not start the API against a dead database
       }
@@ -4680,9 +4680,9 @@ app.whenReady().then(async () => {
         console.error('MongoDB restart failed:', restartError.message);
         updateHealthStatus({ status: 'error', mongodb: 'failed' });
         dialog.showErrorBox(
-          'Posnic - Database stopped',
+          'SamarinaPOS - Database stopped',
           'The local database stopped and could not be restarted automatically.\n' +
-          'Please close and reopen Posnic. If the problem repeats, contact support.'
+          'Please close and reopen SamarinaPOS. If the problem repeats, contact support.'
         );
       }
     };
@@ -4693,7 +4693,7 @@ app.whenReady().then(async () => {
       updateStartupStatus(
         'error',
         'Database not found',
-        'This installation is missing its database component. Please reinstall Posnic.'
+        'This installation is missing its database component. Please reinstall SamarinaPOS.'
       );
       return;
     }
@@ -4950,7 +4950,7 @@ app.whenReady().then(async () => {
    *
    * Owner: "desktop app system got logged out or screen lock, then also our app
    * should keep wake." A sleeping till stops printing while the screen still
-   * says Posnic and nothing reports a fault - the waiter's phone says sent and
+   * says SamarinaPOS and nothing reports a fault - the waiter's phone says sent and
    * no paper comes out.
    *
    * The drain is registered rather than called on a timer: a till asleep for two
@@ -5052,7 +5052,7 @@ async function reportHandsetReachability() {
     title: 'Handsets cannot reach this till',
     message: 'Staff phones running the Captain app will not be able to send orders to this computer.',
     detail: `${handsets.explain(result)}\n\n`
-      + 'Posnic itself is running normally. Allowing it through Windows Firewall needs an '
+      + 'SamarinaPOS itself is running normally. Allowing it through Windows Firewall needs an '
       + 'administrator, so Windows will ask for permission first.',
     buttons: ['Allow through Windows Firewall', 'Not now', 'We do not use handsets'],
     defaultId: 0,
@@ -5075,7 +5075,7 @@ async function reportHandsetReachability() {
       title: 'Nothing was changed',
       message: 'Windows did not grant permission, so the firewall was left as it was.',
       detail: 'Nothing on this computer has changed. You can try again from the Windows Firewall '
-        + 'settings, or the next time Posnic starts.',
+        + 'settings, or the next time SamarinaPOS starts.',
       buttons: ['OK'],
       noLink: true,
     });
@@ -5089,7 +5089,7 @@ async function reportHandsetReachability() {
     type: after.ok ? 'info' : 'warning',
     title: after.ok ? 'Handsets can reach this till' : 'Still blocked',
     message: after.ok
-      ? 'Windows Firewall now allows Posnic to accept connections from the shop network.'
+      ? 'Windows Firewall now allows SamarinaPOS to accept connections from the shop network.'
       : 'The rule was added, but something is still refusing connections.',
     detail: after.ok
       ? 'Staff phones on the same Wi-Fi should find this till straight away. There is nothing '
@@ -5106,7 +5106,7 @@ async function reportHandsetReachability() {
  * refreshBrand() fetches branding from the cloud, but gives up immediately
  * when the till has not paired yet -- which is every fresh install. So a
  * customer who paid for white label, uploaded their logo and built their own
- * installer still met a Posnic sign-in screen, the first thing their staff
+ * installer still met a SamarinaPOS sign-in screen, the first thing their staff
  * ever see. A branded build now carries the same three files the cloud would
  * have sent, and this copies them across on first launch.
  *
@@ -5207,7 +5207,7 @@ ipcMain.handle('install:credentials', () => getInstallCredentials());
  * Secrets this installation signs and encrypts with.
  *
  * These used to be constants in api/src/config/config.js, which meant every
- * Posnic in the world signed its tokens with the same string and guarded its
+ * SamarinaPOS in the world signed its tokens with the same string and guarded its
  * kiosk endpoints with the same key. Anyone reading the source could mint a
  * valid session for any till. Publishing the repository turns that from a
  * latent problem into an open door.
@@ -5319,7 +5319,7 @@ function startServer() {
   process.env.POSNIC_APP_VERSION = app.getVersion();
 
   /*
-   * Is this till enrolled with Posnic Cloud?
+   * Is this till enrolled with SamarinaPOS Cloud?
    *
    * The API cannot work this out for itself. resolveMode() answers 'desktop'
    * before it looks at anything else, so a paying Cloud customer's till reports
@@ -5616,7 +5616,7 @@ function startServer() {
       if (mainWindow) {
         if (!mainWindow.isVisible()) mainWindow.show();
         mainWindow.loadFile(path.join(__dirname, 'loading.html'), {
-          query: { startupError: 'Posnic could not start its local database', details: 'Posnic includes its own database. Your data has not been removed. Open Log for details or restart Posnic to try again.' }
+          query: { startupError: 'SamarinaPOS could not start its local database', details: 'SamarinaPOS includes its own database. Your data has not been removed. Open Log for details or restart SamarinaPOS to try again.' }
         }).catch(error => console.error('Could not display startup recovery:', error));
       }
     }
@@ -5639,7 +5639,7 @@ function startServer() {
     if (mainWindow && !mainWindow.isDestroyed()) {
       if (!mainWindow.isVisible()) mainWindow.show();
       mainWindow.loadFile(path.join(__dirname, 'loading.html'), {
-        query: { startupError: 'Posnic could not start', details: String(error.message || error) }
+        query: { startupError: 'SamarinaPOS could not start', details: String(error.message || error) }
       }).catch(loadError => console.error('Could not display startup recovery:', loadError));
     }
   });
@@ -5763,7 +5763,7 @@ app.on('before-quit', async event => {
     /* The note has to go even on the way out badly. findInProgress would
        eventually discard it anyway once it saw the pid was gone, but a pid the
        operating system has since reused would read as alive and make the next
-       launch wait forty-five seconds for a process that is not Posnic. */
+       launch wait forty-five seconds for a process that is not SamarinaPOS. */
     try { shutdownState.clear(app.getPath('userData')); } catch (e) { /* best effort */ }
     app.exit(0);
   }, SHUTDOWN_TIMEOUTS.total);

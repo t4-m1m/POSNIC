@@ -1,13 +1,13 @@
 {
-  "name": "Posnic POS",
-  "short_name": "Posnic",
+  "name": "SamarinaPOS",
+  "short_name": "SamarinaPOS",
   "description": "Point of sale, inventory and billing",
   "start_url": "../dashboard.html",
   "scope": "../",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#f2f3f7",
-  "theme_color": "#506fe4",
+  "theme_color": "#4e6ddf",
   "icons": [
     {
       "src": "images/icons-pwa/icon-192.png",
@@ -28,7 +28,7 @@
       "purpose": "maskable"
     },
     {
-      "src": "images/logo/posnic-logo.svg",
+      "src": "images/logo/samarinapos-mark.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"

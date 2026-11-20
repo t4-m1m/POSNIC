@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Posnic - First Time Setup</title>
+    <title>SamarinaPOS - First Time Setup</title>
     <style>
         * {
             margin: 0;
@@ -728,7 +728,7 @@
 <body class="choosing desktop-window" data-desktop-window="setup">
     <div class="wizard-container">
         <div class="wizard-header">
-            <img src="../builds/512-posnic.png" alt="Posnic" class="wizard-logo">
+            <img src="../builds/512-posnic.png" alt="SamarinaPOS" class="wizard-logo">
             <p>Point of Sale that never goes down</p>
         </div>
 
@@ -749,7 +749,7 @@
                 </div>
                 
                 <h1 class="success-title">🎉 Installation Complete!</h1>
-                <p class="success-subtitle">Your Posnic account has been created successfully</p>
+                <p class="success-subtitle">Your SamarinaPOS account has been created successfully</p>
                 
                 <div class="success-details">
                     <div class="success-detail-item">
@@ -780,7 +780,7 @@
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        <span>Ready to start using Posnic</span>
+                        <span>Ready to start using SamarinaPOS</span>
                     </div>
                 </div>
 
@@ -793,11 +793,11 @@
 
             <!-- Cloud enrollment is separate from everyday local staff login. -->
             <div class="form-section" id="step0" style="display:block;">
-                <div class="mode-head"><h2>Your shop, ready anywhere</h2><p>Start with Posnic Cloud, or keep your shop on this computer.</p></div>
+                <div class="mode-head"><h2>Your shop, ready anywhere</h2><p>Start with SamarinaPOS Cloud, or keep your shop on this computer.</p></div>
                 <div class="mode-cards">
                     <div class="mode-card is-primary" id="modeCloud">
                         <span class="mode-flag">Recommended</span>
-                        <div class="mode-title-row"><h3>Posnic Cloud</h3><span class="mode-badge">14-day free trial</span></div>
+                        <div class="mode-title-row"><h3>SamarinaPOS Cloud</h3><span class="mode-badge">14-day free trial</span></div>
                         <p class="mode-headline">One shop across your desktop and the cloud.</p>
                         <p>Connect securely in your browser. Your till keeps working when the internet drops.</p>
                         <ul class="mode-points"><li>Sync sales, stock and customers across your branches</li><li>View your business from a browser, anywhere</li><li>Use local staff login after the first download</li></ul>
@@ -817,10 +817,10 @@
             </div>
 
             <div class="form-section" id="stepCloud" style="display:none;">
-                <h2>Connect to Posnic Cloud</h2>
+                <h2>Connect to SamarinaPOS Cloud</h2>
                 <p class="field-hint" style="margin-bottom:18px;">Sign in or create your account in your browser, then approve this computer. Your cloud password stays in the browser.</p>
                 <button type="button" class="btn btn-primary" id="browserSignInBtn" style="width:100%;">Sign in with browser</button>
-                <a href="#" id="cloudSignupLink" class="mode-link" style="display:block;margin-top:12px;">New to Posnic? Start your free cloud trial</a>
+                <a href="#" id="cloudSignupLink" class="mode-link" style="display:block;margin-top:12px;">New to SamarinaPOS? Start your free cloud trial</a>
                 <div id="browserWait" style="display:none;margin:16px 0;" role="status" aria-live="polite">
                     <p>Complete the approval in your browser, then return here. This window will continue automatically.</p>
                     <div class="btn-container"><button type="button" class="btn btn-secondary" id="reopenBrowserBtn">Open browser again</button><button type="button" class="btn btn-secondary" id="cancelBrowserBtn">Cancel</button></div>
@@ -835,7 +835,7 @@
                 </div>
                 <details style="margin:18px 0;color:#64748b;font-size:13px;"><summary>Advanced connection</summary>
                     <input type="hidden" id="cloudServer" value="https://gateway.posnic.com">
-                    <p class="cloud-server-note">Posnic Cloud <a href="#" id="cloudServerToggle">Change server</a></p>
+                    <p class="cloud-server-note">SamarinaPOS Cloud <a href="#" id="cloudServerToggle">Change server</a></p>
                     <div class="form-group" id="cloudServerRow" style="display:none;"><label for="cloudServerVisible">Cloud server</label><input type="text" id="cloudServerVisible" value="https://gateway.posnic.com"></div>
                     <div class="form-group"><label for="cloudEmail">Owner email</label><input type="email" id="cloudEmail" autocomplete="username"></div>
                     <div class="form-group"><label for="cloudPassword">Cloud password</label><input type="password" id="cloudPassword" autocomplete="current-password"></div>
@@ -1353,7 +1353,7 @@ const form = document.getElementById('installForm');
         let API_BASE = 'http://localhost:5555';
 
         // ------------------------------------------------------------------
-        // Step 0: installation mode (local shop vs Posnic Cloud)
+        // Step 0: installation mode (local shop vs SamarinaPOS Cloud)
         // ------------------------------------------------------------------
         function showSection(id) {
             ['step0', 'stepCloud', 'stepCloudSignup', 'stepQuick', 'stepProgress', 'stepRecovery', 'step1', 'step2', 'step3', 'step4'].forEach((name) => {
@@ -1385,7 +1385,7 @@ const form = document.getElementById('installForm');
             next.disabled = true;
             saved.onchange = () => { next.disabled = !saved.checked; };
             document.getElementById('saveRecoveryCodes').onclick = () => {
-                const text = 'POSNIC - OFFLINE RECOVERY CODES\nAccount: ' + data.recoveryAccount + '\n\n' +
+                const text = 'SamarinaPOS - OFFLINE RECOVERY CODES\nAccount: ' + data.recoveryAccount + '\n\n' +
                     'Each line is a separate recovery code. To reset your password, enter only one complete line, not the whole list.\n\n' + codes.join('\n') +
                     '\n\nEach code works once. Keep this sheet away from the till. Anyone with a code can reset this account.\n';
                 const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));

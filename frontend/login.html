@@ -9,7 +9,7 @@
             }
         </script>
         <script>
-            // Posnic (desktop/self-hosted): the API is always the origin that
+            // SamarinaPOS (desktop/self-hosted): the API is always the origin that
             // served this page - Electron window, LAN device, or self-hosted server.
             // Cloud sync runs in a separate background process, never in the browser.
             let API_URL = window.location.protocol.startsWith('http')
@@ -17,38 +17,38 @@
                 : 'http://localhost:5555/';
         </script>
 
-        <title>Posnic POS - Offline POS & Billing Software</title>
+        <title>SamarinaPOS POS - Offline POS & Billing Software</title>
         <meta charset="UTF-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta name="description" content="Posnic POS is offline-first open source POS and billing software for retail stores, restaurants, and small businesses.">
+        <meta name="description" content="SamarinaPOS POS is offline-first open source POS and billing software for retail stores, restaurants, and small businesses.">
         <meta name="keywords" content="POS, Billing Software, Offline POS, Online/Offline POS, open source POS">
-        <meta name="application-name" content="Posnic POS">
-        <meta name="author" content="Posnic">
+        <meta name="application-name" content="SamarinaPOS POS">
+        <meta name="author" content="SamarinaPOS">
         <meta name="robots" content="index, follow">
         <link rel="canonical" href="https://www.posnic.com/">
         <meta property="og:type" content="website">
-        <meta property="og:site_name" content="Posnic POS">
-        <meta property="og:title" content="Posnic POS - Offline POS & Billing Software">
+        <meta property="og:site_name" content="SamarinaPOS POS">
+        <meta property="og:title" content="SamarinaPOS POS - Offline POS & Billing Software">
         <meta property="og:description" content="Offline-first open source POS and billing software for retail stores, restaurants, and small businesses.">
         <meta property="og:url" content="https://www.posnic.com/">
         <meta property="og:image" content="https://www.posnic.com/static/images/icons-pwa/icon-512.png">
         <meta name="twitter:card" content="summary">
-        <meta name="twitter:title" content="Posnic POS - Offline POS & Billing Software">
+        <meta name="twitter:title" content="SamarinaPOS POS - Offline POS & Billing Software">
         <meta name="twitter:description" content="Offline-first open source POS and billing software for retail stores, restaurants, and small businesses.">
         <meta name="twitter:image" content="https://www.posnic.com/static/images/icons-pwa/icon-512.png">
         <script type="application/ld+json" id="posnic-software-schema">
         {
             "@context": "https://schema.org",
             "@type": "SoftwareApplication",
-            "name": "Posnic POS",
+            "name": "SamarinaPOS POS",
             "description": "Offline-first open source POS and billing software for retail stores, restaurants, and small businesses.",
             "url": "https://www.posnic.com/",
-            "codeRepository": "https://github.com/Posnic/POS",
+            "codeRepository": "https://github.com/SamarinaPOS/POS",
             "applicationCategory": "BusinessApplication",
             "operatingSystem": "Windows, macOS, Linux, Web",
             "softwareVersion": "1.9.2",
-            "license": "https://github.com/Posnic/POS/blob/develop/LICENSE",
+            "license": "https://github.com/SamarinaPOS/POS/blob/develop/LICENSE",
             "isAccessibleForFree": true,
             "keywords": [
                 "POS",
@@ -66,7 +66,7 @@
         <link rel="manifest" href="static/manifest.webmanifest">
         <meta name="theme-color" content="#506fe4">
         <link rel="apple-touch-icon" href="static/images/icons-pwa/apple-touch-icon.png">
-        <link rel="apple-touch-icon" href="static/images/logo/posnic-logo.svg">
+        <link rel="apple-touch-icon" href="static/images/logo/samarinapos-mark.svg">
         <link crossorigin="anonymous" media="all" rel="stylesheet" href="style/login.css">
         <style>
             .error{
@@ -120,7 +120,7 @@
                                 <div class="card loginform_card">
                                     <div class="card-body">
                                         <div class="form-head">
-                                            <a href="javascript:void(0)" class="logo"><img src="static/images/logo/posnic.svg" class="img-fluid" alt="logo"></a>
+                                            <a href="javascript:void(0)" class="logo"><img src="static/images/logo/samarinapos.svg" class="img-fluid" alt="logo"></a>
                                         </div>
 
                                         <form id="Branch_selection_form" enctype="multipart/form-data" style="display:none;">
@@ -167,7 +167,7 @@
                                             </div>                          
                                             <button type="submit" class="btn btn-success btn-lg btn-block font-18"><lang class="lang_foget_mail">Reset Password</lang></button>
                                             <p id="offline_recovery_email_help" class="mt-3" hidden><lang class="lang_email_unavailable_use_the_recovery_codes_y">Email unavailable? Use the recovery codes you saved when setting up this shop.</lang></p>
-                                            <p class="mb-0 mt-3"><lang class="lang_remeber_password">Already have a POSNIC account? </lang><a id="Loginslide" href="#"><lang class="lang_login_title">Log in </lang></a></p>
+                                            <p class="mb-0 mt-3"><lang class="lang_remeber_password">Already have a SamarinaPOS account? </lang><a id="Loginslide" href="#"><lang class="lang_login_title">Log in </lang></a></p>
                                         </form>
 
                                         <p id="offline_recovery_login" class="text-center mt-3" hidden><button type="button" class="btn btn-link" id="offline_recovery_open"><lang class="lang_recover_with_an_offline_code">Recover with an offline code</lang></button></p>

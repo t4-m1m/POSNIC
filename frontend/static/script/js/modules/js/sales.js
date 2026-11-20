@@ -15452,6 +15452,7 @@ $(document).ready(function () {
             // depend on the shortcut toolbar staying in its original parent:
             // the sticky-toolbar handler can move that toolbar while scrolling.
             var bar = document.getElementById('posnic-multi-baskets');
+            var headerHost = document.getElementById('posnic-multi-baskets-header-host');
             var needsRender = false;
             if (!bar) {
                 bar = document.createElement('div');
@@ -15463,11 +15464,13 @@ $(document).ready(function () {
                 else if (form) form.insertBefore(bar, form.firstChild);
                 else root.insertBefore(bar, root.firstChild);
                 needsRender = true;
-            } else if (toolbar && root.contains(toolbar) &&
+            } else if (!headerHost && toolbar && root.contains(toolbar) &&
                        (bar.parentNode !== toolbar.parentNode || bar.nextElementSibling !== toolbar)) {
                 toolbar.parentNode.insertBefore(bar, toolbar);
                 needsRender = true;
             }
+            // Keep the live basket strip in the topbar after lazy mounting.
+            if (headerHost && bar.parentNode !== headerHost) headerHost.appendChild(bar);
 
             if (!this.initialized || !this.sessions.length) {
                 this.sessions = [{ id: 1, label: 'Client 1', customerName: '', snapshot: null }];

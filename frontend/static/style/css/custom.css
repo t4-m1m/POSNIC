@@ -8126,3 +8126,24 @@ body:has(#sales_new:not([style*="display: none"])) #posnic-multi-baskets-header-
   height:20px;
   margin:0;
 }
+
+
+/* SamarinaPOS logo sizing and topbar layout. */
+.samarinapos-topbar-logo { display:block; width:128px; max-width:100%; height:auto; max-height:48px; object-fit:contain; }
+.samarinapos-sidebar-wordmark { display:block; width:176px; max-width:100%; height:auto; max-height:64px; object-fit:contain; }
+.vertical-menu-icon .logo-small { display:flex; align-items:center; justify-content:center; }
+.vertical-menu-icon .logo-small img { display:block; width:64px; max-width:100%; height:auto; max-height:42px; object-fit:contain; }
+.auth-box .form-head .logo img { display:block; width:210px; max-width:100%; height:auto; max-height:120px; object-fit:contain; }
+@media (min-width:768px) {
+ .topbar .togglebar > ul.list-inline { display:flex !important; align-items:center !important; flex-wrap:nowrap !important; min-width:0 !important; width:100% !important; }
+ .topbar .togglebar .add_dropdown { margin-top:0 !important; }
+ .topbar .togglebar > ul.list-inline > li#posnic-multi-baskets-header-wrap { display:none; flex:1 1 auto !important; width:auto !important; min-width:96px !important; max-width:none !important; margin-inline-start:10px !important; overflow:hidden !important; }
+ body:has(#sales_new:not([style*="display: none"])) .topbar .togglebar > ul.list-inline > li#posnic-multi-baskets-header-wrap { display:flex !important; align-items:center !important; }
+ #posnic-multi-baskets-header-host { display:flex; align-items:center; width:100%; min-width:0; overflow:hidden; }
+}
+#posnic-multi-baskets-header-wrap #posnic-multi-baskets { flex:1 1 auto; width:100% !important; min-width:0; max-width:100%; }
+#posnic-whatsapp-connector-wrap { display:flex !important; flex:0 0 34px !important; width:34px !important; min-width:34px !important; max-width:34px !important; align-items:center; justify-content:center; }
+#posnic-whatsapp-connector.posnic-whatsapp-icon-btn { display:inline-flex !important; flex:0 0 34px !important; width:34px !important; min-width:34px !important; max-width:34px !important; height:34px !important; min-height:34px !important; max-height:34px !important; box-sizing:border-box !important; align-items:center !important; justify-content:center !important; padding:0 !important; }
+#posnic-whatsapp-connector.posnic-whatsapp-icon-btn svg { display:block; flex:0 0 20px; width:20px !important; height:20px !important; }
+.posnic-touch-mode #posnic-whatsapp-connector-wrap { flex:0 0 34px !important; width:34px !important; min-width:34px !important; max-width:34px !important; }
+.posnic-touch-mode #posnic-whatsapp-connector.posnic-whatsapp-icon-btn { flex:0 0 34px !important; width:34px !important; min-width:34px !important; max-width:34px !important; height:34px !important; min-height:34px !important; }
