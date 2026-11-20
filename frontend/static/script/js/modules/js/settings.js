@@ -129,11 +129,11 @@ PosnicPro.settings = {
         /* A list has to be fetched every time it is opened: a phone that
            signed in a minute ago belongs on it. */
         if (key === 'devices' && PosnicPro.handsets) { PosnicPro.handsets.load(); }
-        if (key === 'branchpayments' || key === 'companion') {
+        if (key === 'companion') {
+            $('#mobile_companion_frame').attr('src', '/samarina-companion-setup');
+        } else if (key === 'branchpayments') {
             var base = (typeof API_URL === 'string' && API_URL) || '/api';
-            var frameId = key === 'companion' ? 'mobile_companion_frame' : 'branch_payments_frame';
-            var view = key === 'branchpayments' ? '?view=payments' : '?view=companion';
-            $('#' + frameId).attr('src', base.replace(/\/+$/, '') + '/mobile-pos-setup' + view);
+            $('#branch_payments_frame').attr('src', base.replace(/\\/+$/, '') + '/branch-payments?view=payments');
         }
         if (key === 'ai') { PosnicPro.askposnic.showSettings(); }
     },
