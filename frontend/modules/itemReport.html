@@ -461,7 +461,21 @@
                     </div>
                 </div>
             </section>
-            <section id="versements-panel" class="card m-b-30" style="display:none;margin:18px 0;">
+            <section id="zakat-panel" class="card m-b-30" style="display:none;margin:18px 0;">
+<div class="card-header d-flex justify-content-between align-items-center flex-wrap"><div><h4 class="mb-1">Calculateur de Zakat</h4><small class="text-muted">Estimation sur l’or, les liquidités, le stock et les créances</small></div><button type="button" class="btn btn-outline-primary" id="zakat-refresh">Actualiser les données POSNIC</button></div>
+<div class="card-body"><div class="alert alert-info mb-3" style="border-radius:12px">Nissab estimé sur 85 g d’or. La zakat commerciale est calculée à 2,5 % du patrimoine net zakatable lorsque le nissab est atteint et que le hawl (année lunaire) est accompli. Vérifiez les règles applicables à votre situation auprès d’une personne qualifiée.</div>
+<div class="row">
+<div class="col-md-6 col-lg-4 form-group"><label for="zakat-gold-gram">1 · Prix de 1 g d’or (DA)</label><input id="zakat-gold-gram" type="number" min="0" step="any" class="form-control" inputmode="decimal" placeholder="Saisir le prix du gramme"></div>
+<div class="col-md-6 col-lg-4 form-group"><label for="zakat-nisab">Nissab automatique (85 g)</label><input id="zakat-nisab" type="text" class="form-control" readonly value="—"></div>
+<div class="col-md-6 col-lg-4 form-group"><label for="zakat-cash">2 · Liquidités disponibles (DA)</label><input id="zakat-cash" type="number" min="0" step="any" class="form-control" inputmode="decimal" value="0"></div>
+<div class="col-md-6 col-lg-4 form-group"><label for="zakat-stock">3 · Stock au prix de vente 1 (DA)</label><input id="zakat-stock" type="text" class="form-control" readonly value="Chargement…"></div>
+<div class="col-md-6 col-lg-4 form-group"><label for="zakat-receivables">4 · Créances clients à récupérer (DA)</label><input id="zakat-receivables" type="text" class="form-control" readonly value="Chargement…"></div>
+<div class="col-md-6 col-lg-4 form-group"><label for="zakat-liabilities">5 · Dettes à payer (DA)</label><input id="zakat-liabilities" type="number" min="0" step="any" class="form-control" inputmode="decimal" value="0"></div>
+</div>
+<div class="custom-control custom-checkbox mb-3"><input type="checkbox" class="custom-control-input" id="zakat-hawl"><label class="custom-control-label" for="zakat-hawl">Le hawl (une année lunaire) est accompli</label></div>
+<div class="d-flex flex-wrap align-items-center" style="gap:10px"><button type="button" class="btn btn-primary" id="zakat-calculate">Calculer la Zakat</button><span id="zakat-data-status" class="small text-muted" role="status"></span></div><div id="zakat-result" class="mt-4" aria-live="polite"></div></div>
+</section>
+<section id="versements-panel" class="card m-b-30" style="display:none;margin:18px 0;">
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap"><div><h4 class="mb-1">Versements</h4><small class="text-muted">Acompte initial et règlement final unique</small></div><div><button class="btn btn-primary" id="versements-refresh">Actualiser</button></div></div>
                 <div class="card-body">
                     <div class="alert alert-info mb-3" style="border-radius:12px">Les nouveaux versements sont créés depuis <strong>Nouvelle vente → F6 Versement</strong>. Ils apparaissent automatiquement dans ce registre, sans créer de compte client ni convertir une vente ordinaire en crédit.</div>
