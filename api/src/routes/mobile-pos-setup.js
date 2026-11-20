@@ -34,10 +34,12 @@ document.querySelectorAll('[data-nav]').forEach((button) => {
 let csrf = '',
   state,
   pairingQr = [],
+  companionQr = [],
   pairingExpiry;
 function clearPairing() {
   clearTimeout(pairingExpiry);
   pairingQr = [];
+  companionQr = [];
   $('code').textContent = '';
   $('code-help').textContent = '';
   $('addresses').querySelector('select')?.dispatchEvent(new Event('change'));
@@ -140,6 +142,14 @@ async function load() {
   const image = document.createElement('img');
   image.width = 180;
   image.height = 180;
+  const nativeLabel = document.createElement('p');
+  nativeLabel.textContent = 'QR code pour l’application mobile native';
+  const companionLabel = document.createElement('p');
+  companionLabel.textContent = 'QR code Compagnon Web : ouvre directement la page mobile et connecte le téléphone';
+  const companionImage = document.createElement('img');
+  companionImage.width = 220;
+  companionImage.height = 220;
+  companionImage.hidden = true;
   addresses.forEach((a, index) => {
     const option = document.createElement('option');
     option.value = index;
@@ -152,13 +162,17 @@ async function load() {
       const paired = pairingQr.find((row) => row.url === a.url);
       image.src = paired?.qr || a.qr;
       image.alt = paired
-        ? 'Scan to authorize the selected staff account'
+        ? 'Scan to authorize the selected staff account in the native app'
         : 'Scan to connect to ' + a.url;
+      const browserPair = companionQr.find((row) => row.url === a.url);
+      companionImage.hidden = !browserPair;
+      companionImage.src = browserPair?.qr || '';
+      companionImage.alt = 'Open and pair the POSNIC Web Companion';
     }
   };
   select.onchange = showAddress;
   showAddress();
-  $('addresses').append(select, image);
+  $('addresses').append(select, nativeLabel, image, companionLabel, companionImage);
   $('settings').hidden = false;
   $('attention').replaceChildren();
   (state.attention || []).forEach((row) => {
@@ -209,6 +223,7 @@ $('pair').onclick = async () => {
   try {
     const result = await call('pair-codes', { staffId: $('pair-staff').value });
     pairingQr = result.pairingQr || [];
+    companionQr = result.companionQr || [];
     $('addresses').querySelector('select')?.dispatchEvent(new Event('change'));
     pairingExpiry = setTimeout(
       () => {
