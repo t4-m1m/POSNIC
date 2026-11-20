@@ -89,7 +89,7 @@ router.get('/setup/status', protect, async (req, res) => {
   if (!branchId) return fail(res, 400, 'Sélectionnez un magasin dans POSNIC.');
   const branch = await findBranch(req, branchId);
   if (!branch) return fail(res, 404, 'Magasin introuvable.');
-  const connectedPhones = await req.db.collection('samarina_companion_sessions').countDocuments({ branchId: oid(branchId) || branchId, expiresAt: { $gt: new Date() }, revokedAt: null });
+  const connectedPhones = await req.db.collection('samarina_companion_sessions').countDocuments({ branchId: oid(branchId) || branchId, expiresAt: { $gt: new Date() }, lastSeenAt: { $gt: new Date(Date.now() - 90000) }, revokedAt: null });
   return res.json({ branch: branch.branch_name || branch.name || 'Magasin', canPair: ownerAllowed(req.user), connectedPhones });
 });
 
@@ -388,6 +388,7 @@ router.get('/bootstrap', (req, res) => {
     isOwner: ownerAllowed(c.user)
   });
 });
+router.post('/heartbeat', (req, res) => res.json({ ok: true, expiresAt: req.companion.session.expiresAt }));
 router.post('/logout', async (req, res) => {
   await req.db.collection('samarina_companion_sessions').updateOne({ _id: req.companion.session._id }, { $set: { revokedAt: new Date() } });
   setCompanionCookie(res, req, '', 0);
