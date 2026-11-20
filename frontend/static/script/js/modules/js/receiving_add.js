@@ -100,8 +100,7 @@ PosnicPro.receivings = {
                 var onNewReceiving = /^\/?receivings\/new$/.test(hash);
                 if (!onNewReceiving) {
                     var hasDraftLines = $('#receiving_print tbody tr').not('#cart_content_area').length > 0;
-                    var hasSupplier = !!String($('#receiving_add_supplier_name').val() || '').trim();
-                    if (hasDraftLines || hasSupplier) return;
+                    if (hasDraftLines) return;
                     if (typeof hasher !== 'undefined' && hasher.setHash) hasher.setHash('receivings/new');
                     else window.location.hash = '#/receivings/new';
                     return;
