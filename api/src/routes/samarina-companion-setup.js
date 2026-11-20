@@ -22,14 +22,14 @@ function renderQr(rows) {
   });
 }
 async function init() {
-  const data = await request('/api/samarina/v1/setup/status');
+  const data = await request('/api/samarina/v1/setup/status?branch_id='+encodeURIComponent(new URLSearchParams(location.search).get('branch_id')||''));
   $('branch').textContent = data.branch;
   if (!data.canPair) { $('generate').disabled = true; $('status').textContent = 'Seul un propriétaire ou administrateur peut jumeler un téléphone.'; }
 }
 $('generate').addEventListener('click', async () => {
   const button = $('generate'); button.disabled = true; $('status').textContent = 'Création du QR code…';
   try {
-    const data = await request('/api/samarina/v1/setup/pairing-code', { method: 'POST', body: '{}' });
+    const data = await request('/api/samarina/v1/setup/pairing-code', { method: 'POST', body: JSON.stringify({ branch_id: new URLSearchParams(location.search).get('branch_id') || '' }) });
     $('code').textContent = data.code; $('expiry').textContent = 'Expire à ' + new Date(data.expiresAt).toLocaleTimeString();
     renderQr(data.pairingQr || []); $('status').textContent = 'Scannez le QR code avec le téléphone. Chaque code ne fonctionne qu’une seule fois.';
   } catch (error) { $('status').textContent = error.message; }
