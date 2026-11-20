@@ -129,9 +129,13 @@ PosnicPro.settings = {
         /* A list has to be fetched every time it is opened: a phone that
            signed in a minute ago belongs on it. */
         if (key === 'devices' && PosnicPro.handsets) { PosnicPro.handsets.load(); }
-        if (key === 'mobilepos' || key === 'branchpayments') {
+        if (key === 'mobilepos' || key === 'branchpayments' || key === 'companion') {
             var base = (typeof API_URL === 'string' && API_URL) || '/api';
-            $('#' + (key === 'mobilepos' ? 'mobile_pos_frame' : 'branch_payments_frame')).attr('src', base.replace(/\/+$/, '') + '/mobile-pos-setup' + (key === 'branchpayments' ? '?view=payments' : ''));
+            var frameId = key === 'mobilepos' ? 'mobile_pos_frame' :
+                key === 'companion' ? 'mobile_companion_frame' : 'branch_payments_frame';
+            var view = key === 'branchpayments' ? '?view=payments' :
+                key === 'companion' ? '?view=companion' : '';
+            $('#' + frameId).attr('src', base.replace(/\/+$/, '') + '/mobile-pos-setup' + view);
         }
         if (key === 'ai') { PosnicPro.askposnic.showSettings(); }
     },
@@ -10368,6 +10372,11 @@ $(document).on('click', '#v-pills-mobilepos-tab', function (e) {
     e.preventDefault();
     var base = (typeof API_URL === 'string' && API_URL) || '/api';
     $('#mobile_pos_frame').attr('src', base.replace(/\/+$/, '') + '/mobile-pos-setup');
+});
+$(document).on('click', '#v-pills-companion-tab', function (e) {
+    e.preventDefault();
+    var base = (typeof API_URL === 'string' && API_URL) || '/api';
+    $('#mobile_companion_frame').attr('src', base.replace(/\/+$/, '') + '/mobile-pos-setup?view=companion');
 });
 
 window.addEventListener('message', function (event) {

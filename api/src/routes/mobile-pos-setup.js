@@ -1,7 +1,9 @@
 'use strict';
 /* global document, location, window */
 const $ = (id) => document.getElementById(id);
-const paymentView = new URLSearchParams(location.search).get('view') === 'payments';
+const view = new URLSearchParams(location.search).get('view');
+const paymentView = view === 'payments';
+const companionView = view === 'companion';
 const api = new URL(paymentView ? 'branch-payments' : 'mobile/v1/', location.href).pathname;
 if (paymentView) {
   document.querySelector('h1').textContent = 'Branch payments';
@@ -10,6 +12,15 @@ if (paymentView) {
     el.hidden = el.id !== 'payments-section';
   });
   $('device-links').hidden = true;
+  document.querySelector('.setup-summary').hidden = true;
+} else if (companionView) {
+  document.querySelector('h1').textContent = 'Compagnon Web POSNIC';
+  document.title = 'POSNIC · Compagnon Web';
+  document.querySelectorAll('#settings > section').forEach((el) => {
+    el.hidden = el.id !== 'connect-section';
+  });
+  $('device-links').hidden = true;
+  $('attention-section').hidden = true;
   document.querySelector('.setup-summary').hidden = true;
 } else {
   $('payments-section').hidden = true;
@@ -114,6 +125,7 @@ async function load() {
     ? 'Mobile POS is enabled for this branch.'
     : 'Mobile POS is off. Enable it in Settings → Features.';
   $('pair').disabled = !state.enabled;
+  $('companion-open-features').hidden = state.enabled;
   $('pair-staff').replaceChildren();
   (state.pairingStaff || []).forEach((staff) => {
     const option = document.createElement('option');
@@ -150,6 +162,11 @@ async function load() {
   companionImage.width = 220;
   companionImage.height = 220;
   companionImage.hidden = true;
+  const browserLink = document.createElement('a');
+  browserLink.textContent = 'Ouvrir le Compagnon Web sur ce téléphone';
+  browserLink.target = '_blank';
+  browserLink.rel = 'noopener noreferrer';
+  browserLink.hidden = !companionView;
   addresses.forEach((a, index) => {
     const option = document.createElement('option');
     option.value = index;
@@ -168,11 +185,15 @@ async function load() {
       companionImage.hidden = !browserPair;
       companionImage.src = browserPair?.qr || '';
       companionImage.alt = 'Open and pair the POSNIC Web Companion';
+      browserLink.href = new URL('/mobile/', a.url).toString();
+      browserLink.hidden = !companionView;
     }
   };
   select.onchange = showAddress;
   showAddress();
-  $('addresses').append(select, nativeLabel, image, companionLabel, companionImage);
+  nativeLabel.hidden = companionView;
+  image.hidden = companionView;
+  $('addresses').append(select, nativeLabel, image, companionLabel, companionImage, browserLink);
   $('settings').hidden = false;
   $('attention').replaceChildren();
   (state.attention || []).forEach((row) => {

@@ -47,6 +47,7 @@
                             </div>
                         </div>
                     </div>
+                    <div id="posnic-multi-baskets-header-host" class="posnic-multi-baskets-header-host"></div>
                     <div id="posnic-multi-baskets" class="posnic-multi-baskets" aria-label="Paniers clients simultanés">
                         <div class="posnic-basket-tab-wrap is-active"><button type="button" class="posnic-basket-tab is-active" aria-pressed="true">Client 1</button></div>
                         <button type="button" class="posnic-basket-add" onclick="if(PosnicPro.sales&&PosnicPro.sales.multiBasket)PosnicPro.sales.multiBasket.create();">+ Nouveau client</button>
@@ -1774,8 +1775,8 @@ body[data-theme="warmnight"]{color-scheme:dark}
 </style>
 
 <style id="posnic-sales-shortcuts-viewport-layout">
-/* The cashier shortcut strip is portalled to BODY by sales.js so dashboard
-   transforms cannot make it overlap the fixed application header. */
+/* The cashier shortcut strip is portalled to BODY by sales.js. Its spacer is
+   measured against .contentbar so sale controls start below its lower edge. */
 #sales-function-shortcuts.sales-function-toolbar-pinned {
   display:flex!important; flex-flow:row nowrap!important; align-items:center!important;
   gap:8px!important; min-height:58px!important; height:auto!important;
@@ -1792,5 +1793,8 @@ body[data-theme="warmnight"]{color-scheme:dark}
 #sales-function-shortcuts.sales-function-toolbar-pinned .sales-shortcut-total {
   flex:0 0 auto!important; min-height:40px!important;
 }
-.sales-function-toolbar-placeholder { display:block!important; width:100%; min-height:58px; }
+.sales-function-toolbar-placeholder { display:block!important; width:100%; min-height:0; height:0; flex:0 0 auto; pointer-events:none; }
+.posnic-multi-baskets-header-host { display:block; position:relative; z-index:1; overflow:visible; }
+body.posnic-sales-toolbar-active .dropdown-menu.show { z-index:2101!important; }
+body.posnic-sales-toolbar-active .dropdown.show > .dropdown-menu { z-index:2101!important; }
 </style>

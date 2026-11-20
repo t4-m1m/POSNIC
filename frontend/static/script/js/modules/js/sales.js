@@ -82,12 +82,11 @@ PosnicPro.sales = {
     pinFunctionToolbar: function () {
         var toolbar = document.getElementById('sales-function-shortcuts');
         var salesPage = document.getElementById('sales_new');
+        var contentBar = salesPage && salesPage.querySelector('.contentbar');
         var basketBar = document.getElementById('posnic-multi-baskets');
         var basketHost = document.getElementById('posnic-multi-baskets-header-host');
-
-        // The basket tabs occupy the first header row beside Ajouter.
         if (basketBar && basketHost && basketBar.parentNode !== basketHost) basketHost.appendChild(basketBar);
-        if (!toolbar || !salesPage) return;
+        if (!toolbar || !salesPage || !contentBar) return;
 
         var state = PosnicPro.sales._functionToolbarPinState;
         if (!state) state = PosnicPro.sales._functionToolbarPinState = {
@@ -105,9 +104,10 @@ PosnicPro.sales = {
                 state.originalParent.insertBefore(toolbar, state.originalNext && state.originalNext.parentNode === state.originalParent ? state.originalNext : null);
             }
             toolbar.classList.remove('sales-function-toolbar-pinned');
-            ['position', 'top', 'left', 'right', 'width', 'zIndex', 'boxSizing', 'margin'].forEach(function (name) {
+            ['position', 'top', 'left', 'right', 'width', 'zIndex', 'boxSizing', 'margin', 'pointerEvents'].forEach(function (name) {
                 toolbar.style[name] = '';
             });
+            document.body.classList.remove('posnic-sales-toolbar-active');
             if (state.placeholder && state.placeholder.parentNode) state.placeholder.parentNode.removeChild(state.placeholder);
             state.placeholder = null;
         }
@@ -127,44 +127,39 @@ PosnicPro.sales = {
                 state.placeholder.className = 'sales-function-toolbar-placeholder';
                 state.placeholder.setAttribute('aria-hidden', 'true');
                 state.placeholder.style.width = '100%';
-                state.placeholder.style.height = Math.max(toolbar.offsetHeight, 1) + 'px';
-                // Reserve the pinned toolbar's row at the VERY TOP of the sale
-                // workspace. Reserving it beside its old position (below the
-                // basket tabs) leaves the fixed toolbar painted over the barcode
-                // field, catalogue and the first basket rows.
-                salesPage.insertBefore(state.placeholder, salesPage.firstChild);
+                // Reserve space inside the actual sale content flow. A spacer
+                // before the outer page shell did not move contentbar reliably.
+                contentBar.insertBefore(state.placeholder, contentBar.firstChild);
             }
 
             var header = headerRect();
             if (!header || !Number.isFinite(header.bottom)) return;
-
-            // Fixed descendants of transformed dashboard/content wrappers are
-            // positioned against those wrappers, not the screen. Reparenting
-            // this one toolbar to BODY makes the measured viewport coordinates
-            // authoritative and prevents the topbar painting over the F keys.
             if (toolbar.parentNode !== document.body) document.body.appendChild(toolbar);
 
-            var anchor = state.placeholder.getBoundingClientRect();
-            var pageHeaderBottom = Math.max(0, header.bottom);
             var left = Math.max(0, header.left);
             var width = Math.max(0, header.width);
             toolbar.classList.add('sales-function-toolbar-pinned');
             toolbar.style.position = 'fixed';
-            toolbar.style.top = pageHeaderBottom + 'px';
+            toolbar.style.top = Math.max(0, header.bottom) + 'px';
             toolbar.style.left = left + 'px';
             toolbar.style.right = 'auto';
             toolbar.style.width = width + 'px';
             toolbar.style.margin = '0';
-            toolbar.style.zIndex = '2000';
+            toolbar.style.zIndex = '1020';
+            toolbar.style.pointerEvents = 'auto';
             toolbar.style.boxSizing = 'border-box';
+            document.body.classList.add('posnic-sales-toolbar-active');
 
-            var height = Math.max(toolbar.offsetHeight, 1);
-            state.placeholder.style.height = height + 'px';
-            state.placeholder.style.minHeight = height + 'px';
-            // If the original flow anchor is above the header due to the
-            // dashboard's fixed topbar, the placeholder still reserves the
-            // complete toolbar row. The toolbar is deliberately never clipped.
-            if (anchor.width && Math.abs(anchor.width - width) > 1) state.placeholder.style.width = width + 'px';
+            // Align the first sale-page control with the exact lower edge of F8.
+            // Recalculate on resize/scroll so different DPI and window sizes fit.
+            var contentRect = contentBar.getBoundingClientRect();
+            var contentStyle = window.getComputedStyle(contentBar);
+            var contentStart = contentRect.top +
+                (parseFloat(contentStyle.borderTopWidth) || 0) +
+                (parseFloat(contentStyle.paddingTop) || 0);
+            var reserved = Math.max(0, Math.ceil(toolbar.getBoundingClientRect().bottom - contentStart));
+            state.placeholder.style.height = reserved + 'px';
+            state.placeholder.style.minHeight = reserved + 'px';
         }
 
         function schedulePin() {

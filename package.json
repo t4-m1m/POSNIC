@@ -450,6 +450,7 @@
         "to": "frontend",
         "filter": [
           "public/**/*",
+          "mobile/**/*",
           "*.html",
           "static/script/**/*",
           "!public/all.zip",
