@@ -17,8 +17,13 @@ function renderQr(rows) {
     const card = document.createElement('article'); card.className = 'qr-card';
     const img = document.createElement('img'); img.src = row.qr; img.alt = 'QR code Samarina Companion';
     const strong = document.createElement('strong'); strong.textContent = 'Ouvrir sur le téléphone';
-    const small = document.createElement('small'); small.textContent = row.url;
-    card.append(img, strong, small); host.append(card);
+    const small = document.createElement('small'); small.textContent = row.url + (row.protocol === 'https' ? ' · HTTPS sécurisé' : ' · HTTP (photo / saisie manuelle)');
+    card.append(img, strong, small);
+    if (row.certificateUrl) {
+      const cert = document.createElement('a'); cert.href = row.certificateUrl; cert.textContent = 'Télécharger le certificat pour faire confiance au PC'; cert.className = 'certificate-link';
+      card.append(cert);
+    }
+    host.append(card);
   });
 }
 async function init() {
@@ -31,7 +36,7 @@ $('generate').addEventListener('click', async () => {
   try {
     const data = await request('/api/samarina/v1/setup/pairing-code', { method: 'POST', body: JSON.stringify({ branch_id: new URLSearchParams(location.search).get('branch_id') || '' }) });
     $('code').textContent = data.code; $('expiry').textContent = 'Expire à ' + new Date(data.expiresAt).toLocaleTimeString();
-    renderQr(data.pairingQr || []); $('status').textContent = 'Scannez le QR code avec le téléphone. Chaque code ne fonctionne qu’une seule fois.';
+    renderQr(data.pairingQr || []); $('trust-instructions').hidden = !(data.pairingQr || []).some(row => row.protocol === 'https'); $('status').textContent = 'Scannez un QR HTTPS après avoir installé le certificat sur le téléphone. Le code de jumelage ne fonctionne qu’une seule fois.';
   } catch (error) { $('status').textContent = error.message; }
   finally { button.disabled = false; }
 });

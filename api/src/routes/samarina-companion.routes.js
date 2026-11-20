@@ -111,14 +111,24 @@ router.post('/setup/pairing-code', protect, async (req, res) => {
     await grants.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
     await grants.insertOne({ _id: hash(code), userId, branchId: oid(branchId) || branchId, license: oid(license) || license, createdAt: new Date(), expiresAt });
     const { localAddresses, pairingTargets } = require('../utils/pairing');
-    const targets = pairingTargets({ host: req.headers.host, port: process.env.PORT || 5555 }, localAddresses()).targets;
+    const addresses = localAddresses();
+    const targets = pairingTargets({ host: req.headers.host, port: process.env.PORT || 5555 }, addresses).targets;
+    const httpsPort = Number(process.env.POSNIC_COMPANION_HTTPS_PORT || 0);
+    const secureTargets = httpsPort ? addresses.map(entry => ({
+      url: `https://${entry.address}:${httpsPort}/api`, label: entry.address, secure: true
+    })) : [];
+    const allTargets = [...secureTargets, ...targets];
     const qrcode = require('qrcode');
-    const pairingQr = await Promise.all(targets.map(async target => {
+    const pairingQr = await Promise.all(allTargets.map(async target => {
       const origin = new URL(target.url).origin;
       const api = origin + '/api/samarina/v1';
-      const url = new URL('/mobile/', origin);
+      const url = new URL('/mobile/login', origin);
       url.hash = new URLSearchParams({ server: api, code }).toString();
-      return { url: origin, qr: await qrcode.toDataURL(url.toString(), { width: 280, margin: 2 }) };
+      return {
+        url: origin, protocol: origin.startsWith('https:') ? 'https' : 'http',
+        certificateUrl: origin.startsWith('https:') ? origin + '/api/samarina/v1/certificate' : '',
+        qr: await qrcode.toDataURL(url.toString(), { width: 280, margin: 2 })
+      };
     }));
     return res.json({ code: code.match(/.{4}/g).join('-'), expiresAt, branch: branch.branch_name || branch.name || 'Magasin', pairingQr });
   } catch (error) {
@@ -155,6 +165,17 @@ router.post('/desktop/receiving-queue/:id/ack', protect, async (req, res) => {
     await req.db.collection('samarina_receiving_queue').updateOne({ _id: id, branchId: oid(branchId) || branchId, state: 'pending' }, { $set: { state: 'imported', importedAt: new Date() } });
     return res.json({ ok: true });
   } catch (_) { return fail(res, 500, 'Impossible de confirmer la réception.'); }
+});
+
+router.get('/certificate', (req, res) => {
+  try {
+    const certPath = require('../utils/companion-https').certificatePath(process.env.POSNIC_USER_DATA_PATH);
+    if (!require('fs').existsSync(certPath)) return fail(res, 404, 'Certificat HTTPS local indisponible.');
+    return res.download(certPath, 'samarina-posnic-companion.crt');
+  } catch (error) {
+    console.error('[Samarina Companion] certificate download failed:', error);
+    return fail(res, 500, 'Impossible de télécharger le certificat HTTPS.');
+  }
 });
 
 async function companionAuth(req, res, next) {

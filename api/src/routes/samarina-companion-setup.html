@@ -7,7 +7,12 @@
   <section class="hero"><div><h2>Connectez un téléphone au magasin</h2><p>Le compagnon est une application Web indépendante, avec son propre appairage et ses propres sessions. Il ne nécessite pas l’activation de Mobile POS.</p></div><button id="generate" class="primary">Générer un QR code</button></section>
   <section class="pairing">
     <div><p class="eyebrow">CODE À USAGE UNIQUE</p><output id="code">—</output><p id="expiry">Le code expire après 5 minutes.</p><p id="status" role="status"></p></div>
-    <div id="qr-list" class="qr-list"><p>Générez un code pour afficher le QR de connexion Wi-Fi.</p></div>
+    <section id="trust-instructions" class="trust-instructions" hidden>
+<strong>Connexion HTTPS sécurisée · iPhone / Android</strong>
+<p>Téléchargez le certificat depuis le lien affiché sous un QR HTTPS. Installez-le sur le téléphone, puis activez sa confiance complète dans les réglages du système. Le navigateur doit afficher une connexion sécurisée avant d’autoriser le scanner vidéo.</p>
+<p>Sur iPhone : Réglages → Profil téléchargé → Installer, puis Réglages → Général → Informations → Réglages de confiance des certificats. Sur Android : Sécurité → Chiffrement et identifiants → Installer un certificat CA. Les intitulés varient selon la version.</p>
+</section>
+<div id="qr-list" class="qr-list"><p>Générez un code pour afficher le QR de connexion Wi-Fi.</p></div>
   </section>
   <section class="features"><h2>Fonctions du compagnon</h2><div class="feature-grid">
     <article><b>Catalogue & scan</b><span>Prix, références, code-barres et stock en direct</span></article>
