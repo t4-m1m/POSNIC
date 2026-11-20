@@ -21,9 +21,9 @@
 <div id="lookup-results" class="results empty-state">Aucun article recherché.</div></section>
 <section class="panel" id="tab-create"><div class="section-heading"><div><h2>Ajouter un article</h2><p>Création directe dans le catalogue POSNIC.</p></div><span class="section-icon">＋</span></div>
 <form id="create-form" class="form-card">
-<label>Nom de l'article *<input name="items_name" required maxlength="200" placeholder="Ex. Ballerine femme"></label>
-<div class="two"><label>Prix de vente (DA) *<input name="items_selling_price" required inputmode="decimal" type="number" min="0" step="0.01"></label><label>Stock initial<input name="quantity" type="number" min="0" step="1" value="0"></label></div>
-<div class="two"><label>SKU / Référence<input name="item_code" maxlength="80"></label><label>Code-barres<input name="barcode" maxlength="100"></label></div>
+<label>Nom de l'article *<input name="name" required maxlength="200" placeholder="Ex. Ballerine femme"></label>
+<div class="two"><label>Prix de vente (DA) *<input name="selling_price" required inputmode="decimal" type="number" min="0" step="0.01"></label><label>Stock initial<input name="quantity" type="number" min="0" step="1" value="0"></label></div>
+<div class="two"><label>SKU / Référence<input name="sku" maxlength="80"></label><label>Code-barres<input name="barcode_id" maxlength="100"></label></div>
 <label>Photo de l'article<input name="photo" id="new-item-photo" type="file" accept="image/*" capture="environment"></label>
 <div id="create-error" class="error" role="alert"></div><button class="primary full" type="submit">Enregistrer l'article</button></form></section>
 <section class="panel" id="tab-receive"><div class="section-heading"><div><h2>Réception achats</h2><p>Préparez les scans des cartons.</p></div><span class="section-icon">▣</span></div>
