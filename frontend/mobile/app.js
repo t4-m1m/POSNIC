@@ -502,7 +502,7 @@
   renderQueue();
   // The Web Companion QR opens this page with a short-lived pairing grant.
   // The browser lands here already holding the correct LAN/cloud API address.
-  var launchParams = new URLSearchParams(window.location.search);
+  var launchParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
   var launchServer = launchParams.get('server');
   var launchCode = launchParams.get('code');
   if (launchServer && launchCode && !token) {
