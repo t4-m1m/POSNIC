@@ -273,14 +273,18 @@ router.get('/dashboard', async (req, res) => {
     for (const sale of sales) {
       const state = String(sale.sale_status || sale.status || '').toLowerCase();
       if (state.includes('void') || state.includes('cancel')) { totals.voids++; continue; }
-      totals.revenue += Number(sale.sales_total ?? sale.total ?? sale.grand_total ?? 0) || 0;
-      totals.debt += Math.max(0, Number(sale.payment_pending ?? sale.pending ?? 0) || 0);
-      totals.discounts += Number(sale.discount_amount ?? sale.discount ?? 0) || 0;
-      for (const payment of Array.isArray(sale.payments) ? sale.payments : []) {
-        const method = String(payment.method || '').toLowerCase(), amount = Number(payment.amount || 0);
+      const saleTotal = Number(sale.sales_total ?? sale.total ?? sale.grand_total ?? 0) || 0;
+      totals.revenue += saleTotal;
+      const payments = Array.isArray(sale.payments) ? sale.payments : [];
+      const paid = payments.reduce((sum, payment) => {
+        const method = String(payment.method || '').toLowerCase();
+        const amount = Number(payment.amount || 0);
         if (method === 'cash') totals.cash += amount;
-        else if (['card','bank_transfer','baridimob','baridi mob'].includes(method)) totals.electronic += amount;
-      }
+        else if (['card','tpe','bank_transfer','baridimob','baridi mob','baridi_mob'].includes(method)) totals.electronic += amount;
+        return sum + (method === 'credit' ? 0 : amount);
+      }, payments.length ? 0 : (Number(sale.paid_amount ?? sale.amount_paid ?? sale.total_paid ?? 0) || 0));
+      totals.debt += Math.max(0, Number(sale.payment_pending ?? sale.pending ?? (saleTotal - paid)) || 0);
+      totals.discounts += Number(sale.discount_amount ?? sale.discount ?? sale.discount_total ?? 0) || 0;
     }
     const items = await req.db.collection('items').countDocuments({ branch_id: branchId });
     const zrExpress = await req.db.collection('zr_deliveries').countDocuments({
