@@ -3,6 +3,9 @@ const express = require('express');
 const crypto = require('crypto');
 const { ObjectId } = require('mongodb');
 const { protect } = require('../middleware/auth');
+const ItemService = require('../services/item.service');
+const itemService = new ItemService();
+const { runWithRequestContext } = require('../utils/request-context');
 const router = express.Router();
 const hash = value => crypto.createHash('sha256').update(String(value)).digest('hex');
 const oid = value => ObjectId.isValid(String(value || '')) ? new ObjectId(String(value)) : null;
@@ -138,8 +141,16 @@ async function companionAuth(req, res, next) {
     const branch = await req.db.collection('branches').findOne({ _id: session.branchId });
     if (!user || !branch) return fail(res, 403, 'Accès au magasin retiré.');
     req.companion = { session, user, branch, branchId: session.branchId };
+    req.user = user;
     await sessions.updateOne({ _id: session._id }, { $set: { lastSeenAt: new Date() } });
-    next();
+    return runWithRequestContext({
+      currentBranch: session.branchId,
+      currentBranchName: branch.branch_name || branch.name || '',
+      license: session.license || null,
+      loggedUser: user._id,
+      loggedUserName: user.username || user.email || user.name || 'Samarina Companion',
+      saleOrigin: 'samarina-companion'
+    }, next);
   } catch (error) {
     console.error('[Samarina Companion] authentication failed:', error);
     return fail(res, 500, 'Erreur de vérification de la session.');
@@ -190,21 +201,27 @@ router.get('/catalogue', async (req, res) => {
 
 router.post('/items', async (req, res) => {
   try {
-    const name = String(req.body?.name || '').trim(), price = Number(req.body?.selling_price);
+    const name = String(req.body?.name || '').trim();
+    const price = Number(req.body?.selling_price);
     if (!name || !Number.isFinite(price) || price < 0) return fail(res, 400, 'Nom et prix de vente valides obligatoires.');
-    const c = req.companion, now = new Date();
-    const item = {
+    const c = req.companion;
+    const photo = String(req.body?.image || '').trim();
+    const data = {
       name, selling_price: price, barcode_id: String(req.body?.barcode_id || '').trim(),
-      sku: String(req.body?.sku || '').trim(), quantity: 0, available_quantity: 0,
-      track_inventory: req.body?.track_inventory !== false, image: String(req.body?.image || '').trim(),
-      branch_id: oid(c.branchId) || c.branchId, branch_name: c.branch.branch_name || c.branch.name || '',
-      license: oid(c.session.license) || c.session.license, createdAt: now, updatedAt: now, is_active: true
+      sku_id: String(req.body?.sku || '').trim(), mrp_price: price, company_price: 0,
+      available_quantity: 0, track_inventory: req.body?.track_inventory !== false,
+      tax: 0, tax_type: 'exclusive', discount_amount: 0, discount_percentage: 0,
+      cover_image: photo, image: photo ? [{ name: photo, size: 0, cover: 'yes' }] : [],
+      category_name: '', category_id: '', supplier_name: '', supplier_id: ''
     };
-    const result = await req.db.collection('items').insertOne(item);
-    res.status(201).json({ id: sid(result.insertedId), name, selling_price: price });
+    const result = await itemService.addItem({
+      data, branchId: c.branchId, licenseId: c.session.license, user: c.user
+    });
+    if (!result || result.status !== true) return fail(res, 409, result?.message || 'Impossible de créer cet article.');
+    return res.status(201).json({ id: result.data?.id || result.data?._id || '', name, selling_price: price, barcode: result.data?.barcode_id || data.barcode_id });
   } catch (error) {
     console.error('[Samarina Companion] item creation failed:', error);
-    fail(res, 500, 'Impossible de créer cet article.');
+    return fail(res, 500, 'Impossible de créer cet article.');
   }
 });
 router.get('/items/:id', async (req, res) => {
@@ -222,19 +239,32 @@ router.put('/items/:id', async (req, res) => {
   try {
     const id = oid(req.params.id);
     if (!id) return fail(res, 400, 'Référence article invalide.');
-    const c = req.companion, set = { updatedAt: new Date() };
-    for (const key of ['name', 'barcode_id', 'sku', 'image']) if (req.body && Object.prototype.hasOwnProperty.call(req.body, key)) set[key] = String(req.body[key] || '').trim();
-    if (req.body && Object.prototype.hasOwnProperty.call(req.body, 'selling_price')) {
-      const price = Number(req.body.selling_price);
-      if (!Number.isFinite(price) || price < 0) return fail(res, 400, 'Prix invalide.');
-      set.selling_price = price;
-    }
-    const result = await req.db.collection('items').updateOne({ _id: id, ...branchFilter(c.branchId), ...licenseFilter(c.session.license) }, { $set: set });
-    if (!result.matchedCount) return fail(res, 404, 'Article introuvable dans ce magasin.');
-    res.json({ ok: true });
+    const c = req.companion;
+    const existing = await req.db.collection('items').findOne({
+      _id: id, ...branchFilter(c.branchId), ...licenseFilter(c.session.license)
+    });
+    if (!existing) return fail(res, 404, 'Article introuvable dans ce magasin.');
+    const data = {
+      ...existing,
+      name: Object.prototype.hasOwnProperty.call(req.body || {}, 'name') ? String(req.body.name || '').trim() : existing.name,
+      selling_price: Object.prototype.hasOwnProperty.call(req.body || {}, 'selling_price') ? Number(req.body.selling_price) : existing.selling_price,
+      barcode_id: Object.prototype.hasOwnProperty.call(req.body || {}, 'barcode_id') ? String(req.body.barcode_id || '').trim() : existing.barcode_id,
+      sku_id: existing.itemid || existing.sku_id || String(req.body?.sku || ''),
+      cover_image: Object.prototype.hasOwnProperty.call(req.body || {}, 'image') ? String(req.body.image || '').trim() : (existing.image || ''),
+      image: Object.prototype.hasOwnProperty.call(req.body || {}, 'image')
+        ? (String(req.body.image || '').trim() ? [{ name: String(req.body.image).trim(), size: 0, cover: 'yes' }] : [])
+        : (Array.isArray(existing.multi_image) ? existing.multi_image : [])
+    };
+    if (!Number.isFinite(Number(data.selling_price)) || Number(data.selling_price) < 0) return fail(res, 400, 'Prix invalide.');
+    const result = await itemService.updateItem({
+      id: sid(existing._id), data, branchId: c.branchId,
+      licenseId: c.session.license, user: c.user
+    });
+    if (!result || result.status !== true) return fail(res, 409, result?.message || 'Impossible de modifier cet article.');
+    return res.json({ ok: true });
   } catch (error) {
     console.error('[Samarina Companion] item update failed:', error);
-    fail(res, 500, 'Impossible de modifier cet article.');
+    return fail(res, 500, 'Impossible de modifier cet article.');
   }
 });
 router.post('/items/photo', (req, res, next) => require('../controllers/items.controller').uploadItemMultiImage(req, res, next));
