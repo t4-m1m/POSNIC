@@ -85,105 +85,99 @@ PosnicPro.sales = {
         var basketBar = document.getElementById('posnic-multi-baskets');
         var basketHost = document.getElementById('posnic-multi-baskets-header-host');
 
-        // Basket tabs belong in the application header, beside Ajouter. They
-        // must never be included in the F-key toolbar's fixed-position maths.
-        if (basketBar && basketHost && basketBar.parentNode !== basketHost) {
-            basketHost.appendChild(basketBar);
-        }
+        // The basket tabs occupy the first header row beside Ajouter.
+        if (basketBar && basketHost && basketBar.parentNode !== basketHost) basketHost.appendChild(basketBar);
         if (!toolbar || !salesPage) return;
 
         var state = PosnicPro.sales._functionToolbarPinState;
         if (!state) state = PosnicPro.sales._functionToolbarPinState = {
-            placeholder: null, anchor: null, installed: false, frame: false
+            placeholder: null, originalParent: null, originalNext: null,
+            installed: false, frame: false, observer: null
         };
 
-        function appHeaderBottom() {
-            // Measure the rendered header (including the basket host), rather
-            // than assuming zero. The native Windows title bar is outside the
-            // document; .topbar is the complete in-page application header.
+        function headerRect() {
             var header = document.querySelector('.topbar');
-            if (!header) header = document.getElementById('posnic-multi-baskets-header-wrap');
-            if (!header) return 0;
-            var rect = header.getBoundingClientRect();
-            return Math.max(0, Math.min(window.innerHeight, rect.bottom));
+            return header ? header.getBoundingClientRect() : null;
         }
 
-        function clearPin() {
+        function restoreToolbar() {
+            if (state.originalParent && toolbar.parentNode !== state.originalParent) {
+                state.originalParent.insertBefore(toolbar, state.originalNext && state.originalNext.parentNode === state.originalParent ? state.originalNext : null);
+            }
             toolbar.classList.remove('sales-function-toolbar-pinned');
-            ['position', 'top', 'left', 'right', 'width', 'zIndex', 'boxSizing'].forEach(function (name) {
+            ['position', 'top', 'left', 'right', 'width', 'zIndex', 'boxSizing', 'margin'].forEach(function (name) {
                 toolbar.style[name] = '';
             });
-            if (state.placeholder && state.placeholder.parentNode) {
-                state.placeholder.parentNode.removeChild(state.placeholder);
-            }
+            if (state.placeholder && state.placeholder.parentNode) state.placeholder.parentNode.removeChild(state.placeholder);
             state.placeholder = null;
-            state.anchor = null;
         }
 
         function updatePin() {
             state.frame = false;
-            if (!document.documentElement.contains(toolbar) ||
+            if (!document.documentElement.contains(salesPage) ||
                 window.getComputedStyle(salesPage).display === 'none') {
-                clearPin();
+                restoreToolbar();
                 return;
             }
 
-            var headerBottom = appHeaderBottom();
-            if (!state.placeholder || state.anchor !== toolbar) {
-                if (state.placeholder && state.placeholder.parentNode) {
-                    state.placeholder.parentNode.removeChild(state.placeholder);
-                }
-                var flowRect = toolbar.getBoundingClientRect();
-                if (flowRect.top > headerBottom + 1) {
-                    state.placeholder = null;
-                    state.anchor = null;
-                    return;
-                }
+            if (!state.placeholder) {
+                state.originalParent = toolbar.parentNode;
+                state.originalNext = toolbar.nextSibling;
                 state.placeholder = document.createElement('div');
                 state.placeholder.className = 'sales-function-toolbar-placeholder';
                 state.placeholder.setAttribute('aria-hidden', 'true');
                 state.placeholder.style.width = '100%';
-                state.placeholder.style.height = '1px';
+                state.placeholder.style.height = Math.max(toolbar.offsetHeight, 1) + 'px';
                 toolbar.parentNode.insertBefore(state.placeholder, toolbar);
-                state.anchor = toolbar;
             }
 
-            var rect = state.placeholder.getBoundingClientRect();
-            headerBottom = appHeaderBottom();
-            if (rect.top > headerBottom + 1) {
-                clearPin();
-                return;
-            }
+            var header = headerRect();
+            if (!header || !Number.isFinite(header.bottom)) return;
 
-            // The top edge of the F-key/customer/total strip always starts at
-            // the actual bottom edge of the app header. This prevents F1-F8
-            // and the live total from being painted underneath the header.
-            var left = Math.max(0, rect.left);
-            var width = Math.max(0, rect.width);
+            // Fixed descendants of transformed dashboard/content wrappers are
+            // positioned against those wrappers, not the screen. Reparenting
+            // this one toolbar to BODY makes the measured viewport coordinates
+            // authoritative and prevents the topbar painting over the F keys.
+            if (toolbar.parentNode !== document.body) document.body.appendChild(toolbar);
+
+            var anchor = state.placeholder.getBoundingClientRect();
+            var pageHeaderBottom = Math.max(0, header.bottom);
+            var left = Math.max(0, header.left);
+            var width = Math.max(0, header.width);
             toolbar.classList.add('sales-function-toolbar-pinned');
             toolbar.style.position = 'fixed';
-            toolbar.style.top = headerBottom + 'px';
+            toolbar.style.top = pageHeaderBottom + 'px';
             toolbar.style.left = left + 'px';
             toolbar.style.right = 'auto';
             toolbar.style.width = width + 'px';
-            toolbar.style.zIndex = '1050';
+            toolbar.style.margin = '0';
+            toolbar.style.zIndex = '2000';
             toolbar.style.boxSizing = 'border-box';
 
-            var toolbarMargin = parseFloat(window.getComputedStyle(toolbar).marginBottom) || 0;
-            state.placeholder.style.height = Math.max(toolbar.offsetHeight + toolbarMargin, 1) + 'px';
+            var height = Math.max(toolbar.offsetHeight, 1);
+            state.placeholder.style.height = height + 'px';
+            state.placeholder.style.minHeight = height + 'px';
+            // If the original flow anchor is above the header due to the
+            // dashboard's fixed topbar, the placeholder still reserves the
+            // complete toolbar row. The toolbar is deliberately never clipped.
+            if (anchor.width && Math.abs(anchor.width - width) > 1) state.placeholder.style.width = width + 'px';
         }
 
         function schedulePin() {
             if (state.frame) return;
             state.frame = true;
-            if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(updatePin);
+            if (window.requestAnimationFrame) window.requestAnimationFrame(updatePin);
             else updatePin();
         }
 
         if (!state.installed) {
             document.addEventListener('scroll', schedulePin, true);
-            window.addEventListener('scroll', schedulePin, true);
+            window.addEventListener('scroll', schedulePin);
             window.addEventListener('resize', schedulePin);
+            if (window.MutationObserver) {
+                state.observer = new MutationObserver(schedulePin);
+                state.observer.observe(document.querySelector('.topbar') || document.body, { childList: true, subtree: true, attributes: true });
+            }
             state.installed = true;
         }
         schedulePin();
