@@ -8065,16 +8065,26 @@ body:has(#sales_new:not([style*="display: none"])) #posnic-multi-baskets-header-
     flex: 0 0 auto;
   }
 }
-/* The app topbar is fixed over the page. Reserve its full height before the
-   cashier controls so the F-key/total bar starts below its bottom edge. */
+/* Keep only a compact topbar clearance; do not consume the cashier workspace. */
 @media (min-width: 768px) {
   #sales_new > .contentbar {
-    padding-top: 76px !important;
+    padding-top: 56px !important;
   }
+  /* Basket and shortcut bars must keep their natural height. The catalogue/cart
+     workspace below them receives the remaining height instead of shrinking them. */
   #sales_new #touchsales_page > #sales-function-shortcuts {
-    margin-top: 4px !important;
+    flex: 0 0 auto !important;
+    min-height: 44px !important;
+    margin: 2px 0 6px !important;
     position: relative !important;
     z-index: 1 !important;
+  }
+  #sales_new #touchsales_page > #posnic-multi-baskets {
+    flex: 0 0 auto !important;
+  }
+  #sales_new #touchsales_page > .row:has(#instance-view, #items_view_hide) {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
   }
 }
 /* Keep the touch-mode glyph optically and geometrically centered. */
