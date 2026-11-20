@@ -9017,9 +9017,10 @@ PosnicPro.sales.itemsMenu = {
         PosnicPro.sales.itemsMenu.variantPop.close();
         PosnicPro.sales.itemsMenu.addToLineItemsList(item_id);
     },
-    addToLineItemsList: function (item_id, barcodeScanned) {
+    addToLineItemsList: function (item_id, barcodeScanned, onComplete, requestedQuantity) {
         if (item_id == null || String(item_id).trim() === '') {
             PosnicPro.alert('error', 'This product has no valid item ID and cannot be added to the basket.');
+            if (typeof onComplete === 'function') onComplete(false);
             return;
         }
         PosnicPro.sales.itemCache.get(item_id, function (item) {
@@ -9028,21 +9029,24 @@ PosnicPro.sales.itemsMenu = {
                 // empty/undefined basket row.
                 if (!item || !(item.id || item.item_id) || !(item.item_name || item.name)) {
                     PosnicPro.alert('error', 'Product details are incomplete. Refresh the catalogue and try again.');
+                    if (typeof onComplete === 'function') onComplete(false);
                     return;
                 }
                 if (barcodeScanned) {
                     item._barcodeScanned = true;
-                    item.item_quantity = 1;
+                    item.item_quantity = Number.isInteger(Number(requestedQuantity)) && Number(requestedQuantity) > 0 ? Number(requestedQuantity) : 1;
                     item._quantityConfirmed = true;
                 }
                 PosnicPro.sales.addSalesLineItems(item);
                 $("#save_submit").removeClass("disabled");
+                if (typeof onComplete === 'function') onComplete(true);
                 if (window.location.hash.slice(1) === '/sales/new') {
                     window.setTimeout(function () { PosnicPro.sales.focusBarcodeInput(true); }, 0);
                 }
             } catch (error) {
                 if (window.console && console.error) console.error('[sales] Could not add catalogue item to basket:', error);
                 PosnicPro.alert('error', 'Could not add this product to the basket. Please try again.');
+                if (typeof onComplete === 'function') onComplete(false);
             }
         });
     },
@@ -15618,6 +15622,44 @@ $(document).ready(function () {
     if (!PosnicPro.sales._samarinaPrintPollTimer) {
         PosnicPro.sales._samarinaPrintPollTimer = window.setInterval(PosnicPro.sales.pollSamarinaPrintJobs, 1800);
         PosnicPro.sales.pollSamarinaPrintJobs();
+    }
+
+    PosnicPro.sales._samarinaBasketPollBusy = false;
+    PosnicPro.sales._samarinaBasketSeen = PosnicPro.sales._samarinaBasketSeen || Object.create(null);
+    PosnicPro.sales.pollSamarinaBasketJobs = function () {
+        var page = document.getElementById('sales_new');
+        if (PosnicPro.sales._samarinaBasketPollBusy || document.hidden || !page || !page.getClientRects().length ||
+            PosnicPro.sales.submissionInProgress || !PosnicPro.sales.itemsMenu ||
+            typeof PosnicPro.sales.itemsMenu.addToLineItemsList !== 'function') return;
+        PosnicPro.sales._samarinaBasketPollBusy = true;
+        PosnicPro.request({ url: 'samarina/v1/desktop/basket-jobs', method: 'GET', data: {} }, function (response) {
+            var rows = response && (response.rows || response.data && response.data.rows) || [];
+            var jobs = (Array.isArray(rows) ? rows : []).filter(function (job) {
+                return job && job.id && job.itemId && !PosnicPro.sales._samarinaBasketSeen[job.id];
+            });
+            function process(index) {
+                if (index >= jobs.length) { PosnicPro.sales._samarinaBasketPollBusy = false; return; }
+                var job = jobs[index];
+                if (PosnicPro.sales.submissionInProgress) { PosnicPro.sales._samarinaBasketPollBusy = false; return; }
+                PosnicPro.sales._samarinaBasketSeen[job.id] = true;
+                PosnicPro.sales.itemsMenu.addToLineItemsList(job.itemId, true, function (ok) {
+                    if (ok) {
+                        PosnicPro.request({ url: 'samarina/v1/desktop/basket-jobs/' + encodeURIComponent(job.id) + '/ack', method: 'POST', data: JSON.stringify({ state: 'added' }) }, function () {}, function () {});
+                        process(index + 1);
+                    } else {
+                        delete PosnicPro.sales._samarinaBasketSeen[job.id];
+                        PosnicPro.request({ url: 'samarina/v1/desktop/basket-jobs/' + encodeURIComponent(job.id) + '/ack', method: 'POST', data: JSON.stringify({ state: 'failed', message: 'Desktop could not add this item.' }) }, function () {}, function () {});
+                        process(index + 1);
+                    }
+                }, Number(job.quantity) || 1);
+            }
+            process(0);
+            if (!jobs.length) PosnicPro.sales._samarinaBasketPollBusy = false;
+        }, function () { PosnicPro.sales._samarinaBasketPollBusy = false; });
+    };
+    if (!PosnicPro.sales._samarinaBasketPollTimer) {
+        PosnicPro.sales._samarinaBasketPollTimer = window.setInterval(PosnicPro.sales.pollSamarinaBasketJobs, 1500);
+        PosnicPro.sales.pollSamarinaBasketJobs();
     }
 
     // A deliberate double-tap on Shift switches baskets; a single Shift remains

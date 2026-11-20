@@ -184,6 +184,31 @@ async function companionAuth(req, res, next) {
     return fail(res, 500, 'Erreur de vérification de la session.');
   }
 }
+router.get('/desktop/basket-jobs', protect, async (req, res) => {
+  try {
+    const branchId = activeBranchId(req);
+    if (!branchId || !requestCanAccessBranch(req, branchId)) return fail(res, 403, 'Accès au magasin refusé.');
+    const rows = await req.db.collection('samarina_companion_basket_jobs')
+      .find({ branchId: oid(branchId) || branchId, state: 'pending', expiresAt: { $gt: new Date() } })
+      .sort({ createdAt: 1 }).limit(30).toArray();
+    return res.json({ rows: rows.map(row => ({ id: sid(row._id), itemId: sid(row.itemId), quantity: row.quantity })) });
+  } catch (error) {
+    console.error('[Samarina Companion] desktop basket queue failed:', error);
+    return fail(res, 500, 'Impossible de lire la file du panier mobile.');
+  }
+});
+router.post('/desktop/basket-jobs/:id/ack', protect, async (req, res) => {
+  try {
+    const branchId = activeBranchId(req), id = oid(req.params.id);
+    if (!branchId || !id || !requestCanAccessBranch(req, branchId)) return fail(res, 403, 'Accès au magasin refusé.');
+    const state = req.body?.state === 'failed' ? 'failed' : 'added';
+    await req.db.collection('samarina_companion_basket_jobs').updateOne(
+      { _id: id, branchId: oid(branchId) || branchId, state: 'pending' },
+      { $set: { state, completedAt: new Date(), result: String(req.body?.message || '').slice(0, 300) } }
+    );
+    return res.json({ ok: true });
+  } catch (_) { return fail(res, 500, 'Impossible de confirmer l’ajout au panier.'); }
+});
 /* Desktop-only queue endpoints: authenticated with the ordinary POSNIC session. */
 router.get('/desktop/print-jobs', protect, async (req, res) => {
   try {
@@ -227,6 +252,34 @@ router.post('/logout', async (req, res) => {
   await req.db.collection('samarina_companion_sessions').updateOne({ _id: req.companion.session._id }, { $set: { revokedAt: new Date() } });
   setCompanionCookie(res, req, '', 0);
   res.json({ ok: true });
+});
+router.post('/basket/push', async (req, res) => {
+  try {
+    const lines = Array.isArray(req.body?.lines) ? req.body.lines : [];
+    if (!lines.length || lines.length > 50) return fail(res, 400, 'Le panier doit contenir entre 1 et 50 lignes.');
+    const c = req.companion, now = new Date(), jobs = [];
+    for (const line of lines) {
+      const itemId = oid(line?.itemId), quantity = Number(line?.quantity);
+      if (!itemId || !Number.isInteger(quantity) || quantity < 1 || quantity > 99)
+        return fail(res, 400, 'Une ligne du panier contient un article ou une quantité invalide.');
+      const item = await req.db.collection('items').findOne(
+        { _id: itemId, ...branchFilter(c.branchId), ...licenseFilter(c.session.license) },
+        { projection: { _id: 1 } }
+      );
+      if (!item) return fail(res, 404, 'Un article du panier est introuvable dans ce magasin.');
+      jobs.push({
+        itemId, quantity, branchId: oid(c.branchId) || c.branchId,
+        license: oid(c.session.license) || c.session.license,
+        deviceId: c.session.deviceId, staffId: c.user._id,
+        state: 'pending', createdAt: now, expiresAt: new Date(now.getTime() + 10 * 60000)
+      });
+    }
+    const result = await req.db.collection('samarina_companion_basket_jobs').insertMany(jobs);
+    return res.status(202).json({ ok: true, queued: result.insertedCount, message: result.insertedCount + ' ligne(s) envoyée(s) au panier PC.' });
+  } catch (error) {
+    console.error('[Samarina Companion] basket push failed:', error);
+    return fail(res, 500, 'Impossible d’envoyer les articles au panier PC.');
+  }
 });
 router.post('/expenses/quick', async (req, res) => {
   try {
