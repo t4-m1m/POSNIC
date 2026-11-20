@@ -175,8 +175,11 @@ router.get('/catalogue', async (req, res) => {
         { itemid: { $regex: safe, $options: 'i' } }
       ];
     }
-    const rows = await req.db.collection('items').find(filter, { projection: { name: 1, barcode_id: 1, sku: 1, quantity: 1, available_quantity: 1, selling_price: 1, image: 1, track_inventory: 1, brand_abbreviation: 1 } }).sort({ name: 1 }).limit(60).toArray();
-    res.json({ rows: rows.map(row => ({ id: sid(row._id), name: row.name || row.item_name || 'Article', barcode: row.barcode_id || '', sku: row.sku || row.itemid || '', quantity: Number(row.available_quantity ?? row.quantity ?? 0), price: Number(row.selling_price || 0), image: row.image || '', tracked: row.track_inventory !== false, brand: row.brand_abbreviation || '' })) });
+    const rows = await req.db.collection('items').find(filter, { projection: { name: 1, barcode_id: 1, sku: 1, quantity: 1, available_quantity: 1, selling_price: 1, image: 1, track_inventory: 1, brand_abbreviation: 1, variant_group_id: 1, variant_axis: 1, variant_value: 1, variant_parent_name: 1 } }).sort({ name: 1 }).limit(60).toArray();
+    res.json({ rows: rows.map(row => ({ id: sid(row._id), name: row.name || row.item_name || 'Article', barcode: row.barcode_id || '', sku: row.sku || row.itemid || '', quantity: Number(row.available_quantity ?? row.quantity ?? 0), price: Number(row.selling_price || 0), image: row.image || '', tracked: row.track_inventory !== false, brand: row.brand_abbreviation || '',
+      variantGroupId: sid(row.variant_group_id), variantAxis: row.variant_axis || '',
+      variantValue: row.variant_value || '', variantParentName: row.variant_parent_name || ''
+    })) });
   } catch (error) {
     console.error('[Samarina Companion] catalogue failed:', error);
     fail(res, 500, 'Impossible de charger le catalogue.');
@@ -280,7 +283,11 @@ router.get('/dashboard', async (req, res) => {
       }
     }
     const items = await req.db.collection('items').countDocuments({ branch_id: branchId });
-    res.json({ date: start.toISOString().slice(0,10), currency: req.companion.branch.currency || 'DA', totals, salesCount: sales.length, itemCount: items, zrExpress: 0 });
+    const zrExpress = await req.db.collection('zr_deliveries').countDocuments({
+      branch_id: branchId, license: oid(req.companion.session.license) || req.companion.session.license,
+      status: { $nin: ['ANNULEE', 'RETOUR'] }
+    }).catch(() => 0);
+    res.json({ date: start.toISOString().slice(0,10), currency: req.companion.branch.currency || 'DA', totals, salesCount: sales.length, itemCount: items, zrExpress });
   } catch (error) {
     console.error('[Samarina Companion] dashboard failed:', error);
     fail(res, 500, 'Impossible de charger le tableau de bord.');
