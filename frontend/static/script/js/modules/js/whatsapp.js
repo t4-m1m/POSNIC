@@ -57,12 +57,14 @@ PosnicPro.whatsapp = {
         }
         this._connectorRefreshBusy = true;
         if (this._connectorRefreshTimer) clearTimeout(this._connectorRefreshTimer);
-        button.prop('disabled', true).html('<i class="feather icon-loader fa-spin mr-1"></i> Connexion…');
+        // Keep the fixed-size connector's original icon intact while refreshing.
+        // Replacing it with status text was stretching the 34px round control.
+        button.prop('disabled', true).attr('aria-busy', 'true');
         const finish = (success, message) => {
             if (this._connectorRefreshTimer) clearTimeout(this._connectorRefreshTimer);
             this._connectorRefreshTimer = null;
             this._connectorRefreshBusy = false;
-            button.prop('disabled', false).html('<i class="feather icon-message-circle mr-1"></i> WhatsApp Connector');
+            button.prop('disabled', false).removeAttr('aria-busy');
             PosnicPro.alert(success ? 'success' : 'error', message);
         };
         this.loadSavedDeviceId(true, (data) => {

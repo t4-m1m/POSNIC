@@ -8147,3 +8147,38 @@ body:has(#sales_new:not([style*="display: none"])) #posnic-multi-baskets-header-
 #posnic-whatsapp-connector.posnic-whatsapp-icon-btn svg { display:block; flex:0 0 20px; width:20px !important; height:20px !important; }
 .posnic-touch-mode #posnic-whatsapp-connector-wrap { flex:0 0 34px !important; width:34px !important; min-width:34px !important; max-width:34px !important; }
 .posnic-touch-mode #posnic-whatsapp-connector.posnic-whatsapp-icon-btn { flex:0 0 34px !important; width:34px !important; min-width:34px !important; max-width:34px !important; height:34px !important; min-height:34px !important; }
+
+
+/* Multi-basket polish: selected state changes only the text treatment.
+   The active basket keeps the same neutral button surface as every other tab. */
+.topbar #posnic-multi-baskets .posnic-basket-tab-wrap,
+.topbar #posnic-multi-baskets .posnic-basket-tab-wrap.is-active {
+  background:#f1f3f5 !important;
+  border-color:#d0d7de !important;
+  box-shadow:none !important;
+}
+.topbar #posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-tab,
+.topbar #posnic-multi-baskets .posnic-basket-tab-wrap.is-active .posnic-basket-tab,
+.topbar #posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-tab.is-active {
+  background:#f1f3f5 !important;
+  color:#57606a !important;
+}
+.topbar #posnic-multi-baskets .posnic-basket-tab-wrap.is-active .posnic-basket-close {
+  background:#e9ecef !important;
+  color:#6e7781 !important;
+  border-left-color:#d0d7de !important;
+}
+.posnic-basket-customer-name { color:#6b7280 !important; }
+.posnic-basket-brand { margin-left:6px; color:#2563eb !important; font-weight:800; letter-spacing:.25px; }
+
+/* The basket rail takes all free topbar width; WhatsApp remains a fixed icon. */
+@media (min-width:768px) {
+  body:has(#sales_new:not([style*="display: none"])) .topbar .togglebar > ul.list-inline > li#posnic-multi-baskets-header-wrap {
+    flex:1 1 0 !important; width:0 !important; min-width:0 !important; max-width:none !important;
+  }
+  #posnic-multi-baskets-header-host { flex:1 1 auto !important; width:100% !important; min-width:0 !important; }
+  #posnic-multi-baskets-header-wrap #posnic-multi-baskets { flex:1 1 auto !important; width:100% !important; min-width:0 !important; max-width:100% !important; }
+  #posnic-whatsapp-connector-wrap { flex:0 0 34px !important; width:34px !important; min-width:34px !important; max-width:34px !important; }
+}
+#posnic-whatsapp-connector.posnic-whatsapp-icon-btn { overflow:hidden !important; white-space:nowrap !important; }
+#posnic-whatsapp-connector.posnic-whatsapp-icon-btn[aria-busy="true"] { opacity:.72; cursor:wait; }
