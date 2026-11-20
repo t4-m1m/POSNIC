@@ -1,36 +1,91 @@
 <!doctype html>
 <html lang="fr">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#2563eb"><meta name="apple-mobile-web-app-capable" content="yes">
-<title>POSNIC Mobile</title><link rel="manifest" href="/mobile/manifest.webmanifest"><link rel="stylesheet" href="/mobile/mobile.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#155eef">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="POSNIC">
+<title>POSNIC Companion</title>
+<link rel="manifest" href="/mobile/manifest.webmanifest">
+<link rel="icon" href="/mobile/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/mobile/icon.svg">
+<link rel="stylesheet" href="/mobile/mobile.css">
 </head>
 <body>
 <div class="app-shell">
-<header class="app-header"><div class="brand"><span class="brand-mark">P</span><div><strong>POSNIC</strong><small>Compagnon mobile</small></div></div><button id="logout" class="icon-button" hidden aria-label="Déconnexion">↗</button></header>
-<section id="login-screen" class="login-screen">
-<div class="login-card"><div class="eyebrow">COMPAGNON WI-FI</div><h1>Connectez votre magasin</h1><p>Utilisez votre compte POSNIC. Votre session reste sur cet appareil.</p>
-<form id="login-form"><label>Identifiant<input id="login-user" name="username" autocomplete="username" required placeholder="Email ou nom d'utilisateur"></label><label>Mot de passe<input id="login-password" name="password" type="password" autocomplete="current-password" required></label><button class="primary full" type="submit">Se connecter</button><p id="login-error" class="error" role="alert"></p></form></div>
+<header class="app-header">
+  <div class="brand"><span class="brand-mark">P</span><div><strong>POSNIC</strong><small>Compagnon du magasin</small></div></div>
+  <div class="header-actions"><span id="connection-state" class="connection-state">Hors connexion</span><button id="logout" class="icon-button" hidden aria-label="Déconnexion" title="Déconnexion">↗</button></div>
+</header>
+
+<section id="connect-screen" class="connect-screen">
+  <div class="connect-card">
+    <div class="eyebrow">CONNEXION SÉCURISÉE</div>
+    <h1>Connectez votre téléphone</h1>
+    <p class="intro">Scannez le QR code créé dans POSNIC sur votre ordinateur. Votre téléphone sera associé à votre compte employé sans saisir votre mot de passe.</p>
+    <button id="open-camera" class="primary full" type="button">Scanner le QR code POSNIC</button>
+    <div class="separator"><span>ou saisir le code</span></div>
+    <form id="pair-form">
+      <label>Adresse du serveur POSNIC<input id="server-url" type="url" autocomplete="url" required></label>
+      <label>Code de jumelage<input id="pair-code" inputmode="text" autocomplete="one-time-code" maxlength="14" placeholder="XXXX-XXXX-XXXX" required></label>
+      <button class="primary full" type="submit">Connecter ce téléphone</button>
+    </form>
+    <div class="help-card"><strong>Où trouver le QR code ?</strong><ol><li>Sur l'ordinateur, ouvrez POSNIC.</li><li>Allez dans Paramètres → Mobile POS / Compagnon mobile.</li><li>Activez Mobile POS si nécessaire, choisissez l'employé puis générez un code.</li><li>Scannez le QR code affiché. Le code est à usage unique et expire après quelques minutes.</li></ol></div>
+    <p id="connect-error" class="error" role="alert"></p>
+  </div>
 </section>
+
 <main id="workspace" hidden>
-<div class="welcome"><div><span class="eyebrow">ESPACE MAGASIN</span><h1 id="welcome-name">Bonjour</h1><p>Votre magasin, dans votre poche.</p></div><span class="live-dot">Connecté</span></div>
-<nav class="tabs" aria-label="Fonctions"><button class="tab active" data-tab="scan">Scanner</button><button class="tab" data-tab="create">Nouvel article</button><button class="tab" data-tab="receive">Réception</button></nav>
-<section class="panel active" id="tab-scan"><div class="section-heading"><div><h2>Prix & stock</h2><p>Scannez un code ou recherchez un article.</p></div><span class="section-icon">⌕</span></div>
-<form id="lookup-form" class="search-row"><input id="lookup-query" placeholder="Code-barres, SKU ou nom" autocomplete="off" required><button class="primary" type="submit">Chercher</button></form>
-<label class="camera-action">Lire avec la caméra / galerie<input id="barcode-photo" type="file" accept="image/*" capture="environment"></label>
-<div id="lookup-results" class="results empty-state">Aucun article recherché.</div></section>
-<section class="panel" id="tab-create"><div class="section-heading"><div><h2>Ajouter un article</h2><p>Création directe dans le catalogue POSNIC.</p></div><span class="section-icon">＋</span></div>
-<form id="create-form" class="form-card">
-<label>Nom de l'article *<input name="name" required maxlength="200" placeholder="Ex. Ballerine femme"></label>
-<div class="two"><label>Prix de vente (DA) *<input name="selling_price" required inputmode="decimal" type="number" min="0" step="0.01"></label><label>Stock initial<input name="quantity" type="number" min="0" step="1" value="0"></label></div>
-<div class="two"><label>SKU / Référence<input name="sku" maxlength="80"></label><label>Code-barres<input name="barcode_id" maxlength="100"></label></div>
-<label>Photo de l'article<input name="photo" id="new-item-photo" type="file" accept="image/*" capture="environment"></label>
-<div id="create-error" class="error" role="alert"></div><button class="primary full" type="submit">Enregistrer l'article</button></form></section>
-<section class="panel" id="tab-receive"><div class="section-heading"><div><h2>Réception achats</h2><p>Préparez les scans des cartons.</p></div><span class="section-icon">▣</span></div>
-<div class="notice"><strong>Mode réception</strong><p>Connectez-vous au POS sur le même magasin et ouvrez une facture d'achat. La liaison en direct avec le brouillon desktop doit être activée côté serveur avant d'appliquer les quantités.</p></div>
-<form id="receive-form" class="search-row"><input id="receive-code" placeholder="Code-barres de l'article" required><button class="primary" type="submit">Ajouter +1</button></form><div id="receive-queue" class="results empty-state">Aucun scan en attente sur ce téléphone.</div></section>
-<footer>POSNIC · Réseau local du magasin</footer>
+  <section class="welcome">
+    <div><span class="eyebrow">ESPACE MAGASIN</span><h1 id="welcome-name">Bonjour</h1><p id="welcome-branch">Votre magasin, dans votre poche.</p></div>
+    <span class="live-dot">Connecté</span>
+  </section>
+  <nav class="tabs" aria-label="Fonctions">
+    <button class="tab active" data-tab="scan">Catalogue</button>
+    <button class="tab" data-tab="receive">Réception stock</button>
+    <button class="tab" data-tab="create">Nouvel article</button>
+  </nav>
+
+  <section class="panel active" id="tab-scan">
+    <div class="section-heading"><div><h2>Prix & disponibilité</h2><p>Recherchez un nom, une référence ou scannez un code-barres.</p></div><span class="section-icon">⌕</span></div>
+    <form id="lookup-form" class="search-row"><input id="lookup-query" placeholder="Code-barres, SKU ou nom" autocomplete="off" required><button class="primary" type="submit">Chercher</button></form>
+    <div class="action-row"><button class="secondary" id="scan-lookup" type="button">Ouvrir la caméra</button><button class="secondary" id="refresh-catalogue" type="button">Actualiser</button></div>
+    <div id="lookup-results" class="results empty-state">Recherchez un article pour afficher son prix et son stock.</div>
+  </section>
+
+  <section class="panel" id="tab-receive">
+    <div class="section-heading"><div><h2>Réception de marchandises</h2><p>Scannez les articles reçus, vérifiez les quantités puis appliquez-les au stock POSNIC.</p></div><span class="section-icon">▣</span></div>
+    <div class="notice"><strong>Stock réel du magasin</strong><p>Les quantités ne sont modifiées qu'après vérification et confirmation. POSNIC enregistre le mouvement dans l'historique de stock. Si une validation manager est exigée, le compte autorisé doit confirmer l'opération.</p></div>
+    <form id="receive-form" class="search-row"><input id="receive-code" placeholder="Scanner / saisir un code-barres" autocomplete="off" required><button class="primary" type="submit">Ajouter +1</button></form>
+    <div class="action-row"><button class="secondary" id="scan-receive" type="button">Scanner avec caméra</button><button class="secondary" id="clear-queue" type="button">Vider la liste</button></div>
+    <div id="receive-queue" class="results empty-state">Aucun article dans la réception.</div>
+    <label class="reason-label">Motif de réception<input id="receive-reason" maxlength="500" value="Réception marchandises depuis POSNIC Companion" required></label>
+    <div class="queue-footer"><span id="queue-count">0 article</span><button id="apply-receive" class="primary" type="button" disabled>Vérifier et appliquer le stock</button></div>
+    <div id="receive-status" class="status-message" role="status"></div>
+  </section>
+
+  <section class="panel" id="tab-create">
+    <div class="section-heading"><div><h2>Créer un article</h2><p>Ajoutez un article au catalogue de la succursale connectée.</p></div><span class="section-icon">＋</span></div>
+    <form id="create-form" class="form-card">
+      <label>Nom de l'article *<input name="name" required maxlength="200" placeholder="Nom de l'article"></label>
+      <div class="two"><label>Prix de vente (DA) *<input name="selling_price" required inputmode="decimal" type="number" min="0" step="0.01"></label><label>Code-barres<input name="barcode_id" maxlength="100"></label></div>
+      <label>SKU / Référence<input name="sku" maxlength="80"></label>
+      <label class="check-label"><input name="track_inventory" type="checkbox" checked> Suivre le stock</label>
+      <label>Photo de l'article<input name="photo" id="new-item-photo" type="file" accept="image/*" capture="environment"></label>
+      <p class="muted-note">La création respecte les autorisations POSNIC de l'employé. Pour un stock initial, utilisez ensuite Réception stock afin de conserver un mouvement auditable.</p>
+      <div id="create-error" class="error" role="alert"></div>
+      <button class="primary full" type="submit">Enregistrer l'article</button>
+    </form>
+  </section>
+  <footer>POSNIC · Données synchronisées avec le serveur du magasin</footer>
 </main>
+
+<div id="camera-layer" class="camera-layer" hidden>
+  <div class="camera-card"><div class="camera-head"><strong>Scanner POSNIC</strong><button id="close-camera" class="icon-button" type="button" aria-label="Fermer">×</button></div><video id="camera-video" playsinline muted></video><p id="camera-hint">Pointez la caméra vers un code-barres ou le QR de jumelage.</p><label class="camera-file">Choisir une image<input id="camera-image" type="file" accept="image/*" capture="environment"></label></div>
+</div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-</div><script src="/mobile/app.js" defer></script>
-</body></html>
+</div>
+<script src="/mobile/app.js" defer></script>
+</body>
+</html>
