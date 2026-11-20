@@ -1,17 +1,44 @@
 PosnicPro.itemreport = {
     activateCustomPanel: function (panel) {
-        var active = panel === 'versements' ? 'versements' : 'stock';
+        var active = ['versements','zakat'].indexOf(panel) >= 0 ? panel : 'stock';
         window.__posnicActiveItemReportPanel = active;
         window.__posnicOpenVersements = false;
         window.__posnicOpenStockHealth = false;
-        $('#stock-health-panel,#versements-panel').hide();
+        window.__posnicOpenZakat = false;
+        $('#stock-health-panel,#versements-panel,#zakat-panel').hide();
         if (active === 'versements') {
             $('#versements-panel').show();
             if (PosnicPro.versementsRegister) PosnicPro.versementsRegister.load();
+        } else if (active === 'zakat') {
+            $('#zakat-panel').show();
+            PosnicPro.itemreport.loadZakatSnapshot();
         } else {
             $('#stock-health-panel').show();
             if (PosnicPro.stockHealthReport) PosnicPro.stockHealthReport.load();
         }
+    },
+    _zakatSnapshot: null,
+    _zakatMoney: function (value) { return (Number(value)||0).toLocaleString('fr-DZ',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+(PosnicPro.local.get('currencySign')||'DA'); },
+    loadZakatSnapshot: function () {
+        $('#zakat-data-status').text('Actualisation des données…');
+        PosnicPro.get({url:'sales/zakatSnapshot',data:{}},function(r){
+            if(!r||r.type!=='success'||!r.data){$('#zakat-data-status').text(r&&r.message||'Impossible de charger les données.');return;}
+            PosnicPro.itemreport._zakatSnapshot=r.data;
+            $('#zakat-stock').val(PosnicPro.itemreport._zakatMoney(r.data.stockValue));
+            $('#zakat-receivables').val(PosnicPro.itemreport._zakatMoney(r.data.receivables));
+            $('#zakat-data-status').text('Données du magasin actualisées.');
+            PosnicPro.itemreport.calculateZakat();
+        },function(){ $('#zakat-data-status').text('Erreur de connexion pendant l’actualisation.'); });
+    },
+    calculateZakat: function () {
+        var gold=Number($('#zakat-gold-gram').val())||0,nisab=gold*85;
+        var stock=Number(PosnicPro.itemreport._zakatSnapshot&&PosnicPro.itemreport._zakatSnapshot.stockValue)||0;
+        var receivables=Number(PosnicPro.itemreport._zakatSnapshot&&PosnicPro.itemreport._zakatSnapshot.receivables)||0;
+        var cash=Math.max(0,Number($('#zakat-cash').val())||0),liabilities=Math.max(0,Number($('#zakat-liabilities').val())||0);
+        var net=Math.max(0,cash+stock+receivables-liabilities),eligible=nisab>0&&net>=nisab,hawl=$('#zakat-hawl').prop('checked');
+        var estimate=eligible?net*.025:0,payable=eligible&&hawl?estimate:0;
+        $('#zakat-nisab').val(gold>0?PosnicPro.itemreport._zakatMoney(nisab):'Saisir le prix de l’or');
+        $('#zakat-result').html('<div class="card" style="border:1px solid var(--theme-border-color,#e2e8f0);border-radius:14px"><div class="card-body"><div class="row"><div class="col-md-4 mb-3"><small class="text-muted">Patrimoine net zakatable</small><h4>'+PosnicPro.itemreport._zakatMoney(net)+'</h4></div><div class="col-md-4 mb-3"><small class="text-muted">Nissab</small><h4>'+PosnicPro.itemreport._zakatMoney(nisab)+'</h4></div><div class="col-md-4 mb-3"><small class="text-muted">Zakat estimée · 2,5 %</small><h4 class="text-primary">'+PosnicPro.itemreport._zakatMoney(estimate)+'</h4></div></div><div class="alert '+(payable>0?'alert-success':'alert-warning')+' mb-0"><strong>'+(payable>0?'Montant à verser estimé : '+PosnicPro.itemreport._zakatMoney(payable):!eligible?'Nissab non atteint : aucune zakat due selon ce calcul.':'Nissab atteint : confirmez le hawl pour valider l’exigibilité.')+'</strong></div></div></div>');
     },
     showDataTablePage: function () {
         var loader = $(".loader-item-report");
@@ -27,10 +54,11 @@ PosnicPro.itemreport = {
         $('#v-pills-report').addClass('show active');
         // The router may enter this page more than once for one menu click.
         // Keep the chosen sub-report until another explicit menu item replaces it.
-        var requestedPanel = window.__posnicOpenVersements===true ? 'versements'
-            : (window.__posnicOpenStockHealth===true ? 'stock' : '');
+        var requestedPanel = window.__posnicOpenZakat===true ? 'zakat' : (window.__posnicOpenVersements===true ? 'versements'
+            : (window.__posnicOpenStockHealth===true ? 'stock' : ''));
         window.__posnicOpenVersements=false;
         window.__posnicOpenStockHealth=false;
+        window.__posnicOpenZakat=false;
         var activePanel = requestedPanel || window.__posnicActiveItemReportPanel || 'stock';
         window.__posnicActiveItemReportPanel = activePanel;
         $('#stock-health-panel,#versements-panel').hide();
@@ -693,6 +721,9 @@ PosnicPro.versementsRegister = (function () {
         });
     }
     $('#versement-settle-confirm').off('click').on('click',function(){var id=$('#versement-settle-modal').data('id'),method=String($('#versement-settle-method').val()||'cash');if(!id)return;var registerId=PosnicPro.sales&&typeof PosnicPro.sales.saleRegisterId==='function'?PosnicPro.sales.saleRegisterId():'';$(this).prop('disabled',true);PosnicPro.post({url:'versements/'+encodeURIComponent(id)+'/settle',data:JSON.stringify({method:method,register_id:registerId})},function(x){$('#versement-settle-confirm').prop('disabled',false);$('#versement-settle-modal').modal('hide');message(x.message||'Règlement enregistré.',x.type==='success'?'success':'danger');load();},function(){$('#versement-settle-confirm').prop('disabled',false);message('Échec du règlement.','danger');});});
+    $(document).on('input','#zakat-gold-gram,#zakat-cash,#zakat-liabilities',function(){PosnicPro.itemreport.calculateZakat();});
+    $(document).on('click','#zakat-calculate',function(){PosnicPro.itemreport.calculateZakat();});
+    $(document).on('click','#zakat-refresh',function(){PosnicPro.itemreport.loadZakatSnapshot();});
     $(document).on('click','#versements-refresh',load).on('input','#versements-search',render);
 
     return {load:load,printReceipt:printReceipt};
