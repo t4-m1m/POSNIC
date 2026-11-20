@@ -128,7 +128,11 @@ PosnicPro.sales = {
                 state.placeholder.setAttribute('aria-hidden', 'true');
                 state.placeholder.style.width = '100%';
                 state.placeholder.style.height = Math.max(toolbar.offsetHeight, 1) + 'px';
-                toolbar.parentNode.insertBefore(state.placeholder, toolbar);
+                // Reserve the pinned toolbar's row at the VERY TOP of the sale
+                // workspace. Reserving it beside its old position (below the
+                // basket tabs) leaves the fixed toolbar painted over the barcode
+                // field, catalogue and the first basket rows.
+                salesPage.insertBefore(state.placeholder, salesPage.firstChild);
             }
 
             var header = headerRect();
