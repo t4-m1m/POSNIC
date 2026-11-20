@@ -9381,7 +9381,10 @@ PosnicPro.sales.recentMenu = {
     editItems: function (id, data, sale) {
         if (sale === 'return' && PosnicPro.sales.multiBasket && PosnicPro.sales.multiBasket.initialized) {
             var returnSession = PosnicPro.sales.multiBasket.sessions.find(function (item) { return item.id === PosnicPro.sales.multiBasket.activeId; });
-            if (returnSession) returnSession.returnOriginSnapshot = PosnicPro.sales.multiBasket.snapshot();
+            if (returnSession) {
+                returnSession.returnOriginSnapshot = PosnicPro.sales.multiBasket.snapshot();
+                returnSession.snapshot = returnSession.returnOriginSnapshot;
+            }
         }
         PosnicPro.sales.defaultCustomer = false;
         PosnicPro.sales.setDefaults();
@@ -16359,8 +16362,7 @@ $(document).off('click.posnicCancelReturn', '#posnic-cancel-return')
         var row = document.getElementById('posnic-payment-actions');
         var whatsapp = document.getElementById('posnic-send-whatsapp-receipt-payment');
         if (!row || !whatsapp || isAdmin()) return;
-        var root = document.getElementById('infobar-settings-sidebar-tender-details') || document.getElementById('tenderpage');
-        var candidates = root ? root.querySelectorAll('button,a,[role="button"]') : [];
+        var candidates = document.querySelectorAll('button,a,[role="button"]');
         for (var i = 0; i < candidates.length; i++) {
             var candidate = candidates[i];
             if (candidate === whatsapp || row.contains(candidate)) continue;
@@ -16373,6 +16375,10 @@ $(document).off('click.posnicCancelReturn', '#posnic-cancel-return')
         }
     }
     $(document).ready(arrange);
-    var observerRoot = document.getElementById('infobar-settings-sidebar-tender-details');
-    if (observerRoot && window.MutationObserver) new MutationObserver(arrange).observe(observerRoot, { childList: true, subtree: true });
+    if (window.MutationObserver) {
+        ['infobar-settings-sidebar-tender-details', 'tenderpage'].forEach(function (id) {
+            var observerRoot = document.getElementById(id);
+            if (observerRoot) new MutationObserver(arrange).observe(observerRoot, { childList: true, subtree: true });
+        });
+    }
 })();
