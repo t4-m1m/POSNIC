@@ -23,7 +23,7 @@
 :root{--blue:#506fe4;--line:#e3e9f5;--muted:#66748f;--canvas:#f4f6fc}
 body{background:var(--canvas);color:#172554;-webkit-tap-highlight-color:transparent}
 .shell{max-width:1080px;padding:0 20px 44px}.top{height:68px;position:sticky;top:0;z-index:12;background:rgba(244,246,252,.94);backdrop-filter:blur(14px);border-bottom-color:rgba(80,111,228,.12)}
-.brand{gap:9px}.brand-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,#506fe4,#3049b8);box-shadow:0 5px 14px rgba(80,111,228,.22);font-size:0}.brand-mark svg{width:24px;height:24px;display:block}
+.brand{gap:9px}.brand-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,#506fe4,#3049b8);box-shadow:0 5px 14px rgba(80,111,228,.22);font-size:0}.brand-mark svg{width:24px;height:24px;display:block}.brand-mark svg path{stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .brand b{font-size:12px;letter-spacing:1.7px;color:#263b86}.brand small{font-size:9px;letter-spacing:1.6px;color:#7180a7}
 .top-right{gap:7px}.network{padding:6px 9px;border-radius:30px;background:#edf2ff;color:#506fe4;font-weight:700}
 .icon-btn{min-height:36px;border:1px solid #dce4f8;background:#fff;color:#334a9a;border-radius:10px;font-weight:700;padding:7px 10px}
