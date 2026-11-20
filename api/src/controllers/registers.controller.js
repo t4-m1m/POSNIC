@@ -10,12 +10,12 @@ const sessionFilterUtil = require('../utils/session-filter.util');
 const { getRequestDeviceId } = require('../utils/device-id.util');
 const { AuditService, AUDIT_EVENTS } = require('../services/audit.service');
 
-async function sendSamarinaZReportAfterClose(req, closeData) {
+async function sendSamarinaZReportAfterClose(req, closeData, resolvedBranchId, resolvedLicenseId) {
   try {
     if (!req.db) return;
-    const rawBranchId = req.tenantContext?.branchId || req.session?.selectedBranchId ||
-      req.session?.branch_id || req.user?.branch_id || req.user?.branch?._id ||
-      req.user?.default_branch_id || req.user?.branch_access?.[0]?.branch_id;
+    const rawBranchId = resolvedBranchId || req.tenantContext?.branchId || req.body?.branch_id ||
+      req.session?.selectedBranchId || req.session?.branch_id || req.user?.branch_id ||
+      req.user?.branch?._id || req.user?.default_branch_id || req.user?.branch_access?.[0]?.branch_id;
     if (!rawBranchId) return;
     const { ObjectId } = require('mongodb');
     const branchId = ObjectId.isValid(String(rawBranchId)) ? new ObjectId(String(rawBranchId)) : rawBranchId;
@@ -24,7 +24,8 @@ async function sendSamarinaZReportAfterClose(req, closeData) {
     });
     if (!config) return;
     const branchQuery = { _id: branchId };
-    if (req.tenantContext?.licenseId) branchQuery.license = req.tenantContext.licenseId;
+    const licenseId = resolvedLicenseId || req.tenantContext?.licenseId || req.user?.license;
+    if (licenseId) branchQuery.license = ObjectId.isValid(String(licenseId)) ? new ObjectId(String(licenseId)) : licenseId;
     const branch = await req.db.collection('branches').findOne(branchQuery, { projection: { branch_name: 1, name: 1, whatsapp_device_id: 1 } });
     const deviceId = String(branch?.whatsapp_device_id || '').trim();
     if (!deviceId) return;
@@ -422,7 +423,7 @@ class RegistersController extends BaseController {
         });
         // The WhatsApp Z-report is best-effort and never delays or reverses a
         // successful register close. It uses the branch's already-linked device.
-        sendSamarinaZReportAfterClose(req, result.data);
+        sendSamarinaZReportAfterClose(req, result.data, this.registerModel.branchId, this.registerModel.licenseId);
         return this.success(res, result.data, result.message);
       } else {
         return this.error(res, result.message, result.statusCode || 404, result.data);
