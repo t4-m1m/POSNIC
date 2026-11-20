@@ -132,7 +132,8 @@ PosnicPro.settings = {
         if (key === 'companion') {
             var companionApi = (typeof API_URL === 'string' && API_URL) || '/api';
             var companionOrigin = companionApi.replace(/\/api\/?$/, '').replace(/\/+$/, '');
-            $('#mobile_companion_frame').attr('src', companionOrigin + '/samarina-companion-setup');
+            var selectedBranch = PosnicPro.local && PosnicPro.local.get('branch_id_set') || '';
+            $('#mobile_companion_frame').attr('src', companionOrigin + '/samarina-companion-setup?branch_id=' + encodeURIComponent(selectedBranch));
         } else if (key === 'branchpayments') {
             var base = (typeof API_URL === 'string' && API_URL) || '/api';
             $('#branch_payments_frame').attr('src', base.replace(/\/+$/, '').replace(/\/api$/, '') + '/branch-payments-setup');
