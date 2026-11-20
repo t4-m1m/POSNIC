@@ -1164,7 +1164,8 @@ for (const file of ['index.html', 'board.js', 'board.css', 'device.js', 'i18n.js
     }
   );
 }
-app.use(['/api/mobile/v1', '/mobile/v1'], require('./src/routes/mobile-pos.routes'));
+// Standalone Samarina Companion API. It owns its pairing grants and sessions.
+app.use(['/api/samarina/v1', '/samarina/v1'], require('./src/routes/samarina-companion.routes'));
 app.use(['/api/business/v1', '/business/v1'], require('./src/routes/business-access.routes'));
 for (const extension of ['html', 'js', 'css']) {
   const suffix = extension === 'html' ? '' : '.' + extension;
@@ -1173,11 +1174,12 @@ for (const extension of ['html', 'js', 'css']) {
     res.sendFile(require('path').join(__dirname, 'src/routes/captain-setup.' + extension), {dotfiles:'allow'});
   });
 }
+const samarinaSetupAuth = require('./src/middleware/auth').protect;
 for (const extension of ['html', 'js', 'css']) {
   const suffix = extension === 'html' ? '' : '.' + extension;
-  app.get(['/api/mobile-pos-setup' + suffix, '/mobile-pos-setup' + suffix], (req, res) => {
+  app.get('/samarina-companion-setup' + suffix, samarinaSetupAuth, (req, res) => {
     res.set('Cache-Control', 'no-store');
-    res.sendFile('mobile-pos-setup.' + extension, { root: require('path').join(__dirname, 'src/routes') });
+    res.sendFile('samarina-companion-setup.' + extension, { root: require('path').join(__dirname, 'src/routes') });
   });
 }
 
