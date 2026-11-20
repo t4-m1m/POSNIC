@@ -1824,3 +1824,14 @@ body > .modal-backdrop {
 .posnic-quick-cash-btn:hover,.posnic-quick-cash-btn:focus{background:#f2f6ff;border-color:#9db5ef;color:#3159b8;outline:none}
 .posnic-quick-cash-btn i{font-size:14px}
 #posnic-quick-expense-modal .modal-content,#posnic-quick-advance-modal .modal-content{border:1px solid #e4e9f1;border-radius:12px;box-shadow:0 12px 36px rgba(15,23,42,.16)}
+
+/* Compact payment actions: quick cash controls sit to the left of the existing
+   day-close action for staff, and to the left of WhatsApp for administrators. */
+#posnic-payment-actions{display:flex;align-items:stretch;gap:6px;width:100%;margin-top:8px;flex-wrap:nowrap}
+#posnic-payment-actions .posnic-quick-cash-actions{display:flex;align-items:stretch;gap:5px;flex:0 0 auto;margin:0}
+#posnic-payment-actions .posnic-quick-cash-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:68px;min-height:38px;padding:5px 9px;border:1px solid #d9e1ec;border-radius:7px;background:#fff;color:#334155;font-size:11px;font-weight:650;white-space:nowrap}
+#posnic-payment-actions .posnic-quick-cash-btn:hover{border-color:#9db4e8;background:#f7f9ff;color:#2457d6}
+#posnic-payment-actions #posnic-send-whatsapp-receipt-payment{display:inline-flex;align-items:center;justify-content:center;flex:1 1 auto;min-width:0;min-height:38px;margin:0!important;padding:6px 9px;font-size:11px;white-space:nowrap}
+#posnic-payment-actions .posnic-close-day-action{display:inline-flex;align-items:center;justify-content:center;flex:1 1 auto;min-width:0;min-height:38px;margin:0!important;padding:6px 9px;font-size:11px;white-space:nowrap}
+#posnic-cancel-return{min-height:38px;font-weight:650}
+@media(max-width:480px){#posnic-payment-actions{flex-wrap:wrap}#posnic-payment-actions>*{flex:1 1 100%!important}#posnic-payment-actions .posnic-quick-cash-actions{flex:1 1 100%!important}#posnic-payment-actions .posnic-quick-cash-btn{flex:1 1 0}}
