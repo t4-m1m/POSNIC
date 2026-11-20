@@ -8187,3 +8187,115 @@ body:has(#sales_new:not([style*="display: none"])) #posnic-multi-baskets-header-
     padding-top: 60px !important;
   }
 }
+
+
+/* Cashier header spacing, search visibility and flexible basket strip. */
+@media (min-width: 768px) {
+  /* Let the basket strip consume the available header width, stopping before
+     the language/settings area instead of using a fixed vw cap. */
+  .topbar > .row > .col-md-12 {
+    display: flex !important;
+    align-items: center !important;
+    min-width: 0 !important;
+  }
+  .topbar > .row > .col-md-12 > .togglebar {
+    display: flex !important;
+    align-items: center !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: 0 !important;
+  }
+  .topbar .togglebar > ul.list-inline {
+    display: flex !important;
+    align-items: center !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  .topbar .togglebar > ul.list-inline > li#posnic-multi-baskets-header-wrap {
+    flex: 1 1 0 !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin-inline-start: 10px !important;
+    overflow: hidden !important;
+  }
+  .topbar .togglebar #posnic-multi-baskets-header-host {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+  .topbar .togglebar #posnic-multi-baskets-header-wrap #posnic-multi-baskets {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    justify-content: flex-start !important;
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
+  }
+  .topbar .togglebar #posnic-multi-baskets-header-wrap #posnic-multi-baskets::-webkit-scrollbar {
+    display: none !important;
+  }
+  .topbar > .row > .col-md-12 > .infobar {
+    flex: 0 0 auto !important;
+    margin-inline-start: 12px !important;
+    white-space: nowrap !important;
+  }
+
+  /* Keep the shortcut bar separated from the topbar and give its controls
+     breathing room. The workspace starts below the entire strip, so scanner
+     input and catalogue tabs cannot be covered by the fixed bar. */
+  #sales_new #touchsales_page > #sales-function-shortcuts {
+    top: calc(var(--titlebar-h, 0px) + 76px) !important;
+    height: 62px !important;
+    min-height: 62px !important;
+    max-height: 62px !important;
+    padding: 9px 22px !important;
+    margin: 0 !important;
+    gap: 9px !important;
+    border: 1px solid var(--theme-border-color, #dbe3ef) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, .08) !important;
+    background: var(--theme-card-bg, #fff) !important;
+  }
+  #sales_new > .contentbar {
+    padding-top: 150px !important;
+  }
+}
+
+/* Neutral grey inactive baskets; blue is reserved for the selected basket. */
+.topbar #posnic-multi-baskets .posnic-basket-tab-wrap {
+  background: #f1f3f5 !important;
+  border-color: #d0d7de !important;
+  box-shadow: none !important;
+}
+.topbar #posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-tab {
+  background: #f1f3f5 !important;
+  color: #57606a !important;
+}
+.topbar #posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-close {
+  background: #e9ecef !important;
+  color: #6e7781 !important;
+  border-left-color: #d0d7de !important;
+}
+.topbar #posnic-multi-baskets .posnic-basket-tab-wrap.is-active {
+  background: #eaf2ff !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 1px rgba(37,99,235,.12) !important;
+}
+.topbar #posnic-multi-baskets .posnic-basket-tab-wrap.is-active .posnic-basket-tab,
+.topbar #posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-tab.is-active {
+  background: #2563eb !important;
+  color: #fff !important;
+}
+.topbar #posnic-multi-baskets .posnic-basket-tab-wrap.is-active .posnic-basket-close {
+  background: #1d4ed8 !important;
+  color: #fff !important;
+  border-left-color: rgba(255,255,255,.25) !important;
+}
+.topbar #posnic-multi-baskets .posnic-basket-add {
+  background: #f1f3f5 !important;
+  color: #57606a !important;
+  border-color: #d0d7de !important;
+}
