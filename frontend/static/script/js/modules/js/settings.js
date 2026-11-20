@@ -7851,7 +7851,6 @@ PosnicPro.settings.FEATURE_HOME = {
     module_online_ordering_enable: ['onlineordering', 'Online Ordering'],
     module_kiosk_enable: ['kioskmachine', 'Kiosk Machine'],
     module_captain_enable: ['captainapp', 'Captain App'],
-    module_mobile_pos_enable: ['mobilepos', 'Mobile POS'],
     module_billing_outlets_enable: ['billingoutlets', 'Billing outlets', 'page'],
     module_delivery_partners_enable: ['deliverypartners', 'Delivery Partners'],
     module_webshop_enable: ['webshop', 'Webshop'],
@@ -10382,7 +10381,6 @@ window.addEventListener('message', function (event) {
     if (!frames.some(function (frame) { return frame && frame.contentWindow === event.source && frame.src && new URL(frame.src, location.href).origin === event.origin; })) return;
     var data = event.data || {};
     if (data.type !== 'posnic-settings-nav' || ['modules', 'devices', 'branchpayments'].indexOf(data.section) < 0) return;
-    if (data.section === 'devices') PosnicPro.handsets.filter = 'mobile-pos';
     location.hash = '#/settings/' + data.section;
 });
 $(document).on('click', '#captain_devices_link', function () { PosnicPro.handsets.filter = 'captain'; });
