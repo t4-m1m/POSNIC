@@ -8078,3 +8078,51 @@ body:has(#sales_new:not([style*="display: none"])) #posnic-multi-baskets-header-
 .topbar #posnic-multi-baskets .posnic-basket-add {
   background:#f1f3f5 !important; color:#57606a !important; border-color:#d0d7de !important;
 }
+
+
+/* Keep the basket strip and language selector in one continuous topbar row. */
+@media (min-width:768px) {
+  .topbar .togglebar > ul.list-inline {
+    display:flex !important;
+    align-items:center !important;
+    flex-wrap:nowrap !important;
+    min-width:0;
+  }
+  .topbar .togglebar > ul.list-inline > li#posnic-multi-baskets-header-wrap {
+    flex:1 1 auto !important;
+    width:auto !important;
+    min-width:80px !important;
+    max-width:none !important;
+    margin-inline-start:10px !important;
+    overflow:hidden !important;
+  }
+  .topbar .togglebar > ul.list-inline > li.mobile-hide:has(.languagebar) {
+    display:list-item !important;
+    flex:0 0 auto !important;
+    margin-left:8px !important;
+    white-space:nowrap !important;
+  }
+  .topbar .infobar .languagebar { display:none !important; }
+}
+#posnic-touch-mode-entry {
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+#posnic-touch-mode-toggle.infobar-icon {
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:34px !important;
+  height:34px !important;
+  padding:0 !important;
+  line-height:1 !important;
+  text-align:center !important;
+}
+#posnic-touch-mode-toggle .posnic-touch-hand-icon {
+  display:block;
+  flex:0 0 20px;
+  width:20px;
+  height:20px;
+  margin:0;
+}
