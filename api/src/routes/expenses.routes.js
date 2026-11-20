@@ -3,7 +3,7 @@ const router = express.Router();
 const expensesController = require('../controllers/expenses.controller');
 const { protect } = require('../middleware/auth');
 const { validateExpense, validateId } = require('../middleware/validation');
-require('mongodb');
+const { ObjectId } = require('mongodb');
 
 // Apply authentication middleware to all routes
 router.use(protect);
@@ -42,6 +42,30 @@ router.get('/category/:category', (req, res) => expensesController.getByCategory
 router.get('/type/:type', (req, res) => expensesController.getByType(req, res));
 
 // GET /api/expenses/:id - Get expense by ID (with ObjectId validation)
+// Authenticated cashier quick expense; stored in the normal expenses ledger.
+router.post('/quick', async (req, res) => {
+  try {
+    await expensesController.ensureContext(req);
+    const body = req.body || {}, value = Number(body.amount), reason = String(body.reason || '').trim();
+    if (!Number.isFinite(value) || value <= 0 || value > 1e12)
+      return res.status(400).json({ status: false, message: 'Saisissez un montant valide.' });
+    if (!reason || reason.length > 255)
+      return res.status(400).json({ status: false, message: 'Saisissez la raison de la dépense (255 caractères maximum).' });
+    const user = expensesController.user || {}, branch = expensesController.branch;
+    const result = await expensesController.service.createExpense({
+      amount: Math.round((value + Number.EPSILON) * 100) / 100,
+      type: 'Dépense rapide', category: 'Dépense rapide', description: reason, date: new Date(),
+      branch_id: branch && ObjectId.isValid(String(branch)) ? new ObjectId(String(branch)) : branch,
+      branch_name: expensesController.branchName || '',
+      created_by: user.username || user.name || user.email || 'system',
+      created_by_id: user._id && ObjectId.isValid(String(user._id)) ? new ObjectId(String(user._id)) : null
+    });
+    if (!result.status) return res.status(400).json({ status: false, message: result.message || 'Dépense non enregistrée.' });
+    return res.status(201).json({ status: true, data: result.data, message: 'Dépense enregistrée.' });
+  } catch (error) {
+    return res.status(error.status || 500).json({ status: false, message: error.message || 'Dépense non enregistrée.' });
+  }
+});
 router.get('/:id', validateId, (req, res) => expensesController.getOne(req, res));
 
 // POST /api/expenses - Create new expense

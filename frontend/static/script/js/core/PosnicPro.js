@@ -2894,7 +2894,10 @@ PosnicPro = {
 
         // Payroll contains confidential salary data: hide its entry from cashiers.
         var role = String(PosnicPro.local.get('usertype') || '').trim().toLowerCase();
-        $('#hrModule').toggle(role === 'admin' || role === 'super_admin');
+        var isPosnicAdmin = role === 'admin' || role === 'super_admin' ||
+            PosnicPro.local.get('is_admin') === true || PosnicPro.local.get('is_admin') === 'true';
+        $('#hrModule').toggle(isPosnicAdmin);
+        $('#companionModule, #v-pills-companion-tab').toggle(isPosnicAdmin);
 
         /*
          * Fields that only mean something to a restaurant: serving periods,

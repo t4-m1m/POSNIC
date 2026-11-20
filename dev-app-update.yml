@@ -1,6 +1,0 @@
-owner: Posnic
-repo: POS
-provider: github
-releaseType: release
-private: true
-updaterCacheDirName: posnic-updater

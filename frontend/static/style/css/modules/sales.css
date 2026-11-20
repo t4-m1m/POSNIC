@@ -1817,3 +1817,10 @@ body > .modal-backdrop {
 @media (max-width: 767.98px) {
   #posnic-multi-baskets-header-wrap { display:none !important; }
 }
+
+/* Compact POSNIC cashier quick-cash actions. */
+.posnic-quick-cash-actions{display:flex;gap:7px;margin-top:7px}
+.posnic-quick-cash-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:32px;padding:5px 11px;border:1px solid #dbe2ee;border-radius:7px;background:#fff;color:#344256;font-size:12px;font-weight:650;line-height:1;cursor:pointer;transition:background .12s,border-color .12s,color .12s}
+.posnic-quick-cash-btn:hover,.posnic-quick-cash-btn:focus{background:#f2f6ff;border-color:#9db5ef;color:#3159b8;outline:none}
+.posnic-quick-cash-btn i{font-size:14px}
+#posnic-quick-expense-modal .modal-content,#posnic-quick-advance-modal .modal-content{border:1px solid #e4e9f1;border-radius:12px;box-shadow:0 12px 36px rgba(15,23,42,.16)}

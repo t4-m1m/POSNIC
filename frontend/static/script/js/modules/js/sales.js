@@ -139,8 +139,10 @@ PosnicPro.sales = {
             if (!header || !Number.isFinite(header.bottom)) return;
             if (toolbar.parentNode !== document.body) document.body.appendChild(toolbar);
 
-            var left = Math.max(0, header.left);
-            var width = Math.max(0, header.width);
+            // The workspace width changes when the blue navigation rail expands on hover.
+            var workspaceRect = contentBar.getBoundingClientRect();
+            var left = Math.max(0, workspaceRect.left);
+            var width = Math.max(0, workspaceRect.width);
             toolbar.classList.add('sales-function-toolbar-pinned');
             toolbar.style.position = 'fixed';
             toolbar.style.top = Math.max(0, header.bottom) + 'px';
@@ -179,7 +181,12 @@ PosnicPro.sales = {
             if (window.MutationObserver) {
                 state.observer = new MutationObserver(schedulePin);
                 state.observer.observe(document.querySelector('.topbar') || document.body, { childList: true, subtree: true, attributes: true });
+                var sideRail = document.querySelector('.vertical-menu-detail') || document.querySelector('.vertical-menu');
+                if (sideRail) state.observer.observe(sideRail, { attributes: true, childList: true, subtree: true });
                 state.observer.observe(salesPage, { attributes: true, attributeFilter: ['style', 'class'] });
+                ['mouseenter','mouseleave','transitionend'].forEach(function (eventName) {
+                    if (sideRail) sideRail.addEventListener(eventName, schedulePin, true);
+                });
             }
             state.installed = true;
         }
@@ -326,6 +333,18 @@ PosnicPro.sales = {
         });
 
         PosnicPro.sales.recentMenu.recentSalesTabDetails();
+        var basketManager = PosnicPro.sales.multiBasket;
+        var basketSession = basketManager && basketManager.initialized
+            ? basketManager.sessions.find(function (item) { return item.id === basketManager.activeId; }) : null;
+        if (basketSession && basketSession.returnOriginSnapshot) {
+            var returnSnapshot = basketSession.returnOriginSnapshot;
+            basketSession.returnOriginSnapshot = null;
+            basketManager.restore(returnSnapshot);
+            if (PosnicPro.sales.calculation && PosnicPro.sales.calculation.salesTableRowCart) {
+                try { PosnicPro.sales.calculation.salesTableRowCart(); } catch (_) {}
+            }
+            basketManager.render();
+        }
         $("#paymentreturnhistory").hide();
         var loader = $(".loader-sales-balance");
         loader.find(".loadingSpinner:first").remove(); 
@@ -8196,6 +8215,13 @@ PosnicPro.sales.loadSalesTilePage = function (offset, categoryId, done, brandNam
     function isStale() {
         return generation !== PosnicPro.sales._catalogueGeneration;
     }
+    var cache = PosnicPro.sales._tilePageCache || (PosnicPro.sales._tilePageCache = Object.create(null));
+    var cacheKey = [categoryId || '', brandName || '', offset || 0].join('|');
+    var cached = cache[cacheKey];
+    if (cached && Date.now() - cached.at < 4500) {
+        finish({ type: 'success', data: JSON.parse(JSON.stringify(cached.items)), nextOffset: cached.nextOffset });
+        return;
+    }
     PosnicPro.get({ url: 'items/onlineSalesItemsAjaxLists', data: {
         paginate: 'true', tile_page: 'true', limit: 48, offset: offset,
         category_id: categoryId || '', brand: brandName || ''
@@ -8231,6 +8257,7 @@ PosnicPro.sales.loadSalesTilePage = function (offset, categoryId, done, brandNam
             });
             return;
         }
+        cache[cacheKey] = { at: Date.now(), items: JSON.parse(JSON.stringify(items)), nextOffset: nextOffset };
         finish({ type: 'success', data: items, nextOffset: nextOffset });
     }, function () {
         finish(isStale() ? { type: 'stale', stale: true } : { type: 'error' });
@@ -9346,6 +9373,10 @@ PosnicPro.sales.recentMenu = {
         });
     },
     editItems: function (id, data, sale) {
+        if (sale === 'return' && PosnicPro.sales.multiBasket && PosnicPro.sales.multiBasket.initialized) {
+            var returnSession = PosnicPro.sales.multiBasket.sessions.find(function (item) { return item.id === PosnicPro.sales.multiBasket.activeId; });
+            if (returnSession) returnSession.returnOriginSnapshot = PosnicPro.sales.multiBasket.snapshot();
+        }
         PosnicPro.sales.defaultCustomer = false;
         PosnicPro.sales.setDefaults();
 
@@ -16222,3 +16253,77 @@ PosnicPro.sales.openZrTracking=function(){
   loadZrRows();
 };
 })(jQuery);
+
+/* POSNIC quick cash actions use the existing financial ledgers. */
+(function () {
+    'use strict';
+    function unwrap(response) {
+        var payload = response && response.data !== undefined ? response.data : response;
+        if (payload && payload.status === true && payload.data !== undefined) return payload.data;
+        return payload;
+    }
+    function errorMessage(xhr, fallback) {
+        var body = xhr && xhr.responseJSON;
+        return body && (body.message || body.error && body.error.message) || fallback;
+    }
+    function showError(id, message) { $(id).text(message || 'Opération impossible.'); }
+    function busy(form, value) { $(form).find('button[type="submit"]').prop('disabled', !!value); }
+    $(document).on('click', '#posnic-quick-expense-open', function () {
+        $('#posnic-quick-expense-form')[0].reset(); showError('#posnic-quick-expense-error', '');
+        $('#posnic-quick-expense-modal').modal('show');
+        window.setTimeout(function () { $('#posnic-quick-expense-amount').trigger('focus'); }, 180);
+    });
+    $(document).on('submit', '#posnic-quick-expense-form', function (event) {
+        event.preventDefault();
+        var amount = Number($('#posnic-quick-expense-amount').val());
+        var reason = String($('#posnic-quick-expense-reason').val() || '').trim();
+        if (!Number.isFinite(amount) || amount <= 0 || !reason) { showError('#posnic-quick-expense-error', 'Saisissez un montant valide et une raison.'); return; }
+        busy(this, true);
+        PosnicPro.post({ url: 'expenses/quick', data: { amount: amount, reason: reason } }, function (response) {
+            busy('#posnic-quick-expense-form', false);
+            var payload = unwrap(response);
+            if (payload && (payload.status === false || payload.type === 'error')) { showError('#posnic-quick-expense-error', payload.message || 'Dépense refusée.'); return; }
+            $('#posnic-quick-expense-modal').modal('hide');
+            if (PosnicPro.alert) PosnicPro.alert('success', 'Dépense enregistrée.');
+        }, function (xhr) {
+            busy('#posnic-quick-expense-form', false);
+            showError('#posnic-quick-expense-error', errorMessage(xhr, 'Impossible d’enregistrer la dépense.'));
+        });
+    });
+    $(document).on('click', '#posnic-quick-advance-open', function () {
+        $('#posnic-quick-advance-form')[0].reset(); showError('#posnic-quick-advance-error', '');
+        $('#posnic-quick-advance-worker').html('<option value="">Chargement…</option>');
+        $('#posnic-quick-advance-modal').modal('show');
+        PosnicPro.get({ url: 'hr/quick-advance/workers', data: {} }, function (response) {
+            var rows = unwrap(response); rows = Array.isArray(rows) ? rows : [];
+            var options = '<option value="">Choisir un employé</option>' + rows.map(function (worker) {
+                return '<option value="' + String(worker._id).replace(/[^a-f0-9]/gi, '') + '">' + $('<span>').text(worker.name || '').html() + '</option>';
+            }).join('');
+            $('#posnic-quick-advance-worker').html(options);
+            if (!rows.length) showError('#posnic-quick-advance-error', 'Aucun employé actif disponible.');
+        }, function (xhr) {
+            $('#posnic-quick-advance-worker').html('<option value="">Indisponible</option>');
+            showError('#posnic-quick-advance-error', errorMessage(xhr, 'Impossible de charger les employés.'));
+        });
+    });
+    $(document).on('submit', '#posnic-quick-advance-form', function (event) {
+        event.preventDefault();
+        var workerId = $('#posnic-quick-advance-worker').val(), amount = Number($('#posnic-quick-advance-amount').val());
+        if (!workerId || !Number.isFinite(amount) || amount <= 0) { showError('#posnic-quick-advance-error', 'Choisissez un employé et saisissez un montant valide.'); return; }
+        busy(this, true);
+        PosnicPro.post({ url: 'hr/quick-advance', data: {
+            worker_id: workerId, amount: amount, date: new Date().toISOString(),
+            period: new Date().toISOString().slice(0, 7), method: 'cash',
+            notes: 'Acompte rapide depuis la caisse'
+        } }, function (response) {
+            busy('#posnic-quick-advance-form', false);
+            var payload = unwrap(response);
+            if (payload && (payload.status === false || payload.type === 'error')) { showError('#posnic-quick-advance-error', payload.message || 'Acompte refusé.'); return; }
+            $('#posnic-quick-advance-modal').modal('hide');
+            if (PosnicPro.alert) PosnicPro.alert('success', 'Acompte enregistré dans le registre RH.');
+        }, function (xhr) {
+            busy('#posnic-quick-advance-form', false);
+            showError('#posnic-quick-advance-error', errorMessage(xhr, 'Impossible d’enregistrer l’acompte.'));
+        });
+    });
+}());
