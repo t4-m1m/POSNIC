@@ -129,12 +129,10 @@ PosnicPro.settings = {
         /* A list has to be fetched every time it is opened: a phone that
            signed in a minute ago belongs on it. */
         if (key === 'devices' && PosnicPro.handsets) { PosnicPro.handsets.load(); }
-        if (key === 'mobilepos' || key === 'branchpayments' || key === 'companion') {
+        if (key === 'branchpayments' || key === 'companion') {
             var base = (typeof API_URL === 'string' && API_URL) || '/api';
-            var frameId = key === 'mobilepos' ? 'mobile_pos_frame' :
-                key === 'companion' ? 'mobile_companion_frame' : 'branch_payments_frame';
-            var view = key === 'branchpayments' ? '?view=payments' :
-                key === 'companion' ? '?view=companion' : '';
+            var frameId = key === 'companion' ? 'mobile_companion_frame' : 'branch_payments_frame';
+            var view = key === 'branchpayments' ? '?view=payments' : '?view=companion';
             $('#' + frameId).attr('src', base.replace(/\/+$/, '') + '/mobile-pos-setup' + view);
         }
         if (key === 'ai') { PosnicPro.askposnic.showSettings(); }
@@ -10368,11 +10366,6 @@ $(document).on('click', '#ai_remove_all', function () {
     PosnicPro.settings.ai.removeKey();
 });
 
-$(document).on('click', '#v-pills-mobilepos-tab', function (e) {
-    e.preventDefault();
-    var base = (typeof API_URL === 'string' && API_URL) || '/api';
-    $('#mobile_pos_frame').attr('src', base.replace(/\/+$/, '') + '/mobile-pos-setup');
-});
 $(document).on('click', '#v-pills-companion-tab', function (e) {
     e.preventDefault();
     var base = (typeof API_URL === 'string' && API_URL) || '/api';
@@ -10380,7 +10373,7 @@ $(document).on('click', '#v-pills-companion-tab', function (e) {
 });
 
 window.addEventListener('message', function (event) {
-    var frames = ['mobile_pos_frame', 'mobile_companion_frame', 'branch_payments_frame'].map(function (id) { return document.getElementById(id); });
+    var frames = ['mobile_companion_frame', 'branch_payments_frame'].map(function (id) { return document.getElementById(id); });
     if (!frames.some(function (frame) { return frame && frame.contentWindow === event.source && frame.src && new URL(frame.src, location.href).origin === event.origin; })) return;
     var data = event.data || {};
     if (data.type !== 'posnic-settings-nav' || ['modules', 'devices', 'branchpayments'].indexOf(data.section) < 0) return;
