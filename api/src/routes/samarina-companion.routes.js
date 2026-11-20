@@ -362,11 +362,13 @@ router.get('/dashboard', async (req, res) => {
       totals.discounts += Number(sale.discount_amount ?? sale.discount ?? sale.discount_total ?? 0) || 0;
     }
     const items = await req.db.collection('items').countDocuments({ branch_id: branchId });
-    const zrExpress = await req.db.collection('zr_deliveries').countDocuments({
-      branch_id: branchId, license: oid(req.companion.session.license) || req.companion.session.license,
-      status: { $nin: ['ANNULEE', 'RETOUR'] }
-    }).catch(() => 0);
-    res.json({ date: start.toISOString().slice(0,10), currency: req.companion.branch.currency || 'DA', totals, salesCount: sales.length, itemCount: items, zrExpress });
+    const zrSummary = await req.db.collection('zr_deliveries').aggregate([
+      { $match: { branch_id: branchId, license: oid(req.companion.session.license) || req.companion.session.license, status: { $nin: ['ANNULEE', 'RETOUR'] } } },
+      { $group: { _id: null, count: { $sum: 1 }, cod: { $sum: '$cod_total' } } }
+    ]).toArray().catch(() => []);
+    const zrExpress = Number(zrSummary[0]?.count || 0);
+    const zrCod = Number(zrSummary[0]?.cod || 0);
+    res.json({ date: start.toISOString().slice(0,10), currency: req.companion.branch.currency || 'DA', totals, salesCount: sales.length, itemCount: items, zrExpress, zrCod });
   } catch (error) {
     console.error('[Samarina Companion] dashboard failed:', error);
     fail(res, 500, 'Impossible de charger le tableau de bord.');
