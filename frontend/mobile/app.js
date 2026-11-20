@@ -38,7 +38,7 @@
     var data = {};
     try { data = await response.json(); } catch (_) {}
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403 && /token|session|device/i.test(messageOf(data, ''))) {
+      if (response.status === 401) {
         token = '';
         localStorage.removeItem('posnic_companion_token');
       }
@@ -76,6 +76,7 @@
     document.querySelectorAll('.panel').forEach(function (panel) {
       panel.classList.toggle('active', panel.id === 'tab-' + name);
     });
+    if (name === 'receive' && token) loadPendingOperations();
   }
 
   function deviceInfo() {
@@ -114,7 +115,7 @@
     if (!shop) throw new Error('Le serveur n’a pas retourné les informations du magasin.');
     showWorkspace();
     toast('Téléphone connecté à POSNIC');
-    await loadCatalogue('');
+    await Promise.all([loadCatalogue(''), loadPendingOperations()]);
   }
 
   async function restoreSession() {
@@ -125,6 +126,7 @@
       shop = boot.shop || null;
       if (!shop) throw new Error('Session invalide.');
       showWorkspace();
+      await loadPendingOperations();
     } catch (error) {
       token = '';
       localStorage.removeItem('posnic_companion_token');
@@ -271,10 +273,61 @@
       } else {
         $('#receive-status').textContent = 'État de réception : ' + String(result.state || 'inconnu');
       }
+      await loadPendingOperations();
     } catch (error) {
       $('#receive-status').textContent = error.message;
+      if (/manager|approv|validation/i.test(error.message)) await loadPendingOperations();
     } finally {
       button.disabled = !queue.length;
+    }
+  }
+
+  async function loadPendingOperations() {
+    var host = $('#pending-operations');
+    var list = $('#pending-operation-list');
+    if (!host || !list || !token) return;
+    try {
+      var data = await request('/mobile/v1/inventory/operations');
+      var rows = (data.rows || []).filter(function (operation) {
+        return operation.state === 'prepared' || operation.state === 'conflict';
+      });
+      list.innerHTML = '';
+      host.hidden = !rows.length;
+      rows.forEach(function (operation) {
+        var card = document.createElement('div');
+        card.className = 'pending-operation';
+        var title = document.createElement('strong');
+        title.textContent = (operation.mode === 'receive' ? 'Réception' : 'Mouvement stock') + ' · ' + operation.lines.length + ' ligne(s)';
+        var detail = document.createElement('small');
+        detail.textContent = operation.reason + ' · ' + (operation.state === 'conflict' ? 'Conflit à examiner' : 'En attente');
+        var action = document.createElement('button');
+        action.type = 'button';
+        action.className = 'primary';
+        action.textContent = operation.state === 'conflict' ? 'Réexaminer' : 'Confirmer le mouvement';
+        action.disabled = operation.state === 'conflict';
+        action.addEventListener('click', async function () {
+          action.disabled = true;
+          action.textContent = 'Validation…';
+          try {
+            var result = await request('/mobile/v1/inventory/operations/' + encodeURIComponent(operation.operationId) + '/confirm', { method: 'POST', body: JSON.stringify({}) });
+            if (result.state === 'complete') {
+              toast('Mouvement de stock confirmé');
+              $('#receive-status').textContent = 'Le responsable a confirmé le mouvement. Le stock POSNIC est à jour.';
+              await loadCatalogue($('#lookup-query').value.trim());
+            } else {
+              $('#receive-status').textContent = 'État du mouvement : ' + String(result.state || 'inconnu');
+            }
+          } catch (error) {
+            $('#receive-status').textContent = error.message;
+          } finally {
+            await loadPendingOperations();
+          }
+        });
+        card.append(title, detail, action);
+        list.append(card);
+      });
+    } catch (error) {
+      host.hidden = true;
     }
   }
 
