@@ -258,6 +258,86 @@ router.post('/desktop/print-jobs/:id/ack', protect, async (req, res) => {
 
 router.use(companionAuth);
 
+/* Companion reports delegate the financial calculation to the exact desktop report controller. */
+router.get('/reports', async (req, res) => {
+  try {
+    const c = req.companion;
+    if (!ownerAllowed(c.user)) return fail(res, 403, 'Accès aux rapports réservé au propriétaire ou responsable.');
+    const branchName = c.branch.branch_name || c.branch.name || '';
+    const timezone = c.branch.time_zone || process.env.DEFAULT_TIMEZONE || 'UTC';
+    const moment = require('moment-timezone');
+    const today = moment().tz(moment.tz.zone(timezone) ? timezone : 'UTC').format('YYYY-MM-DD');
+    req.query = Object.assign({}, req.query, {
+      branch: sid(c.branchId), type: 'VIEW',
+      starting_date: req.query.starting_date || today,
+      ending_date: req.query.ending_date || req.query.starting_date || today
+    });
+    return require('../controllers/sales.controller').dailySalesReports(req, res);
+  } catch (error) {
+    console.error('[Samarina Companion] reports failed:', error);
+    return fail(res, 500, 'Impossible de charger les rapports POSNIC.');
+  }
+});
+function companionReportPeriod(req) {
+  const c = req.companion, moment = require('moment-timezone');
+  const timezone = c.branch.time_zone || process.env.DEFAULT_TIMEZONE || 'UTC';
+  const today = moment().tz(moment.tz.zone(timezone) ? timezone : 'UTC').format('YYYY-MM-DD');
+  const starting_date = String(req.query.starting_date || today);
+  const ending_date = String(req.query.ending_date || starting_date);
+  const period = require('../helpers/daily-report-period').dailyReportPeriod({ starting_date, ending_date }, timezone);
+  return { period, start: period.start, end: period.end };
+}
+router.get('/reports/tickets', async (req, res) => {
+  try {
+    if (!ownerAllowed(req.companion.user)) return fail(res, 403, 'Accès aux rapports réservé au propriétaire ou responsable.');
+    const { period } = companionReportPeriod(req), c = req.companion;
+    const match = { $and: [
+      require('../helpers/reportable-sales')(),
+      period.match('date', period.start),
+      { branch_id: oid(c.branchId) || c.branchId },
+      ...(c.session.license ? [{ license: oid(c.session.license) || c.session.license }] : [])
+    ] };
+    const rows = await req.db.collection('sales').find(match, {
+      projection: { invoice_number: 1, sale_number: 1, date: 1, sales_total: 1, total: 1, customer_name: 1, customer: 1, payment_mode: 1, payments: 1, payment_pending: 1, items: 1 }
+    }).sort({ date: -1 }).limit(100).toArray();
+    return res.json({ rows: rows.map(row => ({
+      id: sid(row._id), number: row.invoice_number || row.sale_number || sid(row._id).slice(-7),
+      date: row.date, total: Number(row.sales_total || row.total) || 0,
+      customer: row.customer_name || row.customer?.name || 'Client de passage',
+      paymentMode: row.payment_mode || '', pending: Number(row.payment_pending) || 0,
+      itemCount: Array.isArray(row.items) ? row.items.length : 0
+    })) });
+  } catch (error) {
+    console.error('[Samarina Companion] report tickets failed:', error);
+    return fail(res, 500, 'Impossible de charger les tickets.');
+  }
+});
+router.get('/reports/tickets/:id', async (req, res) => {
+  try {
+    if (!ownerAllowed(req.companion.user)) return fail(res, 403, 'Accès aux rapports réservé au propriétaire ou responsable.');
+    const id = oid(req.params.id);
+    if (!id) return fail(res, 400, 'Ticket invalide.');
+    const c = req.companion;
+    const sale = await req.db.collection('sales').findOne({
+      _id: id, branch_id: oid(c.branchId) || c.branchId,
+      ...(c.session.license ? { license: oid(c.session.license) || c.session.license } : {}),
+      ...require('../helpers/reportable-sales')()
+    });
+    if (!sale) return fail(res, 404, 'Ticket introuvable.');
+    return res.json({ ticket: {
+      id: sid(sale._id), number: sale.invoice_number || sale.sale_number || sid(sale._id).slice(-7),
+      date: sale.date, total: Number(sale.sales_total || sale.total) || 0,
+      customer: sale.customer_name || sale.customer?.name || 'Client de passage',
+      payments: sale.payments || [], paymentMode: sale.payment_mode || '',
+      pending: Number(sale.payment_pending) || 0, items: sale.items || [],
+      discount: Number(sale.discount) || 0
+    } });
+  } catch (error) {
+    console.error('[Samarina Companion] report ticket detail failed:', error);
+    return fail(res, 500, 'Impossible de charger le détail du ticket.');
+  }
+});
+
 router.get('/bootstrap', (req, res) => {
   const c = req.companion;
   res.set('Cache-Control', 'no-store').json({
