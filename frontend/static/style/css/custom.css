@@ -8028,3 +8028,83 @@ body:has(#sales_new:not([style*="display: none"])) #posnic-multi-baskets-header-
     #posnic-multi-baskets-header-wrap #posnic-multi-baskets { max-width:42vw; }
 }
 
+
+
+/* POSNIC cashier topbar alignment: baskets follow Add; shortcut row clears the fixed header. */
+@media (min-width: 768px) {
+  /* The cashier's Add dropdown is the first control in .togglebar.
+     Keep the basket tabs directly after it, before the right-side controls. */
+  .topbar .togglebar #posnic-multi-baskets-header-wrap {
+    display: none;
+    vertical-align: middle;
+    margin: 0 0 0 12px;
+    max-width: min(36vw, 480px);
+  }
+  body:has(#sales_new:not([style*="display: none"])) .topbar .togglebar #posnic-multi-baskets-header-wrap {
+    display: inline-block !important;
+  }
+  .topbar .togglebar #posnic-multi-baskets-header-host { display: block; min-width: 0; }
+  .topbar .togglebar #posnic-multi-baskets-header-wrap #posnic-multi-baskets {
+    display: flex !important;
+    align-items: center;
+    flex-wrap: nowrap !important;
+    gap: 4px;
+    width: auto !important;
+    max-width: min(36vw, 480px);
+    min-width: 0;
+    min-height: 36px;
+    margin: 0;
+    padding: 2px 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    box-sizing: border-box;
+  }
+  .topbar .togglebar #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-tab-wrap,
+  .topbar .togglebar #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-add {
+    flex: 0 0 auto;
+  }
+}
+/* The app topbar is fixed over the page. Reserve its full height before the
+   cashier controls so the F-key/total bar starts below its bottom edge. */
+@media (min-width: 768px) {
+  #sales_new > .contentbar {
+    padding-top: 76px !important;
+  }
+  #sales_new #touchsales_page > #sales-function-shortcuts {
+    margin-top: 4px !important;
+    position: relative !important;
+    z-index: 1 !important;
+  }
+}
+/* Keep the touch-mode glyph optically and geometrically centered. */
+#posnic-touch-mode-entry {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  vertical-align: middle;
+}
+#posnic-touch-mode-toggle {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
+}
+#posnic-touch-mode-toggle > i {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  font-size: 19px !important;
+}
+@media (max-width: 767.98px) {
+  .topbar .togglebar #posnic-multi-baskets-header-wrap { display: none !important; }
+}
+
