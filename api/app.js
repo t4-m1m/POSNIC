@@ -805,7 +805,10 @@ app.get('/', (req, res, next) => {
   const remoteAddress = String(req.socket.remoteAddress || '');
   const isLoopback = remoteAddress === '127.0.0.1' || remoteAddress === '::1' ||
     remoteAddress === '::ffff:127.0.0.1';
-  if (process.env.POSNIC_DESKTOP === '1' && !isLoopback) return res.redirect(302, '/mobile/');
+  // Only the LAN root opens the companion. Redirecting every remote request
+  // also redirected /mobile/ and /api/* back to /mobile/, creating a loop and
+  // making both the app shell and its pairing API unreachable.
+  if (process.env.POSNIC_DESKTOP === '1' && !isLoopback && req.path === '/') return res.redirect(302, '/mobile/');
   return next();
 });
 // Express's default non-strict routing makes '/mobile' also match '/mobile/'.
