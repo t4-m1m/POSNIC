@@ -1177,14 +1177,13 @@ for (const extension of ['html', 'js', 'css']) {
     res.sendFile(require('path').join(__dirname, 'src/routes/captain-setup.' + extension), {dotfiles:'allow'});
   });
 }
-// Keep the independent Branch Payments settings surface; the legacy Mobile POS
-// companion setup itself is no longer mounted or used by Samarina.
+// Branch payment account settings are now a dedicated page, not a view
+// embedded in the retired Mobile POS setup screen.
 for (const extension of ['html', 'js', 'css']) {
   const suffix = extension === 'html' ? '' : '.' + extension;
-  app.get(['/api/mobile-pos-setup' + suffix, '/mobile-pos-setup' + suffix], (req, res, next) => {
-    if (extension === 'html' && req.query.view !== 'payments') return next();
+  app.get('/branch-payments-setup' + suffix, require('./src/middleware/auth').protect, (req, res) => {
     res.set('Cache-Control', 'no-store');
-    res.sendFile('mobile-pos-setup.' + extension, { root: require('path').join(__dirname, 'src/routes') });
+    res.sendFile('branch-payments-setup.' + extension, { root: require('path').join(__dirname, 'src/routes') });
   });
 }
 const samarinaSetupAuth = require('./src/middleware/auth').protect;
