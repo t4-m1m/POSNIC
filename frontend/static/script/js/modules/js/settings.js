@@ -130,7 +130,9 @@ PosnicPro.settings = {
            signed in a minute ago belongs on it. */
         if (key === 'devices' && PosnicPro.handsets) { PosnicPro.handsets.load(); }
         if (key === 'companion') {
-            $('#mobile_companion_frame').attr('src', '/samarina-companion-setup');
+            var companionApi = (typeof API_URL === 'string' && API_URL) || '/api';
+            var companionOrigin = companionApi.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+            $('#mobile_companion_frame').attr('src', companionOrigin + '/samarina-companion-setup');
         } else if (key === 'branchpayments') {
             var base = (typeof API_URL === 'string' && API_URL) || '/api';
             $('#branch_payments_frame').attr('src', base.replace(/\/+$/, '') + '/mobile-pos-setup?view=payments');
