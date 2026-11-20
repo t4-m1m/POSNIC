@@ -312,8 +312,9 @@ router.post(
     const companionQr = await Promise.all(
       pairingQr.map(async (target) => {
         const url = new URL('/mobile/', target.url);
-        url.searchParams.set('server', target.url);
-        url.searchParams.set('code', code);
+        // Keep the one-use grant in the URL fragment: browsers do not send it
+        // to the HTTP server or include it in ordinary access logs.
+        url.hash = new URLSearchParams({ server: target.url, code }).toString();
         return {
           url: target.url,
           qr: await require('qrcode').toDataURL(url.toString(), { width: 260, margin: 2 }),
