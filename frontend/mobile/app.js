@@ -128,10 +128,16 @@
       showWorkspace();
       await loadPendingOperations();
     } catch (error) {
-      token = '';
-      localStorage.removeItem('posnic_companion_token');
-      setConnected(false);
-      $('#connect-error').textContent = 'Reconnectez le téléphone : ' + error.message;
+      // Keep the paired token across temporary Wi-Fi loss. request() clears it
+      // only for a real 401, so a network outage never forces a new pairing.
+      if (token) {
+        showWorkspace();
+        setConnected(false);
+        toast('Hors connexion · reconnexion automatique dès le retour du Wi-Fi');
+      } else {
+        setConnected(false);
+        $('#connect-error').textContent = 'La session doit être reconnectée : ' + error.message;
+      }
     }
   }
 
@@ -144,7 +150,7 @@
     return amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + ((shop && shop.currency) || 'DA');
   }
 
-  function renderCatalogue(rows, host) {
+  function renderCatalogue(rows, host, editable) {
     host.innerHTML = '';
     if (!rows.length) {
       host.className = 'results empty-state';
@@ -155,6 +161,14 @@
     rows.forEach(function (item) {
       var card = document.createElement('article');
       card.className = 'product';
+      if (item.image) {
+        var photo = document.createElement('img');
+        photo.className = 'product-photo';
+        photo.src = item.image;
+        photo.alt = item.name || 'Article';
+        photo.loading = 'lazy';
+        card.append(photo);
+      }
       var body = document.createElement('div');
       body.className = 'product-body';
       var title = document.createElement('strong');
@@ -165,20 +179,41 @@
       price.className = 'price';
       price.textContent = formatMoney(item.price);
       body.append(title, meta, price);
+      if (editable && item.id) {
+        var edit = document.createElement('button');
+        edit.type = 'button';
+        edit.className = 'secondary product-edit';
+        edit.textContent = 'Modifier la fiche / photo';
+        edit.addEventListener('click', function () { openItemEditor(item.id); });
+        body.append(edit);
+      }
       card.append(body);
       host.append(card);
     });
   }
 
-  async function loadCatalogue(query) {
-    var host = $('#lookup-results');
+  async function loadCatalogue(query, target, editable) {
+    var host = target || $('#lookup-results');
+    var cacheKey = 'posnic_companion_catalogue:' + String(query || '').trim().toLowerCase();
     host.className = 'results empty-state';
     host.textContent = 'Chargement du catalogue…';
     try {
       var data = await request('/mobile/v1/inventory/catalogue?kind=items&q=' + encodeURIComponent(query || ''));
-      renderCatalogue(unwrapRows(data), host);
+      var rows = unwrapRows(data);
+      try { localStorage.setItem(cacheKey, JSON.stringify(rows)); } catch (_) {}
+      renderCatalogue(rows, host, editable === true);
+      return rows;
     } catch (error) {
+      try {
+        var cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+        if (Array.isArray(cached)) {
+          renderCatalogue(cached, host, editable === true);
+          toast('Catalogue en cache · mode hors connexion');
+          return cached;
+        }
+      } catch (_) {}
       host.textContent = error.message;
+      return [];
     }
   }
 
@@ -202,6 +237,7 @@
   }
 
   function renderQueue() {
+    try { localStorage.setItem('posnic_companion_receive_queue', JSON.stringify(queue)); } catch (_) {}
     var host = $('#receive-queue');
     host.innerHTML = '';
     if (!queue.length) {
@@ -349,6 +385,74 @@
     return { name: 'mobile-' + Date.now() + '.jpg', size: blob.size, cover: 'yes', data: data };
   }
 
+  async function openItemEditor(id) {
+    activate('manage');
+    $('#manage-error').textContent = '';
+    $('#manage-form').hidden = true;
+    try {
+      var response = await request('/items/' + encodeURIComponent(id));
+      var item = response.data || response.item || response;
+      if (!item || !(item._id || item.id)) throw new Error(messageOf(response, 'Article introuvable.'));
+      window.posnicEditingItem = item;
+      $('#manage-id').value = String(item._id || item.id);
+      $('#manage-name').value = item.name || item.item_name || '';
+      $('#manage-price').value = Number(item.selling_price || 0);
+      $('#manage-barcode').value = item.barcode_id || '';
+      $('#manage-sku').value = item.sku || item.item_code || '';
+      $('#manage-photo').value = '';
+      $('#manage-remove-photo').checked = false;
+      $('#manage-current-photo').textContent = item.image ? 'Photo actuelle enregistrée · ' + String(item.image).split('/').pop() : 'Aucune photo enregistrée.';
+      $('#manage-form').hidden = false;
+      $('#manage-name').focus();
+    } catch (error) {
+      $('#manage-error').textContent = error.message;
+      $('#manage-form').hidden = false;
+    }
+  }
+
+  async function saveItemEdits(event) {
+    event.preventDefault();
+    var original = window.posnicEditingItem;
+    if (!original) return;
+    var button = $('#manage-form').querySelector('button[type="submit"]');
+    var payload = Object.assign({}, original, {
+      name: $('#manage-name').value.trim(),
+      selling_price: Number($('#manage-price').value || 0),
+      barcode_id: $('#manage-barcode').value.trim(),
+      sku: $('#manage-sku').value.trim()
+    });
+    var photo = $('#manage-photo').files[0];
+    button.disabled = true;
+    $('#manage-error').textContent = '';
+    try {
+      if (photo) {
+        var uploaded = await request('/items/uploadItemMultiImage', {
+          method: 'POST',
+          body: JSON.stringify({ items_image: [await compressPhoto(photo)] })
+        });
+        var list = uploaded.data && (uploaded.data.data || uploaded.data) || [];
+        if (!Array.isArray(list) || !list[0] || !list[0].name) throw new Error('La photo n’a pas été enregistrée.');
+        payload.image = list[0].name;
+      } else if ($('#manage-remove-photo').checked) {
+        payload.image = '';
+      }
+      var result = await request('/items/' + encodeURIComponent($('#manage-id').value), {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      });
+      if (result.type === 'error' || result.success === false) throw new Error(messageOf(result, 'Modification impossible.'));
+      window.posnicEditingItem = null;
+      $('#manage-form').reset();
+      $('#manage-form').hidden = true;
+      await loadCatalogue(payload.name, $('#manage-results'), true);
+      toast('Article et photo synchronisés avec POSNIC');
+    } catch (error) {
+      $('#manage-error').textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   async function createItem(event) {
     event.preventDefault();
     var form = event.currentTarget;
@@ -494,11 +598,30 @@
   $('#clear-queue').addEventListener('click', function () { queue = []; renderQueue(); $('#receive-status').textContent = ''; });
   $('#apply-receive').addEventListener('click', applyReceive);
   $('#create-form').addEventListener('submit', createItem);
+  $('#manage-search-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+    loadCatalogue($('#manage-query').value.trim(), $('#manage-results'), true);
+  });
+  $('#manage-form').addEventListener('submit', saveItemEdits);
+  $('#manage-cancel').addEventListener('click', function () {
+    window.posnicEditingItem = null;
+    $('#manage-form').hidden = true;
+  });
+  window.addEventListener('online', function () {
+    if (token) restoreSession();
+  });
+  window.addEventListener('offline', function () { setConnected(false); });
   window.addEventListener('beforeunload', stopCamera);
 
   if ('serviceWorker' in navigator && window.isSecureContext) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('/mobile/sw.js').catch(function () {}); });
   }
+  try {
+    var savedQueue = JSON.parse(localStorage.getItem('posnic_companion_receive_queue') || '[]');
+    if (Array.isArray(savedQueue)) queue = savedQueue.filter(function (line) {
+      return line && typeof line.itemId === 'string' && Number.isSafeInteger(line.quantity) && line.quantity > 0;
+    });
+  } catch (_) { queue = []; }
   renderQueue();
   // The Web Companion QR opens this page with a short-lived pairing grant.
   // The browser lands here already holding the correct LAN/cloud API address.

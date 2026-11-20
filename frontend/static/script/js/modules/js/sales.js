@@ -15403,17 +15403,10 @@ $(document).ready(function () {
                 button.type = 'button';
                 button.className = 'posnic-basket-tab' + (session.id === self.activeId ? ' is-active' : '');
                 button.setAttribute('aria-pressed', session.id === self.activeId ? 'true' : 'false');
+                button.textContent = session.label;
                 if (session.id === self.activeId) {
-                    var customerLabel = document.createElement('span');
-                    customerLabel.className = 'posnic-basket-customer-name';
-                    customerLabel.textContent = session.label;
-                    var brandLabel = document.createElement('span');
-                    brandLabel.className = 'posnic-basket-brand';
-                    brandLabel.textContent = 'POSNIC';
-                    button.appendChild(customerLabel);
-                    button.appendChild(brandLabel);
-                } else {
-                    button.textContent = session.label;
+                    button.classList.add('posnic-basket-selected');
+                    button.setAttribute('aria-label', session.label + ' — panier sélectionné');
                 }
                 button.addEventListener('click', function () { self.switchTo(session.id); });
                 tab.appendChild(button);

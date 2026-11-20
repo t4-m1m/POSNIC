@@ -8168,8 +8168,16 @@ body:has(#sales_new:not([style*="display: none"])) #posnic-multi-baskets-header-
   color:#6e7781 !important;
   border-left-color:#d0d7de !important;
 }
-.posnic-basket-customer-name { color:#6b7280 !important; }
-.posnic-basket-brand { margin-left:6px; color:#2563eb !important; font-weight:800; letter-spacing:.25px; }
+/* Active basket keeps the regular label; POSNIC blue is only its accent. */
+.topbar #posnic-multi-baskets .posnic-basket-tab.posnic-basket-selected {
+  color:#6b7280 !important;
+  border-color:#2563eb !important;
+  box-shadow:inset 0 -2px 0 #2563eb !important;
+  background:#f1f3f5 !important;
+}
+.topbar #posnic-multi-baskets .posnic-basket-tab:not(.posnic-basket-selected) {
+  color:#57606a !important;
+}
 
 /* The basket rail takes all free topbar width; WhatsApp remains a fixed icon. */
 @media (min-width:768px) {
@@ -8182,3 +8190,5 @@ body:has(#sales_new:not([style*="display: none"])) #posnic-multi-baskets-header-
 }
 #posnic-whatsapp-connector.posnic-whatsapp-icon-btn { overflow:hidden !important; white-space:nowrap !important; }
 #posnic-whatsapp-connector.posnic-whatsapp-icon-btn[aria-busy="true"] { opacity:.72; cursor:wait; }
+
+/* Companion panel is branded without altering the established settings layout. */

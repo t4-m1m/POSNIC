@@ -45,6 +45,7 @@
     <button class="tab active" data-tab="scan">Catalogue</button>
     <button class="tab" data-tab="receive">Réception stock</button>
     <button class="tab" data-tab="create">Nouvel article</button>
+    <button class="tab" data-tab="manage">Gérer articles</button>
   </nav>
 
   <section class="panel active" id="tab-scan">
@@ -81,6 +82,28 @@
       <p class="muted-note">La création respecte les autorisations POSNIC de l'employé. Pour un stock initial, utilisez ensuite Réception stock afin de conserver un mouvement auditable.</p>
       <div id="create-error" class="error" role="alert"></div>
       <button class="primary full" type="submit">Enregistrer l'article</button>
+    </form>
+  </section>
+  <section class="panel" id="tab-manage">
+    <div class="section-heading"><div><h2>Articles & photos</h2><p>Recherchez un article existant pour modifier sa fiche ou sa photo.</p></div><span class="section-icon">✎</span></div>
+    <form id="manage-search-form" class="search-row">
+      <input id="manage-query" placeholder="Nom, SKU ou code-barres" autocomplete="off" required>
+      <button class="primary" type="submit">Rechercher</button>
+    </form>
+    <div id="manage-results" class="results empty-state">Recherchez un article pour commencer.</div>
+    <form id="manage-form" class="form-card edit-form" hidden>
+      <input type="hidden" id="manage-id">
+      <label>Nom de l'article *<input id="manage-name" required maxlength="200"></label>
+      <div class="two">
+        <label>Prix de vente (DA) *<input id="manage-price" required type="number" min="0" step="0.01" inputmode="decimal"></label>
+        <label>Code-barres<input id="manage-barcode" maxlength="100"></label>
+      </div>
+      <label>SKU / Référence<input id="manage-sku" maxlength="80"></label>
+      <label>Photo (caméra arrière ou galerie)<input id="manage-photo" type="file" accept="image/*" capture="environment"></label>
+      <label class="check-label"><input id="manage-remove-photo" type="checkbox"> Supprimer la photo actuelle</label>
+      <p id="manage-current-photo" class="muted-note">La photo actuelle est conservée si aucune nouvelle photo n'est choisie.</p>
+      <div id="manage-error" class="error" role="alert"></div>
+      <div class="action-row"><button class="secondary" id="manage-cancel" type="button">Annuler</button><button class="primary" type="submit">Enregistrer</button></div>
     </form>
   </section>
   <footer>POSNIC · Données synchronisées avec le serveur du magasin</footer>
