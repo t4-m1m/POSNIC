@@ -230,9 +230,9 @@ router.get('/items/:id', async (req, res) => {
     if (!id) return fail(res, 400, 'Référence article invalide.');
     const row = await req.db.collection('items').findOne({
       _id: id, ...branchFilter(req.companion.branchId), ...licenseFilter(req.companion.session.license)
-    }, { projection: { name: 1, barcode_id: 1, sku: 1, selling_price: 1, image: 1, quantity: 1, available_quantity: 1, track_inventory: 1 } });
+    }, { projection: { name: 1, barcode_id: 1, sku: 1, itemid: 1, selling_price: 1, image: 1, quantity: 1, available_quantity: 1, track_inventory: 1 } });
     if (!row) return fail(res, 404, 'Article introuvable.');
-    return res.json({ id: sid(row._id), name: row.name || '', barcode: row.barcode_id || '', sku: row.sku || '', selling_price: Number(row.selling_price || 0), image: row.image || '', quantity: Number(row.available_quantity ?? row.quantity ?? 0), track_inventory: row.track_inventory !== false });
+    return res.json({ id: sid(row._id), name: row.name || '', barcode: row.barcode_id || '', sku: row.sku || row.itemid || '', selling_price: Number(row.selling_price || 0), image: row.image || '', quantity: Number(row.available_quantity ?? row.quantity ?? 0), track_inventory: row.track_inventory !== false });
   } catch (error) { return fail(res, 500, 'Impossible de charger cet article.'); }
 });
 router.put('/items/:id', async (req, res) => {
@@ -249,7 +249,7 @@ router.put('/items/:id', async (req, res) => {
       name: Object.prototype.hasOwnProperty.call(req.body || {}, 'name') ? String(req.body.name || '').trim() : existing.name,
       selling_price: Object.prototype.hasOwnProperty.call(req.body || {}, 'selling_price') ? Number(req.body.selling_price) : existing.selling_price,
       barcode_id: Object.prototype.hasOwnProperty.call(req.body || {}, 'barcode_id') ? String(req.body.barcode_id || '').trim() : existing.barcode_id,
-      sku_id: existing.itemid || existing.sku_id || String(req.body?.sku || ''),
+      sku_id: Object.prototype.hasOwnProperty.call(req.body || {}, 'sku') ? String(req.body.sku || '').trim() : (existing.itemid || existing.sku_id || ''),
       cover_image: Object.prototype.hasOwnProperty.call(req.body || {}, 'image') ? String(req.body.image || '').trim() : (existing.image || ''),
       image: Object.prototype.hasOwnProperty.call(req.body || {}, 'image')
         ? (String(req.body.image || '').trim() ? [{ name: String(req.body.image).trim(), size: 0, cover: 'yes' }] : [])
