@@ -51,4 +51,5 @@ $('server').value=apiBase.replace(/\/api\/samarina\/v1$/,'');
 renderQueue();
 if(params.get('server')&&params.get('code')){ $('server').value=params.get('server').replace(/\/api\/samarina\/v1$/,'');$('code').value=params.get('code');pair(params.get('code'),params.get('server')).catch(error=>$('connect-error').textContent=error.message); }
 else restore();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/mobile/sw.js', { scope: '/mobile/' }).catch(function () {});
 })();
