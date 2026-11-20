@@ -403,7 +403,7 @@ router.post('/expenses/quick', async (req, res) => {
     const expenseId = oid(result.data);
     await req.db.collection('expenses').updateOne(
       { _id: expenseId, branch_id: oid(c.branchId) || c.branchId, license: oid(c.session.license) || c.session.license },
-      { $set: { payment_source: source, cash_drawer_impact: source !== 'personal', source_channel: 'samarina_companion' } }
+      { $set: { payment_source: source, cash_drawer_impact: source !== 'personal', receipt_photo: String(req.body?.receiptPhoto || '').slice(0, 500), source_channel: 'samarina_companion' } }
     );
     return res.status(201).json({ ok: true, id: sid(result.data), amount, category, paymentSource: source, date: now });
   } catch (error) {

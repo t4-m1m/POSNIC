@@ -86,7 +86,7 @@
 <label>Montant (DA) *<input id="expense-amount" type="number" min="0.01" step="0.01" inputmode="decimal" required placeholder="0"></label>
 <label>Catégorie *<select id="expense-category" required><option value="Emballage">Emballage</option><option value="Transport">Transport</option><option value="Fournitures">Fournitures</option></select></label>
 <label>Payé depuis<select id="expense-source"><option value="register">Caisse du magasin</option><option value="personal">Avance personnelle</option></select></label>
-<label>Note<input id="expense-description" maxlength="255" placeholder="Ex. sacs d’emballage"></label>
+<label>Note<input id="expense-description" maxlength="255" placeholder="Ex. sacs d’emballage"></label><label>Photo du reçu (facultatif)<input id="expense-receipt" type="file" accept="image/*" capture="environment"></label><p id="expense-photo-state" class="muted"></p>
 <button class="primary full" type="submit">Enregistrer la dépense</button><p id="expense-status" class="status" role="status"></p>
 </form></section>
 <section id="page-dashboard" class="page owner-only" hidden>
