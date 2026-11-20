@@ -102,10 +102,14 @@ PosnicPro.receivings = {
                     // Start a clean Achats purchase invoice without disturbing
                     // a form that is already open; the next poll imports rows.
                     po.showAdd();
+                    setTimeout(function () { self.pollSamarinaReceivingQueue(); }, 900);
                     return;
                 }
                 var imported = 0;
+                po._samarinaImportedQueueIds = po._samarinaImportedQueueIds || {};
                 rows.forEach(function (row) {
+                    var queueId = String(row.id || '');
+                    if (queueId && po._samarinaImportedQueueIds[queueId]) return;
                     var itemId = String(row.itemId || '');
                     var quantity = Number(row.quantity) || 0;
                     if (!itemId || quantity <= 0) return;
@@ -124,10 +128,11 @@ PosnicPro.receivings = {
                         po._lines[key].qty = (Number(po._lines[key].qty) || 0) + quantity;
                     }
                     imported++;
+                    if (queueId) po._samarinaImportedQueueIds[queueId] = true;
                     PosnicPro.post({
-                        url: 'samarina/v1/desktop/receiving-queue/' + encodeURIComponent(row.id) + '/ack',
+                        url: 'samarina/v1/desktop/receiving-queue/' + encodeURIComponent(queueId) + '/ack',
                         data: JSON.stringify({})
-                    }, function () {});
+                    }, function () {}, function () { if (queueId) delete po._samarinaImportedQueueIds[queueId]; });
                 });
                 if (imported) {
                     po.renderLines();
