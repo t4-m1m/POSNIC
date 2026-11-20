@@ -8005,7 +8005,7 @@ tr.s-doc-purchase-row:hover td { background: rgba(9, 105, 218, 0.05); }
     width:0 !important; min-width:80px !important; max-width:none !important;
     margin:0 8px 0 12px !important; padding:0 !important; overflow:hidden !important;
   }
-  body:has(#sales_new:not([style*="display: none"])) .topbar .togglebar > ul.list-inline > li#posnic-multi-baskets-header-wrap { display:flex !important; }
+  .topbar .togglebar > ul.list-inline > li#posnic-multi-baskets-header-wrap.posnic-basket-header-visible { display:flex !important; }
   #posnic-multi-baskets-header-host {
     display:flex !important; align-items:center !important; flex:1 1 auto !important;
     width:100% !important; min-width:0 !important; overflow:hidden !important;
