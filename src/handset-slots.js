@@ -119,6 +119,17 @@ function admit({
    */
   if (health) return { allow: true, register: false, code: '', message: '' };
 
+  /*
+   * Pairing is the operation that admits a new phone. Refusing its first
+   * request because the legacy IP-slot list is full makes the newer,
+   * explicitly authorized handset flow impossible to start. Keep explicit
+   * administrator IP blocks above, but let the one-time pairing endpoint pass
+   * and register its IP so the following authenticated bootstrap is served.
+   * The mobile-pos handset registry remains the authority for device access.
+   */
+  if (/^\/(?:api\/)?mobile\/v1\/pair(?:\?|$)/.test(String(url || '')))
+    return { allow: true, register: true, code: '', message: '' };
+
   // Business uses its own scoped, revocable sessions, not selling-handset slots.
   // Explicit IP blocks above still apply; the API still authenticates each call.
   if (/^\/(?:api\/)?business\/v1(?:\/|\?|$)/.test(String(url)))
