@@ -283,6 +283,12 @@ router.get('/dashboard', async (req, res) => {
         else if (['card','tpe','bank_transfer','baridimob','baridi mob','baridi_mob'].includes(method)) totals.electronic += amount;
         return sum + (method === 'credit' ? 0 : amount);
       }, payments.length ? 0 : (Number(sale.paid_amount ?? sale.amount_paid ?? sale.total_paid ?? 0) || 0));
+      if (!payments.length) {
+        const method = String(sale.payment_method || sale.payment_mode || '').toLowerCase();
+        const paidAmount = Number(sale.paid_amount ?? sale.amount_paid ?? sale.total_paid ?? 0) || 0;
+        if (method === 'cash') totals.cash += paidAmount;
+        else if (['card','tpe','bank_transfer','baridimob','baridi mob','baridi_mob'].includes(method)) totals.electronic += paidAmount;
+      }
       totals.debt += Math.max(0, Number(sale.payment_pending ?? sale.pending ?? (saleTotal - paid)) || 0);
       totals.discounts += Number(sale.discount_amount ?? sale.discount ?? sale.discount_total ?? 0) || 0;
     }
