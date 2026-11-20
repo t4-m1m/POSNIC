@@ -10,6 +10,39 @@ const sessionFilterUtil = require('../utils/session-filter.util');
 const { getRequestDeviceId } = require('../utils/device-id.util');
 const { AuditService, AUDIT_EVENTS } = require('../services/audit.service');
 
+async function sendSamarinaZReportAfterClose(req, closeData) {
+  try {
+    if (!req.db) return;
+    const rawBranchId = req.tenantContext?.branchId || req.session?.selectedBranchId ||
+      req.session?.branch_id || req.user?.branch_id || req.user?.branch?._id ||
+      req.user?.default_branch_id || req.user?.branch_access?.[0]?.branch_id;
+    if (!rawBranchId) return;
+    const { ObjectId } = require('mongodb');
+    const branchId = ObjectId.isValid(String(rawBranchId)) ? new ObjectId(String(rawBranchId)) : rawBranchId;
+    const config = await req.db.collection('samarina_companion_settings').findOne({
+      branchId, autoZReport: true, ownerPhone: { $type: 'string', $ne: '' }
+    });
+    if (!config) return;
+    const branchQuery = { _id: branchId };
+    if (req.tenantContext?.licenseId) branchQuery.license = req.tenantContext.licenseId;
+    const branch = await req.db.collection('branches').findOne(branchQuery, { projection: { branch_name: 1, name: 1, whatsapp_device_id: 1 } });
+    const deviceId = String(branch?.whatsapp_device_id || '').trim();
+    if (!deviceId) return;
+    const message = [
+      'Z-REPORT · ' + (branch.branch_name || branch.name || 'Magasin'),
+      'Caisse : ' + (closeData?.register_name || closeData?.cash_register_name || req.body?.cash_register_id || '—'),
+      'Attendu : ' + (Number(closeData?.closing_expected) || 0).toLocaleString('fr-DZ') + ' DA',
+      'Compté : ' + (Number(closeData?.closing_counted) || 0).toLocaleString('fr-DZ') + ' DA',
+      'Écart : ' + (Number(closeData?.over_short) || 0).toLocaleString('fr-DZ') + ' DA',
+      'Fermeture : ' + new Date().toLocaleString('fr-DZ')
+    ].join('\\n');
+    const sent = await require('../services/whatsapp.service').sendMessage(deviceId, rawBranchId, config.ownerPhone, message);
+    if (!sent.status) console.warn('[Samarina Companion] Automatic Z report was not sent:', sent.message);
+  } catch (error) {
+    console.warn('[Samarina Companion] Automatic Z report failed without blocking cash close:', error.message);
+  }
+}
+
 class RegistersController extends BaseController {
   constructor() {
     super();
@@ -387,6 +420,9 @@ class RegistersController extends BaseController {
             over_short: result.data?.over_short,
           },
         });
+        // The WhatsApp Z-report is best-effort and never delays or reverses a
+        // successful register close. It uses the branch's already-linked device.
+        sendSamarinaZReportAfterClose(req, result.data);
         return this.success(res, result.data, result.message);
       } else {
         return this.error(res, result.message, result.statusCode || 404, result.data);
