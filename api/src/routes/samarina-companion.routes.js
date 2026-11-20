@@ -10,7 +10,7 @@ const router = express.Router();
 const hash = value => crypto.createHash('sha256').update(String(value)).digest('hex');
 const oid = value => ObjectId.isValid(String(value || '')) ? new ObjectId(String(value)) : null;
 const sid = value => value == null ? '' : String(value);
-const activeBranchId = req => req.tenantContext?.branchId || req.session?.selectedBranchId || req.session?.branch_id || req.user?.branch_id || req.user?.branch?._id || req.user?.default_branch_id || req.user?.branch_access?.[0]?.branch_id;
+const activeBranchId = req => req.body?.branch_id || req.query?.branch_id || req.tenantContext?.branchId || req.session?.selectedBranchId || req.session?.branch_id || req.user?.branch_id || req.user?.branch?._id || req.user?.default_branch_id || req.user?.branch_access?.[0]?.branch_id;
 const fail = (res, status, message) => res.status(status).json({ error: { message } });
 function userCanAccessBranch(user, branchId) {
   const target = sid(branchId);
@@ -82,6 +82,7 @@ router.post('/setup/pairing-code', protect, async (req, res) => {
     if (!ownerAllowed(req.user)) return fail(res, 403, 'Accès administrateur requis pour jumeler un téléphone.');
     const branchId = activeBranchId(req);
     if (!branchId) return fail(res, 400, 'Sélectionnez d’abord un magasin dans POSNIC.');
+    if (!userCanAccessBranch(req.user, branchId)) return fail(res, 403, 'Accès à ce magasin refusé.');
     const branch = await findBranch(req, branchId);
     if (!branch) return fail(res, 404, 'Magasin introuvable.');
     const userId = oid(req.user._id || req.user.id);
@@ -113,6 +114,7 @@ router.get('/desktop/receiving-queue', protect, async (req, res) => {
   try {
     const branchId = activeBranchId(req);
     if (!branchId) return fail(res, 400, 'Aucun magasin sélectionné.');
+    if (!userCanAccessBranch(req.user, branchId)) return fail(res, 403, 'Accès à ce magasin refusé.');
     const rows = await req.db.collection('samarina_receiving_queue').find({ branchId: oid(branchId) || branchId, state: 'pending' }).sort({ createdAt: 1 }).limit(250).toArray();
     return res.json({ rows: rows.map(row => ({
       id: sid(row._id), itemId: sid(row.itemId), name: row.name, barcode: row.barcode || '',
@@ -132,6 +134,7 @@ router.post('/desktop/receiving-queue/:id/ack', protect, async (req, res) => {
   try {
     const branchId = activeBranchId(req), id = oid(req.params.id);
     if (!branchId || !id) return fail(res, 400, 'Référence de réception invalide.');
+    if (!userCanAccessBranch(req.user, branchId)) return fail(res, 403, 'Accès à ce magasin refusé.');
     await req.db.collection('samarina_receiving_queue').updateOne({ _id: id, branchId: oid(branchId) || branchId, state: 'pending' }, { $set: { state: 'imported', importedAt: new Date() } });
     return res.json({ ok: true });
   } catch (_) { return fail(res, 500, 'Impossible de confirmer la réception.'); }
