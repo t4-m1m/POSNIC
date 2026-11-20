@@ -186,13 +186,16 @@ async function companionAuth(req, res, next) {
     const sessions = req.db.collection('samarina_companion_sessions');
     const session = await sessions.findOne({ tokenHash: hash(token), expiresAt: { $gt: new Date() }, revokedAt: null });
     if (!session) return fail(res, 401, 'Session expirée. Reconnectez le téléphone depuis Paramètres.');
-    const user = await req.db.collection('users').findOne({ _id: session.userId, activate: true });
-    const branch = await req.db.collection('branches').findOne({ _id: session.branchId });
+    const [user, branch] = await Promise.all([
+      req.db.collection('users').findOne({ _id: session.userId, activate: true }),
+      req.db.collection('branches').findOne({ _id: session.branchId })
+    ]);
     if (!user || !branch || !userCanAccessBranch(user, session.branchId)) return fail(res, 403, 'Accès au magasin retiré.');
     req.companion = { session, user, branch, branchId: session.branchId };
     req.user = user;
     const activityAt = new Date();
-    await sessions.updateOne({ _id: session._id }, { $set: { lastSeenAt: activityAt, expiresAt: new Date(activityAt.getTime() + 30 * 86400000) } });
+    sessions.updateOne({ _id: session._id }, { $set: { lastSeenAt: activityAt, expiresAt: new Date(activityAt.getTime() + 30 * 86400000) } })
+      .catch(error => console.error('[Samarina Companion] session activity renewal failed:', error));
     if (bearer(req)) setCompanionCookie(res, req, bearer(req), 30 * 86400);
     return runWithRequestContext({
       currentBranch: session.branchId,
