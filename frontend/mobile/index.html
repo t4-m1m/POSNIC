@@ -48,8 +48,13 @@
 <button class="primary full" type="submit">Enregistrer la dépense</button><p id="expense-status" class="status" role="status"></p>
 </form></section>
 <section id="page-dashboard" class="page owner-only" hidden>
-<div class="heading"><div><h2>Vue propriétaire</h2><p>Indicateurs du jour, synchronisés avec le serveur du magasin.</p></div><button id="reload-dashboard" class="secondary">Actualiser</button></div>
-<div id="dashboard-cards" class="metrics"><div class="metric"><small>Chiffre d’affaires</small><b>—</b></div></div><div class="daily-report"><div class="daily-head"><div><h3>Rapport détaillé par jour</h3><p>Ventes, encaissements et dettes par date.</p></div><select id="daily-days"><option value="7">7 jours</option><option value="30" selected>30 jours</option><option value="90">90 jours</option></select></div><div id="daily-report" class="daily-list">Chargement…</div></div><p id="dashboard-error" class="error"></p>
+<div class="heading"><div><h2>Rapports POSNIC</h2><p>Calculs repris du rapport journalier du logiciel de caisse.</p></div></div>
+<div class="report-filters"><select id="report-period"><option value="today">Aujourd’hui</option><option value="yesterday">Hier</option><option value="7">7 jours</option><option value="30">30 jours</option><option value="month">Ce mois</option><option value="custom">Dates personnalisées</option></select><input id="report-start" type="date" hidden><input id="report-end" type="date" hidden><button id="reload-dashboard" class="secondary" type="button">Actualiser</button></div>
+<div id="dashboard-cards" class="metrics"><div class="metric"><small>Chiffre d’affaires</small><b>—</b></div></div>
+<div class="daily-report"><h3>Encaissements et mouvements</h3><div id="report-payment-breakdown" class="daily-list">Chargement…</div></div>
+<div class="daily-report"><h3>Articles les plus vendus</h3><div id="report-top-items" class="daily-list">Chargement…</div></div>
+<div class="daily-report"><h3>Tickets de vente</h3><div id="report-tickets" class="daily-list">Chargement…</div><div id="ticket-details" class="ticket-details" hidden></div></div>
+<p id="dashboard-error" class="error"></p>
 </section>
 <section id="page-owner" class="page owner-only" hidden>
 <div class="heading"><div><h2>Rapport Z WhatsApp</h2><p>Envoyez le récapitulatif de fermeture au propriétaire.</p></div></div>
