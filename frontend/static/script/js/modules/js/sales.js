@@ -15631,7 +15631,7 @@ $(document).ready(function () {
     PosnicPro.sales._samarinaBasketSeen = PosnicPro.sales._samarinaBasketSeen || Object.create(null);
     PosnicPro.sales.pollSamarinaBasketJobs = function () {
         var page = document.getElementById('sales_new');
-        if (PosnicPro.sales._samarinaBasketPollBusy || document.hidden || !page || !page.getClientRects().length ||
+        if (PosnicPro.sales._samarinaBasketPollBusy || document.hidden || !page ||
             PosnicPro.sales.submissionInProgress || !PosnicPro.sales.itemsMenu ||
             typeof PosnicPro.sales.itemsMenu.addToLineItemsList !== 'function') return;
         PosnicPro.sales._samarinaBasketPollBusy = true;
