@@ -7306,3 +7306,32 @@ PosnicPro.itemStockPreference = {
         reflowLayers();
     });
 })(window.jQuery);
+
+
+/* Companion Connector navigation is administrator-only, including lazy panes. */
+(function enforceCompanionAdminVisibility() {
+    function isAdmin() {
+        var values = ['usertype', 'role', 'role_name', 'user_type'].map(function (key) {
+            return String(PosnicPro.local.get(key) || '').trim().toLowerCase();
+        });
+        return values.some(function (value) {
+            return ['admin', 'super_admin', 'administrator', 'owner'].indexOf(value) !== -1;
+        }) || PosnicPro.local.get('is_admin') === true || PosnicPro.local.get('is_admin') === 'true';
+    }
+    function apply() {
+        if (isAdmin()) return;
+        ['#companionModule', '#manage_sec_companion', '#v-pills-companion-tab'].forEach(function (selector) {
+            document.querySelectorAll(selector).forEach(function (node) {
+                if (!node.hidden || node.style.display !== 'none') {
+                    node.hidden = true;
+                    node.style.display = 'none';
+                }
+            });
+        });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
+    else apply();
+    if (window.MutationObserver && document.documentElement) {
+        new MutationObserver(apply).observe(document.documentElement, { childList: true, subtree: true });
+    }
+})();
