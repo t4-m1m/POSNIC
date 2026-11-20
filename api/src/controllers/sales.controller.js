@@ -2043,6 +2043,7 @@ class SalesController extends BaseController {
                 { $gte: ['$reportExpenseDate', reportStart] },
                 { $lt: ['$reportExpenseDate', reportEnd] },
                 { $not: [{ $in: ['$reportExpenseType', ['credit', 'income', 'money in']] }] },
+                { $ne: [{ $ifNull: ['$payment_source', 'register'] }, 'personal'] },
               ],
             },
           },

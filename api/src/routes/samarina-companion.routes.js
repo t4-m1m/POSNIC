@@ -233,7 +233,7 @@ router.post('/expenses/quick', async (req, res) => {
       created_by: c.user.username || c.user.name || c.user.email || 'Samarina Companion',
       created_by_id: c.user._id || null, updated_by: c.user.username || c.user.name || c.user.email || '',
       updated_by_id: c.user._id || null, is_deleted: false,
-      payment_source: source, source_channel: 'samarina_companion'
+      payment_source: source, cash_drawer_impact: source !== 'personal', source_channel: 'samarina_companion'
     };
     const result = await req.db.collection('expenses').insertOne(document);
     return res.status(201).json({ ok: true, id: sid(result.insertedId), amount, category, paymentSource: source, date: now });
