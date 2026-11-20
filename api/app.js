@@ -800,21 +800,20 @@ const UPDATED_ASSETS = process.env.POSNIC_ASSET_DIR;
 
 // The Web Companion is a separate static app, not part of frontend/public.
 // Keep it beside the packaged frontend so /mobile/ works in dev and installed builds.
-const MOBILE_COMPANION_DIR = path.join(__dirname, '..', 'frontend', 'mobile');
+const SAMARINA_COMPANION_DIR = path.join(__dirname, '..', 'frontend', 'mobile');
 app.get('/', (req, res, next) => {
   const remoteAddress = String(req.socket.remoteAddress || '');
   const isLoopback = remoteAddress === '127.0.0.1' || remoteAddress === '::1' ||
     remoteAddress === '::ffff:127.0.0.1';
-  // Only the LAN root opens the companion. Redirecting every remote request
-  // also redirected /mobile/ and /api/* back to /mobile/, creating a loop and
-  // making both the app shell and its pairing API unreachable.
+  // Only the LAN root opens the companion; the /mobile page and API routes
+  // must be allowed to serve normally to remote shop devices.
   if (process.env.POSNIC_DESKTOP === '1' && !isLoopback && req.path === '/') return res.redirect(302, '/mobile/');
   return next();
 });
 // Express's default non-strict routing makes '/mobile' also match '/mobile/'.
 // Match only the slashless URL, otherwise the canonical redirect loops forever.
 app.get(/^\/mobile$/, (_req, res) => res.redirect(308, '/mobile/'));
-app.use('/mobile', express.static(MOBILE_COMPANION_DIR, {
+app.use('/mobile', express.static(SAMARINA_COMPANION_DIR, {
   index: 'index.html',
   fallthrough: true,
   setHeaders: assetCacheHeaders,
