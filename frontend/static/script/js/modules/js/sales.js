@@ -84,7 +84,12 @@ PosnicPro.sales = {
         var salesPage = document.getElementById('sales_new');
         var basketBar = document.getElementById('posnic-multi-baskets');
         var basketHost = document.getElementById('posnic-multi-baskets-header-host');
-        if (basketBar && basketHost && basketBar.parentNode !== basketHost) basketHost.appendChild(basketBar);
+
+        // Basket tabs belong in the application header, beside Ajouter. They
+        // must never be included in the F-key toolbar's fixed-position maths.
+        if (basketBar && basketHost && basketBar.parentNode !== basketHost) {
+            basketHost.appendChild(basketBar);
+        }
         if (!toolbar || !salesPage) return;
 
         var state = PosnicPro.sales._functionToolbarPinState;
@@ -92,17 +97,21 @@ PosnicPro.sales = {
             placeholder: null, anchor: null, installed: false, frame: false
         };
 
-        function currentBasketBar() {
-            return document.getElementById('posnic-multi-baskets');
+        function appHeaderBottom() {
+            // Measure the rendered header (including the basket host), rather
+            // than assuming zero. The native Windows title bar is outside the
+            // document; .topbar is the complete in-page application header.
+            var header = document.querySelector('.topbar');
+            if (!header) header = document.getElementById('posnic-multi-baskets-header-wrap');
+            if (!header) return 0;
+            var rect = header.getBoundingClientRect();
+            return Math.max(0, Math.min(window.innerHeight, rect.bottom));
         }
+
         function clearPin() {
-            var basketBar = currentBasketBar();
-            [basketBar, toolbar].forEach(function (element) {
-                if (!element) return;
-                element.classList.remove('sales-function-toolbar-pinned', 'sales-multi-baskets-toolbar-pinned');
-                ['position', 'top', 'left', 'right', 'width', 'zIndex', 'boxSizing'].forEach(function (name) {
-                    element.style[name] = '';
-                });
+            toolbar.classList.remove('sales-function-toolbar-pinned');
+            ['position', 'top', 'left', 'right', 'width', 'zIndex', 'boxSizing'].forEach(function (name) {
+                toolbar.style[name] = '';
             });
             if (state.placeholder && state.placeholder.parentNode) {
                 state.placeholder.parentNode.removeChild(state.placeholder);
@@ -110,26 +119,22 @@ PosnicPro.sales = {
             state.placeholder = null;
             state.anchor = null;
         }
+
         function updatePin() {
             state.frame = false;
-            var basketBar = currentBasketBar();
             if (!document.documentElement.contains(toolbar) ||
                 window.getComputedStyle(salesPage).display === 'none') {
                 clearPin();
                 return;
             }
 
-            // Pin the basket strip and F-key toolbar as one visual unit.
-            // Pinning only the toolbar let the tabs scroll away while the
-            // toolbar stayed fixed at the top of the cashier workspace.
-            var anchor = basketBar && basketBar.parentNode === toolbar.parentNode
-                ? basketBar : toolbar;
-            if (!state.placeholder || state.anchor !== anchor) {
+            var headerBottom = appHeaderBottom();
+            if (!state.placeholder || state.anchor !== toolbar) {
                 if (state.placeholder && state.placeholder.parentNode) {
                     state.placeholder.parentNode.removeChild(state.placeholder);
                 }
-                var flowRect = anchor.getBoundingClientRect();
-                if (flowRect.top > 0) {
+                var flowRect = toolbar.getBoundingClientRect();
+                if (flowRect.top > headerBottom + 1) {
                     state.placeholder = null;
                     state.anchor = null;
                     return;
@@ -139,37 +144,25 @@ PosnicPro.sales = {
                 state.placeholder.setAttribute('aria-hidden', 'true');
                 state.placeholder.style.width = '100%';
                 state.placeholder.style.height = '1px';
-                anchor.parentNode.insertBefore(state.placeholder, anchor);
-                state.anchor = anchor;
+                toolbar.parentNode.insertBefore(state.placeholder, toolbar);
+                state.anchor = toolbar;
             }
 
             var rect = state.placeholder.getBoundingClientRect();
-            if (rect.top > 1) {
+            headerBottom = appHeaderBottom();
+            if (rect.top > headerBottom + 1) {
                 clearPin();
                 return;
             }
 
+            // The top edge of the F-key/customer/total strip always starts at
+            // the actual bottom edge of the app header. This prevents F1-F8
+            // and the live total from being painted underneath the header.
             var left = Math.max(0, rect.left);
             var width = Math.max(0, rect.width);
-            var hasBasket = !!(basketBar && basketBar.parentNode === toolbar.parentNode);
-            var basketHeight = hasBasket ? basketBar.offsetHeight : 0;
-            var basketGap = hasBasket
-                ? (parseFloat(window.getComputedStyle(basketBar).marginBottom) || 0) : 0;
-
-            if (hasBasket) {
-                basketBar.classList.add('sales-multi-baskets-toolbar-pinned');
-                basketBar.style.position = 'fixed';
-                basketBar.style.top = '0px';
-                basketBar.style.left = left + 'px';
-                basketBar.style.right = 'auto';
-                basketBar.style.width = width + 'px';
-                basketBar.style.zIndex = '1051';
-                basketBar.style.boxSizing = 'border-box';
-            }
-
             toolbar.classList.add('sales-function-toolbar-pinned');
             toolbar.style.position = 'fixed';
-            toolbar.style.top = (basketHeight + basketGap) + 'px';
+            toolbar.style.top = headerBottom + 'px';
             toolbar.style.left = left + 'px';
             toolbar.style.right = 'auto';
             toolbar.style.width = width + 'px';
@@ -177,18 +170,16 @@ PosnicPro.sales = {
             toolbar.style.boxSizing = 'border-box';
 
             var toolbarMargin = parseFloat(window.getComputedStyle(toolbar).marginBottom) || 0;
-            state.placeholder.style.height = Math.max(
-                (hasBasket ? basketHeight + basketGap : 0) + toolbar.offsetHeight + toolbarMargin,
-                1
-            ) + 'px';
+            state.placeholder.style.height = Math.max(toolbar.offsetHeight + toolbarMargin, 1) + 'px';
         }
+
         function schedulePin() {
-            // Coalesce nested/window scroll events into one geometry read per frame.
             if (state.frame) return;
             state.frame = true;
             if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(updatePin);
             else updatePin();
         }
+
         if (!state.installed) {
             document.addEventListener('scroll', schedulePin, true);
             window.addEventListener('scroll', schedulePin, true);
