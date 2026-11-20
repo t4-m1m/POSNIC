@@ -1,13 +1,27 @@
 'use strict';
 const $ = (id) => document.getElementById(id);
 let csrf = '';
-async function request(url, options) {
-  const response = await fetch(url, Object.assign({ credentials: 'same-origin', cache: 'no-store' }, options || {}, {
-    headers: Object.assign({ 'Content-Type': 'application/json', 'X-XSRF-TOKEN': csrf }, options?.headers || {})
-  }));
+const branchId = new URLSearchParams(location.search).get('branch_id') || '';
+const statusUrl = '/api/samarina/v1/setup/status?branch_id=' + encodeURIComponent(branchId);
+async function request(url, options, retryCsrf) {
+  const opts = options || {};
+  const method = String(opts.method || 'GET').toUpperCase();
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && !csrf && retryCsrf !== false) {
+    await request(statusUrl, null, false);
+  }
+  const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+  if (csrf && !['GET', 'HEAD', 'OPTIONS'].includes(method)) headers['X-XSRF-TOKEN'] = csrf;
+  const response = await fetch(url, Object.assign({ credentials: 'same-origin', cache: 'no-store' }, opts, { headers }));
   csrf = response.headers.get('X-CSRF-TOKEN') || csrf;
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error?.message || data.message || 'Erreur de connexion.');
+  const message = data.error?.message || data.message || '';
+  if (!response.ok) {
+    if (response.status === 403 && retryCsrf !== false && /security token is missing or expired/i.test(message)) {
+      await request(statusUrl, null, false);
+      return request(url, opts, false);
+    }
+    throw new Error(message || 'Erreur de connexion.');
+  }
   return data;
 }
 function renderQr(rows) {
@@ -27,9 +41,11 @@ function renderQr(rows) {
   });
 }
 async function init() {
-  const data = await request('/api/samarina/v1/setup/status?branch_id='+encodeURIComponent(new URLSearchParams(location.search).get('branch_id')||''));
+  $('generate').disabled = true;
+  const data = await request(statusUrl);
   $('branch').textContent = data.branch;
   if (!data.canPair) { $('generate').disabled = true; $('status').textContent = 'Seul un propriétaire ou administrateur peut jumeler un téléphone.'; }
+  else $('generate').disabled = false;
 }
 $('generate').addEventListener('click', async () => {
   const button = $('generate'); button.disabled = true; $('status').textContent = 'Création du QR code…';
