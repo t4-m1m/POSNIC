@@ -214,8 +214,8 @@ const helmetCompanionHttp = helmet(helmetOptions(companionHttpCspDirectives));
 const helmetCompanionHttpGa = helmet(helmetOptions(companionHttpGaCspDirectives));
 app.use((req, res, next) => {
   const isCompanionRequest =
-    /^\\/mobile(?:\\/|$)/.test(req.path) ||
-    /^\\/(?:api\\/)?samarina\\/v1(?:\\/|$)/.test(req.path);
+    /^\/mobile(?:\/|$)/.test(req.path) ||
+    /^\/(?:api\/)?samarina\/v1(?:\/|$)/.test(req.path);
   const policyForRequest = (analyticsEnabled) => {
     if (isCompanionRequest && !req.secure) {
       return analyticsEnabled ? helmetCompanionHttpGa : helmetCompanionHttp;
