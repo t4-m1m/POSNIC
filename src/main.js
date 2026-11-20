@@ -1897,7 +1897,7 @@ ipcMain.handle('desktop:open', (_event, target) => {
     /* The renderer names an intent and this decides the address. Letting a page
        pass its own URL here would turn an allowlist into an open redirect for
        anything that can reach this channel. */
-    case 'releases': shell.openExternal('https://github.com/SamarinaPOS/POS/releases'); break;
+    case 'releases': shell.openExternal('https://github.com/t4-m1m/POSNIC/releases'); break;
     /*
      * WHERE MORE VOICES COME FROM.
      *
@@ -3081,7 +3081,7 @@ ipcMain.handle('support:open-issue', (_event, details) => {
       '_Paste the log here — the Contact Support window has a button that copies it._',
     ].join('\n');
 
-    const url = 'https://github.com/SamarinaPOS/POS/issues/new'
+    const url = 'https://github.com/t4-m1m/POSNIC/issues/new'
       + '?title=' + encodeURIComponent(String(d.subject || '').slice(0, 120))
       + '&body=' + encodeURIComponent(body);
 
@@ -3325,7 +3325,7 @@ function openAboutWindow() {
     })
     .join('');
 
-  const REPO = 'https://github.com/SamarinaPOS/POS';
+  const REPO = 'https://github.com/t4-m1m/POSNIC';
 
   // About has no privileged preload. Inline only bundled styles and validated
   // colour tokens so it still follows the shop without granting it IPC access.
@@ -3392,7 +3392,7 @@ function openAboutWindow() {
       <h1>${esc(d.app.name)}</h1>
       <div class="ver">Version ${esc(d.app.version)}</div>
       ${d.app.name === 'SamarinaPOS'
-        ? '<p class="by">by SamarinaPOS Innovations Private Limited &middot; Tamil Nadu, India</p>'
+        ? '<p class="by">by SamarinaPOS</p>'
         : `<p class="by">powered by SamarinaPOS &middot; ${esc(new URL(provider).hostname)}</p>`}
     </div>
 
