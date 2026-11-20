@@ -318,7 +318,7 @@ router.post('/receiving/queue', async (req, res) => {
     const entryId = String(req.body?.entryId || '').trim();
     if (!/^[A-Za-z0-9_-]{12,100}$/.test(entryId)) return fail(res, 400, 'Identifiant de scan invalide.');
     const queueCollection = req.db.collection('samarina_receiving_queue');
-    await queueCollection.createIndex({ deviceId: 1, entryId: 1 }, { unique: true });
+    await queueCollection.createIndex({ deviceId: 1, entryId: 1 }, { unique: true, partialFilterExpression: { entryId: { $type: 'string' } } });
     const now = new Date();
     const result = await queueCollection.updateOne(
       { deviceId: c.session.deviceId, entryId, branchId: oid(c.branchId) || c.branchId },
