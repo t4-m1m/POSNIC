@@ -10,8 +10,8 @@ const sid = value => value == null ? '' : String(value);
 const activeBranchId = req => req.tenantContext?.branchId || req.session?.selectedBranchId || req.session?.branch_id || req.user?.branch_id || req.user?.branch?._id || req.user?.default_branch_id || req.user?.branch_access?.[0]?.branch_id;
 const fail = (res, status, message) => res.status(status).json({ error: { message } });
 const ownerAllowed = user => {
-  const role = String(user?.role || user?.usertype || user?.user_type || '').toLowerCase();
-  return ['owner','admin','administrator','superadmin','super admin'].includes(role) || user?.access?.settings?.write === true || user?.access?.branch?.write === true;
+  const role = String(user?.usertype || user?.user_type || user?.role || '').toLowerCase();
+  return ['owner','admin','administrator','manager','superadmin','super_admin','super admin'].includes(role) || user?.access?.settings?.write === true || user?.access?.branch?.write === true;
 };
 const branchFilter = branchId => ({ branch_id: oid(branchId) || branchId });
 const licenseFilter = license => license ? { license: oid(license) || license } : {};
