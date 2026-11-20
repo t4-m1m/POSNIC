@@ -121,3 +121,5 @@ jobs:
           make_latest: true
 
 # Rebuild current cashier workflow snapshot (installer only, no tests).
+
+# Rebuild Windows installer for cashier action, return-cancel and fixed F-key toolbar updates.
