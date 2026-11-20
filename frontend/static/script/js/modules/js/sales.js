@@ -8156,11 +8156,13 @@ PosnicPro.sales.itemCache = {
             if (!response || response.type !== 'success') {
                 PosnicPro.alert(response && response.type || 'error',
                     response && response.message || 'Could not load this product. Please refresh the catalogue and try again.');
+                onData(null);
                 return;
             }
             var item = normalize(response.data);
             if (!item) {
                 PosnicPro.alert('error', 'The product details were incomplete. Refresh the catalogue and try again.');
+                onData(null);
                 return;
             }
             PosnicPro.sales.itemCache._map[id] = { at: Date.now(), json: JSON.stringify(item) };
@@ -8169,6 +8171,7 @@ PosnicPro.sales.itemCache = {
             var response = {};
             try { response = JSON.parse(xhr && xhr.responseText || '{}'); } catch (e) { /* keep fallback */ }
             PosnicPro.alert('error', response.message || 'Could not load this product. Check the connection and try again.');
+            onData(null);
         });
     },
     clear: function () {
