@@ -35,9 +35,9 @@ const licenseFilter = license => license ? { license: oid(license) || license } 
 const bearer = req => {
   const value = String(req.headers.authorization || '');
   if (/^Bearer\s+/i.test(value)) return value.replace(/^Bearer\s+/i, '').trim();
-  const cookies = String(req.headers.cookie || '');
-  const match = cookies.match(/(?:^|;\\s*)samarina_companion=([^;]+)/);
-  try { return match ? decodeURIComponent(match[1]) : ''; } catch (_) { return ''; }
+  const cookies = String(req.headers.cookie || '').split(';');
+  const pair = cookies.map(value => value.trim()).find(value => value.startsWith('samarina_companion='));
+  try { return pair ? decodeURIComponent(pair.slice('samarina_companion='.length)) : ''; } catch (_) { return ''; }
 };
 function setCompanionCookie(res, req, token, maxAgeSeconds) {
   const secure = req.secure || String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';

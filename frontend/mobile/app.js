@@ -9,7 +9,7 @@ function cleanBase(value){let v=String(value||'').trim().replace(/\/+$/,'');if(!
 function showToast(message){$('toast').textContent=message;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2400);}
 async function request(path,options){const opts=options||{},headers=Object.assign({},opts.headers||{});if(token)headers.Authorization='Bearer '+token;if(opts.body&&!(opts.body instanceof FormData))headers['Content-Type']='application/json';let response;try{response=await fetch(apiBase+path,Object.assign({credentials:'include',cache:'no-store'},opts,{headers}));}catch(_){throw new Error('Serveur inaccessible. Vérifiez le Wi-Fi du téléphone et l’accès réseau de POSNIC sur Windows.');}const data=await response.json().catch(()=>({}));if(!response.ok){if(response.status===401){token='';localStorage.removeItem('samarina_token');}throw new Error(data.error?.message||data.message||'Erreur serveur '+response.status);}return data;}
 function setOnline(value){$('network').textContent=value?'En ligne':'Hors connexion';$('network').classList.toggle('online',value);$('live-text').textContent=value?'Synchronisé':'Hors connexion';}
-function showWorkspace(){ $('connect').hidden=true;$('workspace').hidden=false;$('logout').hidden=false;$('quick-expense-open').hidden=false;$('hello').textContent='Bonjour '+(profile?.staffName||'');$('branch').textContent=profile?.branchName||'Magasin';document.querySelectorAll('.owner-only').forEach(el=>el.hidden=!profile?.isOwner); }
+function showWorkspace(){ $('workspace').hidden=false;$('logout').hidden=false;$('quick-expense-open').hidden=false;$('hello').textContent='Bonjour '+(profile?.staffName||'');$('branch').textContent=profile?.branchName||'Magasin';document.querySelectorAll('.owner-only').forEach(el=>el.hidden=!profile?.isOwner); }
 async function bootstrap(){profile=await request('/bootstrap');localStorage.setItem('samarina_profile',JSON.stringify(profile));showWorkspace();setOnline(true);await loadCatalogue('');if(profile.isOwner)await loadDashboard();}
 
 async function restore(){try{apiBase=cleanBase(apiBase);await bootstrap();}catch(error){if(!token){location.replace('/mobile/login'+(location.hash||''));return;}if(token){try{profile=JSON.parse(localStorage.getItem('samarina_profile')||'{}');showWorkspace();setOnline(false);showToast('Hors connexion · reconnexion automatique');}catch(_){location.replace('/mobile/login');}}}}
@@ -50,7 +50,6 @@ $('quick-expense-open').onclick=()=>activate('expense');$('quick-expense-form').
 $('close-camera').onclick=closeCamera;$('retry-camera').onclick=()=>openCamera(scanTarget);$('logout').onclick=async()=>{try{await request('/logout',{method:'POST',body:'{}'});}catch(_){}token='';localStorage.removeItem('samarina_token');location.reload();};
 window.addEventListener('online',()=>{if(token)restore();});window.addEventListener('offline',()=>setOnline(false));
 renderBasket();
-if(!token && !apiBase){location.replace('/mobile/login'+(location.hash||''));}
-else restore();
+restore();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/mobile/sw.js', { scope: '/mobile/' }).catch(function () {});
 })();
