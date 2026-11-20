@@ -1,0 +1,173 @@
+<div id="infobar-settings-sidebar-register-details" class="infobar-settings-sidebar">
+    <div class="infobar-settings-sidebar-head d-flex w-100 justify-content-between">
+        <h4 id="exampleModalCenterTitle"><span class="register_view_name"> </span></h4>
+        <a href="javascript:void(0)" class="infobar-settings-close" data-id="register">
+            <img src="static/images/svg-icon/close.svg" class="img-fluid menu-hamburger-close" alt="close" loading="lazy" decoding="async">
+        </a>
+    </div>
+    <div class="infobar-settings-sidebar-body">
+        <div class="custom-mode-setting loader-register">            
+
+            <div class="slider-modal-body">
+                <div class="row">
+                    <div class="col-xs-12 col-sm-6">
+                        <div class="portlet light slider-portlet">
+                            <div class="portlet-title margin-bottom-0">
+                                <div class="caption caption-basic font-green-meadow">
+                                    <span class="caption-subject bold uppercase"><lang class="lang_cash_drawer_info">Cash Drawer Info</lang></span>
+                                </div>
+                            </div>
+                            <div class="portlet-body">
+                                <div class="row">
+                                    <div class="col-lg-12 col-xl-12">
+                                        <div class="card m-b-20">
+                                            <div class="card-body">
+                                                <div class="row align-items-center">
+                                                    <table class="table table-borderless mb-20">
+                                                        <tbody>
+                                                            <tr>
+                                                                <th scope="row" class="p-2"><lang class="lang_user_2">User &emsp;&emsp;&nbsp;:&nbsp;</lang> <span class="register_view_user text-info"></span> </th> 
+                                                            </tr>
+                                                            <tr>
+                                                                <th scope="row" class="p-2"><lang class="lang_branch_2">Branch &emsp;: &nbsp;</lang><span class="register_view_branch text-info"></span> </th> 
+                                                            </tr>
+                                                            <tr>
+                                                                <th scope="row" class="p-2"><lang class="lang_opening">Opening &ensp;:&nbsp;</lang> <span class="register_view_opening text-info"></span> </th>
+                                                            </tr>
+                                                            <tr>
+                                                                <th scope="row" class="p-2"><lang class="lang_closing">Closing&ensp;&ensp;:&nbsp;</lang> <span class="register_view_closing text-info"></span> </th>
+                                                            </tr>
+                                                            <tr>
+                                                                <th scope="row" class="p-2"><lang class="lang_status">Status &ensp;&ensp;:&nbsp;</lang> <span class="register_view_status text-info"></span> </th>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>                                                                                                       
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="portlet light slider-portlet">
+                            <div class="portlet-title margin-bottom-0">
+                                <div class="caption caption-basic font-green-meadow">
+                                    <span class="caption-subject bold uppercase"><lang class="lang_payment_tally">Payment Tally</lang></span>
+                                </div>
+                            </div>
+                            <div class="portlet-body">
+                                <div class="row">
+                                    <div class="col-lg-12 col-xl-12">
+                                        <div class="card m-b-20">
+                                            <div class="card-body">
+                                                <div class="row align-items-center">          
+                                                    <table class="table table-borderless">
+                                                        <thead class="header_blue">
+                                                            <tr>
+                                                                <th><lang class="lang_payment_type">Payment Type</lang></th>
+                                                                <th><lang class="lang_expected">Expected</lang></th>
+                                                                <th><lang class="lang_counted">Counted</lang></th>
+                                                                <th><lang class="lang_difference">Difference</lang></th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="view_payment_tally_tbody">
+                                                            <!-- Payment tally rows will be dynamically generated here -->
+                                                        </tbody>
+                                                    </table>                                                    
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>                            
+
+                    </div>
+                    <div class="col-xs-12 col-sm-6">
+                        <div class="portlet light slider-portlet">
+                            <div class="portlet-title margin-bottom-0">
+                                <div class="caption caption-basic font-green-meadow">
+                                    <span class="caption-subject bold uppercase"><lang class="lang_sales_history">Sales history</lang></span>
+                                </div>
+                                <div class="actions">
+                                    <div class="inline-block text-left">
+                                        <div class="form-md-line-input form-md-floating-label custom-select2-ui">
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="portlet-body padding-top-0">
+                                <div class="row">
+                                    <div class="col-lg-2 col-md-2 form-group mb-0 amount-spent-select selecct-align">
+                                        <select class="form-control select_page" id="view_registerdetails_per_page" data-id="registerdetails" onChange="PosnicPro.setPerPage(this, 'Table');">
+                                            <option value="5" selected>5</option>
+                                            <option value="10">10</option>
+                                            <option value="25">25</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-lg-10 col-md-10">                                                                                       
+
+                                    </div>
+                                </div>
+                                <div class="card-body card-box no-padding loader-register-report">
+                                    <!-- Start table -->
+                                    <div class="table-responsive">
+                                        <table id="view_registerdetails" class="table table-borderless" cellspacing="0"
+                                               width="100%">
+                                            <thead class="report-thead-tfoot table-header"></thead>
+                                            <tbody class="report-thead-tfoot table-body"></tbody>
+                                        </table>
+                                    </div>
+                                    <!-- End table -->
+                                </div>
+                                <div class="card m-b-30">
+                                    <div class="card-body ecommerce-pagination">
+                                        <div class="row align-items-center">
+                                            <div class="col-8">
+                                                <div class="hint-text">
+                                                    <lang class="lang_showing">Showing</lang> 
+                                                    <b><span id="view_registerdetails_page_total"></span></b> 
+                                                    <lang class="lang_to">to</lang> 
+                                                    <b><span id="view_registerdetails_page_perpage_total"></span></b> 
+                                                    <lang class="lang_of">of</lang> 
+                                                    <b><span id="view_registerdetails_total"></span></b>
+                                                    <lang class="lang_entries">entries</lang> 
+                                                    <span class="showing-hide-show-registerdetails" style="display:none;"> &nbsp;&nbsp;&nbsp;&nbsp; 
+                                                        <span class="showing-value-registerdetails text-dark"> 0 </span><lang class="lang_rows_selected">&nbsp;
+                                                        rows selected</lang>  
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <nav aria-label="Page navigation example" data-t-aria-label="lang_page_navigation_example">
+                                                    <ul class="pagination mb-0">
+                                                        <button class="btn previous page-item text-dark-gradient f-w-7" data-id="registerdetails" onclick="PosnicPro.previousPage(this, 'Table')"> <i class="fa fa-angle-left font-20"></i> </button>
+                                                        <button class="btn next page-item text-dark-gradient f-w-7" data-id="registerdetails" onclick="PosnicPro.nextPage(this, 'Table')"> <i class="fa fa-angle-right font-20"></i> </button>
+                                                    </ul>
+                                                </nav>
+                                            </div>
+                                        </div>                                
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Same as the item detail panel: read only, so the header X was the only
+         way out, and that header sits under the window title bar on the desktop. -->
+    <div class="infobar-settings-sidebar-foot">
+        <a href="javascript:void(0)" class="btn btn-outline-danger infobar-settings-close" data-id="register">
+            <i class="feather icon-x-circle mr-2"></i><lang class="lang_close_title"> Close</lang>
+        </a>
+    </div>
+</div>

@@ -1,0 +1,64 @@
+version: 1.0.{build}
+image: Visual Studio 2022
+
+branches:
+  only:
+    - feat/article-cost-label-designer-sales-calendar
+
+clone_depth: 1
+
+environment:
+  nodejs_version: "22"
+
+install:
+  - ps: Install-Product node $env:nodejs_version x64
+  - cmd: node --version
+  - cmd: npm --version
+  - cmd: npm ci
+  - cmd: npm ci --prefix frontend
+  - cmd: npm ci --prefix api
+
+build_script:
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      $version = "7.0.14"
+      $zip = Join-Path $env:APPVEYOR_BUILD_FOLDER "mongodb.zip"
+      $temp = Join-Path $env:APPVEYOR_BUILD_FOLDER "mongodb-temp"
+      $mongo = Join-Path $env:APPVEYOR_BUILD_FOLDER "mongodb"
+      $url = "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-$version.zip"
+
+      Write-Host "Downloading MongoDB $version..."
+      Invoke-WebRequest -Uri $url -OutFile $zip
+      if (Test-Path $temp) { Remove-Item $temp -Recurse -Force }
+      Expand-Archive -Path $zip -DestinationPath $temp -Force
+
+      $source = Join-Path $temp "mongodb-win32-x86_64-windows-$version\bin\mongod.exe"
+      if (!(Test-Path $source)) { throw "mongod.exe was not found in the MongoDB archive." }
+
+      New-Item -ItemType Directory -Force -Path (Join-Path $mongo "bin"), (Join-Path $mongo "data"), (Join-Path $mongo "log") | Out-Null
+      Copy-Item $source (Join-Path $mongo "bin\mongod.exe") -Force
+      Remove-Item $zip -Force
+      Remove-Item $temp -Recurse -Force
+
+      Write-Host "Checking MongoDB binary..."
+      npm run check:mongodb
+      if ($LASTEXITCODE -ne 0) { throw "MongoDB binary check failed." }
+
+      Write-Host "Preparing bundled application resources..."
+      npm run prepare:bundle
+      if ($LASTEXITCODE -ne 0) { throw "Application resource preparation failed." }
+
+      Write-Host "Building Windows x64 installer..."
+      npx electron-builder --win --x64 --publish never --config.win.verifyUpdateCodeSignature=false
+      if ($LASTEXITCODE -ne 0) { throw "electron-builder failed." }
+
+artifacts:
+  - path: dist\*.exe
+    name: POSNIC-Windows-Installer
+  - path: dist\*.yml
+    name: POSNIC-Update-Metadata
+  - path: dist\*.blockmap
+    name: POSNIC-Blockmaps
+
+on_success:
+  - ps: Write-Host "POSNIC Windows build completed. Download the installer from the Artifacts section."

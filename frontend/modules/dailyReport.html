@@ -1,0 +1,695 @@
+<div class="vertical-layout page_loader" id="dailyreport_new" style="display: none">
+    <!-- Start Containerbar -->
+    <div id="containerbar">
+        <!-- Start Breadcrumbbar -->
+        <div class="breadcrumbbar crumbbar_padding">
+
+            <!--  filter-->
+            <div class="row align-items-center row_filter hide-sale-filter">
+                <div class="col-lg-2 col-xl-2">
+                    <h4 class="page-title break_title"><lang class="lang_day_end_summary">Day-End Summary</lang></h4>
+                </div>
+                <div class="col-md-9 col-lg-9 show-button-action"></div>
+                <div class="col-lg-2 col-xl-2 hide-button-action tb_filter" style="display:none;">
+                    <div class="form-control pull-right daterange-style date-align view_dailysale_report_daterange"
+                        id="view_dailysale_report_daterange">
+                        <i class="feather icon-calendarfeather icon-calendar"></i>&nbsp;
+                        <span></span>
+                    </div>
+                </div>
+                <div class="col-lg-6 col-xl-6 hide-button-action tb_filter" style="display:none;">
+                    <select class="floating-input select2 load-select-branch display-current-branch"
+                        data-placeholder="Select Branch" name="dailysale_branch_value[]" id="dailysale_branch_value">
+                        <option class="allbranch_name" value=''><lang class="lang_report_all">All</lang></option>
+                    </select>
+                </div>
+                <div class="col-md-1 col-lg-1 hide-button-action" style="display:none;">
+                    <button type="button" class="btn btn-primary-rgba"
+                        onclick="PosnicPro.quickreport.salereportTable();">
+                        <lang class="lang_filter_title">Apply</lang>
+                    </button>
+                </div>
+                <div class="col-lg-1 col-xl-1 tb_widget">
+                    <div class="widgetbar">
+                        <button type="button"
+                            class="btn btn-round btn-primary-rgba click-action-button adjuce_left add_new_tooltip"
+                            data-toggle="tooltip" title="Filter" data-t-title="lang_filter">
+                            <i class="feather icon-filter" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        #dailyreport_new .meal-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 8px 30px 0; padding: 10px 14px; background: var(--bs-body-bg, #fff); border: 1px solid #dbe3ef; border-radius: 10px; }
+        #dailyreport_new .meal-filter > strong { font-size: 13px; }
+        #dailyreport_new .meal-custom { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+        #dailyreport_new .meal-custom label { display: flex; align-items: center; gap: 6px; margin: 0; }
+        #dailyreport_new .meal-custom input { width: 130px; height: 36px; padding: 5px 8px; }
+        #dailyreport_new .meal-custom .btn { padding: 6px 12px; min-height: 36px; }
+        #dailyreport_new .meal-help { font-size: 13px; margin: 0; color: #526176; }
+        #dailyreport_new .meal-guidance { margin-left: auto; font-size: 13px; }
+        #dailyreport_new .meal-guidance summary { cursor: pointer; color: #124e96; }
+        #dailyreport_new .meal-guidance[open] { flex-basis: 100%; }
+        #dailyreport_new .meal-guidance[open] .meal-help { margin-top: 6px; }
+        #dailyreport_new #daily-meal-status { flex-basis: 100%; }
+        #dailyreport_new #daily-meal-status:empty { display: none; }
+        @media screen {
+            #dailyreport_new > .contentbar { padding-top: 10px; }
+            #dailyreport_new > .contentbar > .row > .m-t-10 { margin-top: 0 !important; }
+            #dailyreport_new .loader-dailysale-report { padding: 12px; }
+            #dailyreport_new #dailysale-view-line > .card > .card-body { padding: 12px; }
+        }
+        @media(max-width: 600px) {
+            #dailyreport_new .meal-filter { margin: 8px 12px 0; padding: 10px; }
+            #dailyreport_new .meal-filter > strong { flex-basis: 100%; }
+            #dailyreport_new .meal-guidance { margin-left: 0; }
+            #dailyreport_new > .contentbar { padding-left: 12px; padding-right: 12px; }
+        }
+
+        #dailyreport_new .day-close-tools{margin:10px 30px 14px;padding:18px;border:1px solid var(--theme-border-color,#dce4ef);border-radius:16px;background:var(--theme-card-bg,#fff);box-shadow:0 8px 24px rgba(25,45,75,.07);color:var(--theme-text-primary,#243247)}
+        #dailyreport_new .day-close-tools-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid #e8edf4}
+        #dailyreport_new .day-close-tools-head strong{font-size:16px;font-weight:750}#dailyreport_new .day-close-tools-head p{margin:4px 0 0;color:#6b778b;font-size:12px}
+        #dailyreport_new .day-close-workspace{display:grid;grid-template-columns:minmax(250px, .9fr) minmax(260px, 1.1fr);gap:18px;padding-top:16px}
+        #dailyreport_new .day-close-designer{border:1px solid #e4eaf2;border-radius:12px;padding:14px;background:var(--theme-card-bg,#fff)}#dailyreport_new .day-close-designer summary{cursor:pointer;font-weight:700;color:#245da8}
+        #dailyreport_new .day-close-fields{display:grid;grid-template-columns:1fr;gap:12px;margin:12px 0}
+        #dailyreport_new .day-close-fields label{font-size:12px;font-weight:650;margin:0}#dailyreport_new .day-close-fields input.form-control,#dailyreport_new .day-close-fields select.form-control{margin-top:5px;font-size:13px}
+        #dailyreport_new .day-close-fields .day-close-check{display:flex;align-items:center;gap:8px;font-weight:500}#dailyreport_new #day-close-save-status{display:block;margin-top:10px;font-size:12px;color:#247044}
+        #dailyreport_new .day-close-preview-wrap{border:1px solid #e4eaf2;border-radius:12px;padding:14px;background:#f1f4f8;min-width:0}
+        #dailyreport_new .day-close-preview-label{font-size:11px;font-weight:750;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin-bottom:10px}
+        #dailyreport_new #day-close-ticket-preview{width:100%;max-width:360px;min-height:380px;margin:0 auto;background:#fff;color:#111;padding:20px 18px;box-shadow:0 4px 18px rgba(15,23,42,.12);font:11px/1.45 Arial,sans-serif}
+        #dailyreport_new #day-close-ticket-preview h4{text-align:center;font-size:16px;margin:0 0 5px;color:#111;font-weight:800}#dailyreport_new #day-close-ticket-preview .dc-preview-muted{text-align:center;color:#64748b;font-size:10px}
+        #dailyreport_new #day-close-ticket-preview .dc-preview-rule{border:0;border-top:1px dashed #9ca3af;margin:10px 0}
+        #dailyreport_new #day-close-ticket-preview .dc-preview-line{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px dotted #e5e7eb}
+        #dailyreport_new #day-close-ticket-preview .dc-preview-line strong{white-space:nowrap}#dailyreport_new #day-close-ticket-preview .dc-preview-total{font-size:12px;font-weight:800;border-top:1px solid #111;border-bottom:1px solid #111;margin-top:5px;padding:7px 0}
+        @media(max-width:800px){#dailyreport_new .day-close-tools{margin:8px 12px}#dailyreport_new .day-close-workspace{grid-template-columns:1fr}}
+    </style>
+    <section class="meal-filter" id="daily-meal-filter" style="display:none" aria-label="Sales time filter" data-t-aria-label="lang_sales_time_filter">
+        <label for="daily-serving-period" class="mb-0"><lang class="lang_serving_period">Serving period</lang></label>
+        <select id="daily-serving-period" class="form-control form-control-sm" style="width:auto;min-width:160px;"><option value="" data-t="lang_all_day">All day</option></select>
+        <small id="daily-period-hint" class="text-muted" aria-live="polite"></small>
+        <div id="daily-meal-custom" class="meal-custom" style="display:none">
+            <label for="daily-meal-from"><lang class="lang_from">From</lang><input id="daily-meal-from" type="time" class="form-control" value="06:00" required></label>
+            <label for="daily-meal-to"><lang class="lang_to_2">To</lang><input id="daily-meal-to" type="time" class="form-control" value="12:00" required></label>
+            <button type="button" class="btn btn-primary" id="daily-meal-apply"><lang class="lang_apply_time">Apply time</lang></button>
+        </div>
+        <details class="meal-guidance">
+            <summary><lang class="lang_about_these_times">About these times</lang></summary>
+            <p class="meal-help" id="daily-meal-help"><lang class="lang_sessions_use_settings_restaurant_serving_p">Sessions use Settings → Restaurant → Serving periods, in the shop’s local time on each selected date. An end time earlier than the start continues into the next day.</lang></p>
+        </details>
+        <p class="meal-help" id="daily-meal-status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="day-close-ticket-tools" class="day-close-tools" aria-label="Cash closing ticket studio">
+      <div class="day-close-tools-head">
+        <div><strong><i class="feather icon-sliders mr-1"></i> Clôture de caisse · Ticket Studio</strong><p>Composez votre ticket thermique 80 mm par glisser-déposer. Le rapport A4 reste inchangé.</p></div>
+        <div class="d-flex flex-wrap" style="gap:8px">
+          <button type="button" class="btn btn-outline-secondary" id="day-close-history-refresh">Historique</button>
+          <button type="button" class="btn btn-primary" id="day-close-ticket-print"><i class="feather icon-printer mr-1"></i> Imprimer le ticket</button>
+        </div>
+      </div>
+      <div class="dc-studio-layout">
+        <aside class="dc-studio-sidebar">
+          <h5>Éléments du ticket</h5>
+          <p class="text-muted small">Glissez un élément dans le ticket ou cliquez pour l’ajouter.</p>
+          <div id="dc-studio-palette" class="dc-studio-palette">
+            <button type="button" draggable="true" data-dc-type="title">Titre</button>
+            <button type="button" draggable="true" data-dc-type="date">Date de clôture</button>
+            <button type="button" draggable="true" data-dc-type="sales">Ventes</button>
+            <button type="button" draggable="true" data-dc-type="cost">Coût des marchandises</button>
+            <button type="button" draggable="true" data-dc-type="gross">Bénéfice brut</button>
+            <button type="button" draggable="true" data-dc-type="expenses">Dépenses</button>
+            <button type="button" draggable="true" data-dc-type="advance">Acomptes employés</button>
+            <button type="button" draggable="true" data-dc-type="net">Bénéfice net</button>
+            <button type="button" draggable="true" data-dc-type="payments">Détail des paiements</button><button type="button" draggable="true" data-dc-type="debt">Encaissements de dettes</button><button type="button" draggable="true" data-dc-type="versement">Paiements de versement</button>
+            <button type="button" draggable="true" data-dc-type="count">Nombre de ventes</button>
+            <button type="button" draggable="true" data-dc-type="text">Texte libre</button>
+            <button type="button" draggable="true" data-dc-type="divider">Séparateur</button>
+            <button type="button" draggable="true" data-dc-type="footer">Pied de ticket</button>
+          </div>
+          <hr>
+          <h5>Personnaliser</h5>
+          <label class="small">Texte / libellé<input class="form-control" id="dc-studio-label" maxlength="120"></label>
+          <label class="small">Taille du texte<select class="form-control" id="dc-studio-size"><option value="10">10 px</option><option value="12" selected>12 px</option><option value="14">14 px</option><option value="16">16 px</option><option value="20">20 px</option></select></label>
+          <label class="small">Alignement<select class="form-control" id="dc-studio-align"><option value="left">Gauche</option><option value="center">Centré</option><option value="right">Droite</option></select></label>
+          <div class="d-flex flex-wrap" style="gap:6px"><button type="button" class="btn btn-sm btn-outline-danger" id="dc-studio-delete">Supprimer</button><button type="button" class="btn btn-sm btn-outline-secondary" id="dc-studio-up">Monter</button><button type="button" class="btn btn-sm btn-outline-secondary" id="dc-studio-down">Descendre</button></div>
+          <hr>
+          <label class="small">Largeur papier<select class="form-control" id="dc-studio-width"><option value="80" selected>80 mm</option><option value="58">58 mm</option></select></label>
+          <button type="button" class="btn btn-primary btn-sm" id="dc-studio-save">Enregistrer le modèle</button>
+          <span id="day-close-save-status" role="status" aria-live="polite"></span>
+        </aside>
+        <section class="dc-studio-history">
+          <div class="dc-agenda-head"><h5>Agenda des clôtures</h5><div class="dc-agenda-nav"><button type="button" class="btn btn-sm btn-outline-secondary" id="dc-agenda-prev" aria-label="Mois précédent">‹</button><strong id="dc-agenda-month"></strong><button type="button" class="btn btn-sm btn-outline-secondary" id="dc-agenda-next" aria-label="Mois suivant">›</button></div></div>
+          <p class="small text-muted">Cliquez sur une date pour charger le rapport réel de cette journée et prévisualiser le ticket avec votre modèle enregistré.</p>
+          <div id="dc-studio-agenda" class="dc-studio-agenda" aria-label="Agenda des clôtures"></div>
+          <div id="dc-agenda-status" class="small text-muted" role="status" aria-live="polite"></div>
+        </section>
+        <div class="dc-studio-preview-area">
+          <div class="dc-studio-preview-label">Aperçu en direct · déposez les éléments ici</div>
+          <div id="day-close-ticket-preview" class="dc-studio-paper" aria-live="polite" tabindex="0">
+            <div class="dc-studio-drop-hint">Glissez des éléments ici</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+<style id="dc-studio-styles">
+#day-close-ticket-tools .dc-studio-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,380px);gap:24px;align-items:start;margin-top:16px}
+#day-close-ticket-tools .dc-studio-sidebar{background:var(--theme-card-bg,#fff);color:var(--theme-text-primary,#243247);border:1px solid var(--theme-border-color,#e5e7eb);border-radius:8px;padding:14px;min-width:0}
+#day-close-ticket-tools .dc-studio-sidebar{display:none!important}
+#day-close-ticket-tools .dc-studio-palette{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+#day-close-ticket-tools .dc-studio-palette button{border:1px solid var(--theme-border-color,#d1d5db);background:var(--theme-body-bg,#f8fafc);color:var(--theme-text-primary,#243247);border-radius:5px;padding:8px;font-size:12px;cursor:pointer;text-align:left;min-height:52px;touch-action:manipulation}
+#day-close-ticket-tools .dc-studio-palette button:active{cursor:grabbing}
+#day-close-ticket-tools .dc-studio-sidebar label{display:block;margin:10px 0}
+#day-close-ticket-tools .dc-studio-preview-area{min-width:0}
+#day-close-ticket-tools .dc-studio-paper{box-sizing:border-box;width:80mm;max-width:100%;min-height:220px;margin:8px auto;background:#fff;color:#111;padding:5mm 4mm;box-shadow:0 2px 16px #0002;font-family:Arial,sans-serif;font-size:12px}
+#day-close-ticket-tools .dc-studio-block{position:relative;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 3px;border:1px dashed transparent;cursor:pointer;white-space:pre-wrap;overflow-wrap:anywhere}
+#day-close-ticket-tools .dc-studio-block:hover,#day-close-ticket-tools .dc-studio-block.is-selected{border-color:#448aff;background:#eaf3ff}
+#day-close-ticket-tools .dc-studio-block .dc-value{font-weight:700;text-align:right}
+#day-close-ticket-tools .dc-studio-block[data-dc-type="title"],#day-close-ticket-tools .dc-studio-block[data-dc-type="text"],#day-close-ticket-tools .dc-studio-block[data-dc-type="footer"]{display:block;text-align:center}
+#day-close-ticket-tools .dc-studio-block[data-dc-type="divider"]{border-top:1px dashed #333;height:1px;margin:5px 0;padding:0}
+#day-close-ticket-tools .dc-studio-drop-hint{text-align:center;color:#777;padding:16px;border:1px dashed #bbb}
+#day-close-ticket-tools .dc-studio-preview-label{font-size:12px;color:var(--theme-text-secondary,#6b7280);text-align:center}
+#day-close-ticket-tools .dc-studio-history{max-width:none;min-width:0;margin:0}
+#day-close-ticket-tools .dc-agenda-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+#day-close-ticket-tools .dc-agenda-head h5{margin:0}
+#day-close-ticket-tools .dc-agenda-nav{display:flex;align-items:center;gap:12px}
+#day-close-ticket-tools .dc-studio-agenda{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-top:12px}
+#day-close-ticket-tools .dc-agenda-weekday{font-size:11px;font-weight:700;text-align:center;color:#64748b;padding:6px 0}
+#day-close-ticket-tools .dc-agenda-day{min-height:52px;border:1px solid var(--theme-border-color,#dbe3ef);border-radius:6px;background:var(--theme-card-bg,#fff);color:var(--theme-text-primary,#243247);cursor:pointer;touch-action:manipulation}
+#day-close-ticket-tools .dc-agenda-day:hover{border-color:var(--theme-primary-color,#2877e8);background:color-mix(in srgb,var(--theme-primary-color,#2877e8) 12%,var(--theme-card-bg,#fff));color:var(--theme-text-primary,#243247)}
+#day-close-ticket-tools .dc-agenda-day.is-selected{background:var(--theme-primary-color,#1d5fbf);color:var(--theme-btn-primary-text,#fff);border-color:var(--theme-primary-color,#1d5fbf)}
+#day-close-ticket-tools .dc-agenda-day.is-empty{visibility:hidden}
+#day-close-ticket-tools .dc-agenda-day.is-today{box-shadow:inset 0 0 0 2px #8bb8f5}
+#day-close-ticket-tools .dc-history-row{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #e5e7eb}
+#day-close-ticket-tools .dc-history-row button{white-space:nowrap}
+@media(max-width:1024px){#day-close-ticket-tools .dc-studio-layout{grid-template-columns:minmax(0,1fr)}#day-close-ticket-tools .dc-studio-paper{width:80mm;max-width:100%}}
+@media print{body.dc-print-dayclose *{visibility:hidden!important}body.dc-print-dayclose #day-close-ticket-preview,body.dc-print-dayclose #day-close-ticket-preview *{visibility:visible!important}body.dc-print-dayclose #day-close-ticket-preview{position:absolute;left:0;top:0;width:72mm;box-shadow:none;margin:0;padding:0}}
+
+/* Reports page: keep the complete A4 report in document flow and scrollable. */
+#dailyreport_new,
+#dailyreport_new #containerbar,
+#dailyreport_new .contentbar {
+  height:auto !important; min-height:0 !important; max-height:none !important;
+  overflow:visible !important;
+}
+#dailyreport_new { position:relative !important; padding-bottom:28px !important; }
+#dailyreport_new .dc-studio-layout {
+  display:grid !important;
+  grid-template-columns:minmax(280px,1fr) minmax(260px,380px) !important;
+  align-items:start !important; gap:18px !important; min-width:0 !important;
+}
+#dailyreport_new .dc-studio-history,
+#dailyreport_new .dc-studio-preview-area {
+  display:block !important; min-width:0 !important;
+  max-height:none !important; overflow:visible !important;
+}
+#dailyreport_new #day-close-ticket-preview {
+  max-width:80mm !important; min-height:220px !important;
+  height:auto !important; overflow:visible !important;
+}
+@media (max-width:1024px) {
+  #dailyreport_new .dc-studio-layout { grid-template-columns:minmax(0,1fr) !important; }
+}
+
+
+/* The report remains in normal document flow and scrolls with the page. */
+#dailyreport_new,
+#dailyreport_new .contentbar {
+  height:auto !important; min-height:0 !important; max-height:none !important;
+  overflow:visible !important;
+}
+#day-close-ticket-tools .dc-agenda-day.has-report { position:relative; font-weight:750; }
+#day-close-ticket-tools .dc-agenda-day.has-report:after {
+  content:""; display:block; width:5px; height:5px; margin:3px auto 0;
+  border-radius:50%; background:currentColor; opacity:.8;
+}
+
+</style>
+    <!-- Start Contentbar -->
+    <div class="contentbar">
+    <div class="row mb-3" id="day-end-expense-report-link"><div class="col-12"><a class="btn btn-outline-primary" href="#/expensesreport"><i class="feather icon-file-text mr-2"></i>Détails des dépenses</a></div></div>
+
+        <!-- Start row -->
+        <div class="row">
+            <div class="col-md-12 col-lg-12 col-xl-12 m-t-10">
+                <div class="card m-b-30">
+                    <div class="card-body loader-dailysale-report">
+                        <!-- <ul class="nav nav-tabs custom-tab-line mb-3" id="defaultTabLine" role="tablist">                            
+                            <li class="nav-item">
+                                <a class="nav-link active report_tab_font custom-daily-sale-nav-menu" id="dailysale-view-tab-line" data-toggle="tab" href="#dailysale-view-line" role="tab" aria-controls="dailysale-view-line" aria-selected="true" onClick="PosnicPro.quickreport.salereportTable('Daily');"><i class="feather icon-list mr-1"></i>Daily</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link report_tab_font" id="dailysale-view-tab-line" data-toggle="tab" href="#dailysale-view-line" role="tab" aria-controls="dailysale-view-line" aria-selected="true" onClick="PosnicPro.quickreport.salereportTable('Weekly');"><i class="feather icon-list mr-1"></i>Weekly</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link report_tab_font" id="dailysale-view-tab-line" data-toggle="tab" href="#dailysale-view-line" role="tab" aria-controls="dailysale-view-line" aria-selected="true" onClick="PosnicPro.quickreport.salereportTable('Monthly');"><i class="feather icon-list mr-1"></i>Monthly</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link report_tab_font" id="dailysale-view-tab-line" data-toggle="tab" href="#dailysale-view-line" role="tab" aria-controls="dailysale-view-line" aria-selected="true" onClick="PosnicPro.quickreport.salereportTable('Yearly');"><i class="feather icon-list mr-1"></i>Yearly</a>
+                            </li>
+                        </ul> -->
+                        <div class="tab-content" id="defaultTabContentLine">
+                            <div id="dailysale_upgrade" class="text-center mt-4">
+                                <p class="font-weight-bold"><lang class="lang_you_re_currently_on_the_free_plan_upgrade">You're currently on the Free Plan. Upgrade to Premium for
+                                    full access to all features.</lang></p>
+                                <a href="javascript:void(0)"
+                                    onclick="return PosnicPro.users.accountGoToWebsiteURL(this);"
+                                    class="btn btn-primary"><lang class="lang_upgrade_to_premium">Upgrade to Premium</lang></a>
+                            </div>
+                            <div class="tab-pane fade show active" id="dailysale-view-line" role="tabpanel"
+                                aria-labelledby="dailysale-view-tab-line">
+
+
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="row justify-content-center">
+                                            <div class="col-lg-12 col-xl-10">
+                                                <div class="cart-head hide-show-dailyimgreport" style="display: none;">
+
+                                                    <div class="row">
+                                                        <div class="col-sm-6 col-md-12 col-lg-12">
+                                                            <img src="static/images/general/nodata.svg"
+                                                                class="img-fluid"
+                                                                style="opacity: 0.6;width: 100%;height: 250px;" alt="" loading="lazy" decoding="async">
+                                                        </div>
+                                                        <div class="col-sm-6 col-md-12 col-lg-12">
+                                                            <div class="text-center text-dark">
+                                                                <p><lang class="lang_no_records">No Records</lang> </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="cart-head hide-show-dailyreport">
+
+                                                    <div class="row">
+                                                        <div class="col-lg-12">
+                                                            <!--
+                                                                On a thermal roll this prints a cash-up slip
+                                                                rather than the whole report: sales, the
+                                                                payment split, and lines to sign at handover.
+                                                                On A4 it prints the full page.
+                                                            -->
+                                                            <button class="btn btn-primary-rgba pull-right blur_val"
+                                                                onclick="return PosnicPro.quickreport.printDailyReport();"
+                                                                data-toggle="tooltip" data-placement="top"
+                                                                title="Print (A4)" data-t-title="lang_print_a4" type="button"
+                                                                style="margin-right: 5px;font-size: 20px;">
+                                                                <i class="fa fa-print"></i>
+                                                            </button>
+                                                            <button class="btn btn-success-rgba pull-right blur_val"
+                                                                onclick="return PosnicPro.quickreport.printDaySlip();"
+                                                                data-toggle="tooltip" data-placement="top"
+                                                                title="Day-close slip (thermal)" data-t-title="lang_day_close_slip_thermal" type="button"
+                                                                style="margin-right: 5px;font-size: 20px;">
+                                                                <i class="fa fa-sticky-note-o"></i>
+                                                            </button>
+                                                            <button class="btn btn-secondary-rgba pull-right blur_val"
+                                                                onclick="return PosnicPro.quickreport.exportCsv();"
+                                                                data-toggle="tooltip" data-placement="top"
+                                                                title="Export CSV" data-t-title="lang_export_csv" type="button"
+                                                                style="margin-right: 5px;font-size: 20px;">
+                                                                <i class="fa fa-file-text-o"></i>
+                                                            </button>
+                                                            <button class="btn btn-secondary-rgba pull-right blur_val"
+                                                                onclick="return PosnicPro.quickreport.exportXls();"
+                                                                data-toggle="tooltip" data-placement="top"
+                                                                title="Export Excel" data-t-title="lang_export_excel" type="button"
+                                                                style="margin-right: 5px;font-size: 20px;">
+                                                                <i class="fa fa-file-excel-o"></i>
+                                                            </button>
+                                                            <button class="btn btn-danger-rgba pull-right blur_val"
+                                                                onclick="return PosnicPro.quickreport.dailyReportPdf();"
+                                                                data-toggle="tooltip" data-placement="top"
+                                                                title="Download PDF" data-t-title="lang_download_pdf" type="button"
+                                                                style="margin-right: 5px;font-size: 20px;">
+                                                                <i class="fa fa-file-pdf-o"></i>
+                                                            </button>
+                                                            <button class="btn btn-primary-rgba pull-right blur_val"
+                                                                onclick="return PosnicPro.quickreport.dailyReportEmail();"
+                                                                data-toggle="tooltip" data-placement="top" title="Email" data-t-title="lang_email_title"
+                                                                style="margin-right: 5px;font-size: 20px;">
+                                                                <i class="fa fa-envelope-o"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+
+                                                    <div id="export_daily_report">
+<p id="daily-report-period" class="text-center"></p>
+                                                        <h5 style="display:none;"><lang class="lang_summary">Summary</lang></h5>
+                                                        <table id="dayend_export_summary" data-export-include style="display:none;">
+                                                            <thead><tr><th><lang class="lang_summary">Summary</lang></th><th class="text-right"><lang class="lang_value_title">Value</lang></th></tr></thead>
+                                                            <tbody id="dayend_export_summary_body"></tbody>
+                                                        </table>
+                                                        <!-- From and To on one line, right-aligned, with a modest top
+                                                             gap (was m-t-50 on two stacked tables) so the report fits
+                                                             without scrolling. Span ids are kept for the JS that fills them. -->
+                                                        <table data-export-skip
+                                                            class="col-12 table table-borderless m-sticky-first table-bordered-padding m-t-15"
+                                                            id="daily_report_date_details">
+                                                            <tbody>
+                                                                <tr>
+                                                                    <th class="text-right f-w-3 font-18">
+                                                                        <span><lang class="lang_from_2">From :&nbsp;</lang></span><span id="daily_report_fromdate"></span>
+                                                                        <span><lang class="lang_to_3">&nbsp;&nbsp;&nbsp;&nbsp;To :&nbsp;</lang></span><span id="daily_report_todate"></span>
+                                                                    </th>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                        <h5 class="f-w-6 m-t-30 m-b-10" id="dayend_live_summary_heading">Récapitulatif financier</h5>
+                                                        <div class="table-responsive">
+                                                            <table class="table table-bordered table-bordered-padding" id="dayend_live_summary">
+                                                                <thead><tr><th>Indicateur</th><th class="text-right">Montant / valeur</th></tr></thead>
+                                                                <tbody id="dayend_live_summary_body"></tbody>
+                                                            </table>
+                                                        </div>
+                                                        <table data-export-skip
+                                                            class="col-12 table table-borderless m-sticky-first table-bordered-padding m-b-50"
+                                                            id="daily_report_branch_details">
+                                                            <tbody>
+                                                                <tr>
+                                                                    <th id="" class="f-w-7 font-30 text-left"><lang class="lang_day_end_summary">Day-End Summary</lang></th>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th></th>
+                                                                </tr>
+                                                                <tr>
+                                                                    <th>
+                                                                        <address>
+                                                                            <span class="f-w-3 font-13"
+                                                                                id="daily_report_date"></span></br>
+                                                                            <span class="f-w-6 font-13"
+                                                                                id="daily_report_branchname"></span></br>
+                                                                            <span class="f-w-3 font-13"
+                                                                                id="daily_report_branchaddress"></span></br>
+                                                                            <span class="f-w-3 font-13"
+                                                                                id="daily_report_branchphone"></span></br>
+                                                                            <span class="f-w-3 font-13"
+                                                                                id="daily_report_branchemail"></span>
+                                                                        </address>
+                                                                    </th>
+                                                                </tr>
+                                                                <tr style="border-style:hidden !important;">
+                                                                    <th style="border-style:hidden !important;"></th>
+                                                                </tr>
+                                                                <tr style="border-style:hidden !important;">
+                                                                    <th style="border-style:hidden !important;"></th>
+                                                                </tr>
+                                                                <tr style="border-style:hidden !important;">
+                                                                    <th style="border-style:hidden !important;"></th>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+
+                                                        <h5 class="f-w-6 m-t-30 m-b-20"><lang class="lang_itemdetail_title">Items</lang></h5>
+                                                        <div class="table-responsive">
+                                                            <table class="table table-bordered table-bordered-padding"
+                                                                cellspacing="0" width="100%"
+                                                                id="daily_report_product_details">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <td class="f-w-6 font-13 text-center"
+                                                                            width="5%"><lang class="lang_s_no">S.No</lang></td>
+                                                                        <td class="f-w-6 font-13 text-left" width="30%">
+                                                                            <lang class="lang_description_title">Description</lang></td>
+                                                                        <td class="f-w-6 font-13 text-left" width="10%">
+                                                                            <lang class="lang_sku_title">SKU</lang></td>
+                                                                        <td class="f-w-6 font-13 text-center"
+                                                                            width="5%"><lang class="lang_qty_title">Qty</lang></td>
+                                                                        <td class="f-w-6 font-13 text-center"
+                                                                            width="10%"><lang class="lang_price_title">Price</lang></td>
+                                                                        <td class="f-w-6 font-13 text-center"
+                                                                            width="10%"><lang class="lang_additional_discount">Additional Discount</lang></td>
+                                                                        <td class="f-w-6 font-13 text-center"
+                                                                            width="10%"><lang class="lang_module_tax">Tax</lang></td>
+                                                                        <td class="f-w-6 font-13 text-center"
+                                                                            width="10%"><lang class="lang_total_title">Total</lang></td>
+                                                                        <!-- <td class="f-w-6 font-13 text-center" width="10%">Profit</td> -->
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+
+                                                                </tbody>
+
+                                                                <tfoot>
+                                                                    <tr>
+                                                                        <td></td>
+                                                                        <td class="font-13 text-center f-w-6"
+                                                                            style="border-left-style:hidden !important;">
+                                                                            <lang class="lang_total_title">Total</lang></td>
+                                                                        <td class="font-12 text-left"> </td>
+                                                                        <td class="font-12 text-center"><b><span
+                                                                                    class="daily_report_qty_price"></span></b>
+                                                                        </td>
+                                                                        <td class="font-12 text-right"><b><span
+                                                                                    class="display-currency"></span>&nbsp;<span
+                                                                                    class="daily_report_product_price"></span></b>
+                                                                        </td>
+                                                                        <td class="font-12 text-right"> </td>
+                                                                        <td class="font-12 text-right"> </td>
+                                                                        <td class="font-12 text-right"><b><span
+                                                                                    class="display-currency"></span>&nbsp;<span
+                                                                                    class="daily_report_product_total"></span></b>
+                                                                        </td>
+                                                                        <!-- <td class="font-12 text-right"><b><span class="display-currency"></span>&nbsp;<span class="daily_report_product_profit"></span></b></td> -->
+                                                                    </tr>
+                                                                </tfoot>
+                                                            </table>
+                                                        </div>
+                                                        <h5 class="f-w-6 m-t-50 m-b-20" id="extra_discount_heading"><lang class="lang_additional_discount">Additional Discount</lang></h5>
+                                                        <div class="row m-t-20">
+                                                            <div class="col-sm-12 m-b-20">
+                                                                <table class="table table-bordered"
+                                                                    id="daily_report_extra_discount_details">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <td class="f-w-6 font-13 text-center"
+                                                                                width="75%"><lang class="lang_additional_discount">Additional Discount</lang></td>
+                                                                            <td class="f-w-6 font-13 text-center"
+                                                                                width="25%"><lang class="lang_amount_title">Amount</lang></td>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                    </tbody>
+                                                                    <tfoot>
+                                                                        <tr>
+                                                                            <th class="text-center">
+                                                                                <lang class="lang_total_title">Total</lang> </th>
+                                                                            <td class="text-right"><b><span
+                                                                                        class="display-currency"></span>&nbsp;<span
+                                                                                        class="daily_report_extra_discount_total"></span></b>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tfoot>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                        <h5 class="f-w-6 m-t-50 m-b-20" id="tender_type_heading"><lang class="lang_tender_type">Tender Type</lang></h5>
+                                                        <div class="row m-t-20">
+                                                            <div class="col-sm-12 m-b-20">
+                                                                <table class="table table-bordered"
+                                                                    id="daily_report_tender_details">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <td class="f-w-6 font-13 text-center"
+                                                                                width="5%"><lang class="lang_s_no">S.No</lang></td>
+                                                                            <td class="f-w-6 font-13 text-left"
+                                                                                width="75%"><lang class="lang_tender_type">Tender Type</lang></td>
+                                                                            <td class="f-w-6 font-13 text-center"
+                                                                                width="20%"><lang class="lang_amount_title">Amount</lang></td>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+
+                                                                    </tbody>
+                                                                    <tfoot>
+                                                                        <tr>
+                                                                            <th></th>
+                                                                            <th class="text-center"
+                                                                                style="border-left-style:hidden !important;">
+                                                                                <lang class="lang_total_title">Total</lang> </th>
+                                                                            <td class="text-right"><b><span
+                                                                                        class="display-currency"></span>&nbsp;<span
+                                                                                        class="daily_report_product_tender_total"></span></b>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tfoot>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                        <h5 class="f-w-6 m-t-50 m-b-20" id="tax_type_heading"><lang class="lang_tax_type">Tax Type</lang></h5>
+                                                        <div class="row m-t-20">
+                                                            <div class="col-sm-12 m-b-20">
+                                                                <table class="table table-bordered"
+                                                                    id="daily_report_tax_details">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <td class="f-w-6 font-13 text-center"
+                                                                                width="5%"><lang class="lang_s_no">S.No</lang></td>
+                                                                            <td class="f-w-6 font-13 text-left"
+                                                                                width="75%"><lang class="lang_tax_type">Tax Type</lang></td>
+                                                                            <td class="f-w-6 font-13 text-center"
+                                                                                width="20%"><lang class="lang_amount_title">Amount</lang></td>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+
+                                                                    </tbody>
+                                                                    <tfoot>
+                                                                        <tr>
+                                                                            <th></th>
+                                                                            <th class="text-center"
+                                                                                style="border-left-style:hidden !important;">
+                                                                                <lang class="lang_total_title">Total</lang></th>
+                                                                            <td class="text-right"><b><span
+                                                                                        class="display-currency"></span>&nbsp;<span
+                                                                                        class="daily_report_product_tax_total"></span></b>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tfoot>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="row m-t-20 table-dine-summary-section">
+                                                            <h5 class="f-w-6 m-t-50 m-b-20"><lang class="lang_dine_table_summary">Dine & Table Summary</lang></h5>
+                                                            <div class="col-sm-12 m-b-20">
+                                                                <table class="table table-bordered"
+                                                                    id="daily_report_dine_details">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <td class="f-w-6 font-13 text-center"
+                                                                                width="5%"><lang class="lang_s_no">S.No</lang></td>
+                                                                            <td class="f-w-6 font-13 text-left"
+                                                                                width="55%"><lang class="lang_dine_type">Dine Type</lang></td>
+                                                                            <td class="f-w-6 font-13 text-center"
+                                                                                width="15%"><lang class="lang_count">Count</lang></td>
+                                                                            <td class="f-w-6 font-13 text-center"
+                                                                                width="15%"><lang class="lang_pax">Pax</lang></td>
+                                                                            <td class="f-w-6 font-13 text-center"
+                                                                                width="15%"><lang class="lang_amount_title">Amount</lang></td>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+
+                                                                    </tbody>
+                                                                    <tfoot>
+                                                                        <tr>
+                                                                            <th></th>
+                                                                            <th class="text-center"
+                                                                                style="border-left-style:hidden !important;">
+                                                                                <lang class="lang_total_title">Total</lang> </th>
+                                                                            <td class="text-center"><b>
+                                                                                <!-- <span class="display-currency"></span>&nbsp; -->
+                                                                                    <span class="daily_report_dine_count"></span></b>
+                                                                            </td>
+                                                                            <td class="text-center"><b>
+                                                                                    <span class="daily_report_dine_pax"></span></b>
+                                                                            </td>
+                                                                            <td class="text-right"><b><span
+                                                                                        class="display-currency"></span>&nbsp;<span
+                                                                                        class="daily_report_dine_total"></span></b>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tfoot>
+                                                                </table>
+                                                            </div>
+                                                            <div class="col-sm-12">
+                                                                <table class="table table-bordered"
+                                                                    id="daily_report_table_summary">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <td class="f-w-6 font-13 text-center"
+                                                                                width="5%"><lang class="lang_s_no">S.No</lang></td>
+                                                                            <td class="f-w-6 font-13 text-left"
+                                                                                width="55%"><lang class="lang_tables">Tables</lang></td>
+                                                                            <td class="f-w-6 font-13 text-center"
+                                                                                width="15%"><lang class="lang_pax">Pax</lang></td>
+                                                                            <td class="f-w-6 font-13 text-center"
+                                                                                width="25%"><lang class="lang_total_title">Total</lang></td>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                    </tbody>
+                                                                    <tfoot>
+                                                                        <tr>
+                                                                            <th></th>
+                                                                            <th class="text-center"
+                                                                                style="border-left-style:hidden !important;">
+                                                                                <lang class="lang_total_title">Total</lang>
+                                                                            </th>
+                                                                            <td class="text-center">
+                                                                                <b>
+                                                                                    <span class="daily_report_table_pax"></span>
+                                                                                </b>
+                                                                            </td>
+                                                                            <td class="text-right">
+                                                                                <b>
+                                                                                    <span
+                                                                                        class="display-currency"></span>&nbsp;
+                                                                                    <span
+                                                                                        class="daily_report_table_total"></span>
+                                                                                </b>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tfoot>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+
+                                                    </div>
+
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- End col -->
+        </div>
+    </div>
+</div>
+
+
+<!-- start mail modal -->
+<div class="modal fade close_on_esc" id="to_email_modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><lang class="lang_email_address">Email Address</lang></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" data-t-aria-label="lang_close_title">
+                    <span aria-hidden="true"><lang class="lang_text">&times;</lang></span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form class="to_email_form" method="POST">
+                    <div class="form-row">
+                        <div class="form-group col-md-12">
+                            <label for="to_email_value"> <lang class="lang_to_email_address">To email address</lang> <span class="text-danger">*</span></label>
+                            <input id="to_email_value" type="email" maxlength="250" name="to_email_value"
+                                class="form-control border-control" required="">
+                        </div>
+                    </div>
+                    <div class="form-row pull-right">
+                        <div class="form-group col-md-12">
+                            <button type="button" class="btn btn-outline-danger" data-dismiss="modal">
+                                <lang class="lang_close_title"> <i class="feather icon-x-circle mr-2"></i>Close </lang>
+                            </button>
+                            <button type="submit" class="btn btn-outline-primary"><i class="feather icon-send mr-2"></i>
+                                <lang class="lang_yes_title"> Proceed </lang>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- end mail modal -->

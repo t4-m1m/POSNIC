@@ -1,0 +1,19 @@
+{
+  "id": "/mobile/",
+  "name": "Samarina Companion",
+  "short_name": "Samarina",
+  "description": "Compagnon mobile autonome pour le magasin Samarina POS.",
+  "start_url": "/mobile/",
+  "scope": "/mobile/",
+  "display": "standalone",
+  "background_color": "#f3f6fb",
+  "theme_color": "#155eef",
+  "icons": [
+    {
+      "src": "/mobile/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

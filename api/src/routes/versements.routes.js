@@ -1,0 +1,10 @@
+const express = require('express');
+const router = express.Router();
+const { protect } = require('../middleware/auth');
+const controller = require('../controllers/versements.controller');
+router.use(protect);
+router.get('/', controller.list);
+router.post('/', controller.create);
+router.post('/:id/settle', controller.settle);
+router.post('/:id/cancel', controller.cancel);
+module.exports = router;

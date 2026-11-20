@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#155eef"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Samarina"><title>Samarina Companion</title>
+<link rel="manifest" href="/mobile/manifest.webmanifest"><link rel="icon" href="/mobile/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/mobile/mobile.css">
+</head>
+<body>
+<div class="shell">
+<header class="top"><a class="brand" href="/mobile/"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h9a5 5 0 0 1 0 10H9"/><path d="M9 10h6a5 5 0 0 1 0 10H5"/><path d="M5 4v16"/></svg></span><span><b>POSNIC</b><small>SAMARINA COMPANION</small></span></a><div class="top-right"><span id="network" class="network">Connexion…</span><button id="quick-expense-open" class="icon-btn" hidden>＋ Dépense</button><button id="quick-items-open" class="icon-btn" hidden>Articles</button><button id="quick-owner-open" class="icon-btn owner-only" hidden>Réglages</button><button id="logout" class="icon-btn" hidden>Déconnexion</button></div></header>
+
+<main id="workspace">
+<section class="welcome"><div><span class="eyebrow">ESPACE MAGASIN</span><h1 id="hello">Bonjour</h1><p id="branch">Votre magasin</p></div><div class="connection-actions"><span class="live"><i></i> <span id="live-text">Connexion…</span></span><button id="connection-retry" class="secondary" type="button" hidden>Réessayer</button></div></section><p id="connection-error" class="connection-error" role="status" hidden></p>
+<nav class="tabs" aria-label="Navigation principale">
+<button class="tab active" data-tab="catalogue"><span class="tab-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg></span><span>Catalogue</span></button><button class="tab scanner-tab" id="tab-scanner" data-tab="scanner"><span class="tab-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h4v4H4zM16 4h4v4h-4zM4 16h4v4H4zM16 16h4v4h-4z"/><path d="M10 4v4M14 4v4M4 10h4M4 14h4M16 10h4M16 14h4M10 16v4M14 16v4"/></svg></span><span>Scanner</span></button><button class="tab" data-tab="basket"><span class="tab-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5M8 17h8"/></svg></span><span>Panier PC</span><span id="basket-badge" class="basket-badge" hidden>0</span></button><button class="tab owner-only" data-tab="dashboard" hidden><span class="tab-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h17"/><path d="m7 15 4-4 3 2 6-7"/></svg></span><span>Rapports</span></button>
+</nav>
+<section id="page-scanner" class="page"><div class="heading"><div><h2>Scanner les articles</h2><p>Gardez le viseur ouvert pour enchaîner les scans.</p></div></div><button id="scan-fullscreen" class="primary full" type="button">Ouvrir le scanner</button><form id="scanner-manual-form" class="search"><input id="scanner-manual-code" placeholder="Saisir un code-barres" autocomplete="off"><button class="secondary">Valider</button></form><p id="scanner-page-status" class="status"></p></section>
+<section id="page-catalogue" class="page active">
+<div class="heading"><div><h2>Prix & disponibilité</h2><p>Recherchez par nom, référence ou code-barres.</p></div><span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg></span></div>
+<form id="search-form" class="search"><input id="search" placeholder="Nom, SKU, code-barres…" autocomplete="off" required><button class="primary">Rechercher</button></form>
+<div class="actions"><button class="secondary" id="scan-catalogue">Scanner un code-barres</button><button class="secondary" id="refresh">Actualiser</button></div>
+<div id="catalogue-results" class="results empty">Le catalogue du magasin s’affichera ici.</div>
+</section>
+<section id="page-basket" class="page"><div class="heading"><div><h2>Mon panier</h2><p>Les articles scannés sont ajoutés directement ici.</p></div><span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5M8 17h8"/></svg></span></div><form id="basket-form" class="search"><input id="basket-code" placeholder="Code-barres ou référence" autocomplete="off" required><button class="primary">Ajouter</button></form><div class="actions"><button class="secondary" id="scan-basket">Scanner et ajouter</button><button class="secondary" id="clear-basket">Vider le panier</button></div><label class="check direct-send"><input id="direct-send-scan" type="checkbox"> Envoi direct au scan</label><button id="push-basket-pc" class="primary full" type="button">Ajouter au panier PC</button><p id="push-basket-status" class="status" role="status"></p><div id="basket-items" class="results empty">Scannez un article pour commencer.</div><div class="basket-summary"><span id="basket-count">0 article</span><strong id="basket-total">0 DA</strong></div><p id="basket-status" class="status"></p></section>
+<section id="page-items" class="page">
+<div class="heading"><div><h2>Gestion des articles</h2><p>Créer un article ou modifier sa fiche et sa photo.</p></div><span class="glyph"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="m16.5 3.5 4 4L8 20l-5 1 1-5z"/></svg></span></div>
+<button id="new-item" class="primary">＋ Nouvel article</button>
+<form id="item-form" class="form-card mobile-item-sheet" hidden>
+<input id="item-id" type="hidden">
+<div class="sheet-heading"><div><span class="eyebrow">FICHE ARTICLE POSNIC</span><h3>Ajouter / Modifier Article</h3></div><button id="cancel-item" class="secondary" type="button">Fermer</button></div>
+<label>Nom POSNIC généré<input id="item-name" readonly required maxlength="200"></label><small class="muted">Le nom est composé automatiquement à partir du type, de la marque, de la date et de la référence.</small>
+<div class="two"><label>Prix de vente (DA) *<input id="item-price" type="number" min="0" step="any" required inputmode="decimal"></label><label>Prix de gros / tarif 2<input id="item-price-2" type="number" min="0" step="any" inputmode="decimal"></label></div>
+<div class="two"><label>Prix tarif 3 / promotion<input id="item-price-3" type="number" min="0" step="any" inputmode="decimal"></label></div>
+<details open><summary>Coût d’achat et stock</summary>
+<div class="two"><label>Prix d’achat (€)<input id="item-cost-eur" type="number" min="0" step="0.01" inputmode="decimal"></label><label>Taux EUR → DA<input id="item-exchange-rate" type="number" min="0.000001" step="any" value="280"></label></div>
+<div class="two"><label>Frais supplémentaires (DA)<input id="item-extra-cost" type="number" min="0" step="0.01" value="0"></label><label>Coût d’achat final (DA)<input id="item-cost" type="number" min="0" step="0.01" inputmode="decimal"></label></div>
+<div class="two"><label>Quantité en stock<input id="item-quantity" type="number" min="0" step="any" value="0" inputmode="decimal"></label><label>Alerte stock bas<input id="item-reorder" type="number" min="0" step="any" inputmode="decimal"></label></div>
+<div class="two"><label>Unité<input id="item-unit" value="qty" placeholder="qty, pièce, kg…"></label><label>Unité d’achat<input id="item-purchase-unit" placeholder="carton, lot…"></label></div>
+<div class="two"><label>Conversion achat → vente<input id="item-pack-size" type="number" min="0" step="any"></label><label>Position / ordre<input id="item-position" type="number" min="0" step="any"></label></div>
+<label class="check"><input id="item-track-stock" type="checkbox" checked> Suivre le stock</label>
+<label class="check"><input id="item-negative-stock" type="checkbox"> Autoriser le stock négatif</label>
+<label class="check"><input id="item-open-price" type="checkbox"> Prix libre à la vente</label>
+<label class="check"><input id="item-weight" type="checkbox"> Article pesé / balance</label>
+</details>
+<details open><summary>Identification, catégorie et fournisseur</summary>
+<div class="two"><label>SKU / Référence<input id="item-sku" maxlength="20"></label><label>PLU<input id="item-plu" maxlength="6" inputmode="numeric"></label></div>
+<label>Code-barres<div class="inline-input"><input id="item-barcode" maxlength="100"><button id="item-barcode-scan" class="secondary" type="button">Scanner</button></div></label>
+<div class="two"><label>GTIN<input id="item-gtin" maxlength="14" inputmode="numeric"></label><label>Codes-barres alternatifs<input id="item-alt-barcodes" placeholder="séparés par virgules"></label></div>
+<div class="two"><label>Catégorie · ID<input id="item-category-id"></label><label>Nom catégorie<input id="item-category-name"></label></div>
+<div class="two"><label>Marque<input id="item-brand"></label><label>Abréviation marque<input id="item-brand-abbr" maxlength="40"></label></div>
+
+<div class="two"><label>Type / modèle<input id="item-type"></label><label>Référence modèle<input id="item-reference"></label></div>
+<label>Date de référence (YY-MM)<input id="item-reference-date" maxlength="5" placeholder="26-11"></label>
+<label>Tags<input id="item-tags" placeholder="séparés par virgules"></label>
+</details>
+<details hidden><summary>Taxes et conformité</summary>
+<div class="two"><label>Taxe · ID<input id="item-tax-id"></label><label>Nom taxe<input id="item-tax-name"></label></div>
+<div class="two"><label>Taux taxe (%)<input id="item-tax-rate" type="number" min="0" step="any"></label><label>Type taxe<select id="item-tax-type"><option value="inclusive">TTC / inclusive</option><option value="exclusive">HT / exclusive</option></select></label></div>
+<div class="two"><label>Code HSN<input id="item-hsn"></label><label>Description HSN<input id="item-hsn-description"></label></div>
+</details>
+<details><summary>Variantes (tailles / couleurs)</summary>
+<label class="check"><input id="item-has-variants" type="checkbox"> Cet article possède des variantes</label>
+<label>Axe (ex. Taille / Couleur)<input id="item-variant-axis" placeholder="Taille"></label>
+<label>Valeurs (séparées par virgules)<input id="item-variant-values" placeholder="S, M, L, XL"></label>
+<p class="muted">Chaque valeur crée sa propre fiche variante avec code-barres et stock. Les prix partagés reprennent les tarifs ci-dessus.</p>
+</details>
+<details><summary>Dates et description</summary>
+<div class="two"><label>Date fabrication<input id="item-mfg" type="date"></label><label>Date expiration<input id="item-expiry" type="date"></label></div>
+<label>Description<textarea id="item-description" rows="3" maxlength="2000"></textarea></label>
+</details>
+<details open><summary>Photos article</summary>
+<label>Photos · caméra ou galerie<input id="item-photo" type="file" accept="image/png,image/jpeg,image/gif,image/bmp" multiple></label>
+<label class="check"><input id="remove-photo" type="checkbox"> Supprimer toutes les photos enregistrées</label><p id="item-photo-state" class="muted"></p>
+</details>
+<div class="actions sheet-actions"><button class="primary" type="submit">Enregistrer l’article</button></div>
+<div class="label-print-row"><label>Quantité d’étiquettes<input id="item-print-copies" type="number" min="1" max="999" step="1" value="1" inputmode="numeric"></label><button id="item-print" class="secondary" type="button" hidden>Imprimer Étiquette (x Qté)</button></div><p id="item-error" class="error"></p>
+</form>
+<form id="manage-search-form" class="search"><input id="manage-search" placeholder="Rechercher un article à modifier"><button class="secondary">Rechercher</button></form>
+<div id="manage-results" class="results empty">Recherchez un article pour le modifier.</div>
+</section>
+<section id="page-expense" class="page">
+<div class="heading"><div><h2>Dépenses & reçus photo</h2><p>Enregistrez une sortie de caisse en quelques secondes.</p></div></div>
+<form id="quick-expense-form" class="form-card">
+<label>Montant (DA) *<input id="expense-amount" type="number" min="0.01" step="0.01" inputmode="decimal" required placeholder="0"></label>
+<label>Catégorie *<select id="expense-category" required><option value="Emballage">Emballage</option><option value="Transport">Transport</option><option value="Fournitures">Fournitures</option></select></label>
+<label>Payé depuis<select id="expense-source"><option value="register">Caisse du magasin</option><option value="personal">Avance personnelle</option></select></label>
+<label>Note<input id="expense-description" maxlength="255" placeholder="Ex. sacs d’emballage"></label><label>Photo du reçu (facultatif)<input id="expense-receipt" type="file" accept="image/*" capture="environment"></label><p id="expense-photo-state" class="muted"></p>
+<button class="primary full" type="submit">Enregistrer la dépense</button><p id="expense-status" class="status" role="status"></p>
+</form></section>
+<section id="page-dashboard" class="page owner-only" hidden>
+<div class="heading"><div><h2>Rapports POSNIC</h2><p>Calculs repris du rapport journalier du logiciel de caisse.</p></div></div>
+<div class="report-filters"><select id="report-period"><option value="today">Aujourd’hui</option><option value="yesterday">Hier</option><option value="7">7 jours</option><option value="30">30 jours</option><option value="month">Ce mois</option><option value="custom">Dates personnalisées</option></select><input id="report-start" type="date" hidden><input id="report-end" type="date" hidden><button id="reload-dashboard" class="secondary" type="button">Actualiser</button></div>
+<div id="dashboard-cards" class="metrics"><div class="metric"><small>Chiffre d’affaires</small><b>—</b></div></div>
+<div class="daily-report"><h3>Encaissements et mouvements</h3><div id="report-payment-breakdown" class="daily-list">Chargement…</div></div>
+<div class="daily-report"><h3>Articles les plus vendus</h3><div id="report-top-items" class="daily-list">Chargement…</div></div>
+<div class="daily-report"><h3>Tickets de vente</h3><div id="report-tickets" class="daily-list">Chargement…</div><div id="ticket-details" class="ticket-details" hidden></div></div>
+<p id="dashboard-error" class="error"></p>
+</section>
+<section id="page-owner" class="page owner-only" hidden>
+<div class="heading"><div><h2>Rapport Z WhatsApp</h2><p>Envoyez le récapitulatif de fermeture au propriétaire.</p></div></div>
+<form id="owner-form" class="form-card"><label>Numéro WhatsApp du propriétaire<input id="owner-phone" type="tel" placeholder="+213…" required></label><label class="check"><input id="auto-z" type="checkbox"> Envoyer automatiquement le rapport Z à la clôture de caisse</label><button class="primary">Enregistrer</button></form>
+<button id="send-z" class="secondary">Envoyer le rapport Z maintenant</button><p id="owner-status" class="status"></p>
+</section>
+<footer>Compagnon Samarina · Connexion locale sécurisée</footer>
+</main>
+<div id="camera" class="camera" hidden><div class="camera-card"><div class="camera-head"><b>Scanner</b><button id="close-camera" class="icon-btn">Fermer</button></div><video id="video" playsinline muted></video><p id="camera-status">Pointez la caméra vers le code-barres. Le viseur reste actif après chaque lecture.</p><div class="scan-guide" aria-hidden="true"></div><div class="actions camera-actions"><button id="camera-switch" class="secondary" type="button">Changer caméra</button><button id="camera-torch" class="secondary" type="button" hidden>Lampe</button><button id="camera-capture" class="secondary" type="button">Photo du code</button><input id="camera-file" type="file" accept="image/*" capture="environment" hidden></div><button id="retry-camera" class="primary full" type="button" hidden>Réessayer l’autorisation</button></div></div>
+
+<div id="toast" class="toast" role="status"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js" defer></script><script src="/mobile/app.js" defer></script>
+</body></html>

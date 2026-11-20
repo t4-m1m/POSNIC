@@ -1,0 +1,37 @@
+{
+  "name": "SamarinaPOS",
+  "short_name": "SamarinaPOS",
+  "description": "Point of sale, inventory and billing",
+  "start_url": "../dashboard.html",
+  "scope": "../",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f2f3f7",
+  "theme_color": "#4e6ddf",
+  "icons": [
+    {
+      "src": "images/icons-pwa/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "images/icons-pwa/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "images/icons-pwa/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "images/logo/samarinapos-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

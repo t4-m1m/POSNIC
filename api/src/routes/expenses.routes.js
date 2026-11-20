@@ -42,7 +42,9 @@ router.get('/category/:category', (req, res) => expensesController.getByCategory
 router.get('/type/:type', (req, res) => expensesController.getByType(req, res));
 
 // GET /api/expenses/:id - Get expense by ID (with ObjectId validation)
-// Authenticated cashier quick expense; stored in the normal expenses ledger.
+router.get('/:id', validateId, (req, res) => expensesController.getOne(req, res));
+
+// Authenticated cashier quick expense; saved in the same expenses ledger.
 router.post('/quick', async (req, res) => {
   try {
     await expensesController.ensureContext(req);
@@ -66,7 +68,6 @@ router.post('/quick', async (req, res) => {
     return res.status(error.status || 500).json({ status: false, message: error.message || 'Dépense non enregistrée.' });
   }
 });
-router.get('/:id', validateId, (req, res) => expensesController.getOne(req, res));
 
 // POST /api/expenses - Create new expense
 router.post('/', validateExpense, (req, res) => expensesController.create(req, res));

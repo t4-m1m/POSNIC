@@ -2893,9 +2893,13 @@ PosnicPro = {
             .toggle(PosnicPro.local.get('table_options') === 'enable');
 
         // Payroll contains confidential salary data: hide its entry from cashiers.
-        var role = String(PosnicPro.local.get('usertype') || '').trim().toLowerCase();
-        var isPosnicAdmin = role === 'admin' || role === 'super_admin' ||
-            PosnicPro.local.get('is_admin') === true || PosnicPro.local.get('is_admin') === 'true';
+        var roleValues = [
+            PosnicPro.local.get('usertype'), PosnicPro.local.get('role'),
+            PosnicPro.local.get('role_name'), PosnicPro.local.get('user_type')
+        ].map(function (value) { return String(value || '').trim().toLowerCase(); });
+        var isPosnicAdmin = roleValues.some(function (value) {
+            return ['admin', 'super_admin', 'administrator', 'owner'].indexOf(value) !== -1;
+        }) || PosnicPro.local.get('is_admin') === true || PosnicPro.local.get('is_admin') === 'true';
         $('#hrModule').toggle(isPosnicAdmin);
         $('#companionModule, #v-pills-companion-tab').toggle(isPosnicAdmin);
 

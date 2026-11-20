@@ -73,7 +73,7 @@ function sendError(res, error) {
 }
 router.use((req, res, next) => { try { req.hrContext = context(req); next(); } catch (e) { sendError(res, e); } });
 
-// Cashier-safe quick advance: names only; salary details remain admin-only.
+// Cashier-safe quick advance: employee names only; payroll data remains admin-only.
 router.get('/quick-advance/workers', async (req, res) => {
   try {
     const rows = await (await collection('hr_workers')).find({
@@ -87,7 +87,7 @@ router.post('/quick-advance', async (req, res) => {
     const { license, username, userId } = req.hrContext, b = req.body || {};
     if (!ObjectId.isValid(String(b.worker_id || ''))) return res.status(400).json({ status: false, message: 'Choisissez un employé valide.' });
     const workerId = new ObjectId(String(b.worker_id));
-    const worker = await (await collection('hr_workers')).findOne({ _id: workerId, license, active: { $ne: false }, deleted: { $ne: true } });
+    const worker = await (await collection('hr_workers')).findOne({ _id: workerId, license, active: { $ne: false } });
     if (!worker) return res.status(404).json({ status: false, message: 'Employé actif introuvable.' });
     const value = amount(b.amount, 'Montant');
     if (value <= 0) return res.status(400).json({ status: false, message: 'Le montant doit être supérieur à zéro.' });
@@ -100,7 +100,8 @@ router.post('/quick-advance', async (req, res) => {
     const paid = existing.filter(t => t.type === 'salary_payment').reduce((sum,t) => sum + Number(t.amount || 0), 0);
     const overtime = existing.filter(t => t.type === 'overtime').reduce((sum,t) => sum + Number(t.amount || 0), 0);
     const adjustments = existing.filter(t => t.type === 'adjustment').reduce((sum,t) => sum + Number(t.amount || 0), 0);
-    const remaining = Math.max(0, Number(worker.monthly_salary || 0) + overtime + adjustments - advances - paid);
+    const gross = Math.max(0, Number(worker.monthly_salary || 0) + overtime + adjustments);
+    const remaining = Math.max(0, gross - advances - paid);
     if (value > remaining) return res.status(400).json({ status: false, message: 'Le montant dépasse le solde de salaire disponible.' });
     const doc = { worker_id: workerId, worker_name: worker.name, type: 'advance', amount: value,
       date: d, period, method: String(b.method || 'cash'), reference: '',
