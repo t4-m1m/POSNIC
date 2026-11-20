@@ -114,8 +114,11 @@ PosnicPro.sales = {
 
         function updatePin() {
             state.frame = false;
-            if (!document.documentElement.contains(salesPage) ||
-                window.getComputedStyle(salesPage).display === 'none') {
+            var basketHeader = document.getElementById('posnic-multi-baskets-header-wrap');
+            var salesVisible = !!(document.documentElement.contains(salesPage) &&
+                window.getComputedStyle(salesPage).display !== 'none');
+            if (basketHeader) basketHeader.classList.toggle('posnic-basket-header-visible', salesVisible);
+            if (!salesVisible) {
                 restoreToolbar();
                 return;
             }
@@ -176,6 +179,7 @@ PosnicPro.sales = {
             if (window.MutationObserver) {
                 state.observer = new MutationObserver(schedulePin);
                 state.observer.observe(document.querySelector('.topbar') || document.body, { childList: true, subtree: true, attributes: true });
+                state.observer.observe(salesPage, { attributes: true, attributeFilter: ['style', 'class'] });
             }
             state.installed = true;
         }
