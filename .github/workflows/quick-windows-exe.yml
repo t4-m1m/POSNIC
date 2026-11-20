@@ -125,3 +125,5 @@ jobs:
 # Rebuild Windows installer for cashier action, return-cancel and fixed F-key toolbar updates.
 
 # Rebuild installer with the visible return-cancel action placement.
+
+# Installer rebuild after preserving active basket snapshot before return.
