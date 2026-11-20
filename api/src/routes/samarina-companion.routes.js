@@ -89,7 +89,8 @@ router.get('/setup/status', protect, async (req, res) => {
   if (!branchId) return fail(res, 400, 'Sélectionnez un magasin dans POSNIC.');
   const branch = await findBranch(req, branchId);
   if (!branch) return fail(res, 404, 'Magasin introuvable.');
-  return res.json({ branch: branch.branch_name || branch.name || 'Magasin', canPair: ownerAllowed(req.user) });
+  const connectedPhones = await req.db.collection('samarina_companion_sessions').countDocuments({ branchId: oid(branchId) || branchId, expiresAt: { $gt: new Date() }, revokedAt: null });
+  return res.json({ branch: branch.branch_name || branch.name || 'Magasin', canPair: ownerAllowed(req.user), connectedPhones });
 });
 
 /* Desktop setup is protected by the ordinary POSNIC login, but issues its own

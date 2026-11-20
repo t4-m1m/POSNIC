@@ -15662,6 +15662,46 @@ $(document).ready(function () {
         PosnicPro.sales.pollSamarinaBasketJobs();
     }
 
+    (function bindSamarinaSalesConnect() {
+        if (window._posnicSamarinaConnectBound) return;
+        window._posnicSamarinaConnectBound = true;
+        var refreshTimer = null;
+        function refreshCount() {
+            PosnicPro.request({ url: 'samarina/v1/setup/status', method: 'GET', data: {} }, function (data) {
+                $('#posnic-mobile-companion-count').text(Number(data && data.connectedPhones || 0));
+            }, function () {});
+        }
+        function generatePairing() {
+            $('#posnic-mobile-companion-status').text('Génération du code…');
+            PosnicPro.request({ url: 'samarina/v1/setup/pairing-code', method: 'POST', data: JSON.stringify({}) }, function (data) {
+                var rows = data && data.pairingQr || [], row = rows.find(function (candidate) { return candidate.protocol === 'https'; }) || rows[0];
+                $('#posnic-mobile-companion-code').text(data.code || '—');
+                $('#posnic-mobile-companion-expiry').text('Expire le ' + (data.expiresAt ? new Date(data.expiresAt).toLocaleTimeString() : 'dans 5 minutes'));
+                if (row && row.qr) {
+                    $('#posnic-mobile-companion-qr').attr('src', row.qr).prop('hidden', false);
+                    $('#posnic-mobile-companion-qr-empty').prop('hidden', true);
+                    $('#posnic-mobile-companion-url').attr('href', row.url).text(row.url);
+                    if (row.certificateUrl) {
+                        $('#posnic-mobile-companion-trust').prop('hidden', false);
+                        $('#posnic-mobile-companion-cert').attr('href', row.certificateUrl);
+                    } else $('#posnic-mobile-companion-trust').prop('hidden', true);
+                    $('#posnic-mobile-companion-status').text(row.protocol === 'https' ? 'QR HTTPS prêt. Installez le certificat sur le téléphone avant le premier scan caméra.' : 'QR HTTP prêt. Utilisez Photo du code ou la saisie manuelle si la caméra vidéo est bloquée.');
+                } else $('#posnic-mobile-companion-status').text('Aucune adresse de connexion disponible.');
+                refreshCount();
+            }, function (error) { $('#posnic-mobile-companion-status').text(error && error.message || 'Impossible de générer le code.'); });
+        }
+        $(document).on('click', '#posnic-mobile-companion-open', function () {
+            $('#posnic-mobile-companion-modal').modal('show');
+            refreshCount();
+            if (!refreshTimer) refreshTimer = window.setInterval(refreshCount, 5000);
+        });
+        $(document).on('hidden.bs.modal', '#posnic-mobile-companion-modal', function () {
+            if (refreshTimer) window.clearInterval(refreshTimer);
+            refreshTimer = null;
+        });
+        $(document).on('click', '#posnic-mobile-companion-generate', generatePairing);
+    })();
+
     // A deliberate double-tap on Shift switches baskets; a single Shift remains
     // available for normal uppercase typing. Tabs and the add button always work.
     var lastShift = 0;
