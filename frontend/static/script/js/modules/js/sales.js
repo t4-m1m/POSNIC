@@ -15592,6 +15592,31 @@ $(document).ready(function () {
         observer.observe(document.documentElement, { childList: true, subtree: true });
     }
 
+    // Low-frequency, foreground-only remote label queue. Printing always uses the
+    // desktop's saved shelf-label design and local printer transport.
+    PosnicPro.sales._samarinaPrintPollBusy = false;
+    PosnicPro.sales.pollSamarinaPrintJobs = function () {
+        var page = document.getElementById('sales_new');
+        if (PosnicPro.sales._samarinaPrintPollBusy || document.hidden || !page || !page.getClientRects().length) return;
+        PosnicPro.sales._samarinaPrintPollBusy = true;
+        PosnicPro.get({ url: 'samarina-companion/desktop/print-jobs', data: {} }, function (response) {
+            var rows = response && (response.rows || response.data && response.data.rows) || [];
+            (Array.isArray(rows) ? rows : []).forEach(function (job) {
+                if (!job || !job.id || !job.itemId || !window.PosnicShelfLabels || typeof window.PosnicShelfLabels.quickPrint !== 'function') return;
+                window.PosnicShelfLabels.quickPrint(job.itemId, Number(job.copies) || 1).then(function () {
+                    PosnicPro.request({ url: 'samarina-companion/desktop/print-jobs/' + encodeURIComponent(job.id) + '/ack', method: 'POST', data: JSON.stringify({ state: 'printed' }) }, function () {}, function () {});
+                }).catch(function (error) {
+                    PosnicPro.request({ url: 'samarina-companion/desktop/print-jobs/' + encodeURIComponent(job.id) + '/ack', method: 'POST', data: JSON.stringify({ state: 'failed', message: error && error.message || 'Print failed' }) }, function () {}, function () {});
+                });
+            });
+        }, function () {}).always && null;
+        window.setTimeout(function () { PosnicPro.sales._samarinaPrintPollBusy = false; }, 1800);
+    };
+    if (!PosnicPro.sales._samarinaPrintPollTimer) {
+        PosnicPro.sales._samarinaPrintPollTimer = window.setInterval(PosnicPro.sales.pollSamarinaPrintJobs, 1800);
+        PosnicPro.sales.pollSamarinaPrintJobs();
+    }
+
     // A deliberate double-tap on Shift switches baskets; a single Shift remains
     // available for normal uppercase typing. Tabs and the add button always work.
     var lastShift = 0;

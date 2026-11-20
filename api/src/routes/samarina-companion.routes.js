@@ -157,7 +157,8 @@ async function companionAuth(req, res, next) {
     if (!user || !branch || !userCanAccessBranch(user, session.branchId)) return fail(res, 403, 'Accès au magasin retiré.');
     req.companion = { session, user, branch, branchId: session.branchId };
     req.user = user;
-    await sessions.updateOne({ _id: session._id }, { $set: { lastSeenAt: new Date() } });
+    const activityAt = new Date();
+    await sessions.updateOne({ _id: session._id }, { $set: { lastSeenAt: activityAt, expiresAt: new Date(activityAt.getTime() + 30 * 86400000) } });
     return runWithRequestContext({
       currentBranch: session.branchId,
       currentBranchName: branch.branch_name || branch.name || '',
@@ -170,6 +171,33 @@ async function companionAuth(req, res, next) {
     return fail(res, 500, 'Erreur de vérification de la session.');
   }
 }
+/* Desktop-only queue endpoints: authenticated with the ordinary POSNIC session. */
+router.get('/desktop/print-jobs', protect, async (req, res) => {
+  try {
+    const branchId = activeBranchId(req);
+    if (!branchId || !requestCanAccessBranch(req, branchId)) return fail(res, 403, 'Accès au magasin refusé.');
+    const rows = await req.db.collection('samarina_companion_print_jobs')
+      .find({ branchId: oid(branchId) || branchId, state: 'pending', expiresAt: { $gt: new Date() } })
+      .sort({ createdAt: 1 }).limit(20).toArray();
+    return res.json({ rows: rows.map(row => ({ id: sid(row._id), itemId: sid(row.itemId), copies: row.copies })) });
+  } catch (error) {
+    console.error('[Samarina Companion] desktop print queue failed:', error);
+    return fail(res, 500, 'Impossible de lire la file d’impression.');
+  }
+});
+router.post('/desktop/print-jobs/:id/ack', protect, async (req, res) => {
+  try {
+    const branchId = activeBranchId(req), id = oid(req.params.id);
+    if (!branchId || !id || !requestCanAccessBranch(req, branchId)) return fail(res, 403, 'Accès au magasin refusé.');
+    const state = req.body?.state === 'failed' ? 'failed' : 'printed';
+    await req.db.collection('samarina_companion_print_jobs').updateOne(
+      { _id: id, branchId: oid(branchId) || branchId, state: 'pending' },
+      { $set: { state, completedAt: new Date(), result: String(req.body?.message || '').slice(0, 300) } }
+    );
+    return res.json({ ok: true });
+  } catch (_) { return fail(res, 500, 'Impossible de confirmer l’impression.'); }
+});
+
 router.use(companionAuth);
 
 router.get('/bootstrap', (req, res) => {
@@ -185,6 +213,54 @@ router.get('/bootstrap', (req, res) => {
 router.post('/logout', async (req, res) => {
   await req.db.collection('samarina_companion_sessions').updateOne({ _id: req.companion.session._id }, { $set: { revokedAt: new Date() } });
   res.json({ ok: true });
+});
+router.post('/expenses/quick', async (req, res) => {
+  try {
+    const amount = Number(req.body?.amount);
+    const categories = new Set(['Emballage', 'Transport', 'Fournitures']);
+    const category = String(req.body?.category || '');
+    const source = req.body?.paymentSource === 'personal' ? 'personal' : 'register';
+    const description = String(req.body?.description || ('Dépense mobile · ' + category)).trim().slice(0, 255);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 100000000 || !categories.has(category) || description.length < 3)
+      return fail(res, 400, 'Montant, catégorie ou description invalide.');
+    const c = req.companion, now = new Date();
+    const document = {
+      amount, type: 'debit', date: now, category, recipientname: '', approvedby: '',
+      description, branch_id: oid(c.branchId) || c.branchId,
+      branch_name: c.branch.branch_name || c.branch.name || '',
+      license: oid(c.session.license) || c.session.license || null,
+      created_date: now, updated_date: now,
+      created_by: c.user.username || c.user.name || c.user.email || 'Samarina Companion',
+      created_by_id: c.user._id || null, updated_by: c.user.username || c.user.name || c.user.email || '',
+      updated_by_id: c.user._id || null, is_deleted: false,
+      payment_source: source, source_channel: 'samarina_companion'
+    };
+    const result = await req.db.collection('expenses').insertOne(document);
+    return res.status(201).json({ ok: true, id: sid(result.insertedId), amount, category, paymentSource: source, date: now });
+  } catch (error) {
+    console.error('[Samarina Companion] quick expense failed:', error);
+    return fail(res, 500, 'Impossible d’enregistrer la dépense.');
+  }
+});
+router.post('/print-jobs', async (req, res) => {
+  try {
+    const itemId = oid(req.body?.itemId), copies = Number(req.body?.copies);
+    if (!itemId || !Number.isInteger(copies) || copies < 1 || copies > 999) return fail(res, 400, 'Article ou quantité d’étiquettes invalide.');
+    const c = req.companion;
+    const item = await req.db.collection('items').findOne({ _id: itemId, ...branchFilter(c.branchId), ...licenseFilter(c.session.license) }, { projection: { _id: 1 } });
+    if (!item) return fail(res, 404, 'Article introuvable dans ce magasin.');
+    const now = new Date();
+    const result = await req.db.collection('samarina_companion_print_jobs').insertOne({
+      itemId, copies, branchId: oid(c.branchId) || c.branchId,
+      license: oid(c.session.license) || c.session.license,
+      deviceId: c.session.deviceId, staffId: c.user._id,
+      state: 'pending', createdAt: now, expiresAt: new Date(now.getTime() + 10 * 60000)
+    });
+    return res.status(202).json({ ok: true, id: sid(result.insertedId), message: 'Demande envoyée au PC. L’étiquette sera imprimée avec le modèle enregistré.' });
+  } catch (error) {
+    console.error('[Samarina Companion] label print request failed:', error);
+    return fail(res, 500, 'Impossible d’envoyer la demande d’impression.');
+  }
 });
 
 router.get('/catalogue', async (req, res) => {
