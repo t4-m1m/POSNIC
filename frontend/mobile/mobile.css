@@ -18,3 +18,35 @@
 .mobile-item-sheet{position:fixed;z-index:55;left:10px;right:10px;bottom:calc(70px + env(safe-area-inset-bottom,0px));max-height:84svh;overflow:auto;margin:0 auto;padding:18px 16px 22px;background:#fff;box-shadow:0 20px 70px #0003;border-radius:22px;border:1px solid var(--line)}.sheet-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:-18px;background:#fff;padding:6px 0 12px;z-index:2;border-bottom:1px solid var(--line);margin-bottom:12px}.sheet-heading h3{margin:3px 0;font-size:18px}.mobile-item-sheet details{border-top:1px solid var(--line);padding:12px 0}.mobile-item-sheet summary{font-weight:750;cursor:pointer;padding:4px 0 10px}.mobile-item-sheet label{display:block;margin:10px 0}.mobile-item-sheet .inline-input{display:flex;gap:7px}.mobile-item-sheet .inline-input input{flex:1;min-width:0}.mobile-item-sheet .inline-input button{flex:0 0 auto}.sheet-actions .primary{width:100%}.report-filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.report-filters select{grid-column:1/-1;min-height:46px;border-radius:12px;padding:10px}.report-filters input{min-width:0;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:8px}.ticket-details{margin-top:12px;padding:14px;background:#fff;border:1px solid var(--line);border-radius:14px}.daily-report h3{margin-bottom:10px}.daily-report .daily-card-head{padding:8px 0;border-bottom:1px solid var(--line)}
 
 .connection-actions{display:flex;align-items:center;gap:8px}.connection-actions #connection-retry{min-height:34px;padding:6px 10px;font-size:11px}.connection-error{margin:-5px 0 12px;padding:10px 12px;border:1px solid #f1d3d3;border-radius:11px;background:#fff7f7;color:#a12b2b;font-size:12px}.connection-error[hidden]{display:none!important}
+
+/* POSNIC mobile experience refresh — responsive, touch-first and theme-aligned. */
+:root{--blue:#506fe4;--line:#e3e9f5;--muted:#66748f;--canvas:#f4f6fc}
+body{background:var(--canvas);color:#172554;-webkit-tap-highlight-color:transparent}
+.shell{max-width:1080px;padding:0 20px 44px}.top{height:68px;position:sticky;top:0;z-index:12;background:rgba(244,246,252,.94);backdrop-filter:blur(14px);border-bottom-color:rgba(80,111,228,.12)}
+.brand{gap:9px}.brand-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,#506fe4,#3049b8);box-shadow:0 5px 14px rgba(80,111,228,.22);font-size:0}.brand-mark svg{width:24px;height:24px;display:block}
+.brand b{font-size:12px;letter-spacing:1.7px;color:#263b86}.brand small{font-size:9px;letter-spacing:1.6px;color:#7180a7}
+.top-right{gap:7px}.network{padding:6px 9px;border-radius:30px;background:#edf2ff;color:#506fe4;font-weight:700}
+.icon-btn{min-height:36px;border:1px solid #dce4f8;background:#fff;color:#334a9a;border-radius:10px;font-weight:700;padding:7px 10px}
+.welcome{padding:24px 0 16px}.eyebrow{color:#506fe4}.welcome h1{color:#172554;font-size:25px;letter-spacing:-.7px}.live{background:#eaf7ef;color:#187647;font-weight:700}
+.tabs{gap:5px;padding:5px;background:#e9edfa;border:1px solid #dfe5f7;border-radius:14px}
+.tab{display:flex;align-items:center;justify-content:center;gap:8px;min-height:43px;padding:9px 14px;border-radius:10px;color:#617096;font-size:13px}.tab.active{background:#fff;color:#3f5fd2;box-shadow:0 2px 8px rgba(42,62,133,.1)}
+.tab-icon,.glyph{display:inline-flex;align-items:center;justify-content:center;color:inherit}.tab-icon svg,.glyph svg{width:18px;height:18px;display:block;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.page{border:1px solid #e3e8f4;border-radius:17px;padding:22px;background:#fff;box-shadow:0 8px 28px rgba(30,49,105,.035)}
+.heading h2{font-size:19px;font-weight:800;color:#1b2c68;letter-spacing:-.3px}.heading p{font-size:12px;color:#73809c}
+.search input,.connect-card input,.form-card input:not([type=checkbox]){border-color:#d9e1f2;border-radius:11px;min-height:46px}.search input:focus,.form-card input:focus{outline:0;border-color:#8298f1;box-shadow:0 0 0 3px rgba(80,111,228,.12)}
+.primary{background:linear-gradient(135deg,#506fe4,#405bd0);box-shadow:0 4px 10px rgba(80,111,228,.16);border-radius:11px}.secondary{background:#eef2fb;color:#3c529e;border:1px solid #e1e7f6;border-radius:11px}
+.product,.queue-row{border-color:#e4e9f5;border-radius:13px;background:#fff}.product-photo{border:1px solid #edf0f7}.price{color:#405bd0}.form-card{background:#f8faff;border-color:#e1e7f5;border-radius:15px}
+.metric{background:linear-gradient(180deg,#fff,#f8faff);border-color:#e3e9f6}.metric b{color:#263d9a;font-size:21px}.status{color:#286e50}
+@media(max-width:650px){
+.shell{padding:0 12px calc(92px + env(safe-area-inset-bottom))}.top{height:60px;margin:0 -12px;padding:0 12px}.brand-mark{width:34px;height:34px}
+.top-right{gap:5px}.network{font-size:10px;padding:5px 7px}.icon-btn{font-size:11px;min-height:32px;padding:6px 8px}
+.welcome{padding:17px 2px 13px;align-items:flex-start}.welcome h1{font-size:21px}.welcome p{font-size:12px}.connection-actions{display:flex;align-items:center;gap:6px}.live{font-size:10px;padding:7px 9px}
+.tabs{position:fixed;z-index:30;left:9px;right:9px;bottom:calc(8px + env(safe-area-inset-bottom));margin:0;padding:5px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;border-radius:16px;background:rgba(255,255,255,.96);box-shadow:0 8px 30px rgba(22,39,91,.18);backdrop-filter:blur(18px)}
+.tab{min-width:0;min-height:52px;padding:6px 2px;flex-direction:column;gap:3px;font-size:10px;white-space:normal}.tab-icon svg{width:19px;height:19px}
+.page{padding:14px;border-radius:15px;min-height:300px}.heading{margin-bottom:14px}.heading h2{font-size:17px}.heading p{font-size:11px}
+.search{flex-direction:row;align-items:stretch}.search input{min-width:0}.search .primary,.search .secondary{flex:0 0 auto;padding:9px 12px}.actions>*{flex:1 1 130px}
+.product{align-items:flex-start;padding:11px;gap:10px}.product-photo{width:54px;height:54px}.product-body .secondary{min-height:36px;margin-right:5px;padding:7px 10px;font-size:11px}
+.two{grid-template-columns:1fr;gap:4px}.form-card{padding:13px;margin-top:12px}.form-card label{margin:11px 0;font-size:12px}.form-card input:not([type=checkbox]){min-height:44px}
+.metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.metric{padding:13px}.metric b{font-size:17px}.queue-row{padding:10px}.qty{gap:7px}.qty button{width:34px;height:34px;background:#eef2ff;color:#405bd0;font-size:18px}.full{min-height:48px}
+}
+@media(min-width:651px) and (max-width:900px){.shell{padding-left:16px;padding-right:16px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
