@@ -27,13 +27,55 @@
 <section id="page-items" class="page">
 <div class="heading"><div><h2>Gestion des articles</h2><p>Créer un article ou modifier sa fiche et sa photo.</p></div><span class="glyph">✎</span></div>
 <button id="new-item" class="primary">＋ Nouvel article</button>
-<form id="item-form" class="form-card" hidden>
-<input id="item-id" type="hidden"><label>Nom de l’article *<input id="item-name" required maxlength="200"></label>
-<div class="two"><label>Prix de vente (DA) *<input id="item-price" type="number" min="0" step=".01" required></label><label>Code-barres<input id="item-barcode"></label></div>
-<label>SKU / Référence<input id="item-sku"></label>
-<label>Photo depuis la galerie ou les fichiers<input id="item-photo" type="file" accept="image/*"></label>
-<label class="check"><input id="remove-photo" type="checkbox"> Supprimer la photo actuelle</label><p id="item-photo-state" class="muted"></p>
-<div class="actions"><button id="cancel-item" class="secondary" type="button">Annuler</button><button class="primary">Enregistrer</button></div><div class="label-print-row"><label>Quantité d’étiquettes<input id="item-print-copies" type="number" min="1" max="999" step="1" value="1" inputmode="numeric"></label><button id="item-print" class="secondary" type="button" hidden>Imprimer Étiquette (x Qté)</button></div><p id="item-error" class="error"></p>
+<form id="item-form" class="form-card mobile-item-sheet" hidden>
+<input id="item-id" type="hidden">
+<div class="sheet-heading"><div><span class="eyebrow">FICHE ARTICLE POSNIC</span><h3>Ajouter / Modifier Article</h3></div><button id="cancel-item" class="secondary" type="button">Fermer</button></div>
+<label>Nom de l’article *<input id="item-name" required maxlength="200"></label>
+<div class="two"><label>Prix de vente (DA) *<input id="item-price" type="number" min="0" step="any" required inputmode="decimal"></label><label>Prix de gros / tarif 2<input id="item-price-2" type="number" min="0" step="any" inputmode="decimal"></label></div>
+<div class="two"><label>Prix tarif 3 / promotion<input id="item-price-3" type="number" min="0" step="any" inputmode="decimal"></label><label>MRP<input id="item-mrp" type="number" min="0" step="any" inputmode="decimal"></label></div>
+<details open><summary>Coût d’achat et stock</summary>
+<div class="two"><label>Prix d’achat (€)<input id="item-cost-eur" type="number" min="0" step="0.01" inputmode="decimal"></label><label>Taux EUR → DA<input id="item-exchange-rate" type="number" min="0.000001" step="any" value="280"></label></div>
+<div class="two"><label>Frais supplémentaires (DA)<input id="item-extra-cost" type="number" min="0" step="0.01" value="0"></label><label>Coût d’achat final (DA)<input id="item-cost" type="number" min="0" step="0.01" inputmode="decimal"></label></div>
+<div class="two"><label>Quantité en stock<input id="item-quantity" type="number" min="0" step="any" value="0" inputmode="decimal"></label><label>Alerte stock bas<input id="item-reorder" type="number" min="0" step="any" inputmode="decimal"></label></div>
+<div class="two"><label>Unité<input id="item-unit" value="qty" placeholder="qty, pièce, kg…"></label><label>Unité d’achat<input id="item-purchase-unit" placeholder="carton, lot…"></label></div>
+<div class="two"><label>Conversion achat → vente<input id="item-pack-size" type="number" min="0" step="any"></label><label>Position / ordre<input id="item-position" type="number" min="0" step="any"></label></div>
+<label class="check"><input id="item-track-stock" type="checkbox" checked> Suivre le stock</label>
+<label class="check"><input id="item-negative-stock" type="checkbox"> Autoriser le stock négatif</label>
+<label class="check"><input id="item-open-price" type="checkbox"> Prix libre à la vente</label>
+<label class="check"><input id="item-weight" type="checkbox"> Article pesé / balance</label>
+</details>
+<details open><summary>Identification, catégorie et fournisseur</summary>
+<div class="two"><label>SKU / Référence<input id="item-sku" maxlength="20"></label><label>PLU<input id="item-plu" maxlength="6" inputmode="numeric"></label></div>
+<label>Code-barres<div class="inline-input"><input id="item-barcode" maxlength="100"><button id="item-barcode-scan" class="secondary" type="button">Scanner</button></div></label>
+<div class="two"><label>GTIN<input id="item-gtin" maxlength="14" inputmode="numeric"></label><label>Codes-barres alternatifs<input id="item-alt-barcodes" placeholder="séparés par virgules"></label></div>
+<div class="two"><label>Catégorie · ID<input id="item-category-id"></label><label>Nom catégorie<input id="item-category-name"></label></div>
+<div class="two"><label>Marque<input id="item-brand"></label><label>Abréviation marque<input id="item-brand-abbr" maxlength="40"></label></div>
+<div class="two"><label>Fournisseur · ID<input id="item-supplier-id"></label><label>Nom fournisseur<input id="item-supplier-name"></label></div>
+<div class="two"><label>Type / modèle<input id="item-type"></label><label>Référence modèle<input id="item-reference"></label></div>
+<label>Date de référence (YY-MM)<input id="item-reference-date" maxlength="5" placeholder="26-11"></label>
+<label>Tags<input id="item-tags" placeholder="séparés par virgules"></label>
+</details>
+<details><summary>Taxes et conformité</summary>
+<div class="two"><label>Taxe · ID<input id="item-tax-id"></label><label>Nom taxe<input id="item-tax-name"></label></div>
+<div class="two"><label>Taux taxe (%)<input id="item-tax-rate" type="number" min="0" step="any"></label><label>Type taxe<select id="item-tax-type"><option value="inclusive">TTC / inclusive</option><option value="exclusive">HT / exclusive</option></select></label></div>
+<div class="two"><label>Code HSN<input id="item-hsn"></label><label>Description HSN<input id="item-hsn-description"></label></div>
+</details>
+<details><summary>Variantes (tailles / couleurs)</summary>
+<label class="check"><input id="item-has-variants" type="checkbox"> Cet article possède des variantes</label>
+<label>Axe (ex. Taille / Couleur)<input id="item-variant-axis" placeholder="Taille"></label>
+<label>Valeurs (séparées par virgules)<input id="item-variant-values" placeholder="S, M, L, XL"></label>
+<p class="muted">Chaque valeur crée sa propre fiche variante avec code-barres et stock. Les prix partagés reprennent les tarifs ci-dessus.</p>
+</details>
+<details><summary>Dates et description</summary>
+<div class="two"><label>Date fabrication<input id="item-mfg" type="date"></label><label>Date expiration<input id="item-expiry" type="date"></label></div>
+<label>Description<textarea id="item-description" rows="3" maxlength="2000"></textarea></label>
+</details>
+<details open><summary>Photos article</summary>
+<label>Photos · caméra ou galerie<input id="item-photo" type="file" accept="image/png,image/jpeg,image/gif,image/bmp" multiple></label>
+<label class="check"><input id="remove-photo" type="checkbox"> Supprimer toutes les photos enregistrées</label><p id="item-photo-state" class="muted"></p>
+</details>
+<div class="actions sheet-actions"><button class="primary" type="submit">Enregistrer l’article</button></div>
+<div class="label-print-row"><label>Quantité d’étiquettes<input id="item-print-copies" type="number" min="1" max="999" step="1" value="1" inputmode="numeric"></label><button id="item-print" class="secondary" type="button" hidden>Imprimer Étiquette (x Qté)</button></div><p id="item-error" class="error"></p>
 </form>
 <form id="manage-search-form" class="search"><input id="manage-search" placeholder="Rechercher un article à modifier"><button class="secondary">Rechercher</button></form>
 <div id="manage-results" class="results empty">Recherchez un article pour le modifier.</div>
