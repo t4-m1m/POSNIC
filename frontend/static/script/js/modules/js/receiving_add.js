@@ -93,45 +93,42 @@ PosnicPro.receivings = {
         if (self._samarinaQueueBusy || !PosnicPro.local || !PosnicPro.local.get('branch_id_set')) return;
         self._samarinaQueueBusy = true;
         PosnicPro.get({ url: 'samarina/v1/desktop/receiving-queue', data: {} }, function (response) {
-            var rows = response && response.rows ? response.rows : (response && response.data && response.data.rows) || [];
-            if (!rows.length) return;
-            var hash = String(window.location.hash || '').slice(1);
-            var onNewReceiving = /^\\/?receivings\\/new$/.test(hash);
-            if (!onNewReceiving) {
-                var hasDraftLines = $('#receiving_print tbody tr').not('#cart_content_area').length > 0;
-                var hasSupplier = !!String($('#receiving_add_supplier_name').val() || '').trim();
-                if (hasDraftLines || hasSupplier) return;
-                if (typeof hasher !== 'undefined' && hasher.setHash) hasher.setHash('receivings/new');
-                else window.location.hash = '#/receivings/new';
-                return;
-            }
-            if (!$('#receiving_add').length || !PosnicPro.receivings.addReceivingLineItems) return;
-            var imported = 0;
-            rows.forEach(function (row) {
-                var itemId = String(row.itemId || '');
-                if (!itemId || !row.quantity) return;
-                PosnicPro.receivings.addReceivingLineItems({
-                    item_id: itemId,
-                    item_name: row.name || 'Article',
-                    item_quantity: row.quantity,
-                    company_price: Number(row.companyPrice) || 0,
-                    tax: Number(row.tax) || 0,
-                    tax_type: row.taxType || 'exclusive',
-                    available_quantity: Number(row.availableQuantity) || 0,
-                    itemid: row.itemid || row.barcode || '',
-                    item_unit: row.unit || 'qty',
-                    purchase_unit: row.purchaseUnit || '',
-                    conversion_factor: Number(row.conversionFactor) || 0
+            try {
+                var rows = response && response.rows ? response.rows : (response && response.data && response.data.rows) || [];
+                if (!rows.length) return;
+                var hash = String(window.location.hash || '').slice(1);
+                var onNewReceiving = /^\/?receivings\/new$/.test(hash);
+                if (!onNewReceiving) {
+                    var hasDraftLines = $('#receiving_print tbody tr').not('#cart_content_area').length > 0;
+                    var hasSupplier = !!String($('#receiving_add_supplier_name').val() || '').trim();
+                    if (hasDraftLines || hasSupplier) return;
+                    if (typeof hasher !== 'undefined' && hasher.setHash) hasher.setHash('receivings/new');
+                    else window.location.hash = '#/receivings/new';
+                    return;
+                }
+                if (!$('#receiving_add').length || !PosnicPro.receivings.addReceivingLineItems) return;
+                var imported = 0;
+                rows.forEach(function (row) {
+                    var itemId = String(row.itemId || '');
+                    if (!itemId || !row.quantity) return;
+                    PosnicPro.receivings.addReceivingLineItems({
+                        item_id: itemId, item_name: row.name || 'Article', item_quantity: row.quantity,
+                        company_price: Number(row.companyPrice) || 0, tax: Number(row.tax) || 0,
+                        tax_type: row.taxType || 'exclusive', available_quantity: Number(row.availableQuantity) || 0,
+                        itemid: row.itemid || row.barcode || '', item_unit: row.unit || 'qty',
+                        purchase_unit: row.purchaseUnit || '', conversion_factor: Number(row.conversionFactor) || 0
+                    });
+                    PosnicPro.post({
+                        url: 'samarina/v1/desktop/receiving-queue/' + encodeURIComponent(row.id) + '/ack',
+                        data: JSON.stringify({})
+                    }, function () {});
+                    imported++;
                 });
-                PosnicPro.post({
-                    url: 'samarina/v1/desktop/receiving-queue/' + encodeURIComponent(row.id) + '/ack',
-                    data: JSON.stringify({})
-                }, function () {});
-                imported++;
-            });
-            if (imported) PosnicPro.alert('success', imported + ' article(s) reçus depuis le Compagnon Samarina. Vérifiez le fournisseur et les quantités avant d’enregistrer.');
-        }, function () {}).always && null;
-        setTimeout(function () { self._samarinaQueueBusy = false; }, 2500);
+                if (imported) PosnicPro.alert('success', imported + ' article(s) reçus depuis le Compagnon Samarina. Vérifiez le fournisseur et les quantités avant d’enregistrer.');
+            } finally {
+                self._samarinaQueueBusy = false;
+            }
+        }, function () { self._samarinaQueueBusy = false; });
     },
     showEdit: function (id) {
         $('#receiving_add_date').removeClass('commonDate');
