@@ -125,6 +125,9 @@ async function load() {
     ? 'Mobile POS is enabled for this branch.'
     : 'Mobile POS is off. Enable it in Settings → Features.';
   $('pair').disabled = !state.enabled;
+  $('companion-feature-status').textContent = state.enabled
+    ? 'Le Compagnon Web est prêt. Générez un QR code ou ouvrez directement le lien depuis votre téléphone.'
+    : 'Activez Mobile POS dans Paramètres → Fonctionnalités pour autoriser la connexion du téléphone.';
   $('companion-open-features').hidden = state.enabled;
   $('pair-staff').replaceChildren();
   (state.pairingStaff || []).forEach((staff) => {
