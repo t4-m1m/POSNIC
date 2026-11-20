@@ -88,11 +88,11 @@ PosnicPro.sales = {
         // scroll. Keep the basket tabs and F-keys in normal flex flow instead
         // of detaching them as fixed overlays above the clipped workspace.
         var basketBar = document.getElementById('posnic-multi-baskets');
-        if (basketBar && (basketBar.parentNode !== toolbar.parentNode ||
-            basketBar.nextElementSibling !== toolbar)) {
-            toolbar.parentNode.insertBefore(basketBar, toolbar);
+        var basketHost = document.getElementById('posnic-multi-baskets-header-host');
+        if (basketBar && basketHost && basketBar.parentNode !== basketHost) {
+            basketHost.appendChild(basketBar);
         }
-        [basketBar, toolbar].forEach(function (element) {
+        [toolbar].forEach(function (element) {
             if (!element) return;
             element.classList.remove('sales-function-toolbar-pinned', 'sales-multi-baskets-toolbar-pinned');
             ['position', 'top', 'left', 'right', 'width', 'zIndex', 'boxSizing'].forEach(function (name) {
@@ -15374,7 +15374,13 @@ $(document).ready(function () {
                 else if (form) form.insertBefore(bar, form.firstChild);
                 else root.insertBefore(bar, root.firstChild);
                 needsRender = true;
-            } else if (toolbar && root.contains(toolbar) &&
+            }
+
+            var basketHost = document.getElementById('posnic-multi-baskets-header-host');
+            if (basketHost && bar.parentNode !== basketHost) {
+                basketHost.appendChild(bar);
+                needsRender = true;
+            } else if (!basketHost && toolbar && root.contains(toolbar) &&
                        (bar.parentNode !== toolbar.parentNode || bar.nextElementSibling !== toolbar)) {
                 toolbar.parentNode.insertBefore(bar, toolbar);
                 needsRender = true;
