@@ -126,7 +126,7 @@ router.post('/setup/pairing-code', protect, async (req, res) => {
       url.hash = new URLSearchParams({ server: api, code }).toString();
       return {
         url: origin, protocol: origin.startsWith('https:') ? 'https' : 'http',
-        certificateUrl: origin.startsWith('https:') ? origin + '/api/samarina/v1/certificate' : '',
+        certificateUrl: target.secure ? 'http://' + new URL(target.url).hostname + ':' + (process.env.PORT || 5555) + '/api/samarina/v1/certificate' : '',
         qr: await qrcode.toDataURL(url.toString(), { width: 280, margin: 2 })
       };
     }));
