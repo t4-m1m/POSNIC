@@ -104,7 +104,15 @@ router.get('/desktop/receiving-queue', protect, async (req, res) => {
     const branchId = activeBranchId(req);
     if (!branchId) return fail(res, 400, 'Aucun magasin sélectionné.');
     const rows = await req.db.collection('samarina_receiving_queue').find({ branchId: oid(branchId) || branchId, state: 'pending' }).sort({ createdAt: 1 }).limit(250).toArray();
-    return res.json({ rows: rows.map(row => ({ id: sid(row._id), itemId: sid(row.itemId), name: row.name, barcode: row.barcode || '', quantity: Number(row.quantity || 0), createdAt: row.createdAt, deviceId: row.deviceId || '' })) });
+    return res.json({ rows: rows.map(row => ({
+      id: sid(row._id), itemId: sid(row.itemId), name: row.name, barcode: row.barcode || '',
+      quantity: Number(row.quantity || 0), companyPrice: Number(row.companyPrice || 0),
+      tax: Number(row.tax || 0), taxType: row.taxType || 'exclusive',
+      availableQuantity: Number(row.availableQuantity || 0), unit: row.unit || 'qty',
+      itemid: row.itemid || row.barcode || '', purchaseUnit: row.purchaseUnit || '',
+      conversionFactor: Number(row.conversionFactor || 0),
+      createdAt: row.createdAt, deviceId: row.deviceId || ''
+    })) });
   } catch (error) {
     console.error('[Samarina Companion] desktop queue failed:', error);
     return fail(res, 500, 'Impossible de lire la file de réception.');
@@ -231,11 +239,18 @@ router.post('/receiving/queue', async (req, res) => {
     const itemId = oid(req.body?.itemId), quantity = Number(req.body?.quantity);
     if (!itemId || !Number.isFinite(quantity) || quantity <= 0 || quantity > 100000) return fail(res, 400, 'Article ou quantité invalide.');
     const c = req.companion;
-    const item = await req.db.collection('items').findOne({ _id: itemId, ...branchFilter(c.branchId), ...licenseFilter(c.session.license) }, { projection: { name: 1, barcode_id: 1 } });
+    const item = await req.db.collection('items').findOne({ _id: itemId, ...branchFilter(c.branchId), ...licenseFilter(c.session.license) }, {
+      projection: { name: 1, barcode_id: 1, itemid: 1, company_price: 1, cost_price: 1, tax: 1, tax_type: 1, quantity: 1, available_quantity: 1, unit: 1, item_unit: 1, purchase_unit: 1, conversion_factor: 1 }
+    });
     if (!item) return fail(res, 404, 'Article introuvable dans ce magasin.');
     await req.db.collection('samarina_receiving_queue').insertOne({
       itemId, branchId: oid(c.branchId) || c.branchId, license: oid(c.session.license) || c.session.license,
       name: item.name || 'Article', barcode: item.barcode_id || '', quantity,
+      companyPrice: Number(item.company_price || item.cost_price || 0),
+      tax: Number(item.tax || 0), taxType: item.tax_type || 'exclusive',
+      availableQuantity: Number(item.available_quantity ?? item.quantity ?? 0),
+      unit: item.unit || item.item_unit || 'qty', itemid: item.itemid || item.barcode_id || '',
+      purchaseUnit: item.purchase_unit || '', conversionFactor: Number(item.conversion_factor || 0),
       deviceId: c.session.deviceId, state: 'pending', createdAt: new Date(), updatedAt: new Date(), staffId: c.user._id
     });
     res.json({ ok: true, message: 'Article ajouté à la file de réception.' });
