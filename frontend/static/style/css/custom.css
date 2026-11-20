@@ -7988,19 +7988,6 @@ tr.s-doc-purchase-row:hover td { background: rgba(9, 105, 218, 0.05); }
 .jconfirm,
 .swal2-container { z-index: 40120 !important; }
 
-/* POS cashier page: the shared #containerbar is an empty breadcrumb spacer here.
-   The global application rule gives it a 100vh minimum height, which pushes the
-   actual sales content (basket tabs, F-key bar and workspace) below the viewport.
-   Keep the existing 100px cashier top offset, but never let this spacer consume
-   the full screen. Scope this correction to #sales_new so other pages are untouched. */
-#sales_new > #containerbar {
-  height: 100px !important;
-  min-height: 100px !important;
-  max-height: 100px !important;
-  overflow: hidden !important;
-}
-
-
 /* POSNIC build #1004 header restoration: cashier baskets live beside the language selector. */
 #posnic-multi-baskets-header-wrap { display:none; vertical-align:middle; margin:0 4px 0 0; }
 body:has(#sales_new:not([style*="display: none"])) #posnic-multi-baskets-header-wrap { display:inline-block !important; }
@@ -8033,7 +8020,7 @@ body:has(#sales_new:not([style*="display: none"])) #posnic-multi-baskets-header-
 #posnic-whatsapp-connector.posnic-whatsapp-icon-btn:focus {
     background:#1fb85a; border-color:#1fb85a; color:#fff;
 }
-#posnic-whatsapp-connector.posnic-whatsapp-icon-btn i { margin:0 !important; font-size:19px; line-height:1; }
+#posnic-whatsapp-connector.posnic-whatsapp-icon-btn svg { display:block; width:20px; height:20px; }
 #sales_new #touchsales_page > #sales-function-shortcuts { order:2 !important; }
 #sales_new #touchsales_page > .row:has(#instance-view, #items_view_hide) { order:3 !important; }
 @media (max-width:767.98px) {
