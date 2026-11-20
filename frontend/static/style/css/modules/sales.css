@@ -1738,13 +1738,13 @@ body > .modal-backdrop {
     font-weight:700 !important;
   }
   #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-tab-wrap.is-active {
-    border-color:#2563eb !important;
-    background:#2563eb !important;
-    box-shadow:0 2px 7px rgba(37,99,235,.18) !important;
+    border-color:#506fe4 !important;
+    background:#506fe4 !important;
+    box-shadow:0 2px 7px rgba(80,111,228,.18) !important;
   }
   #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-tab-wrap.is-active .posnic-basket-tab,
   #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-tab.is-active {
-    background:#2563eb !important;
+    background:#506fe4 !important;
     color:#fff !important;
   }
   #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-close {
