@@ -827,6 +827,8 @@ const UPDATED_ASSETS = process.env.POSNIC_ASSET_DIR;
 // The Web Companion is a separate static app, not part of frontend/public.
 // Keep it beside the packaged frontend so /mobile/ works in dev and installed builds.
 const SAMARINA_COMPANION_DIR = path.join(__dirname, '..', 'frontend', 'mobile');
+const POSNIC_NEXT_DIR = path.join(__dirname, '..', 'frontend-v2');
+app.use('/v2', express.static(POSNIC_NEXT_DIR, { index: 'index.html', fallthrough: true, etag: true, maxAge: '1h' }));
 app.get('/', (req, res, next) => {
   const remoteAddress = String(req.socket.remoteAddress || '');
   const isLoopback = remoteAddress === '127.0.0.1' || remoteAddress === '::1' ||
@@ -1108,6 +1110,10 @@ app.use(responseMiddleware);
 
 // Welcome route (PHP-compatible format)
 app.get('/', (req, res) => {
+  if (process.env.POSNIC_DESKTOP === '1') {
+    res.set('Cache-Control', 'no-store');
+    return res.sendFile(path.join(POSNIC_NEXT_DIR, 'index.html'));
+  }
   res.status(200).json({
     type: 'success',
     message: 'Welcome to the Posnic API v2',
