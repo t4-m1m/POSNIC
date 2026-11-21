@@ -1,0 +1,1 @@
+export function toast(message,type='info'){const host=document.querySelector('#toast-host');if(!host)return;const el=document.createElement('div');el.className='toast '+type;el.textContent=message;host.append(el);setTimeout(()=>el.remove(),3600);}
