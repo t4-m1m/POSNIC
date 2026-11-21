@@ -287,7 +287,7 @@ class ItemsController extends BaseController {
         selling_price: 1, selling_price_2: 1, selling_price_3: 1,
         company_price: 1, purchase_price_eur: 1, purchase_cost_dzd: 1,
         available_quantity: 1, quantity: 1, track_inventory: 1,
-        low_stock_alert: 1, reorder_point: 1, image: 1, updated_date: 1,
+        low_stock_alert: 1, reorder_point: 1, updated_date: 1,
         variants: 1, variant_group_id: 1, variant_axis: 1, variant_value: 1
       };
       const [items, total] = await Promise.all([
