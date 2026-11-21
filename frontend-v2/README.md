@@ -1,3 +1,3 @@
-# Saint Marina POS / POSNIC Next
+# SamarinaPOS V2
 
-Standalone ES-module frontend migration shell. Existing legacy frontend and mobile companion remain untouched. This initial slice establishes the visual system and navigation only; transactional modules require explicit adapters to the existing authenticated controllers before production cutover.
+SamarinaPOS V2 standalone ES-module desktop renderer. The cashier, catalogue, customer, purchasing, delivery, reporting, settings, receipt, and label workflows use the authenticated POSNIC API and Electron bridges.
