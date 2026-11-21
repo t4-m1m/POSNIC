@@ -10,6 +10,10 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 const fs = require('fs');
+
+// Fonts used by the desktop shell are shipped under src/fonts in app.asar.
+const BUILT_STATIC = process.env.POSNIC_BUILT_STATIC_PATH || path.join(__dirname, '..', 'src');
+const STATIC_MAX_AGE = '7d';
 const session = require('express-session');
 /* A session store that follows the shop. It extends session.Store, lives in its
    own file, and is tested there - see src/session/tenant-session-store.js for
@@ -752,7 +756,6 @@ app.use(async (req, res, next) => {
   // The page can live under either mount depending on how it was reached.
   const rel = req.path.replace(/^\/(public\/)?/, '');
   const file = [
-    path.join(__dirname, '..', 'frontend', 'public', rel),
     path.join(__dirname, 'public', rel),
   ].find((p) => fs.existsSync(p));
   if (!file) return next();
