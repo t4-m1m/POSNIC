@@ -10,8 +10,6 @@ on:
     branches:
       - feat/article-cost-label-designer-sales-calendar
       - feat/posnic-v2-rebrand
-    tags:
-      - 'v*-rebrand*'
   workflow_dispatch:
 
 permissions:
@@ -84,6 +82,10 @@ jobs:
 
       - name: Validate Windows workflow YAML syntax
         run: node -e "const fs=require('node:fs'); require('js-yaml').load(fs.readFileSync('.github/workflows/quick-windows-exe.yml','utf8')); console.log('Workflow YAML syntax is valid.');"
+
+      - name: Verify packaged desktop frontend and unsigned Windows configuration
+        run: |
+          node -e "const p=require('./package.json'); const files=p.build.files||[]; const resources=p.build.extraResources||[]; const win=p.build.win||{}; if(p.main!=='src/main.js') throw new Error('Electron main entry must be src/main.js'); if(!files.includes('frontend-v2/**/*')) throw new Error('frontend-v2 is missing from the packaged app'); if(!resources.some(x=>x.from==='frontend/mobile'&&x.to==='frontend/mobile')) throw new Error('Samarina Companion assets are missing from extraResources'); if(win.verifyUpdateCodeSignature!==false||win.signAndEditExecutable!==false) throw new Error('Windows build must not require a signing certificate'); console.log('Desktop frontend, Companion resources and unsigned x64 installer configuration verified.');"
 
       - name: Install API dependencies
         working-directory: api
