@@ -139,6 +139,7 @@ router.get('/channel', bindController(itemsController.channelItems));
 router.post('/channel', bindController(itemsController.setChannelForItems));
 router.post('/:id/channel-hours', bindController(itemsController.setChannelHours));
 
+router.get('/fast-search', bindController(itemsController.fastSearch));
 router.get('/', bindController(itemsController.getAll));
 
 // Legacy low stock endpoint expected by frontend dashboard
