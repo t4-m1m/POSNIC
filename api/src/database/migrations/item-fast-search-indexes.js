@@ -16,7 +16,8 @@ async function ensureItemFastSearchIndexes(db) {
     { key: { license: 1, 'branch_access.branch_id': 1, updated_date: -1 }, name: 'v2_items_updated_scope' },
     { key: { license: 1, 'branch_access.branch_id': 1, reference: 1 }, name: 'v2_items_reference_scope', sparse: true }
   ];
-  const existing = await items.listIndexes().toArray();
+  const hasItemsCollection = await db.listCollections({ name: 'items' }, { nameOnly: true }).hasNext();
+  const existing = hasItemsCollection ? await items.listIndexes().toArray() : [];
   const keySignature = key => JSON.stringify(Object.entries(key || {}));
   const created = [];
   const present = [];
