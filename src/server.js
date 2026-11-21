@@ -1,5 +1,6 @@
 const path = require('path');
 const { app: electronApp } = require('electron');
+process.env.POSNIC_DESKTOP = '1';
 const fs = require('fs');
 const Module = require('module');
 
