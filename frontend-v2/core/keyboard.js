@@ -1,2 +1,74 @@
-import{state,basket}from'./store.js';
-export function installKeyboard({render,focusSearch}){const handler=e=>{const typing=e.target?.matches?.('input,textarea,select,[contenteditable=true]');if(e.key==='Escape'){if(state.drawer){state.drawer=null;render();focusSearch();}return;}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();document.querySelector('#global-search')?.focus();return;}if(e.ctrlKey&&e.key==='Tab'){e.preventDefault();const i=state.baskets.findIndex(x=>x.id===state.activeBasket);state.activeBasket=state.baskets[(i+1)%state.baskets.length].id;render();return;}if(typing)return;if(e.key==='F6'){e.preventDefault();document.querySelector('[data-action="new-basket"]')?.click();return;}if(e.key==='ArrowDown'||e.key==='ArrowUp'){const rows=[...document.querySelectorAll('[data-cart-row]')];if(rows.length){e.preventDefault();const i=rows.findIndex(x=>x.classList.contains('selected'));rows.forEach(x=>x.classList.remove('selected'));rows[Math.max(0,Math.min(rows.length-1,(i<0?0:i)+(e.key==='ArrowDown'?1:-1)))].classList.add('selected');}return;}if((e.key==='+'||e.key==='-')&&basket().items.length){e.preventDefault();const rows=[...document.querySelectorAll('[data-cart-row]')],i=rows.findIndex(x=>x.classList.contains('selected')),item=basket().items[i<0?0:i];if(item)item.quantity=Math.max(1,item.quantity+(e.key==='+'?1:-1));document.querySelector('#app')?.dispatchEvent(new CustomEvent('posnic:refresh'));return;}if(typing)return;if(e.key==='Delete'&&basket().items.length){const i=[...document.querySelectorAll('[data-cart-row]')].findIndex(x=>x.classList.contains('selected'));basket().items.splice(i<0?basket().items.length-1:i,1);render();return;}if(['F1','F2','F3','F4','F6','F7','F8'].includes(e.key)){e.preventDefault();document.querySelector('[data-action="'+e.key+'"]').click();return;}if(e.key.length===1&&!e.ctrlKey&&!e.altKey&&!e.metaKey){focusSearch();const input=document.querySelector('#barcode-search');if(input){input.value+=e.key;input.dispatchEvent(new Event('input',{bubbles:true}));}}};window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler);}
+import { state, basket } from './store.js';
+
+export function installKeyboard({ render, focusSearch }) {
+  const handler = (event) => {
+    const typing = event.target?.matches?.('input,textarea,select,[contenteditable=true]');
+    if (event.key === 'Escape') {
+      if (state.drawer) { state.drawer = null; render(); focusSearch(); }
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      document.querySelector('#global-search')?.focus();
+      return;
+    }
+    if (event.ctrlKey && event.key === 'Tab') {
+      event.preventDefault();
+      const index = state.baskets.findIndex((entry) => entry.id === state.activeBasket);
+      state.activeBasket = state.baskets[(index + 1) % state.baskets.length].id;
+      render();
+      return;
+    }
+    if (event.key === 'F6') {
+      event.preventDefault();
+      document.querySelector('[data-action="new-basket"]')?.click();
+      return;
+    }
+    const actions = { F1: 'F1', F2: 'F2', F3: 'customer', F4: 'F4', F7: 'F7', F8: 'F8' };
+    if (actions[event.key]) {
+      event.preventDefault();
+      document.querySelector('[data-action="' + actions[event.key] + '"]')?.click();
+      return;
+    }
+    if (typing) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      const rows = [...document.querySelectorAll('[data-cart-row]')];
+      if (!rows.length) return;
+      event.preventDefault();
+      const index = rows.findIndex((row) => row.classList.contains('selected'));
+      rows.forEach((row) => row.classList.remove('selected'));
+      rows[Math.max(0, Math.min(rows.length - 1, (index < 0 ? 0 : index) + (event.key === 'ArrowDown' ? 1 : -1)))].classList.add('selected');
+      return;
+    }
+    if ((event.key === '+' || event.key === '-') && basket().items.length) {
+      event.preventDefault();
+      const rows = [...document.querySelectorAll('[data-cart-row]')];
+      const index = rows.findIndex((row) => row.classList.contains('selected'));
+      const item = basket().items[index < 0 ? 0 : index];
+      if (item) {
+        const next = item.quantity + (event.key === '+' ? 1 : -1);
+        const available = Number(item.available_quantity);
+        if (event.key === '+' && item.track_inventory && !item.negative_stock && available >= 0 && next > available) return;
+        item.quantity = Math.max(1, next);
+        render();
+      }
+      return;
+    }
+    if (event.key === 'Delete' && basket().items.length) {
+      const index = [...document.querySelectorAll('[data-cart-row]')].findIndex((row) => row.classList.contains('selected'));
+      basket().items.splice(index < 0 ? basket().items.length - 1 : index, 1);
+      render();
+      return;
+    }
+    if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
+      focusSearch();
+      const input = document.querySelector('#barcode-search');
+      if (input) {
+        input.value += event.key;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+  };
+  window.addEventListener('keydown', handler);
+  return () => window.removeEventListener('keydown', handler);
+}
