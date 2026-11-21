@@ -285,6 +285,10 @@
         "to": "server.js"
       },
       {
+        "from": "src/item-image-storage.js",
+        "to": "item-image-storage.js"
+      },
+      {
         "from": "src/extension-signing-key.pub",
         "to": "extension-signing-key.pub"
       },
