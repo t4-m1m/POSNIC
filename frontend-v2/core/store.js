@@ -2,4 +2,4 @@ export const state={user:null,view:'caisse',tab:0,expanded:false,theme:localStor
 export const basket=()=>state.baskets.find(x=>x.id===state.activeBasket)||state.baskets[0];
 export const money=n=>new Intl.NumberFormat('fr-DZ',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0);
 export const subtotal=()=>basket().items.reduce((s,x)=>s+(Number(x.selling_price)||0)*(Number(x.quantity)||1),0);
-export const total=()=>Math.max(0,subtotal()-(Number(basket().discount)||0));
+export const total=()=>Math.max(0,subtotal()-(Number(basket().discount)||0)-(Number(basket().coupon?.discount)||0));
