@@ -888,35 +888,7 @@ if (UPDATED_ASSETS && fs.existsSync(UPDATED_ASSETS)) {
   );
 }
 
-// Serve transformed frontend assets (used for login page, etc.)
-app.use(
-  '/',
-  express.static(path.join(__dirname, '..', 'frontend', 'public'), {
-    fallthrough: true,
-    setHeaders: assetCacheHeaders,
-  })
-);
-
-// Assets from the built frontend: /static/... and /fonts/...
-//
-// These pointed at public/static/static, a directory the build has not
-// written in a long time. They only ever resolved because an older copy of
-// that tree was still sitting on the server, so any clean deploy broke the
-// font faces, which is exactly what happened. gulp copies assets to
-// public/static, so point at that.
-const BUILT_STATIC = path.join(__dirname, '..', 'frontend', 'public', 'static');
-
-/*
- * App art (fonts, icons, images, reference JSON files) changes rarely and
- * only with releases: a week of HTTP cache (SW roadmap W2). The service
- * worker already shields repeat visits; this covers SW-less contexts. Art
- * that must change immediately should change NAME - same discipline as the
- * bundles, documented in SERVICE_WORKER_CACHING_STRATEGY.md.
- */
-const STATIC_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
-
-app.use('/static', express.static(BUILT_STATIC, { fallthrough: true, maxAge: STATIC_MAX_AGE }));
-
+// Legacy desktop static bundles were retired; the desktop renderer is / and /v2.
 /*
  * Print documents, served from this origin so they need no exception.
  *
@@ -1627,36 +1599,7 @@ app.get('/api', (req, res) => {
 // Expose suppliers endpoints without the /api prefix for legacy clients
 app.use('/suppliers', suppliersRoutes);
 
-// Serve frontend static files
-const frontendPath = path.join(__dirname, '..', 'frontend');
-// The independent Samarina Companion static bundle is mounted once above at /mobile.
-app.use('/static', express.static(path.join(frontendPath, 'static'), { maxAge: STATIC_MAX_AGE }));
-app.use(
-  '/images',
-  express.static(path.join(frontendPath, 'static', 'images'), { maxAge: STATIC_MAX_AGE })
-);
-app.use(
-  '/fonts',
-  express.static(path.join(frontendPath, 'static', 'fonts'), { maxAge: STATIC_MAX_AGE })
-);
-app.use(
-  '/style',
-  express.static(path.join(frontendPath, 'public', 'style'), { setHeaders: assetCacheHeaders })
-);
-app.use(
-  '/script',
-  express.static(path.join(frontendPath, 'public', 'script'), { setHeaders: assetCacheHeaders })
-);
-// Serve static files from /public/static for pages loaded from /public/
-app.use('/public/static', express.static(path.join(frontendPath, 'static')));
-app.use('/public/images', express.static(path.join(frontendPath, 'static', 'images')));
-app.use('/public/fonts', express.static(path.join(frontendPath, 'static', 'fonts')));
-app.use(
-  '/public',
-  express.static(path.join(frontendPath, 'public'), { setHeaders: assetCacheHeaders })
-);
-app.use(express.static(path.join(frontendPath, 'public'), { setHeaders: assetCacheHeaders }));
-
+// Samarina Companion remains mounted independently at /mobile; no legacy desktop bundles are served.
 /*
  * The shop's own online ordering page.
  *
