@@ -829,14 +829,18 @@ const UPDATED_ASSETS = process.env.POSNIC_ASSET_DIR;
 const SAMARINA_COMPANION_DIR = path.join(__dirname, '..', 'frontend', 'mobile');
 const POSNIC_NEXT_DIR = process.env.POSNIC_FRONTEND_V2_PATH || path.join(__dirname, '..', 'frontend-v2');
 app.use('/v2', express.static(POSNIC_NEXT_DIR, { index: 'index.html', fallthrough: true, etag: true, maxAge: '1h' }));
+// POSNIC Next owns the desktop origin root and its root-relative assets.
+// index:false keeps this middleware from swallowing API and other app routes.
+app.use(express.static(POSNIC_NEXT_DIR, { index: false, fallthrough: true, etag: true, maxAge: '1h' }));
 app.get('/', (req, res, next) => {
+  if (process.env.POSNIC_DESKTOP !== '1') return next();
   const remoteAddress = String(req.socket.remoteAddress || '');
   const isLoopback = remoteAddress === '127.0.0.1' || remoteAddress === '::1' ||
     remoteAddress === '::ffff:127.0.0.1';
-  // Only the LAN root opens the companion; the /mobile page and API routes
-  // must be allowed to serve normally to remote shop devices.
-  if (process.env.POSNIC_DESKTOP === '1' && !isLoopback && req.path === '/') return res.redirect(302, '/mobile/');
-  return next();
+  // LAN devices use Samarina Companion; only the local Electron shell gets the desktop POS.
+  if (!isLoopback) return res.redirect(302, '/mobile/');
+  res.set('Cache-Control', 'no-store');
+  return res.sendFile(path.join(POSNIC_NEXT_DIR, 'index.html'));
 });
 // Express's default non-strict routing makes '/mobile' also match '/mobile/'.
 // Match only the slashless URL, otherwise the canonical redirect loops forever.
