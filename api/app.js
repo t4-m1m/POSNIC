@@ -1606,6 +1606,9 @@ app.post(['/push/test', '/api/push/test'], sseProtect, async (req, res) => {
   }
 });
 
+// Saint Marina POS branch-scoped preferences; separate from generated legacy route index.
+app.use('/api/posnic-next', require('./src/routes/posnic-next.routes'));
+
 // Mount API routes under /api
 app.use('/api', apiRouter);
 
