@@ -376,7 +376,7 @@ module.exports = async function startServer(options = {}) {
       ? path.join(process.resourcesPath, 'extension-signing-key.pub')
       : path.join(__dirname, 'extension-signing-key.pub');
 
-    // Saint Marina POS / POSNIC Next: isolated renderer served alongside the authenticated legacy UI.
+    // SamarinaPOS V2 renderer served alongside the existing authenticated API routes.
     // The migration route intentionally does not alter /mobile/, login/session middleware, or legacy routes.
     try {
       if (fs.existsSync(path.join(frontendV2Path, 'index.html'))) {
@@ -386,7 +386,7 @@ module.exports = async function startServer(options = {}) {
           etag: true,
           maxAge: '1h'
         }));
-        console.log('[FrontendV2] Saint Marina POS available at /v2/');
+        console.log('[FrontendV2] SamarinaPOS available at /v2/');
       } else {
         console.warn('[FrontendV2] packaged frontend directory is missing:', frontendV2Path);
       }
