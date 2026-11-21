@@ -203,3 +203,32 @@
   .fkey-grid{grid-template-columns:repeat(8,minmax(92px,1fr));overflow-x:auto}
   .caisse-customer,.caisse-total{min-height:88px}
 }
+
+
+/* SamarinaPOS rebrand.4 — cashier header is one continuous horizontal row. */
+.caisse-screen{height:100%;min-height:0;overflow:hidden}
+.shell.caisse-lock{height:100vh;min-height:0;overflow:hidden}
+.shell.caisse-lock main{height:100vh;min-height:0;overflow:hidden}
+.caisse-top{display:grid!important;grid-template-columns:minmax(0,2.7fr) minmax(230px,1.15fr) minmax(190px,.8fr)!important;grid-template-areas:"keys customer total"!important;align-items:stretch;gap:10px;min-width:0}
+.caisse-keys{grid-area:keys;min-width:0}
+.caisse-customer{grid-area:customer;min-width:0;display:flex;align-items:center}
+.caisse-total{grid-area:total;min-width:0;display:flex;align-items:center;justify-content:center;text-align:center}
+.caisse-total>*{width:100%;text-align:center}
+.caisse-keys .basket-strip{display:flex;align-items:center;gap:8px;min-width:0;margin-bottom:9px}
+.caisse-keys .basket-tabs{display:flex;align-items:center;gap:6px;min-width:0;overflow-x:auto}
+.caisse-keys .new-sale{flex:none;white-space:nowrap}
+.caisse-keys .fkey-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;min-width:0;overflow:visible}
+.caisse-keys .fkey{min-width:0;height:auto;min-height:62px;padding:6px 4px;display:flex;flex-direction:column;justify-content:center;gap:4px}
+.caisse-keys .fkey-label{text-align:center;white-space:normal;line-height:1.15;font-size:10px}
+.caisse-customer .customer-debt{max-width:100%;white-space:normal}
+.caisse-total strong{font-variant-numeric:tabular-nums}
+.drawer-backdrop{position:fixed!important;inset:0!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:20px!important;background:rgba(15,23,42,.45)!important;z-index:10000!important}
+.drawer{position:relative!important;inset:auto!important;width:min(680px,calc(100vw - 40px))!important;height:auto!important;max-height:88vh!important;margin:auto!important;border-radius:16px!important;transform:none!important}
+.nav-subnav[hidden]{display:none!important}
+.nav-group:not(:has(>.nav-primary.active))>.nav-subnav{display:none!important}
+.quick-item{min-height:180px;height:auto;overflow:visible}
+.products-workspace #product-results{grid-template-columns:repeat(4,minmax(0,1fr))}
+#product-results:has(.recent-sale){display:flex!important;flex-direction:column!important;gap:8px!important}
+.recent-sale{width:100%;display:flex;flex-direction:row;align-items:center}
+@media(max-width:1180px){.caisse-top{grid-template-columns:minmax(0,1fr) minmax(210px,.8fr)!important;grid-template-areas:"keys keys" "customer total"!important}.caisse-keys .fkey-grid{grid-template-columns:repeat(8,minmax(78px,1fr));overflow-x:auto}}
+@media(max-width:760px){.caisse-top{grid-template-columns:minmax(0,1fr)!important;grid-template-areas:"keys" "customer" "total"!important}.caisse-keys .fkey-grid{grid-template-columns:repeat(8,minmax(74px,1fr));overflow-x:auto}}

@@ -37,7 +37,7 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            const tag = 'v2.0.0-rebrand.3';
+            const tag = 'v2.0.0-rebrand.4';
             try {
               const existing = await github.rest.git.getRef({
                 owner: context.repo.owner,
@@ -61,7 +61,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag,
-              message: 'SamarinaPOS v2 Rebrand Pre-Release 3',
+              message: 'SamarinaPOS v2 Rebrand Pre-Release 4',
               object: context.sha,
               type: 'commit'
             });
@@ -179,7 +179,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $owner = 't4-m1m'
           $repo = 'POSNIC'
-          $tag = if ($env:GITHUB_REF.StartsWith('refs/tags/')) { $env:GITHUB_REF_NAME } else { 'v2.0.0-rebrand.3' }
+          $tag = if ($env:GITHUB_REF.StartsWith('refs/tags/')) { $env:GITHUB_REF_NAME } else { 'v2.0.0-rebrand.4' }
           $installer = Get-Item 'dist/SamarinaPOS-Windows-Installer.exe'
           $headers = @{
             Authorization = "Bearer $env:GH_TOKEN"
