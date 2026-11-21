@@ -30,7 +30,7 @@ jobs:
       POSNIC_MINIFY: "0"
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -75,7 +75,7 @@ jobs:
             });
             core.info(`Created annotated tag ${tag} at ${context.sha}.`);
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
 
@@ -84,7 +84,7 @@ jobs:
 
       - name: Install API dependencies
         working-directory: api
-        run: npm ci --no-audit --no-fund
+        run: npm install --no-audit --no-fund --package-lock=false
 
       - name: Syntax-check every tracked application JavaScript file
         shell: pwsh
