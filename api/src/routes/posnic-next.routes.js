@@ -1,0 +1,93 @@
+'use strict';
+
+const express = require('express');
+const { ObjectId } = require('mongodb');
+const { protect } = require('../middleware/auth');
+
+const router = express.Router();
+router.use(protect);
+
+function scope(req) {
+  const user = req.user || {};
+  const branch = req.tenantContext?.branchId || req.session?.selectedBranchId || req.session?.branch_id || user.branch_id || user.branchId || user.branch?._id || user.default_branch_id;
+  const license = req.tenantContext?.licenseId || user.license || user.license_id;
+  if (!req.db || !branch || !license || !ObjectId.isValid(String(branch))) {
+    const error = new Error('Active branch and license context are required.');
+    error.status = 403;
+    throw error;
+  }
+  return { branch_id: new ObjectId(String(branch)), license: ObjectId.isValid(String(license)) ? new ObjectId(String(license)) : license };
+}
+
+function collection(req) {
+  return req.db.collection('posnic_next_settings');
+}
+
+async function ensureIndex(req) {
+  await collection(req).createIndex({ branch_id: 1, license: 1 }, { unique: true, name: 'posnic_next_branch_license' });
+}
+
+router.get('/settings/costing', async (req, res) => {
+  try {
+    const filter = scope(req);
+    const col = collection(req);
+    await ensureIndex(req);
+    const row = await col.findOne(filter, { projection: { costing: 1 } });
+    return res.json({ type: 'success', data: row?.costing || { exchangeRate: 280, markupPercent: 0, rounding: 'none', cipherMap: {} } });
+  } catch (error) {
+    return res.status(error.status || 500).json({ type: 'error', message: error.message || 'Could not read costing settings.' });
+  }
+});
+
+router.put('/settings/costing', async (req, res) => {
+  try {
+    if (req.user?.access?.setting?.write === false) return res.status(403).json({ type: 'error', message: 'Unauthorized.' });
+    const filter = scope(req);
+    const exchangeRate = Number(req.body?.exchangeRate);
+    const markupPercent = Number(req.body?.markupPercent);
+    const rounding = String(req.body?.rounding || 'none');
+    const allowedRounding = ['none', '50', '100', 'x900', 'x950'];
+    if (!Number.isFinite(exchangeRate) || exchangeRate <= 0 || exchangeRate > 100000 ||
+        !Number.isFinite(markupPercent) || markupPercent < 0 || markupPercent > 10000 ||
+        !allowedRounding.includes(rounding)) {
+      return res.status(400).json({ type: 'error', message: 'Invalid exchange rate, markup or rounding rule.' });
+    }
+    const cipherMap = req.body?.cipherMap && typeof req.body.cipherMap === 'object' && !Array.isArray(req.body.cipherMap) ? req.body.cipherMap : {};
+    await ensureIndex(req);
+    const costing = { exchangeRate, markupPercent, rounding, cipherMap, updatedAt: new Date(), updatedBy: String(req.user?._id || req.user?.username || '') };
+    await collection(req).updateOne(filter, { $set: { costing, updated_at: new Date() }, $setOnInsert: { created_at: new Date() } }, { upsert: true });
+    return res.json({ type: 'success', data: costing, message: 'Costing settings saved.' });
+  } catch (error) {
+    return res.status(error.status || 500).json({ type: 'error', message: error.message || 'Could not save costing settings.' });
+  }
+});
+
+router.get('/settings/label-template', async (req, res) => {
+  try {
+    const filter = scope(req);
+    await ensureIndex(req);
+    const row = await collection(req).findOne(filter, { projection: { labelTemplate: 1 } });
+    return res.json({ type: 'success', data: row?.labelTemplate || { width: 30, height: 45, showName: true, showPrice: true, showBarcode: true, copies: 1 } });
+  } catch (error) {
+    return res.status(error.status || 500).json({ type: 'error', message: error.message || 'Could not read label settings.' });
+  }
+});
+
+router.put('/settings/label-template', async (req, res) => {
+  try {
+    if (req.user?.access?.setting?.write === false) return res.status(403).json({ type: 'error', message: 'Unauthorized.' });
+    const filter = scope(req);
+    const width = Number(req.body?.width), height = Number(req.body?.height), copies = Number(req.body?.copies || 1);
+    if (!Number.isFinite(width) || width < 10 || width > 210 || !Number.isFinite(height) || height < 10 || height > 297 || !Number.isInteger(copies) || copies < 1 || copies > 500) {
+      return res.status(400).json({ type: 'error', message: 'Label dimensions or copy count are outside supported limits.' });
+    }
+    const labelTemplate = { width, height, copies, showName: req.body?.showName !== false, showPrice: req.body?.showPrice !== false, showBarcode: req.body?.showBarcode !== false, updatedAt: new Date() };
+    await ensureIndex(req);
+    await collection(req).updateOne(filter, { $set: { labelTemplate, updated_at: new Date() }, $setOnInsert: { created_at: new Date() } }, { upsert: true });
+    return res.json({ type: 'success', data: labelTemplate, message: 'Label template saved.' });
+  } catch (error) {
+    return res.status(error.status || 500).json({ type: 'error', message: error.message || 'Could not save label template.' });
+  }
+});
+
+module.exports = router;
