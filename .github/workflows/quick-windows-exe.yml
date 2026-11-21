@@ -84,7 +84,7 @@ jobs:
 
       - name: Install API dependencies
         working-directory: api
-        run: npm install --no-audit --no-fund --package-lock=false
+        run: npm install --no-audit --no-fund
 
       - name: Syntax-check every tracked application JavaScript file
         shell: pwsh
