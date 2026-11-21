@@ -232,3 +232,24 @@
 .recent-sale{width:100%;display:flex;flex-direction:row;align-items:center}
 @media(max-width:1180px){.caisse-top{grid-template-columns:minmax(0,1fr) minmax(210px,.8fr)!important;grid-template-areas:"keys keys" "customer total"!important}.caisse-keys .fkey-grid{grid-template-columns:repeat(8,minmax(78px,1fr));overflow-x:auto}}
 @media(max-width:760px){.caisse-top{grid-template-columns:minmax(0,1fr)!important;grid-template-areas:"keys" "customer" "total"!important}.caisse-keys .fkey-grid{grid-template-columns:repeat(8,minmax(74px,1fr));overflow-x:auto}}
+
+/* Storeep 2026 — finance views and centered modal dialogs */
+.drawer-backdrop{position:fixed!important;inset:0!important;display:flex!important;align-items:center!important;justify-content:center!important;background:rgba(15,23,42,.45)!important;backdrop-filter:blur(2px);z-index:1000!important}
+.drawer{position:relative!important;inset:auto!important;margin:auto!important;max-height:88vh!important;height:auto!important;width:min(720px,calc(100vw - 32px))!important;border-radius:16px!important;transform:none!important;overflow:auto}
+.history-toolbar{display:grid;grid-template-columns:minmax(240px,310px) minmax(0,1fr);gap:16px;margin-bottom:16px}
+.calendar-card,.history-content,.history-kpi{border:1px solid var(--line,#e5e9f0);border-radius:12px}
+.calendar-card{background:var(--surface,#fff);padding:14px}
+.calendar-heading,.calendar-actions,.period-pills{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin:12px 0}
+.calendar-weekday,.calendar-empty,.sales-day{display:grid;place-items:center;min-height:32px}
+.calendar-weekday{font-size:11px;color:var(--muted)}
+.sales-day{border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer;font-variant-numeric:tabular-nums}
+.sales-day.has-sales{background:#eff6ff;color:#2563eb;font-weight:700}.sales-day.active{background:#2563eb;color:white}
+.history-content{background:var(--surface,#fff);padding:14px;min-width:0}
+.period-pills{justify-content:flex-start;flex-wrap:wrap;margin-bottom:12px}
+.period-pill.active{background:#eff6ff;color:#2563eb;border-color:#bfdbfe}
+.history-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:12px 0}
+.history-kpi{padding:12px;background:var(--surface,#fff);display:flex;flex-direction:column;gap:6px;min-width:0}
+.history-kpi span{font-size:11px;color:var(--muted)}.history-kpi strong{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.link-button{border:0;background:transparent;color:#2563eb;font-weight:700;cursor:pointer}
+@media(max-width:980px){.history-toolbar{grid-template-columns:1fr}.history-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
