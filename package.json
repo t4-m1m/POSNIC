@@ -449,6 +449,13 @@
         ]
       },
       {
+        "from": "frontend-v2",
+        "to": "frontend-v2",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
         "from": "frontend/mobile",
         "to": "frontend/mobile",
         "filter": [

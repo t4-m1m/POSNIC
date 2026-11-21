@@ -12,7 +12,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Fonts used by the desktop shell are shipped under src/fonts in app.asar.
-const BUILT_STATIC = process.env.POSNIC_BUILT_STATIC_PATH || path.join(__dirname, '..', 'src');
+const BUILT_STATIC_DIR = process.env.POSNIC_BUILT_STATIC_PATH || path.join(__dirname, '..', 'src');
 const STATIC_MAX_AGE = '7d';
 const session = require('express-session');
 /* A session store that follows the shop. It extends session.Store, lives in its
@@ -933,7 +933,7 @@ app.get('/print/:token', (req, res) => {
 // The compiled stylesheets reference ../fonts, which resolves to /fonts.
 app.use(
   '/fonts',
-  express.static(path.join(BUILT_STATIC, 'fonts'), { fallthrough: true, maxAge: STATIC_MAX_AGE })
+  express.static(path.join(BUILT_STATIC_DIR, 'fonts'), { fallthrough: true, maxAge: STATIC_MAX_AGE })
 );
 
 // Serving backend-specific static files (exports, uploads, etc.)
@@ -1590,6 +1590,9 @@ app.use('/api/posnic-next', require('./src/routes/posnic-next.routes'));
 
 // Versioned fast-search alias for POSNIC Next; legacy /api/items routes remain unchanged.
 app.use('/api/v2/items', require('./src/routes/items.routes'));
+
+// Legacy renderer crash reporting must remain public during pre-auth startup.
+app.use('/public/api/client-errors', require('./src/routes/client-errors.routes'));
 
 // Mount API routes under /api
 app.use('/api', apiRouter);

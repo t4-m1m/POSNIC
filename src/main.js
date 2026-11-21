@@ -5550,11 +5550,14 @@ function startServer() {
         await redirectToLogin();
       }
       if (result.databaseHealth && result.databaseHealth.status !== 'healthy') {
-        const health = result.databaseHealth;
+        const health = result.databaseHealth || {};
+        const healthErrors = Array.isArray(health.errors) ? health.errors : [];
+        const healthWarnings = Array.isArray(health.warnings) ? health.warnings : [];
+        const healthRepairs = Array.isArray(health.repairs) ? health.repairs : [];
         const lines = [
-          ...health.errors.map((entry) => `Error: ${entry}`),
-          ...health.warnings.map((entry) => `Warning: ${entry}`),
-          ...health.repairs.filter((entry) => entry.repaired).map((entry) => `Repaired: ${entry.repaired} ${entry.type}`),
+          ...healthErrors.map((entry) => `Error: ${entry}`),
+          ...healthWarnings.map((entry) => `Warning: ${entry}`),
+          ...healthRepairs.filter((entry) => entry && entry.repaired).map((entry) => `Repaired: ${entry.repaired} ${entry.type || 'maintenance'}`),
         ];
         const summary = lines.slice(0, 8).join('\n');
 
@@ -5564,16 +5567,16 @@ function startServer() {
         // never silenced.
         const fingerprint = health.findingFingerprint || crypto.createHash('sha1')
           .update(lines.slice().sort().join('|')).digest('hex');
-        const dismissed = health.errors.length ? [] : (readHealthDismissals() || []);
+        const dismissed = healthErrors.length ? [] : (readHealthDismissals() || []);
         if (!dismissed.includes(fingerprint)) {
-          const buttons = health.errors.length
+          const buttons = healthErrors.length
             ? ['OK', 'Open Diagnostic File']
             : ['OK', 'Open Diagnostic File', "Don't show this again"];
           const response = await dialog.showMessageBox(mainWindow, {
-            type: health.errors.length ? 'error' : 'warning',
+            type: healthErrors.length ? 'error' : 'warning',
             title: 'Database Health Diagnostic',
-            message: health.errors.length ? 'Database requires attention' : 'Database check completed with warnings',
-            detail: `${summary}\n\nFull diagnostic: ${HEALTH_FILE}`,
+            message: healthErrors.length ? 'Database requires attention' : 'Database check completed with warnings',
+            detail: `${summary || 'No additional database findings were returned.'}\n\nFull diagnostic: ${HEALTH_FILE}`,
             buttons,
             defaultId: 0,
             cancelId: 0,

@@ -12,18 +12,22 @@ process.env.POSNIC_USER_DATA_PATH = userDataPath;
 // Resolve app.asar and unpacked layouts without assuming frontend files live in resources/.
 const appRootPath = electronApp.getAppPath();
 function resolveAppDirectory(name, requiredFile) {
+  const resourcesRoot = process.resourcesPath || '';
   const candidates = [
     path.join(appRootPath, name),
-    path.join(process.resourcesPath || '', 'app.asar', name),
-    path.join(process.resourcesPath || '', name),
+    path.join(resourcesRoot, 'app.asar', name),
+    path.join(resourcesRoot, 'app.asar.unpacked', name),
+    path.join(resourcesRoot, name),
     path.join(__dirname, '..', name),
   ];
-  return candidates.find((candidate) => fs.existsSync(path.join(candidate, requiredFile))) || candidates[0];
+  const resolved = candidates.find((candidate) => fs.existsSync(path.join(candidate, requiredFile)));
+  return resolved || path.join(resourcesRoot || appRootPath, name);
 }
 const frontendV2Path = resolveAppDirectory('frontend-v2', 'index.html');
 const builtStaticPath = resolveAppDirectory('src', 'fonts');
 process.env.POSNIC_FRONTEND_V2_PATH = frontendV2Path;
-process.env.POSNIC_BUILT_STATIC_PATH = path.dirname(builtStaticPath);
+// The API app expects the directory that CONTAINS fonts, not its parent.
+process.env.POSNIC_BUILT_STATIC_PATH = builtStaticPath;
 
 // Add api node_modules to module paths BEFORE requiring setup-mongodb
 // This allows setup-mongodb.js to find 'mongodb' package
@@ -222,7 +226,14 @@ module.exports = async function startServer(options = {}) {
   // One-time, non-destructive migration for images still present in the old
   // install folder. Never overwrite a newer persistent copy.
   try {
-    const migration = require('./item-image-storage').preserveLegacyItemImages({
+    const imageStorageCandidates = [
+      path.join(__dirname, 'item-image-storage.js'),
+      path.join(appRootPath, 'src', 'item-image-storage.js'),
+      path.join(process.resourcesPath || '', 'app.asar', 'src', 'item-image-storage.js'),
+    ];
+    const imageStoragePath = imageStorageCandidates.find((candidate) => fs.existsSync(candidate));
+    if (!imageStoragePath) throw new Error('item-image-storage.js is missing from packaged resources and app.asar');
+    const migration = require(imageStoragePath).preserveLegacyItemImages({
       apiPath,
       userDataPath,
     });

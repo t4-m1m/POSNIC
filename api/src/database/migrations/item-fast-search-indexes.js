@@ -28,21 +28,38 @@ async function createIndexes(db) {
       present.push(found.name);
       continue;
     }
+    // A previous POSNIC release used the same index label for the legacy
+    // branch_id key. Keep that live index and add the branch_access index
+    // under a stable alternate name; never drop a production index at startup.
+    const conflictingName = existing.some((index) =>
+      index.name === definition.name && signature(index.key) !== signature(definition.key)
+    );
+    const indexName = conflictingName ? `${definition.name}_branch_access_v2` : definition.name;
+    const indexOptions = { name: indexName, ...(definition.sparse ? { sparse: true } : {}) };
     try {
-      const { name, key, sparse } = definition;
-      await items.createIndex(key, { name, ...(sparse ? { sparse: true } : {}) });
-      created.push(name);
+      await items.createIndex(definition.key, indexOptions);
+      created.push(indexName);
+      existing.push({ name: indexName, key: definition.key });
     } catch (error) {
       try {
         const refreshed = await items.listIndexes().toArray();
         const equivalent = refreshed.find((index) => signature(index.key) === signature(definition.key));
         if (equivalent) {
           present.push(equivalent.name);
-          warnings.push(`${definition.name}: using existing equivalent index ${equivalent.name}`);
+          continue;
+        }
+        if ((error.code === 85 || error.codeName === 'IndexOptionsConflict') && indexName === definition.name) {
+          const alternateName = `${definition.name}_branch_access_v2`;
+          await items.createIndex(definition.key, {
+            name: alternateName,
+            ...(definition.sparse ? { sparse: true } : {}),
+          });
+          created.push(alternateName);
+          existing.push({ name: alternateName, key: definition.key });
           continue;
         }
       } catch (refreshError) {
-        warnings.push(`${definition.name}: index refresh failed: ${refreshError.message}`);
+        warnings.push(`${definition.name}: index refresh/create failed: ${refreshError.message}`);
       }
       warnings.push(`${definition.name}: ${error.message}`);
       console.warn('[ItemSearchIndexes] Could not create index:', definition.name, error.message);

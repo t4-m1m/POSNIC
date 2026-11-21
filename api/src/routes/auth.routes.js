@@ -54,7 +54,7 @@ router.get('/shadow', loginLimiter, shadowLogin);
 router.use(protect);
 
 router.patch('/update-password', authController.updatePassword);
-router.get('/me', authController.getMe, authController.getUser);
+router.get('/me', authController.getMe);
 router.patch('/update-me', authController.updateMe);
 router.delete('/delete-me', authController.deleteMe);
 
