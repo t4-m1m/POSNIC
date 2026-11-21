@@ -10,6 +10,8 @@ on:
     branches:
       - feat/article-cost-label-designer-sales-calendar
       - feat/posnic-v2-rebrand
+    tags:
+      - 'v*-rebrand*'
   workflow_dispatch:
 
 permissions:
@@ -38,13 +40,22 @@ jobs:
       - name: Install root dependencies
         run: npm ci
 
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm ci
-
       - name: Install API dependencies
         working-directory: api
         run: npm install --no-audit --no-fund
+
+      - name: Syntax-check application JavaScript
+        shell: pwsh
+        run: |
+          $files = @()
+          foreach ($folder in @('src', 'api/src', 'frontend-v2/core')) {
+            $files += Get-ChildItem -Path $folder -Recurse -File -Filter '*.js'
+          }
+          foreach ($file in $files) {
+            node --check $file.FullName
+            if ($LASTEXITCODE -ne 0) { throw "JavaScript syntax check failed: $($file.FullName)" }
+          }
+          Write-Host "Checked $($files.Count) JavaScript files."
 
       - name: Fetch bundled MongoDB
         shell: bash
@@ -74,14 +85,14 @@ jobs:
           if ($installers.Count -ne 1) {
             throw "Expected exactly one Windows installer, found $($installers.Count)."
           }
-          Move-Item -LiteralPath $installers[0].FullName -Destination "dist/SamarinaPOS-Windows-Installer.exe" -Force
+          Move-Item -LiteralPath $installers[0].FullName -Destination "dist/SaintMarinaPOS-Windows-Installer.exe" -Force
 
       - name: Mirror installer to GoFile (free third-party host)
         id: gofile
         continue-on-error: true
         shell: pwsh
         run: |
-          $installer = Get-Item "dist/SamarinaPOS-Windows-Installer.exe"
+          $installer = Get-Item "dist/SaintMarinaPOS-Windows-Installer.exe"
           $response = Invoke-RestMethod -Uri "https://upload.gofile.is/uploadfile" -Method Post -Form @{ file = $installer }
           if ($response.status -ne "ok") {
             throw "GoFile upload failed: $($response.status)"
@@ -100,26 +111,26 @@ jobs:
       - name: Upload Windows installer artifact
         uses: actions/upload-artifact@v7
         with:
-          name: SamarinaPOS-Windows-Installer
-          path: dist/SamarinaPOS-Windows-Installer.exe
+          name: SaintMarinaPOS-Windows-Installer
+          path: dist/SaintMarinaPOS-Windows-Installer.exe
           if-no-files-found: error
           retention-days: 7
 
       - name: Publish installer to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: installer-${{ github.run_number }}
-          name: SamarinaPOS Windows Installer (build ${{ github.run_number }})
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('installer-{0}', github.run_number) }}
+          name: ${{ startsWith(github.ref, 'refs/tags/') && format('Saint Marina POS {0}', github.ref_name) || format('Saint Marina POS installer build {0}', github.run_number) }}
           body: |
             Automatically published Windows installer from the successful SamarinaPOS installer build.
 
             **Alternative download (GoFile):** ${{ steps.gofile.outputs.download_url || 'GoFile mirror unavailable for this build; use the GitHub asset below.' }}
 
-            Download **SamarinaPOS-Windows-Installer.exe** below. This release contains the installer only.
+            Download **SaintMarinaPOS-Windows-Installer.exe** below. This release contains the installer only.
           files: dist/SamarinaPOS-Windows-Installer.exe
           draft: false
-          prerelease: false
-          make_latest: true
+          prerelease: ${{ github.ref == 'refs/heads/feat/posnic-v2-rebrand' || startsWith(github.ref, 'refs/tags/v2.0.0-rebrand') }}
+          make_latest: ${{ github.ref == 'refs/heads/feat/posnic-v2-rebrand' || startsWith(github.ref, 'refs/tags/v2.0.0-rebrand') ? 'false' : 'true' }}
 
 # Rebuild current cashier workflow snapshot (installer only, no tests).
 
