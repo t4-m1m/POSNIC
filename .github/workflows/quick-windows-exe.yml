@@ -122,15 +122,15 @@ jobs:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('installer-{0}', github.run_number) }}
           name: ${{ startsWith(github.ref, 'refs/tags/') && format('Saint Marina POS {0}', github.ref_name) || format('Saint Marina POS installer build {0}', github.run_number) }}
           body: |
-            Automatically published Windows installer from the successful SamarinaPOS installer build.
+            Automatically published Saint Marina POS Windows installer from the successful POSNIC Next build.
 
             **Alternative download (GoFile):** ${{ steps.gofile.outputs.download_url || 'GoFile mirror unavailable for this build; use the GitHub asset below.' }}
 
             Download **SaintMarinaPOS-Windows-Installer.exe** below. This release contains the installer only.
-          files: dist/SamarinaPOS-Windows-Installer.exe
+          files: dist/SaintMarinaPOS-Windows-Installer.exe
           draft: false
           prerelease: ${{ github.ref == 'refs/heads/feat/posnic-v2-rebrand' || startsWith(github.ref, 'refs/tags/v2.0.0-rebrand') }}
-          make_latest: ${{ github.ref == 'refs/heads/feat/posnic-v2-rebrand' || startsWith(github.ref, 'refs/tags/v2.0.0-rebrand') ? 'false' : 'true' }}
+          make_latest: false
 
 # Rebuild current cashier workflow snapshot (installer only, no tests).
 

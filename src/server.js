@@ -306,6 +306,9 @@ module.exports = async function startServer(options = {}) {
     
     // Load mongoose and app from api's node_modules
     const mongoose = require(path.join(apiNodeModules, 'mongoose'));
+    // The API is packaged under resources/api while POSNIC Next is packaged in app.asar.
+    // Resolve the renderer from Electron's actual application root in both dev and production.
+    process.env.POSNIC_FRONTEND_V2_PATH = path.join(electronApp.getAppPath(), 'frontend-v2');
     const app = require(path.join(apiPath, 'app.js'));
     reportProgress({
       stage: 'timing',

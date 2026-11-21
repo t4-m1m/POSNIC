@@ -145,8 +145,6 @@
       "src/desktop-design.css",
       "src/hardware-workspace.css",
       "src/hardware-workspace.js",
-      "frontend/static/fonts/dmsans/*.woff2",
-      "frontend/static/fonts/lexend/*.woff2",
       "src/cloud-setup.html",
       "builds/512-posnic.png",
       "builds/icon-256.png",
@@ -447,26 +445,10 @@
         ]
       },
       {
-        "from": "frontend",
-        "to": "frontend",
+        "from": "frontend/mobile",
+        "to": "frontend/mobile",
         "filter": [
-          "mobile/**/*",
-          "*.html",
-          "!index.html",
-          "!dashboard.html",
-          "!login.html",
-          "!modules/**/*",
-          "!static/**/*",
-          "!layouts/**/*",
-          "!modals/**/*",
-          "!gulpfile.js/**/*",
-          "!package.json",
-          "!package-lock.json",
-          "!zip-build.js",
-          "!pages_*.json",
-          "!sw-template.js",
-          "!worker.json",
-          "!*.json"
+          "**/*"
         ]
       }
     ],
