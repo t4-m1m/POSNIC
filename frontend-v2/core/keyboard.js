@@ -22,12 +22,12 @@ export function installKeyboard({ render, focusSearch }) {
     const actions = { F1: 'F1', F2: 'F2', F3: 'F3', F4: 'F4', F5: 'F5', F6: 'F6', F7: 'F7', F8: 'F8' };
     if (actions[event.key]) {
       event.preventDefault();
-      document.querySelector('[data-action="' + actions[event.key] + '"]')?.click();
+      document.querySelector('.fkey-grid [data-action="' + actions[event.key] + '"]')?.click();
       return;
     }
     if (typing) return;
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      const rows = [...document.querySelectorAll('[data-cart-row]')];
+      const rows = [...document.querySelectorAll('.cart-workspace [data-cart-row]')];
       if (!rows.length) return;
       event.preventDefault();
       const index = rows.findIndex((row) => row.classList.contains('selected'));
