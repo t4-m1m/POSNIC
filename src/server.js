@@ -9,6 +9,22 @@ const Module = require('module');
 const userDataPath = electronApp.getPath('userData');
 process.env.POSNIC_USER_DATA_PATH = userDataPath;
 
+// Resolve app.asar and unpacked layouts without assuming frontend files live in resources/.
+const appRootPath = electronApp.getAppPath();
+function resolveAppDirectory(name, requiredFile) {
+  const candidates = [
+    path.join(appRootPath, name),
+    path.join(process.resourcesPath || '', 'app.asar', name),
+    path.join(process.resourcesPath || '', name),
+    path.join(__dirname, '..', name),
+  ];
+  return candidates.find((candidate) => fs.existsSync(path.join(candidate, requiredFile))) || candidates[0];
+}
+const frontendV2Path = resolveAppDirectory('frontend-v2', 'index.html');
+const builtStaticPath = resolveAppDirectory('src', 'fonts');
+process.env.POSNIC_FRONTEND_V2_PATH = frontendV2Path;
+process.env.POSNIC_BUILT_STATIC_PATH = path.dirname(builtStaticPath);
+
 // Add api node_modules to module paths BEFORE requiring setup-mongodb
 // This allows setup-mongodb.js to find 'mongodb' package
 const initialApiPath = electronApp.isPackaged 
@@ -308,7 +324,6 @@ module.exports = async function startServer(options = {}) {
     const mongoose = require(path.join(apiNodeModules, 'mongoose'));
     // The API is packaged under resources/api while POSNIC Next is packaged in app.asar.
     // Resolve the renderer from Electron's actual application root in both dev and production.
-    process.env.POSNIC_FRONTEND_V2_PATH = path.join(electronApp.getAppPath(), 'frontend-v2');
     const app = require(path.join(apiPath, 'app.js'));
     reportProgress({
       stage: 'timing',
@@ -351,9 +366,6 @@ module.exports = async function startServer(options = {}) {
         .migrateCustomerEmailIndex(mongoose.connection.db);
       await require(path.join(apiPath, 'src/database/migrations/receiving-number-indexes'))
         .migrateReceivingNumberIndexes(mongoose.connection.db);
-      const itemSearchIndexes = await require(path.join(apiPath, 'src/database/migrations/item-fast-search-indexes'))
-        .ensureItemFastSearchIndexes(mongoose.connection.db);
-      console.log('[Database] POSNIC Next item search indexes ready:', JSON.stringify(itemSearchIndexes));
     
     // Add mongoClient to app.locals for session filter utility
     app.locals.mongoClient = mongoClient;
@@ -392,7 +404,6 @@ module.exports = async function startServer(options = {}) {
     // Saint Marina POS / POSNIC Next: isolated renderer served alongside the authenticated legacy UI.
     // The migration route intentionally does not alter /mobile/, login/session middleware, or legacy routes.
     try {
-      const frontendV2Path = path.join(electronApp.getAppPath(), 'frontend-v2');
       if (fs.existsSync(path.join(frontendV2Path, 'index.html'))) {
         app.use('/v2', require('express').static(frontendV2Path, {
           index: 'index.html',
@@ -592,6 +603,14 @@ module.exports = async function startServer(options = {}) {
 
     // Do not redirect the Electron window until Express accepts requests.
     await serverReady;
+
+    // Fast-search indexes are an optimization, never a prerequisite for opening the POS.
+    setImmediate(() => {
+      require(path.join(apiPath, 'src/database/migrations/item-fast-search-indexes'))
+        .ensureItemFastSearchIndexes(mongoose.connection.db)
+        .then((result) => console.log('[Database] POSNIC Next item search indexes:', JSON.stringify(result)))
+        .catch((error) => console.warn('[Database] POSNIC Next item search indexes deferred:', error.message));
+    });
     // Companion HTTPS is a separate listener on the same Express app. The
     // certificate/key live in Electron userData and the listener is closed
     // alongside the ordinary API server during application shutdown.
