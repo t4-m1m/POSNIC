@@ -347,6 +347,9 @@ module.exports = async function startServer(options = {}) {
         .migrateCustomerEmailIndex(mongoose.connection.db);
       await require(path.join(apiPath, 'src/database/migrations/receiving-number-indexes'))
         .migrateReceivingNumberIndexes(mongoose.connection.db);
+      const itemSearchIndexes = await require(path.join(apiPath, 'src/database/migrations/item-fast-search-indexes'))
+        .ensureItemFastSearchIndexes(mongoose.connection.db);
+      console.log('[Database] POSNIC Next item search indexes ready:', itemSearchIndexes.join(', '));
     
     // Add mongoClient to app.locals for session filter utility
     app.locals.mongoClient = mongoClient;
