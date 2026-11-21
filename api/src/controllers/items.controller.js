@@ -257,6 +257,53 @@ class ItemsController extends BaseController {
     }
   }
 
+  async fastSearch(req, res) {
+    try {
+      await this.ensureContext(req);
+      if (req.user?.access?.item?.read === false) return this.error(res, ERROR_MESSAGES.UNAUTHORIZED, 403);
+      const query = String(req.query.q || req.query.search || '').trim().slice(0, 100);
+      const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+      const limit = Math.min(40, Math.max(1, Number.parseInt(req.query.limit, 10) || 40));
+      const branchId = this.model?.branchId || null;
+      const licenseId = this.model?.licenseId || null;
+      if (!branchId || !licenseId) return this.error(res, ERROR_MESSAGES.BRANCH_LICENSE_REQUIRED, 400);
+      const { collection, filter } = await this.service.repository.listScope({ branchId, licenseId });
+      const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\  async getAll(req, res) {');
+      const clauses = [filter];
+      if (query) {
+        const exact = query.replace(/\s+/g, '');
+        clauses.push({ $or: [
+          { barcode_id: exact }, { barcodes: exact }, { itemid: exact },
+          { name: { $regex: escaped, $options: 'i' } },
+          { category_name: { $regex: escaped, $options: 'i' } },
+          { brand: { $regex: escaped, $options: 'i' } },
+          { reference: { $regex: escaped, $options: 'i' } }
+        ] });
+      }
+      const scoped = clauses.length === 1 ? filter : { $and: clauses };
+      const projection = {
+        _id: 1, name: 1, itemid: 1, barcode_id: 1, reference: 1,
+        category_name: 1, category_id: 1, brand: 1, supplier_name: 1,
+        selling_price: 1, selling_price_2: 1, selling_price_3: 1,
+        company_price: 1, purchase_price_eur: 1, purchase_cost_dzd: 1,
+        available_quantity: 1, quantity: 1, track_inventory: 1,
+        low_stock_alert: 1, reorder_point: 1, image: 1, updated_date: 1,
+        variants: 1, variant_group_id: 1, variant_axis: 1, variant_value: 1
+      };
+      const [items, total] = await Promise.all([
+        collection.find(scoped, { projection }).sort({ name: 1, _id: 1 }).skip((page - 1) * limit).limit(limit).toArray(),
+        collection.countDocuments(scoped)
+      ]);
+      return this.success(res, {
+        list: items.map((item) => this.service.normalizeItemImages(item)),
+        total, page, limit, total_pages: Math.ceil(total / limit)
+      }, 'Fast item search');
+    } catch (error) {
+      console.error('Fast item search failed:', error);
+      return this.error(res, error.message || 'Could not search items', 500);
+    }
+  }
+
   async getAll(req, res) {
     try {
       await this.ensureContext(req);
