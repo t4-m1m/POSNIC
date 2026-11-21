@@ -2154,7 +2154,7 @@ function createWindow(showStartupLoader = !isWarmStartup()) {
     rendererRecoveryStarted = true;
     setTimeout(() => {
       if (!mainWindow || mainWindow.isDestroyed()) return;
-      const loginUrl = `http://localhost:${apiPort()}/public/login.html`;
+      const loginUrl = `http://localhost:${apiPort()}/`;
       mainWindow.loadURL(loginUrl).then(() => {
         if (!mainWindow || mainWindow.isDestroyed()) return;
         if (!mainWindow.isVisible()) mainWindow.show();
@@ -2572,7 +2572,7 @@ async function redirectToLogin() {
     // the previous login cookie is still valid. Preserve local app data; clear
     // only authentication cookies before opening the login screen.
     await clearStaleLogin(session.defaultSession.cookies, origin, console);
-    const targetUrl = `${origin}/public/login.html`;
+    const targetUrl = `${origin}/`;
     await loadPageAndReveal(targetUrl);
     require('./startup-progress').clearLoginRenderer(mainWindow.webContents, targetUrl, console);
     writeStartupPerformanceSummary('Login');
@@ -2599,7 +2599,7 @@ async function redirectToLogin() {
     console.log('=======================================================');
     console.log(`Server:          http://localhost:${apiPort()}`);
     console.log(`  - API Endpoint:  http://localhost:${apiPort()}/api`);
-    console.log(`  - web:      http://localhost:${apiPort()}/public/login.html`);
+    console.log(`  - web:      http://localhost:${apiPort()}/`);
     console.log('Database:        PosnicPro');
     console.log('=======================================================\n');
   }
