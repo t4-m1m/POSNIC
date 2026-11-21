@@ -28,8 +28,9 @@ jobs:
     runs-on: windows-latest
     env:
       POSNIC_MINIFY: "0"
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -74,7 +75,7 @@ jobs:
             });
             core.info(`Created annotated tag ${tag} at ${context.sha}.`);
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
 
@@ -83,23 +84,26 @@ jobs:
 
       - name: Install API dependencies
         working-directory: api
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
-      - name: Syntax-check changed application JavaScript
+      - name: Syntax-check every tracked application JavaScript file
         shell: pwsh
         run: |
-          git fetch --no-tags origin feat/article-cost-label-designer-sales-calendar
-          $files = @(git diff --name-only FETCH_HEAD...HEAD | Where-Object {
-            $_ -match '^(src|api|frontend-v2)/.*\.js$' -and
-            $_ -notmatch '(^|/)(test|tests|__tests__)/'
+          $files = @(git ls-files | Where-Object {
+            $_ -match '^(src|api|frontend-v2|frontend/mobile)/.*\.js$' -and
+            $_ -notmatch '(^|/)node_modules/'
           })
-          if ($files.Count -eq 0) { Write-Host "No changed application JavaScript files to check."; exit 0 }
+          if ($files.Count -eq 0) { throw "No tracked application JavaScript files were found." }
+          $failed = @()
           foreach ($file in $files) {
-            Write-Host "Checking $file"
             node --check $file
-            if ($LASTEXITCODE -ne 0) { throw "JavaScript syntax check failed: $file" }
+            if ($LASTEXITCODE -ne 0) { $failed += $file }
           }
-          Write-Host "Checked $($files.Count) changed application JavaScript files."
+          if ($failed.Count -gt 0) {
+            $failed | ForEach-Object { Write-Error "Syntax error: $_" }
+            throw "$($failed.Count) of $($files.Count) JavaScript files failed syntax verification."
+          }
+          Write-Host "All $($files.Count) tracked application JavaScript files passed node --check."
       
       - name: Fetch bundled MongoDB
         shell: bash
