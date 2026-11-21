@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - feat/article-cost-label-designer-sales-calendar
+      - feat/posnic-v2-rebrand
   workflow_dispatch:
 
 permissions:
