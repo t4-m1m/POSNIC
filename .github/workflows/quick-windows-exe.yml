@@ -45,25 +45,34 @@ jobs:
                 repo: context.repo.repo,
                 ref: `tags/${tag}`
               });
-              core.info(`Tag ${tag} already exists at ${existing.data.object.sha}; leaving it unchanged.`);
+              if (existing.data.object.sha === context.sha) {
+                core.info(`Tag ${tag} already points to this commit.`);
+                return;
+              }
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `tags/${tag}`
+              });
+              core.info(`Moving test-only prerelease tag ${tag} to the current branch commit.`);
             } catch (error) {
               if (error.status !== 404) throw error;
-              const annotated = await github.rest.git.createTag({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                tag,
-                message: 'Saint Marina POS v2 Rebrand Pre-Release 1',
-                object: context.sha,
-                type: 'commit'
-              });
-              await github.rest.git.createRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: `refs/tags/${tag}`,
-                sha: annotated.data.sha
-              });
-              core.info(`Created annotated tag ${tag} at ${context.sha}.`);
             }
+            const annotated = await github.rest.git.createTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag,
+              message: 'Saint Marina POS v2 Rebrand Pre-Release 1',
+              object: context.sha,
+              type: 'commit'
+            });
+            await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `refs/tags/${tag}`,
+              sha: annotated.data.sha
+            });
+            core.info(`Created annotated tag ${tag} at ${context.sha}.`);
 
       - uses: actions/setup-node@v7
         with:
@@ -149,11 +158,11 @@ jobs:
           retention-days: 7
 
       - name: Publish installer to GitHub Releases
-        if: startsWith(github.ref, 'refs/tags/v2.0.0-rebrand')
+        if: github.ref == 'refs/heads/feat/posnic-v2-rebrand' || startsWith(github.ref, 'refs/tags/v2.0.0-rebrand')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ format('Saint Marina POS {0}', github.ref_name) }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v2.0.0-rebrand.1' }}
+          name: ${{ format('Saint Marina POS {0}', startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v2.0.0-rebrand.1') }}
           body: |
             Automatically published Saint Marina POS Windows installer from the successful POSNIC Next build.
 
