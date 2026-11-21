@@ -20,6 +20,7 @@ export function installKeyboard({ render, focusSearch }) {
       return;
     }
     if (state.drawer) return;
+    if ((event.altKey || event.ctrlKey) && event.shiftKey && /^[1-5]$/.test(event.key)) { const target = ['caisse','catalogue','achats','clients','zr-express'][Number(event.key)-1]; if (target) { event.preventDefault(); state.view=target; state.tab=0; location.hash=target; render(); } return; }
     const actions = { F1: 'F1', F2: 'F2', F3: 'F3', F4: 'F4', F5: 'F5', F6: 'F6', F7: 'F7', F8: 'F8' };
     if (actions[event.key]) {
       event.preventDefault();
