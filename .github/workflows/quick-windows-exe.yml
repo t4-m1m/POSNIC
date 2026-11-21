@@ -35,7 +35,7 @@ jobs:
 
       - name: Create annotated Saint Marina POS pre-release tag
         if: github.ref == 'refs/heads/feat/posnic-v2-rebrand'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const tag = 'v2.0.0-rebrand.1';
