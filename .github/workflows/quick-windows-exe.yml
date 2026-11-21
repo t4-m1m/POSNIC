@@ -90,7 +90,9 @@ jobs:
         shell: pwsh
         run: |
           $files = @(git ls-files | Where-Object {
-            $_ -match '^(src|api|frontend-v2|frontend/mobile)/.*\.js
+            $_ -match '^(src|api|frontend-v2|frontend/mobile)/.*\.js$' -and
+            $_ -notmatch '(^|/)node_modules/'
+          })
           if ($files.Count -eq 0) { throw "No tracked application JavaScript files were found." }
           $failed = @()
           foreach ($file in $files) {
