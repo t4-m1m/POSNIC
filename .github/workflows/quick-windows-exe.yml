@@ -88,16 +88,14 @@ jobs:
       - name: Syntax-check application JavaScript
         shell: pwsh
         run: |
-          $files = @()
-          foreach ($folder in @('src', 'api/src', 'frontend-v2/core')) {
-            $files += Get-ChildItem -Path $folder -Recurse -File -Filter '*.js'
-          }
+          $files = @(git ls-files | Where-Object { $_ -match '^(src|api|frontend-v2)/.*\.js$' })
+          if ($files.Count -eq 0) { throw "No application JavaScript files were found." }
           foreach ($file in $files) {
-            node --check $file.FullName
-            if ($LASTEXITCODE -ne 0) { throw "JavaScript syntax check failed: $($file.FullName)" }
+            node --check $file
+            if ($LASTEXITCODE -ne 0) { throw "JavaScript syntax check failed: $file" }
           }
-          Write-Host "Checked $($files.Count) JavaScript files."
-
+          Write-Host "Checked $($files.Count) tracked JavaScript files across src/, api/ and frontend-v2/."
+      
       - name: Fetch bundled MongoDB
         shell: bash
         run: |
