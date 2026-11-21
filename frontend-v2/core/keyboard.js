@@ -19,12 +19,7 @@ export function installKeyboard({ render, focusSearch }) {
       render();
       return;
     }
-    if (event.key === 'F6') {
-      event.preventDefault();
-      document.querySelector('[data-action="new-basket"]')?.click();
-      return;
-    }
-    const actions = { F1: 'F1', F2: 'F2', F3: 'customer', F4: 'F4', F7: 'F7', F8: 'F8' };
+    const actions = { F1: 'F1', F2: 'F2', F3: 'F3', F4: 'F4', F5: 'F5', F6: 'F6', F7: 'F7', F8: 'F8' };
     if (actions[event.key]) {
       event.preventDefault();
       document.querySelector('[data-action="' + actions[event.key] + '"]')?.click();
