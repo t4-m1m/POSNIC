@@ -1981,8 +1981,8 @@ function waitForApiServer(callback, attempts = 0) {
     return;
   }
 
-  http.get(`http://localhost:${apiPort()}/api`, (res) => {
-    if (res.statusCode === 200 || res.statusCode === 404) {
+  http.get(`http://localhost:${apiPort()}/api/healthz`, (res) => {
+    if (res.statusCode === 200) {
       console.log('\nAPI server is ready!');
       console.log(`API Endpoint: http://localhost:${apiPort()}/api\n`);
       callback();
