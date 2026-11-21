@@ -357,49 +357,13 @@ module.exports = async function startServer(options = {}) {
       }
     });
     console.log('✅ MongoDB Connected Successfully!');
-      console.log(`📊 Database: ${mongoose.connection.name}`);
-      // Desktop does not execute api/server.js. Repair legacy supplier email
-      // indexes here too, before imports or other writes can reach the API.
-      await require(path.join(apiPath, 'src/database/migrations/supplier-email-index'))
-        .migrateSupplierEmailIndex(mongoose.connection.db);
-      await require(path.join(apiPath, 'src/database/migrations/supplier-email-index'))
-        .migrateCustomerEmailIndex(mongoose.connection.db);
-      await require(path.join(apiPath, 'src/database/migrations/receiving-number-indexes'))
-        .migrateReceivingNumberIndexes(mongoose.connection.db);
-    
-    // Add mongoClient to app.locals for session filter utility
+    console.log(`📊 Database: ${mongoose.connection.name}`);
     app.locals.mongoClient = mongoClient;
-    console.log("✅ MongoDB Client added to app.locals for session management");
-
-    reportProgress({ stage: 'database-health', text: 'Checking database health...', details: 'Validating indexes and settings', progress: 84 });
-    const { runDatabaseHealthCheck } = require('./database-health');
-    const databaseHealth = await runDatabaseHealthCheck(mongoClient);
-    console.log(`[Database Health] ${databaseHealth.status.toUpperCase()} in ${databaseHealth.durationMs}ms`);
-    databaseHealth.warnings.forEach((warning) => console.warn(`[Database Health] ${warning}`));
-    databaseHealth.errors.forEach((error) => console.error(`[Database Health] ${error}`));
-    reportProgress({
-      stage: 'database-health-result',
-      text: databaseHealth.status === 'healthy' ? 'Database healthy' : 'Database needs attention',
-      details: databaseHealth,
-      progress: 88,
-    });
-    
-    // The desktop loads app.js directly; api/server.js is not executed here.
-    // Keep installed extensions under user data so replacing the app preserves
-    // their packages and offline rollback pointers.
+    let databaseHealth = { status: 'pending', durationMs: 0, warnings: [], errors: [] };
     process.env.POSNIC_EXTENSIONS_ROOT ||= path.join(electronApp.getPath('userData'), 'extensions');
     process.env.POSNIC_EXTENSIONS_PUBLIC_KEY_FILE ||= electronApp.isPackaged
       ? path.join(process.resourcesPath, 'extension-signing-key.pub')
       : path.join(__dirname, 'extension-signing-key.pub');
-    try {
-      const result = await require(path.join(apiPath, 'src/services/extension-package-loader'))
-        .initializeInstalledExtensions({ db: mongoose.connection.db });
-      app.locals.releaseExtensionRuntime = result.release;
-      for (const failure of result.failures)
-        console.error('[EXTENSIONS] Package not activated:', failure.id || 'configuration', failure.code);
-    } catch (error) {
-      console.error('[EXTENSIONS] Could not read installed packages:', error.code || error.message);
-    }
 
     // Saint Marina POS / POSNIC Next: isolated renderer served alongside the authenticated legacy UI.
     // The migration route intentionally does not alter /mobile/, login/session middleware, or legacy routes.
@@ -604,44 +568,62 @@ module.exports = async function startServer(options = {}) {
     // Do not redirect the Electron window until Express accepts requests.
     await serverReady;
 
-    // Fast-search indexes are an optimization, never a prerequisite for opening the POS.
+    // DB migrations, health checks and extension activation run after Express is listening.
+    setImmediate(() => {
+      void (async () => {
+        const migrations = [
+          ['supplier email index', () => require(path.join(apiPath, 'src/database/migrations/supplier-email-index')).migrateSupplierEmailIndex(mongoose.connection.db)],
+          ['customer email index', () => require(path.join(apiPath, 'src/database/migrations/supplier-email-index')).migrateCustomerEmailIndex(mongoose.connection.db)],
+          ['receiving number indexes', () => require(path.join(apiPath, 'src/database/migrations/receiving-number-indexes')).migrateReceivingNumberIndexes(mongoose.connection.db)],
+        ];
+        for (const [name, migrate] of migrations) {
+          try { await migrate(); console.log(`[Database] ${name} migration complete.`); }
+          catch (error) { console.warn(`[Database] ${name} migration deferred:`, error.code || error.message); }
+        }
+        try {
+          const { runDatabaseHealthCheck } = require('./database-health');
+          databaseHealth = await runDatabaseHealthCheck(mongoClient);
+          console.log(`[Database Health] ${databaseHealth.status.toUpperCase()} in ${databaseHealth.durationMs}ms`);
+          databaseHealth.warnings.forEach((warning) => console.warn(`[Database Health] ${warning}`));
+          databaseHealth.errors.forEach((error) => console.error(`[Database Health] ${error}`));
+          reportProgress({ stage: 'database-health-result', text: databaseHealth.status === 'healthy' ? 'Database healthy' : 'Database needs attention', details: databaseHealth, progress: 88 });
+        } catch (error) { console.warn('[Database Health] Background check failed:', error.code || error.message); }
+        try {
+          const result = await require(path.join(apiPath, 'src/services/extension-package-loader')).initializeInstalledExtensions({ db: mongoose.connection.db });
+          app.locals.releaseExtensionRuntime = result.release;
+          for (const failure of result.failures) console.error('[EXTENSIONS] Package not activated:', failure.id || 'configuration', failure.code);
+        } catch (error) { console.error('[EXTENSIONS] Could not read installed packages:', error.code || error.message); }
+      })().catch((error) => console.warn('[Startup] Background database maintenance failed:', error.message));
+    });
+    setImmediate(() => {
+      void (async () => {
+        try {
+          const companionHttpsServer = await require(path.join(apiPath, 'src/utils/companion-https')).start(app, { userDataPath, preferredPort: Number(PORT) + 1 });
+          global.companionHttpsServer = companionHttpsServer;
+          console.log(`[Samarina Companion] Local HTTPS ready on https://0.0.0.0:${companionHttpsServer.companionHttpsPort}`);
+        } catch (httpsError) {
+          global.companionHttpsServer = null;
+          console.warn('[Samarina Companion] Local HTTPS unavailable; HTTP and native photo/manual scan fallback remain available:', httpsError.message);
+        }
+        if (process.env.POSNIC_BUSINESS_LOCAL_REPORTING === '1') {
+          try {
+            const stopNotifications = require(path.join(apiPath, 'src/services/business-notification-worker')).startNotifications({ tenants: () => [{ db: mongoose.connection.db }] });
+            server.once('close', stopNotifications);
+          } catch (error) { console.warn('[Business Notifications] Could not start:', error.message); }
+        }
+        try {
+          const stopBusinessReporting = require(path.join(apiPath, 'src/services/business-reporting-worker')).startDesktopReporting(mongoose.connection.db);
+          server.once('close', stopBusinessReporting);
+        } catch (error) { console.warn('[Business Reporting] Could not start:', error.message); }
+      })().catch((error) => console.warn('[Startup] Optional services failed:', error.message));
+    });
     setImmediate(() => {
       require(path.join(apiPath, 'src/database/migrations/item-fast-search-indexes'))
         .ensureItemFastSearchIndexes(mongoose.connection.db)
         .then((result) => console.log('[Database] POSNIC Next item search indexes:', JSON.stringify(result)))
         .catch((error) => console.warn('[Database] POSNIC Next item search indexes deferred:', error.message));
     });
-    // Companion HTTPS is a separate listener on the same Express app. The
-    // certificate/key live in Electron userData and the listener is closed
-    // alongside the ordinary API server during application shutdown.
-    try {
-      const companionHttpsServer = await require(path.join(apiPath, 'src/utils/companion-https')).start(app, {
-        userDataPath,
-        preferredPort: Number(PORT) + 1,
-      });
-      global.companionHttpsServer = companionHttpsServer;
-      console.log(`[Samarina Companion] Local HTTPS ready on https://0.0.0.0:${companionHttpsServer.companionHttpsPort}`);
-    } catch (httpsError) {
-      global.companionHttpsServer = null;
-      console.warn('[Samarina Companion] Local HTTPS unavailable; HTTP and native photo/manual scan fallback remain available:', httpsError.message);
-    }
-    if (process.env.POSNIC_BUSINESS_LOCAL_REPORTING === '1') {
-      try {
-        const stopNotifications = require(path.join(apiPath, 'src/services/business-notification-worker')).startNotifications({
-          tenants: () => [{ db: mongoose.connection.db }],
-        });
-        server.once('close', stopNotifications);
-      } catch {
-        console.warn('Business notification scheduling could not start.');
-      }
-    }
-    try {
-      const stopBusinessReporting = require(path.join(apiPath, 'src/services/business-reporting-worker')).startDesktopReporting(mongoose.connection.db);
-      server.once('close', stopBusinessReporting);
-    } catch {
-      // Optional reporting must never prevent the till from opening.
-      console.warn('Business summary preparation could not start.');
-    }
+
     reportProgress({
       stage: 'ready',
       text: 'Loading Interface...',

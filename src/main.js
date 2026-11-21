@@ -1437,7 +1437,7 @@ const assetUpdater = new AssetUpdater({
   updateGuard: () => require('./extension-update-policy').getExtensionUpdateHold(
     process.env.POSNIC_EXTENSIONS_ROOT || path.join(app.getPath('userData'), 'extensions')),
   root: path.join(app.getPath('userData'), 'assets'),
-  baseline: path.join(process.resourcesPath || path.join(__dirname, '..'), 'frontend', 'public'),
+  baseline: path.join(__dirname, '..', 'frontend-v2'),
   publicKey: (() => {
     try {
       return fs.existsSync(ASSET_PUBLIC_KEY_FILE)

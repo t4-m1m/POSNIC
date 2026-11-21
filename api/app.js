@@ -831,20 +831,12 @@ const UPDATED_ASSETS = process.env.POSNIC_ASSET_DIR;
 // Keep it beside the packaged frontend so /mobile/ works in dev and installed builds.
 const SAMARINA_COMPANION_DIR = path.join(__dirname, '..', 'frontend', 'mobile');
 const POSNIC_NEXT_DIR = process.env.POSNIC_FRONTEND_V2_PATH || path.join(__dirname, '..', 'frontend-v2');
-app.use('/v2', express.static(POSNIC_NEXT_DIR, { index: 'index.html', fallthrough: true, etag: true, maxAge: '1h' }));
+app.get(['/v2', '/v2/', '/v2/index.html'], (_req, res) => res.redirect(302, '/'));
+app.get('/index.html', (_req, res) => res.redirect(302, '/'));
+app.use('/v2', express.static(POSNIC_NEXT_DIR, { index: false, fallthrough: true, etag: true, maxAge: '1h' }));
 // POSNIC Next owns the desktop origin root and its root-relative assets.
 // index:false keeps this middleware from swallowing API and other app routes.
 app.use(express.static(POSNIC_NEXT_DIR, { index: false, fallthrough: true, etag: true, maxAge: '1h' }));
-app.get('/', (req, res, next) => {
-  if (process.env.POSNIC_DESKTOP !== '1') return next();
-  const remoteAddress = String(req.socket.remoteAddress || '');
-  const isLoopback = remoteAddress === '127.0.0.1' || remoteAddress === '::1' ||
-    remoteAddress === '::ffff:127.0.0.1';
-  // LAN devices use Samarina Companion; only the local Electron shell gets the desktop POS.
-  if (!isLoopback) return res.redirect(302, '/mobile/');
-  res.set('Cache-Control', 'no-store');
-  return res.sendFile(path.join(POSNIC_NEXT_DIR, 'index.html'));
-});
 // Express's default non-strict routing makes '/mobile' also match '/mobile/'.
 // Match only the slashless URL, otherwise the canonical redirect loops forever.
 app.get(/^\/mobile$/, (_req, res) => res.redirect(308, '/mobile/'));
@@ -1087,22 +1079,7 @@ app.use(cors((req, callback) => callback(null, buildCorsOptions(req))));
 // Response middleware (PHP-compatible format)
 app.use(responseMiddleware);
 
-// Welcome route (PHP-compatible format)
-app.get('/', (req, res) => {
-  if (process.env.POSNIC_DESKTOP === '1') {
-    res.set('Cache-Control', 'no-store');
-    return res.sendFile(path.join(POSNIC_NEXT_DIR, 'index.html'));
-  }
-  res.status(200).json({
-    type: 'success',
-    message: 'Welcome to the Posnic API v2',
-    data: {
-      version: '2.0.0',
-      documentation: '/api-docs',
-      endpoints: '/api',
-    },
-  });
-});
+/* Desktop root route is registered after attachDb for existing JWT validation. */
 
 /*
  * Browsable API reference at /api-docs, development only.
@@ -1139,6 +1116,29 @@ if (process.env.NODE_ENV !== 'production') {
    inside the routers so there is one answer to "which database is this request
    for", which is what makes serving more than one shop from a process safe. */
 app.use(attachDb);
+
+app.get('/', async (req, res, next) => {
+  if (process.env.POSNIC_DESKTOP !== '1') return res.status(200).json({ type: 'success', message: 'Welcome to the Posnic API v2', data: { version: '2.0.0', documentation: '/api-docs', endpoints: '/api' } });
+  const remoteAddress = String(req.socket.remoteAddress || '');
+  const isLoopback = remoteAddress === '127.0.0.1' || remoteAddress === '::1' || remoteAddress === '::ffff:127.0.0.1';
+  if (!isLoopback) return res.redirect(302, '/mobile/');
+  const loginPage = path.join(POSNIC_NEXT_DIR, 'login.html');
+  const appPage = path.join(POSNIC_NEXT_DIR, 'index.html');
+  const token = req.cookies?.jwt || (String(req.headers.authorization || '').startsWith('Bearer ') ? String(req.headers.authorization).slice(7) : '');
+  res.set('Cache-Control', 'no-store');
+  if (!token) return res.sendFile(loginPage, error => { if (error && !res.headersSent) next(error); });
+  try {
+    const { protect: desktopProtect } = require('./src/middleware/auth');
+    await new Promise((resolve, reject) => {
+      const result = desktopProtect(req, res, error => error ? reject(error) : resolve());
+      if (result && typeof result.then === 'function') result.catch(reject);
+    });
+    return res.sendFile(appPage, error => { if (error && !res.headersSent) next(error); });
+  } catch (authError) {
+    return res.sendFile(loginPage, error => { if (error && !res.headersSent) next(error); });
+  }
+});
+
 
 /*
  * Realtime (S2): every successful write publishes a coarse change signal to

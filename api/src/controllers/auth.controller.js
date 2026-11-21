@@ -260,8 +260,11 @@ const getUserData = (user) => {
 // Get current user
 // (protected route - requires authentication)
 exports.getMe = (req, res, next) => {
-  req.params.id = req.user.id;
-  next();
+  if (!req.user) return next(new AppError('Not authenticated.', 401));
+  return res.status(200).json({
+    status: 'success',
+    data: { user: getUserData(req.user) },
+  });
 };
 
 // Get user by ID

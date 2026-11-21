@@ -2,6 +2,7 @@ const { loginLimiter, passwordResetLimiter } = require('../middleware/auth-rate-
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
+const { authCookieOptions } = require('../utils/auth-cookie');
 
 // Apply authentication middleware
 const { protect, restrictTo, auth } = require('../middleware/auth');
@@ -25,6 +26,10 @@ const { verifyInstallationCredentials } = require('../middleware/install.validat
 
 router.post('/register', verifyInstallationCredentials, authController.register);
 router.post('/login', loginLimiter, authController.login);
+router.post('/logout', (req, res) => {
+  res.clearCookie('jwt', authCookieOptions());
+  return res.status(200).json({ type: 'success', message: 'Logged out', data: null });
+});
 router.post('/verify', auth, authController.verifyToken);
 router.post('/forgot-password', passwordResetLimiter, authController.forgotPassword);
 router.patch('/reset-password/:token', authController.resetPassword);
@@ -49,7 +54,7 @@ router.get('/shadow', loginLimiter, shadowLogin);
 router.use(protect);
 
 router.patch('/update-password', authController.updatePassword);
-router.get('/me', authController.getMe);
+router.get('/me', authController.getMe, authController.getUser);
 router.patch('/update-me', authController.updateMe);
 router.delete('/delete-me', authController.deleteMe);
 
