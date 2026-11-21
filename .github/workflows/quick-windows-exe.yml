@@ -32,7 +32,7 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Create annotated Saint Marina POS pre-release tag
+      - name: Create annotated SamarinaPOS pre-release tag
         if: github.ref == 'refs/heads/feat/posnic-v2-rebrand'
         uses: actions/github-script@v8
         with:
@@ -61,7 +61,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag,
-              message: 'Saint Marina POS v2 Rebrand Pre-Release 2',
+              message: 'SamarinaPOS v2 Rebrand Pre-Release 2',
               object: context.sha,
               type: 'commit'
             });
@@ -138,14 +138,14 @@ jobs:
           if ($installers.Count -ne 1) {
             throw "Expected exactly one Windows installer, found $($installers.Count)."
           }
-          Move-Item -LiteralPath $installers[0].FullName -Destination "dist/SaintMarinaPOS-Windows-Installer.exe" -Force
+          Move-Item -LiteralPath $installers[0].FullName -Destination "dist/SamarinaPOS-Windows-Installer.exe" -Force
 
       - name: Mirror installer to GoFile (free third-party host)
         id: gofile
         continue-on-error: true
         shell: pwsh
         run: |
-          $installer = Get-Item "dist/SaintMarinaPOS-Windows-Installer.exe"
+          $installer = Get-Item "dist/SamarinaPOS-Windows-Installer.exe"
           $response = Invoke-RestMethod -Uri "https://upload.gofile.is/uploadfile" -Method Post -Form @{ file = $installer }
           if ($response.status -ne "ok") {
             throw "GoFile upload failed: $($response.status)"
@@ -164,8 +164,8 @@ jobs:
       - name: Upload Windows installer artifact
         uses: actions/upload-artifact@v7
         with:
-          name: SaintMarinaPOS-Windows-Installer
-          path: dist/SaintMarinaPOS-Windows-Installer.exe
+          name: SamarinaPOS-Windows-Installer
+          path: dist/SamarinaPOS-Windows-Installer.exe
           if-no-files-found: error
           retention-days: 7
 
@@ -180,17 +180,17 @@ jobs:
           $owner = 't4-m1m'
           $repo = 'POSNIC'
           $tag = if ($env:GITHUB_REF.StartsWith('refs/tags/')) { $env:GITHUB_REF_NAME } else { 'v2.0.0-rebrand.2' }
-          $installer = Get-Item 'dist/SaintMarinaPOS-Windows-Installer.exe'
+          $installer = Get-Item 'dist/SamarinaPOS-Windows-Installer.exe'
           $headers = @{
             Authorization = "Bearer $env:GH_TOKEN"
             Accept = 'application/vnd.github+json'
             'X-GitHub-Api-Version' = '2022-11-28'
           }
           $api = "https://api.github.com/repos/$owner/$repo"
-          $notes = "Automatically published Saint Marina POS Windows installer from the successful POSNIC Next build.`n`n**Alternative download (GoFile):** $env:GOFILE_URL`n`nDownload **SaintMarinaPOS-Windows-Installer.exe** below. This release contains the installer only."
+          $notes = "Automatically published SamarinaPOS Windows installer from the successful SamarinaPOS build.`n`n**Alternative download (GoFile):** $env:GOFILE_URL`n`nDownload **SamarinaPOS-Windows-Installer.exe** below. This release contains the installer only."
           $payload = @{
             tag_name = $tag
-            name = "Saint Marina POS $tag"
+            name = "SamarinaPOS $tag"
             body = $notes
             draft = $false
             prerelease = $true

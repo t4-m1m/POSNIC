@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Loading SamarinaPOS...</title>
+    <title>SamarinaPOS</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -38,7 +38,8 @@
         }
 
         .logo { margin-bottom: 34px; }
-        .logo img { width: 150px; height: auto; }
+        .logo img { width: 64px; height: 64px; object-fit: contain; border-radius: 16px; }
+        .brand-wordmark { margin-top: 12px; font-size: 22px; font-weight: 750; letter-spacing: -.03em; color: var(--ink); }
 
         .spinner-container {
             position: relative;
@@ -191,7 +192,7 @@
 </head>
 <body class="desktop-window" data-desktop-window="startup">
     <div class="loading-container">
-        <div class="logo"><img src="../builds/512-posnic.png" alt="SamarinaPOS"></div>
+        <div class="logo"><img src="../frontend-v2/assets/samarinapos-mark.svg" alt="SamarinaPOS"><div class="brand-wordmark">SamarinaPOS</div></div>
 
         <div class="spinner-container">
             <div class="spinner"></div>
