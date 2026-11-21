@@ -2,14 +2,11 @@
 
 /**
  * Supporting indexes for the authenticated POSNIC fast catalogue search.
- * Names and fields follow the live legacy items collection (itemid=SKU,
- * barcode_id=barcode, category_name=category, updated_date=updatedAt).
- * Tenant/branch scope is kept in each compound index.
+ * Live collection fields: itemid=SKU, barcode_id=barcode,
+ * category_name=category and updated_date=updatedAt.
  */
 async function ensureItemFastSearchIndexes(db) {
-  if (!db || typeof db.collection !== 'function') {
-    throw new TypeError('A connected MongoDB database is required');
-  }
+  if (!db || typeof db.collection !== 'function') throw new TypeError('A connected MongoDB database is required');
   const items = db.collection('items');
   const definitions = [
     { key: { license: 1, branch_id: 1, barcode_id: 1 }, name: 'v2_items_barcode_scope' },
@@ -19,13 +16,18 @@ async function ensureItemFastSearchIndexes(db) {
     { key: { license: 1, branch_id: 1, updated_date: -1 }, name: 'v2_items_updated_scope' },
     { key: { license: 1, branch_id: 1, reference: 1 }, name: 'v2_items_reference_scope', sparse: true }
   ];
+  const existing = await items.listIndexes().toArray();
+  const keySignature = key => JSON.stringify(Object.entries(key || {}));
   const created = [];
+  const present = [];
   for (const definition of definitions) {
-    const { name, ...options } = definition;
-    await items.createIndex(options.key, { name, ...(options.sparse ? { sparse: true } : {}) });
+    const found = existing.find(index => keySignature(index.key) === keySignature(definition.key));
+    if (found) { present.push(found.name); continue; }
+    const { name, key, sparse } = definition;
+    await items.createIndex(key, { name, ...(sparse ? { sparse: true } : {}) });
     created.push(name);
   }
-  return created;
+  return { created, present };
 }
 
 module.exports = { ensureItemFastSearchIndexes };
