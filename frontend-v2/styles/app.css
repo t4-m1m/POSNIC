@@ -364,3 +364,36 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 .modal-close{border:0;border-radius:8px;background:var(--bg-subtle);font-size:22px;line-height:1;width:34px;height:34px;cursor:pointer}
 @media(max-width:1120px){.cashier-header-row{grid-template-columns:minmax(0,1fr) 200px 190px!important}.cashier-shortcuts .fkey-label{font-size:9px!important}}
 @media(max-width:850px){.cashier-header-row{grid-template-columns:1fr!important;grid-template-areas:none!important}.cashier-shortcuts,.cashier-customer-card,.cashier-total-card{height:auto!important;max-height:none!important}.history-controls{grid-template-columns:1fr}}
+
+/* SamarinaPOS V2 corrective pass */
+.cashier-header-row{grid-template-columns:minmax(0,1fr) 215px 195px!important;grid-template-areas:"keys customer total"!important;gap:10px!important;align-items:stretch!important;height:92px!important;max-height:94px!important;min-height:92px!important}
+.cashier-shortcuts{height:92px!important;max-height:94px!important;min-height:92px!important;padding:6px 8px!important;gap:4px!important;overflow:hidden!important;justify-content:space-between!important}
+.cashier-shortcuts .basket-strip{height:24px!important;min-height:24px!important;max-height:24px!important;margin:0!important;overflow:hidden}
+.cashier-shortcuts .fkey-grid{display:grid!important;grid-template-columns:repeat(8,minmax(0,1fr))!important;gap:5px!important;height:52px!important;min-height:52px!important;overflow:hidden!important}
+.cashier-shortcuts .fkey{height:52px!important;min-height:52px!important;padding:4px 3px!important;border-radius:9px!important;display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:center!important;gap:4px!important;white-space:nowrap!important;overflow:hidden!important}
+.cashier-shortcuts .fkey-label{display:block!important;min-width:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;overflow-wrap:normal!important;word-break:keep-all!important;font-size:10px!important;line-height:1.1!important}
+.cashier-shortcuts .fkey kbd{flex:none!important;white-space:nowrap!important}
+.cashier-customer-card{width:215px!important;height:92px!important;min-height:92px!important;max-height:92px!important;padding:6px 10px!important;overflow:hidden!important;display:flex!important;align-items:center!important;gap:7px!important}
+.cashier-customer-card .customer-info{min-width:0!important;flex:1!important;display:flex!important;flex-direction:column!important;gap:2px!important}
+.cashier-customer-card .customer-info strong{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:12px!important}
+.cashier-customer-card .customer-debt{font-size:10px!important;padding:4px 6px!important;white-space:nowrap!important;max-width:100%!important}
+.cashier-total-card{width:195px!important;height:92px!important;min-height:92px!important;max-height:92px!important;padding:6px 10px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;text-align:center!important;overflow:hidden!important}
+.cashier-total-card strong{font-size:22px!important;white-space:nowrap!important;overflow-wrap:normal!important}
+.quick-item{min-height:122px!important;height:122px!important;padding:6px!important;overflow:hidden!important}
+.quick-item .product-photo,.quick-item .product-monogram{width:46px!important;height:46px!important;min-width:46px!important;min-height:46px!important;border-radius:8px!important;object-fit:cover!important;flex:none!important}
+#product-results:has(.recent-sale),.recent-sales-list{display:flex!important;flex-direction:column!important;gap:6px!important;width:100%!important}
+#product-results .recent-sale{width:100%!important;min-height:58px!important;display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:space-between!important;gap:10px!important}
+#product-results .recent-sale>div{min-width:0!important;flex:1!important;display:flex!important;flex-direction:column!important;gap:3px!important}
+#product-results .recent-sale .btn{flex:none!important;white-space:nowrap!important}
+.article-summary-grid{display:grid;grid-template-columns:48px minmax(170px,2fr) minmax(110px,1fr) repeat(5,minmax(125px,1fr));gap:8px;align-items:stretch;margin-top:12px;min-width:1120px}
+.article-summary-cell{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:7px;padding:8px;border:1px solid var(--border-hairline);border-radius:9px;background:var(--bg-surface)}
+.article-summary-cell small{font-size:10px;color:var(--text-secondary)}
+.summary-total-one,.summary-total-two{display:flex;flex-direction:column;gap:4px;padding:8px;border-radius:8px;min-width:0}
+.summary-total-one{background:#EFF6FF;color:#1D4ED8}.summary-total-two{background:#ECFDF5;color:#047857}
+.article-summary-cell strong{font-size:13px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.drawer-backdrop{background:rgba(15,23,42,.45)!important;justify-content:center!important;align-items:center!important}.drawer.modal-dialog,.drawer{border-radius:16px!important}
+.closure-split{display:grid;grid-template-columns:minmax(280px,.85fr) minmax(360px,1.15fr);gap:14px;align-items:start}
+.closure-agenda .calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.thermal-paper{width:80mm;max-width:100%;margin:8px auto;padding:5mm 4mm;background:#fff;color:#111;font-family:ui-monospace,Consolas,monospace;font-size:11px;box-shadow:0 2px 16px #0f172a18}
+.thermal-paper h2{text-align:center;font-size:15px;margin:0 0 5px}.thermal-paper p{text-align:center;margin:0 0 8px}.thermal-line{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dashed #ddd}.thermal-line span{max-width:66%;overflow-wrap:anywhere}.thermal-line b{text-align:right;white-space:nowrap}
+@media(max-width:850px){.cashier-header-row{height:auto!important;max-height:none!important;min-height:0!important;grid-template-columns:1fr!important;grid-template-areas:"keys" "customer" "total"!important}.cashier-shortcuts,.cashier-customer-card,.cashier-total-card{height:auto!important;max-height:none!important;min-height:82px!important;width:auto!important}.cashier-shortcuts .fkey-grid{grid-template-columns:repeat(8,minmax(62px,1fr))!important;overflow-x:auto!important}.article-summary-grid{grid-template-columns:48px minmax(160px,2fr) minmax(110px,1fr) repeat(4,minmax(125px,1fr));overflow-x:auto}.closure-split{grid-template-columns:1fr}}

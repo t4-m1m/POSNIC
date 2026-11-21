@@ -7,7 +7,7 @@ export function installKeyboard({ render, focusSearch }) {
       if (state.drawer) { state.drawer = null; render(); focusSearch(); }
       return;
     }
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+    if ((event.ctrlKey || event.metaKey) && ['k','f'].includes(event.key.toLowerCase())) {
       event.preventDefault();
       document.querySelector('#global-search')?.focus();
       return;
@@ -28,6 +28,7 @@ export function installKeyboard({ render, focusSearch }) {
       return;
     }
     const scanInput = event.target?.id === 'barcode-search';
+    if (event.key === '/' && !typing) { event.preventDefault(); focusSearch(); return; }
     if (typing && !scanInput) return;
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       const rows = [...document.querySelectorAll('.cart-workspace [data-cart-line]')];
