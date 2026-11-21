@@ -382,6 +382,25 @@ module.exports = async function startServer(options = {}) {
       console.error('[EXTENSIONS] Could not read installed packages:', error.code || error.message);
     }
 
+    // Saint Marina POS / POSNIC Next: isolated renderer served alongside the authenticated legacy UI.
+    // The migration route intentionally does not alter /mobile/, login/session middleware, or legacy routes.
+    try {
+      const frontendV2Path = path.join(electronApp.getAppPath(), 'frontend-v2');
+      if (fs.existsSync(path.join(frontendV2Path, 'index.html'))) {
+        app.use('/v2', require('express').static(frontendV2Path, {
+          index: 'index.html',
+          fallthrough: true,
+          etag: true,
+          maxAge: '1h'
+        }));
+        console.log('[FrontendV2] Saint Marina POS available at /v2/');
+      } else {
+        console.warn('[FrontendV2] packaged frontend directory is missing:', frontendV2Path);
+      }
+    } catch (error) {
+      console.warn('[FrontendV2] static route unavailable; legacy UI remains active:', error.message);
+    }
+
     // Start Express server
     const PORT = process.env.PORT || 5555;
     // The desktop Companion is used from phones on the shop LAN; bind IPv4 on
