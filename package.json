@@ -87,6 +87,7 @@
     },
     "files": [
       "src/main.js",
+      "frontend-v2/**/*",
       "src/zr-express.js",
       "src/user-data-path.js",
       "src/item-image-storage.js",
