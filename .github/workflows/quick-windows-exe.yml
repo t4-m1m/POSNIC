@@ -28,7 +28,7 @@ jobs:
       POSNIC_MINIFY: "0"
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -73,7 +73,7 @@ jobs:
             });
             core.info(`Created annotated tag ${tag} at ${context.sha}.`);
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
 

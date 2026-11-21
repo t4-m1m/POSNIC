@@ -1,7 +1,7 @@
 {
   "name": "posnic",
   "version": "1.9.3",
-  "description": "SamarinaPOS point-of-sale software for retail and restaurants, with offline-first billing and inventory workflows.",
+  "description": "SamarinaPOS point-of-sale software for retail, with offline-first billing and inventory workflows.",
   "main": "src/main.js",
   "desktopName": "com.posnic.app.desktop",
   "scripts": {
