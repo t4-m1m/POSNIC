@@ -166,7 +166,7 @@ jobs:
 
       - name: Publish installer to GitHub Releases
         if: github.ref == 'refs/heads/feat/posnic-v2-rebrand' || startsWith(github.ref, 'refs/tags/v2.0.0-rebrand')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v2.0.0-rebrand.1' }}
           name: ${{ format('Saint Marina POS {0}', startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v2.0.0-rebrand.1') }}
