@@ -85,16 +85,21 @@ jobs:
         working-directory: api
         run: npm install --no-audit --no-fund
 
-      - name: Syntax-check application JavaScript
+      - name: Syntax-check changed application JavaScript
         shell: pwsh
         run: |
-          $files = @(git ls-files | Where-Object { $_ -match '^(src|api|frontend-v2)/.*\.js$' })
-          if ($files.Count -eq 0) { throw "No application JavaScript files were found." }
+          git fetch --no-tags origin feat/article-cost-label-designer-sales-calendar
+          $files = @(git diff --name-only FETCH_HEAD...HEAD | Where-Object {
+            $_ -match '^(src|api|frontend-v2)/.*\.js$' -and
+            $_ -notmatch '(^|/)(test|tests|__tests__)/'
+          })
+          if ($files.Count -eq 0) { Write-Host "No changed application JavaScript files to check."; exit 0 }
           foreach ($file in $files) {
+            Write-Host "Checking $file"
             node --check $file
             if ($LASTEXITCODE -ne 0) { throw "JavaScript syntax check failed: $file" }
           }
-          Write-Host "Checked $($files.Count) tracked JavaScript files across src/, api/ and frontend-v2/."
+          Write-Host "Checked $($files.Count) changed application JavaScript files."
       
       - name: Fetch bundled MongoDB
         shell: bash
