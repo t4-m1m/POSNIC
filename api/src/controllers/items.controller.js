@@ -16,6 +16,8 @@ const itemDescription = require('../services/ai-item-description');
 const dishFactsDraft = require('../services/ai-dish-facts');
 const budget = require('../services/ai-budget');
 const voiceMeter = require('../services/voice-meter');
+const { ensureItemFastSearchIndexes } = require('../database/migrations/item-fast-search-indexes');
+const fastSearchIndexedDatabases = new WeakSet();
 
 class ItemsController extends BaseController {
   constructor() {
@@ -260,6 +262,11 @@ class ItemsController extends BaseController {
   async fastSearch(req, res) {
     try {
       await this.ensureContext(req);
+      // Create the scoped lookup indexes once per connected database, not per keystroke.
+      if (req.db && typeof req.db === 'object' && !fastSearchIndexedDatabases.has(req.db)) {
+        await ensureItemFastSearchIndexes(req.db);
+        fastSearchIndexedDatabases.add(req.db);
+      }
       if (req.user?.access?.item?.read === false) return this.error(res, ERROR_MESSAGES.UNAUTHORIZED, 403);
       const query = String(req.query.q || req.query.search || '').trim().slice(0, 100);
       const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
