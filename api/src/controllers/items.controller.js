@@ -268,7 +268,7 @@ class ItemsController extends BaseController {
       const licenseId = this.model?.licenseId || null;
       if (!branchId || !licenseId) return this.error(res, ERROR_MESSAGES.BRANCH_LICENSE_REQUIRED, 400);
       const { collection, filter } = await this.service.repository.listScope({ branchId, licenseId });
-      const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\  async getAll(req, res) {');
+      const escaped = query.split('').map((character) => '\\^$.*+?()[]{}|'.includes(character) ? `\\${character}` : character).join('');
       const clauses = [filter];
       if (query) {
         const exact = query.replace(/\s+/g, '');
