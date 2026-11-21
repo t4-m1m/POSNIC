@@ -338,3 +338,29 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
   .cashier-shortcuts .fkey-grid{grid-template-columns:repeat(8,minmax(70px,1fr))}
   .cashier-customer-card,.cashier-total-card{min-height:82px}
 }
+
+/* Storeep V2: history filters, centered dialogs and compact cashier proportions */
+.history-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,240px);gap:8px;margin:10px 0}
+.history-controls .field{min-width:0}
+.cashier-header-row{grid-template-columns:minmax(0,1fr) 210px 200px!important;gap:8px!important}
+.cashier-shortcuts{height:70px!important;max-height:70px!important;padding:6px 8px!important;gap:5px!important;overflow:hidden}
+.cashier-shortcuts .basket-strip{min-height:24px;max-height:24px}
+.cashier-shortcuts .fkey-grid{height:34px!important;min-height:34px;gap:6px!important}
+.cashier-shortcuts .fkey{height:34px!important;min-height:34px!important;padding:2px!important;display:flex;flex-direction:row;gap:4px!important;white-space:nowrap;overflow:hidden}
+.cashier-shortcuts .fkey .fkey-icon,.cashier-shortcuts .fkey .fkey-icon svg{width:16px!important;height:16px!important;flex:none}
+.cashier-shortcuts .fkey-label{font-size:10px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cashier-customer-card,.cashier-total-card{height:70px!important;max-height:70px!important;min-height:70px!important;padding:6px 10px!important;overflow:hidden}
+.cashier-customer-card{display:flex;align-items:center;gap:7px}
+.cashier-customer-card .customer-info{min-width:0;flex:1}
+.cashier-customer-card .customer-info strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.cashier-customer-card .customer-debt{font-size:10px;padding:4px 6px;white-space:nowrap}
+.cashier-total-card{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.cashier-total-card>span:first-child{font-size:10px}
+.cashier-total-card strong{font-size:21px!important;white-space:nowrap!important}
+.quick-item{min-height:138px;height:auto;padding:8px;display:flex;flex-direction:column;justify-content:space-between;overflow:visible}
+.quick-item .product-photo,.quick-item .product-monogram{width:52px!important;height:52px!important;object-fit:cover;border-radius:8px}
+.drawer-backdrop{justify-content:center!important;align-items:center!important;padding:20px}
+.drawer.modal-dialog{width:min(720px,calc(100vw - 40px))!important;height:auto!important;max-width:720px;max-height:calc(100vh - 40px);border-radius:16px!important;overflow:auto}
+.modal-close{border:0;border-radius:8px;background:var(--bg-subtle);font-size:22px;line-height:1;width:34px;height:34px;cursor:pointer}
+@media(max-width:1120px){.cashier-header-row{grid-template-columns:minmax(0,1fr) 200px 190px!important}.cashier-shortcuts .fkey-label{font-size:9px!important}}
+@media(max-width:850px){.cashier-header-row{grid-template-columns:1fr!important;grid-template-areas:none!important}.cashier-shortcuts,.cashier-customer-card,.cashier-total-card{height:auto!important;max-height:none!important}.history-controls{grid-template-columns:1fr}}
