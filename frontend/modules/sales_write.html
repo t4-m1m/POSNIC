@@ -53,14 +53,14 @@
                         <button type="button" class="posnic-basket-add" onclick="if(PosnicPro.sales&&PosnicPro.sales.multiBasket)PosnicPro.sales.multiBasket.create();">+ Nouveau client</button>
                     </div>
                     <div id="sales-function-shortcuts" class="sales-function-shortcuts" role="toolbar" aria-label="Raccourcis de vente">
-<button type="button" class="sales-function-key sales-key-fast" onclick="PosnicPro.sales.runFunctionShortcut('F1')" title="F1 — Encaissement rapide"><kbd>F1</kbd><i class="feather icon-zap"></i><span>Encaissement rapide</span></button>
+<button type="button" class="sales-function-key sales-key-fast" onclick="PosnicPro.sales.runFunctionShortcut('F1')" title="F1 — Encaissement rapide"><kbd>F1</kbd><i class="feather icon-zap"></i><span>Rapide</span></button>
 <button type="button" class="sales-function-key sales-key-pay" onclick="PosnicPro.sales.runFunctionShortcut('F2')" title="F2 — Encaisser"><kbd>F2</kbd><i class="feather icon-dollar-sign"></i><span>Encaisser</span></button>
 <button type="button" class="sales-function-key sales-key-price" onclick="PosnicPro.sales.runFunctionShortcut('F3')" title="F3 — Choisir le prix"><kbd>F3</kbd><i class="feather icon-tag"></i><span>Prix</span></button>
-<button type="button" class="sales-function-key sales-key-quantity" onclick="PosnicPro.sales.runFunctionShortcut('F4')" title="F4 — Modifier la quantité"><kbd>F4</kbd><i class="feather icon-edit-2"></i><span>Quantité</span></button>
+<button type="button" class="sales-function-key sales-key-quantity" onclick="PosnicPro.sales.runFunctionShortcut('F4')" title="F4 — Modifier la quantité"><kbd>F4</kbd><i class="feather icon-edit-2"></i><span>Qté</span></button>
 <button type="button" class="sales-function-key sales-key-customer" onclick="PosnicPro.sales.runFunctionShortcut('F5')" title="F5 — Choisir un client"><kbd>F5</kbd><i class="feather icon-users"></i><span>Client</span></button>
 <button type="button" class="sales-function-key sales-key-pay" onclick="PosnicPro.sales.runFunctionShortcut('F6')" title="F6 — Versement"><kbd>F6</kbd><i class="feather icon-wallet"></i><span>Versement</span></button>
 <button type="button" class="sales-function-key sales-key-delivery" onclick="PosnicPro.sales.runFunctionShortcut('F7')" title="F7 — Livraison ZR Express"><kbd>F7</kbd><i class="feather icon-truck"></i><span>Livraison ZR</span></button>
-<button type="button" class="sales-function-key sales-key-exchange" onclick="PosnicPro.sales.runFunctionShortcut('F8')" title="F8 — Échange / ticket"><kbd>F8</kbd><i class="feather icon-repeat"></i><span>Échange ticket</span></button>
+<button type="button" class="sales-function-key sales-key-exchange" onclick="PosnicPro.sales.runFunctionShortcut('F8')" title="F8 — Échange / ticket"><kbd>F8</kbd><i class="feather icon-repeat"></i><span>Ticket</span></button>
 <div class="sales-current-customer" id="sales-current-customer" role="status" title="Client de la vente"><i class="feather icon-user"></i><span id="sales-current-customer-name">Client de passage</span></div>
 <button type="button" id="sales-customer-credit-inline" class="sales-customer-credit-inline" hidden aria-label="Open this customer’s debt settlement"><strong>Crédit : <span id="sales-customer-credit-inline-amount">0,00</span> <span class="display-currency"></span></strong></button>
 <div class="sales-shortcut-total" role="status" aria-live="polite"><span>Total</span><strong><span class="display-currency"></span> <span id="sales-shortcut-total-value">0.00</span></strong></div>
@@ -162,13 +162,14 @@
                                     </a>
                                     <!-- Quick Sale (Square study Q1): amount in, payment
                                          recorded - the busy-counter mode. -->
-                                    <a href="javascript:void(0)" id="quick_sale_btn"
-                                        style="height:38px;border: transparent;border-radius: 0px;"
+                                    <button type="button" id="quick_sale_btn"
+                                        style="height:38px;border:transparent;border-radius:0;padding:0 12px;"
                                         class="btn btn-warning-rgba"
                                         onclick="PosnicPro.sales.quickSale.open();"
-                                        data-toggle="tooltip" title="Quick sale - just an amount" data-t-title="lang_quick_sale_just_an_amount">
+                                        data-toggle="tooltip" title="Quick add by price" data-t-title="lang_quick_sale_just_an_amount"
+                                        aria-label="Ajouter un article par prix">
                                         <i class="feather icon-zap"></i>
-                                    </a>
+                                    </button>
 
                                 </div>
                             </div>
@@ -872,10 +873,6 @@
                                         </div>
 <div class="posnic-pay-due">Reste à payer : <strong><span class="display-currency"></span> <span class="balanceDue font-18">0.00</span></strong></div>
                                         <div class="posnic-payment-actions" id="posnic-payment-actions" aria-label="Actions de caisse">
-                                            <div class="posnic-quick-cash-actions" aria-label="Opérations rapides">
-                                                <button type="button" class="posnic-quick-cash-btn" id="posnic-quick-expense-open"><i class="feather icon-minus-circle"></i><span>Dépense</span></button>
-                                                <button type="button" class="posnic-quick-cash-btn" id="posnic-quick-advance-open"><i class="feather icon-wallet"></i><span>Acompte</span></button>
-                                            </div>
                                             <button type="button" id="posnic-send-whatsapp-receipt-payment" class="btn btn-outline-success"><i class="feather icon-message-circle mr-2"></i>Envoyer le ticket par WhatsApp</button>
                                         </div>
                                         <div class="profilebox text-center" style="display:none">

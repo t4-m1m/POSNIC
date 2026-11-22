@@ -1835,3 +1835,146 @@ body > .modal-backdrop {
 #posnic-payment-actions .posnic-close-day-action{display:inline-flex;align-items:center;justify-content:center;flex:1 1 auto;min-width:0;min-height:38px;margin:0!important;padding:6px 9px;font-size:11px;white-space:nowrap}
 #posnic-cancel-return{min-height:38px;font-weight:650}
 @media(max-width:480px){#posnic-payment-actions{flex-wrap:wrap}#posnic-payment-actions>*{flex:1 1 100%!important}#posnic-payment-actions .posnic-quick-cash-actions{flex:1 1 100%!important}#posnic-payment-actions .posnic-quick-cash-btn{flex:1 1 0}}
+
+
+/* POSNIC cashier refinement: balanced working panes, readable shortcuts and compact catalogue gaps. */
+@media (min-width: 768px) {
+  #sales_new #touchsales_page > .row:has(#instance-view, #items_view_hide) > #items_view_hide {
+    flex: 0 0 44% !important;
+    width: 44% !important;
+    max-width: 44% !important;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+  }
+  #sales_new #touchsales_page > .row:has(#instance-view, #items_view_hide) > #instance-view {
+    flex: 0 0 56% !important;
+    width: 56% !important;
+    max-width: 56% !important;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+  }
+  #sales_new #items_view_hide .sale-tile-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+    gap: 4px !important;
+  }
+  #sales_new #items_view_hide .sale-tile-grid > .wsk-cp {
+    width: auto !important;
+    max-width: none !important;
+    flex: initial !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin: 0 !important;
+  }
+}
+#sales_new #items_view_hide #quick_sale_btn {
+  display: inline-flex !important;
+  flex: 0 0 42px !important;
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+}
+#sales_new .sales-function-shortcuts {
+  align-items: center;
+  column-gap: 6px;
+  row-gap: 6px;
+}
+#sales_new .sales-function-key {
+  display: inline-flex !important;
+  flex: 0 1 auto !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  min-width: 78px;
+  min-height: 44px;
+  padding: 6px 9px !important;
+  white-space: nowrap;
+}
+#sales_new .sales-function-key kbd {
+  display: inline-flex;
+  flex: 0 0 25px;
+  align-items: center;
+  justify-content: center;
+  min-width: 25px;
+  min-height: 23px;
+  margin: 0;
+  line-height: 1;
+}
+#sales_new .sales-function-key > .feather {
+  display: inline-flex;
+  flex: 0 0 17px;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+#sales_new .sales-function-key > span {
+  display: inline-block;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.15;
+  text-align: left;
+}
+#sales_new #sales-function-shortcuts .sales-current-customer {
+  flex: 0 1 190px;
+  min-width: 120px;
+  max-width: 210px;
+}
+#sales_new #sales-function-shortcuts .sales-customer-credit-inline {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 7px 11px;
+}
+@media (min-width: 768px) {
+  body:has(#sales_new:not([style*="display: none"])) .topbar .togglebar > ul.list-inline > li#posnic-multi-baskets-header-wrap {
+    flex: 1 1 390px !important;
+    max-width: clamp(250px, 40vw, 560px) !important;
+  }
+  #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-tab-wrap,
+  #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-add {
+    min-height: 36px !important;
+  }
+  #posnic-multi-baskets-header-wrap #posnic-multi-baskets .posnic-basket-tab-wrap .posnic-basket-tab {
+    min-height: 34px !important;
+    padding: 6px 13px !important;
+  }
+}
+#posnic-customer-picker .posnic-customer-picker-row {
+  align-items: center;
+}
+#posnic-customer-picker .posnic-customer-picker-main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+#posnic-customer-picker .posnic-customer-picker-debt {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  max-width: 48%;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 750;
+  text-align: right;
+  white-space: nowrap;
+}
+@media (max-width: 520px) {
+  #posnic-customer-picker .posnic-customer-picker-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  #posnic-customer-picker .posnic-customer-picker-debt {
+    max-width: 100%;
+    text-align: left;
+  }
+}

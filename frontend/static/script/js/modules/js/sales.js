@@ -12486,6 +12486,7 @@ document.addEventListener('keydown',function(event){if(event.key!=='F6'||event.r
 /* Fix 2 — explicit client assignment window (F5) for the active sale. */
 (function () {
     var pickerReady = false, pickerRows = [], pickerRequest = 0, debtRequest = 0;
+    var pickerDebtById = Object.create(null), pickerDebtLoaded = false, pickerDebtLoadFailed = false;
     function esc(value) { return $('<span>').text(value == null ? '' : String(value)).html(); }
     function currentClientName() {
         var name = String($('#sales_new_customer_name').val() || '').trim();
@@ -12574,11 +12575,19 @@ document.addEventListener('keydown',function(event){if(event.key!=='F6'||event.r
         });
         var $list = $('#posnic-customer-picker-list');
         if (!rows.length) { $list.html('<div class="p-3 text-muted">Aucun client trouvé.</div>'); return; }
+        var currency = String(PosnicPro.local.get('currencySign') || '');
         $list.html(rows.map(function (c) {
             var id = String(c.id || c._id || '');
+            var debtLabel = 'Dettes : chargement…';
+            if (pickerDebtLoaded && pickerDebtLoadFailed) {
+                debtLabel = 'Dettes : indisponibles';
+            } else if (pickerDebtLoaded) {
+                var due = Math.max(0, Number(pickerDebtById[id]) || 0);
+                debtLabel = 'Dette : ' + due.toLocaleString('fr-DZ', {minimumFractionDigits:2, maximumFractionDigits:2}) + (currency ? ' ' + currency : '');
+            }
             return '<div tabindex="0" role="option" class="posnic-customer-picker-row" data-id="' + esc(id) + '" data-name="' + esc(c.name || '') + '">' +
-              '<div><strong>' + esc(c.name || 'Client sans nom') + '</strong><small>' + esc(c.phone || 'Sans téléphone') + '</small></div>' +
-              '<span class="text-muted">Double-clic pour choisir</span></div>';
+              '<div class="posnic-customer-picker-main"><strong>' + esc(c.name || 'Client sans nom') + '</strong><small>' + esc(c.phone || 'Sans téléphone') + '</small></div>' +
+              '<span class="posnic-customer-picker-debt">' + esc(debtLabel) + '</span></div>';
         }).join(''));
     }
     function previewDebt(id, name) {
@@ -12608,6 +12617,10 @@ document.addEventListener('keydown',function(event){if(event.key!=='F6'||event.r
         $('#posnic-customer-picker-search').val('');
         $('#posnic-customer-picker-list').html('<div class="p-3 text-muted">Chargement des clients…</div>');
         $('#posnic-customer-debt-preview').text('Survolez un client pour afficher ses dettes en cours.');
+        pickerRows = [];
+        pickerDebtById = Object.create(null);
+        pickerDebtLoaded = false;
+        pickerDebtLoadFailed = false;
         $('#posnic-customer-picker').modal('show');
         var request = ++pickerRequest;
         PosnicPro.get({url:'customers', data:{page:1, limit:100}}, function (response) {
@@ -12621,8 +12634,26 @@ document.addEventListener('keydown',function(event){if(event.key!=='F6'||event.r
                     price_tier:c.price_tier
                 };
             }).filter(function (c) { return c.id && c.name && c.name !== 'Walk-In-Customer'; });
-            paintRows('');
+            paintRows($('#posnic-customer-picker-search').val() || '');
             if (!pickerRows.length) $('#posnic-customer-picker-list').html('<div class="p-3 text-muted">Aucun client enregistré.</div>');
+            PosnicPro.get('credit/outstanding', function (debtResponse) {
+                if (request !== pickerRequest) return;
+                if (!debtResponse || debtResponse.type !== 'success' || !Array.isArray(debtResponse.data)) {
+                    pickerDebtLoadFailed = true;
+                } else {
+                    debtResponse.data.forEach(function (row) {
+                        var id = String(row && row.customer_id && (row.customer_id._id || row.customer_id) || '');
+                        if (id) pickerDebtById[id] = Math.max(0, Number(row.due) || 0);
+                    });
+                }
+                pickerDebtLoaded = true;
+                paintRows($('#posnic-customer-picker-search').val() || '');
+            }, function () {
+                if (request !== pickerRequest) return;
+                pickerDebtLoaded = true;
+                pickerDebtLoadFailed = true;
+                paintRows($('#posnic-customer-picker-search').val() || '');
+            });
         }, function () {
             if (request === pickerRequest) $('#posnic-customer-picker-list').html('<div class="p-3 text-danger">Impossible de charger les clients. Réessayez.</div>');
         });
@@ -12919,7 +12950,6 @@ PosnicPro.sales.quickSale = {
                 '<button type="button" class="close" data-dismiss="modal" aria-label="Close" data-t-aria-label="lang_close_title"><span aria-hidden="true">&times;</span></button></div>' +
                 '<div class="modal-body">' +
                 '<input type="number" min="0" step="any" class="form-control form-control-lg text-right mb-2" id="quick_sale_amount" placeholder="0.00" autocomplete="off" style="font-size:1.6rem;">' +
-                '<input type="text" class="form-control mb-2" id="quick_sale_note" maxlength="100" placeholder="Item name (optional)" data-t-placeholder="lang_item_name_optional" autocomplete="off">' +
                 '<small class="text-muted d-block" id="quick_sale_hint"></small>' +
                 '<small class="text-muted d-block" id="quick_sale_added"></small>' +
                 '</div>' +
@@ -12930,21 +12960,10 @@ PosnicPro.sales.quickSale = {
             $('#quick_sale_amount').on('keydown', function (e) {
                 if (e.key === 'Enter') { PosnicPro.sales.quickSale.add(); }
             });
-            /* Enter from the NOTE field too (owner): amount typed, name
-               typed, Enter - the line is in the cart. No amount yet means
-               Enter walks back to the amount box instead of nagging. */
-            $('#quick_sale_note').on('keydown', function (e) {
-                if (e.key !== 'Enter') { return; }
-                if (parseFloat($('#quick_sale_amount').val()) > 0) {
-                    PosnicPro.sales.quickSale.add();
-                } else {
-                    $('#quick_sale_amount').focus();
-                }
-            });
         }
         PosnicPro.sales.quickSale._count = 0;
         $('#quick_sale_added').text('');
-        $('#quick_sale_amount,#quick_sale_note').val('');
+        $('#quick_sale_amount').val('');
         // The shop's default tax, fetched once - the amount is treated as
         // tax-inclusive against it, like any inclusive-priced item.
         if (PosnicPro.sales.quickSale._tax === null) {
@@ -12981,13 +13000,12 @@ PosnicPro.sales.quickSale = {
             $('#quick_sale_amount').focus();
             return;
         }
-        var note = ($('#quick_sale_note').val() || '').trim();
-        var tax = PosnicPro.sales.quickSale._tax || { id: '', name: '', value: 0 };
+                var tax = PosnicPro.sales.quickSale._tax || { id: '', name: '', value: 0 };
         $('#quick_sale_add').prop('disabled', true);
         PosnicPro.post({
             url: 'items/instanceItemInsert',
             data: JSON.stringify({
-                items_name: note || 'Quick sale',
+                items_name: 'Quick sale',
                 items_quantity: 1,
                 items_mrp_price: amount,
                 items_selling_price: amount,
@@ -13029,7 +13047,7 @@ PosnicPro.sales.quickSale = {
             });
             PosnicPro.sales.quickSale._count += 1;
             $('#quick_sale_added').text(PosnicPro.sales.quickSale._count + ' line(s) added to this sale');
-            $('#quick_sale_amount,#quick_sale_note').val('');
+            $('#quick_sale_amount').val('');
             $('#quick_sale_amount').focus();
         }, function (xhr) {
             $('#quick_sale_add').prop('disabled', false);
@@ -13283,7 +13301,6 @@ $(function () {
                 $('#sales_new_item_name').val('');
                 if (act === 'quick') {
                     PosnicPro.sales.quickSale.open();
-                    $('#quick_sale_note').val(typed);
                 } else {
                     PosnicPro.quickitems.popup(typed, function (newId) {
                         if (newId) { PosnicPro.sales.itemsMenu.addToLineItemsList(newId); }
@@ -13332,19 +13349,6 @@ $(function () {
                     $.Autocomplete.formatResult(suggestion, currentValue), {
                         sales: true, currency: currency, price: pricing.price, was: pricing.was
                     });
-                // Prefer the database ID accepted by GET items/:id. item_id/id may be a display identifier.
-                var rawMongoId = suggestion.data._id && (suggestion.data._id.$oid || suggestion.data._id);
-                var labelId = rawMongoId || suggestion.data.item_id || suggestion.data.id;
-                if (labelId) {
-                    // Insert inside the suggestion's outermost wrapper rather than
-                    // relying on a fragile exact closing-tag sequence in sugRow().
-                    var safeLabelId = String(labelId).replace(/[^a-zA-Z0-9_-]/g, '');
-                    var labelButton = '<button type="button" class="posnic-search-label-btn" data-item-id="' +
-                        safeLabelId +
-                        '" onclick="return window.posnicPrintSearchLabel(this)" title="Print price labels" aria-label="Print price labels" style="flex:0 0 30px;width:30px;height:30px;margin:4px 6px;border:1px solid #75b6f5;background:#fff;color:#2776bd;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border-radius:0"><i class="feather icon-printer"></i></button>';
-                    var closingTag = row.lastIndexOf('</div>');
-                    if (closingTag >= 0) row = row.slice(0, closingTag) + labelButton + row.slice(closingTag);
-                }
                 return row;
             }
         }
