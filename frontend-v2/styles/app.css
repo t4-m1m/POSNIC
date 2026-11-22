@@ -577,3 +577,6 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 
 /* Keep the F-key focus state visible during fast keyboard-only checkout. */
 .caisse-keys .fkey:focus-visible{outline:2px solid #2563EB!important;outline-offset:2px!important}
+
+/* Give the price-only quick-add action enough width beside the scanner field. */
+.products-workspace .toolbar .quick-add{min-width:78px!important}
