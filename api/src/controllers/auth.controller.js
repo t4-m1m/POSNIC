@@ -251,8 +251,17 @@ const getUserData = (user) => {
   return {
     id: user._id,
     name: user.name,
+    username: user.username,
     email: user.email,
     role: user.role,
+    usertype: user.usertype,
+    role_name: user.role_name,
+    is_admin: user.is_admin,
+    isAdmin: user.isAdmin,
+    is_super_admin: user.is_super_admin,
+    isSuperAdmin: user.isSuperAdmin,
+    permissions: user.permissions,
+    access: user.access,
     active: user.active,
   };
 };

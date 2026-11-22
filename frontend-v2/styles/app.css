@@ -666,3 +666,12 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 .designer-object{touch-action:none}.designer-selection-handles{pointer-events:none!important}.designer-resize-handle,.designer-rotate-handle{pointer-events:auto!important;z-index:20!important}
 .payment-method-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;align-items:start!important}.payment-method-field{display:flex!important;flex-direction:column!important;gap:7px!important}.payment-method-field .payment-method{width:100%!important;min-height:52px!important}.payment-method-field .payment-amount{width:100%!important;box-sizing:border-box!important}
 @media(max-width:700px){.payment-method-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.cashier-customer-card .customer-info strong,.caisse-customer .customer-info strong{font-size:18px!important}}
+
+
+/* Caisse catalogue: keep filters and cards tightly stacked without stretched grid rows. */
+.products-workspace{display:flex!important;flex-direction:column!important;justify-content:flex-start!important;align-content:start!important;gap:8px!important}
+.products-workspace .catalogue-tabs{flex:none!important;margin:8px 0 0!important}
+.products-workspace #product-results{display:grid!important;align-content:start!important;justify-content:start!important;grid-auto-rows:max-content!important;grid-auto-flow:row!important;gap:8px!important;min-height:0!important}
+.products-workspace #product-results .catalogue-filter-active{grid-column:1/-1!important;align-self:start!important;margin:0!important}
+.sale-edit-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border:1px solid #F59E0B;background:#FFFBEB;color:#92400E}
+.sale-edit-banner .actions{display:flex;gap:8px}

@@ -1761,7 +1761,7 @@ class SalesController extends BaseController {
       const costOfGoodsTotal = roundToTwo(
         productDetails.reduce((sum, item) => sum + Number(item.product_cost || 0), 0)
       );
-      const grossProfitTotal = roundToTwo(
+      let grossProfitTotal = roundToTwo(
         productDetails.reduce((sum, item) => sum + Number(item.product_profit || 0), 0)
       );
 
@@ -1920,6 +1920,14 @@ class SalesController extends BaseController {
         sale_extra_discount_total: roundToTwo(data.sale_extra_discount_total),
         count_sales: data.count_sales,
       }));
+
+      // sales_total is persisted by calculateSaleHeader after item-level and cart-level
+      // discounts. Use that final payable amount as the source of truth; subtracting
+      // the separately reported discount fields again would double-discount the Z report.
+      const itemDiscountTotal = roundToTwo(productDetails.reduce((sum, item) => sum + Number(item.product_discount || 0), 0));
+      const salesNetTotal = roundToTwo(salesPayments.reduce((sum, saleDoc) => sum + (Number(saleDoc.sales_total ?? saleDoc.total) || 0), 0));
+      const discountTotal = roundToTwo(itemDiscountTotal + totalSaleExtraDiscount);
+      grossProfitTotal = roundToTwo(salesNetTotal - costOfGoodsTotal);
 
       const timeZone = branchDoc.time_zone || process.env.DEFAULT_TIMEZONE || 'UTC';
 
@@ -2159,6 +2167,7 @@ class SalesController extends BaseController {
         count: Number(row.count) || 0,
       }));
       const salaryPrimesTotal = roundToTwo(salaryPrimeDetails.reduce((sum, row) => sum + row.amount, 0));
+      const netProfitTotal = roundToTwo(grossProfitTotal - expensesTotal - salaryPaymentsTotal - salaryAdvancesTotal - salaryPrimesTotal);
 
       const salesCount = salesPayments.length;
       const isCashTender = (method) => /^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(method || '').trim());
@@ -2194,8 +2203,12 @@ class SalesController extends BaseController {
         delivery_payout_cash_total: deliveryPayoutCash,
         versement_settlement_cash_total: versementCashTotal,
         sales_count: salesCount,
+        sales_total: salesNetTotal,
+        net_sales: salesNetTotal,
+        discount_total: discountTotal,
         cost_of_goods_total: costOfGoodsTotal,
         gross_profit_total: grossProfitTotal,
+        net_profit_total: netProfitTotal,
         expenses_total: expensesTotal,
         expenses_count: expensesCount,
         salary_payments_total: salaryPaymentsTotal,
