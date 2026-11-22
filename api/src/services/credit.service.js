@@ -110,11 +110,12 @@ class CreditService {
   /** A customer's outstanding = sum of `pending` across their ledger rows. */
   async dueFor(customerId, branchId) {
     const db = await BaseModel.getDb();
-    const match = { customer_id: oid(customerId), license: BaseModel.license };
-    if (branchId) match.branch_id = oid(branchId);
+    const customerIds = [oid(customerId), String(customerId)].filter(value => value != null);
+    const match = { customer_id: { $in: customerIds }, license: BaseModel.license };
+    if (branchId) match.branch_id = { $in: [oid(branchId), String(branchId)] };
     const rows = await db.collection('transaction').aggregate([
       { $match: match },
-      { $group: { _id: '$customer_id', due: { $sum: '$pending' } } },
+      { $group: { _id: '$customer_id', due: { $sum: { $convert: { input: '$pending', to: 'double', onError: 0, onNull: 0 } } } } },
     ]).toArray();
     return rows.length ? round2(rows[0].due) : 0;
   }
@@ -122,39 +123,46 @@ class CreditService {
   /** Customers who owe money, most-owed first, with their phone for reminders. */
   async outstanding(branchId, { minDue = 0, minAgeDays = 0 } = {}) {
     const db = await BaseModel.getDb();
-    const outstandingMatch = { license: BaseModel.license };
-    if (branchId) outstandingMatch.branch_id = oid(branchId);
-    const grouped = await db
-      .collection('transaction')
-      .aggregate([
-        { $match: outstandingMatch },
-        {
-          $group: {
-            _id: '$customer_id',
-            name: { $first: '$customer_name' },
-            due: { $sum: '$pending' },
-            oldest_debt_date: { $min: '$created_date' },
-          },
+    const match = { license: BaseModel.license };
+    if (branchId) match.branch_id = { $in: [oid(branchId), String(branchId)] };
+    const grouped = await db.collection('transaction').aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: '$customer_id',
+          name: { $first: '$customer_name' },
+          due: { $sum: { $convert: { input: '$pending', to: 'double', onError: 0, onNull: 0 } } },
+          oldest_debt_date: { $min: '$created_date' },
         },
-        { $match: { due: { $gt: Math.max(0, Number(minDue) || 0) } } },
-        { $sort: { due: -1 } },
-      ])
-      .toArray();
-
+      },
+      { $match: { due: { $gt: Math.max(0, Number(minDue) || 0) } } },
+    ]).toArray();
     const custCol = db.collection('customers');
     const list = [];
-    for (const g of grouped) {
-      const cust = await custCol.findOne({ _id: g._id, license: BaseModel.license });
+    for (const group of grouped) {
+      const customerId = String(group._id?._id || group._id || '').trim();
+      if (!customerId || Number(group.due) <= 0) continue;
+      const customerObjectId = ObjectId.isValid(customerId) ? new ObjectId(customerId) : null;
+      let cust = customerObjectId
+        ? await custCol.findOne({ _id: customerObjectId, license: BaseModel.license })
+        : null;
+      if (!cust) cust = await custCol.findOne({ _id: customerId, license: BaseModel.license });
+      const oldest = group.oldest_debt_date ? new Date(group.oldest_debt_date) : null;
+      const daysOverdue = oldest && !Number.isNaN(oldest.getTime())
+        ? Math.max(0, Math.floor((Date.now() - oldest.getTime()) / 86400000))
+        : 0;
+      if (daysOverdue < Math.max(0, Number(minAgeDays) || 0)) continue;
       list.push({
-        customer_id: g._id,
-        name: g.name || (cust && cust.name) || '',
-        phone: (cust && cust.phone) || '',
-        due: round2(g.due),
-        oldest_debt_date: g.oldest_debt_date || null,
-        days_overdue: g.oldest_debt_date ? Math.max(0, Math.floor((Date.now() - new Date(g.oldest_debt_date).getTime()) / 86400000)) : 0,
+        customer_id: customerId,
+        name: group.name || (cust && (cust.name || cust.customer_name)) || '',
+        phone: (cust && (cust.phone || cust.customer_phone)) || '',
+        due: round2(group.due),
+        oldest_debt_date: group.oldest_debt_date || null,
+        days_overdue: daysOverdue,
         credit_limit: (cust && Number(cust.creditLimit)) || 0,
       });
     }
+    list.sort((left, right) => right.due - left.due);
     return { status: true, data: list, message: 'Outstanding customers' };
   }
 

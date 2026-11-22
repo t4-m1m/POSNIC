@@ -696,3 +696,32 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 .recent-sale-actions{flex:0 0 auto!important;flex-shrink:0!important;display:flex!important;align-items:center!important;gap:6px!important;white-space:nowrap}
 .recent-sale-actions .btn{flex:none!important;white-space:nowrap!important;grid-column:auto!important}
 @media(max-width:760px){.recent-sale{gap:8px!important;overflow-x:auto}.recent-sale .recent-ticket{min-width:140px}.recent-sale-actions .btn{padding:7px 8px;font-size:11px}}
+
+/* SamarinaPOS V2: keep data views anchored at the top of the viewport. */
+.shell.view-catalogue,.shell.view-clients,.shell.view-zr-express{
+ height:auto!important;min-height:100dvh!important;max-height:none!important;
+ grid-template-rows:44px auto!important;align-content:start!important;overflow:visible!important;
+}
+.shell.view-catalogue main,.shell.view-clients main,.shell.view-zr-express main{
+ display:block!important;grid-row:2;align-self:start!important;justify-self:stretch!important;
+ width:100%;height:auto!important;min-height:0!important;max-height:none!important;
+ margin:0!important;padding:20px 24px 28px!important;overflow:visible!important;
+}
+.shell.view-catalogue main>.page-head,.shell.view-clients main>.page-head,.shell.view-zr-express main>.page-head,
+.shell.view-catalogue main>.toolbar,.shell.view-clients main>.toolbar,.shell.view-zr-express main>.toolbar,
+.shell.view-catalogue main>.table-wrap,.shell.view-clients main>.table-wrap,.shell.view-zr-express main>.table-wrap,
+.shell.view-catalogue main>.panel,.shell.view-clients main>.panel,.shell.view-zr-express main>.panel{
+ margin-top:0!important;align-self:stretch!important;
+}
+.recent-sale-items{margin-top:5px;min-width:0;font-size:12px;color:var(--text-secondary)}
+.recent-sale-items summary{cursor:pointer;font-weight:700;color:var(--accent-brand);padding:2px 0}
+.recent-sale-item-list{display:flex;flex-wrap:wrap;gap:5px 12px;margin-top:5px}
+.recent-sale-item-list>span{display:inline-flex;gap:4px;align-items:baseline;max-width:100%;overflow-wrap:anywhere}
+.recent-sale-item-list small{color:var(--text-secondary);white-space:nowrap}
+.recent-sale-items.empty-items{font-style:italic}
+@media(max-width:760px){
+ .shell.view-catalogue main,.shell.view-clients main,.shell.view-zr-express main{padding:14px!important}
+ .recent-sale{align-items:flex-start!important;flex-wrap:wrap!important}
+ .recent-sale .recent-ticket{flex-basis:100%!important}
+ .recent-sale-actions{margin-left:auto}
+}
