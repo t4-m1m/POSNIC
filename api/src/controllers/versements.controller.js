@@ -253,7 +253,8 @@ exports.updatePending = async (req,res) => {
     const total=money(req.body?.sale_total);
     if (!(total>0)) return fail(res,400,'The updated sale total must be positive.');
     const collection=req.db.collection(COLLECTION),id=new ObjectId(req.params.id);
-    const branch=branchOf(req),filter={_id:id,...(ObjectId.isValid(branch)?{branch_id:new ObjectId(branch)}:{})};\n    const current=await collection.findOne(filter);
+    const branch=branchOf(req),filter={_id:id,...(ObjectId.isValid(branch)?{branch_id:new ObjectId(branch)}:{})};
+    const current=await collection.findOne(filter);
     if (!current) return fail(res,404,'Versement not found.');
     if (current.status!=='pending') return fail(res,409,'Only a pending versement can be edited.');
     const deposit=money(current.initial_recorded_amount??current.initial_amount);
