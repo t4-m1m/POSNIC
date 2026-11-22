@@ -112,6 +112,7 @@ jobs:
           node --check frontend-v2/core/app.js
           node --check frontend-v2/core/keyboard.js
           node --check api/src/models/receiving.model.js
+          node --check api/src/routes/hr.routes.js
       
       - name: Fetch bundled MongoDB
         shell: bash
