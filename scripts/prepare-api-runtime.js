@@ -57,10 +57,10 @@ const EXCLUDE = [
   '-xr!android-arm64', '-xr!android-arm', '-xr!android-x64', '-xr!android-ia32',
 ];
 
-// -mx=9 rather than -mx=1: this archive is built once and then downloaded by
-// every customer, so trading build seconds for megabytes on each install is
-// the right way round. Measured 55 MB -> 31 MB with the exclusions above.
-const COMPRESSION = '-mx=9';
+// -mx=5 keeps a good size reduction without the long CPU-bound level-9
+// compression pass on every Windows release runner. The installer itself is
+// compressed again by electron-builder; a few MB here are not worth minutes.
+const COMPRESSION = '-mx=5';
 
 /*
  * Leave the development tooling behind.
