@@ -23,7 +23,7 @@ function context(req) {
   const isAdmin = [true, 'true', 1, '1'].includes(user.is_admin) ||
     [true, 'true', 1, '1'].includes(user.admin) ||
     roles.some(role => adminRoles.includes(role));
-  const quickAdvanceRoute = req.path === '/quick-advance' || req.path === '/quick-advance/workers';
+  const quickAdvanceRoute = req.path === '/quick-advance' || req.path === '/quick-advance/workers' || req.path === '/vendors';
   if (!isAdmin && !quickAdvanceRoute) {
     const error = new Error('Only administrators can access employee salary records.');
     error.status = 403;
@@ -129,7 +129,7 @@ router.get('/summary', async (req, res) => {
     res.json({ status:true, data:{ workers:workers.length, monthlyPayroll:workers.reduce((s,w)=>s+Number(w.monthly_salary||0),0)+additions, advances, overtime, payments, period } });
   } catch(e) { sendError(res,e); }
 });
-router.get('/workers', async (req,res) => {
+router.get('/vendors', async (req,res) => {\n  try { const rows=await (await collection('hr_workers')).find({license:req.hrContext.license,active:{$ne:false},deleted:{$ne:true}}).project({name:1,job_title:1,badge_color:1,phone:1}).sort({name:1}).toArray(); res.json({status:true,data:rows.map(w=>({...w,_id:String(w._id)}))}); } catch(e) { sendError(res,e); }\n});\nrouter.get('/workers', async (req,res) => {
   try {
     const rows = await (await collection('hr_workers')).find({ license:req.hrContext.license, deleted: { $ne: true } }).sort({ name:1 }).toArray();
     res.json({status:true,data:rows.map(w=>({...w,_id:String(w._id)}))});
