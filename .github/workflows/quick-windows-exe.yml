@@ -95,6 +95,7 @@ jobs:
         run: |
           node --check frontend-v2/core/app.js
           node --check frontend-v2/core/keyboard.js
+          node --check api/src/models/receiving.model.js
       
       - name: Fetch bundled MongoDB
         shell: bash
