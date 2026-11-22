@@ -107,13 +107,13 @@ jobs:
         working-directory: api
         run: npm install --prefer-offline --no-audit --no-fund
 
-      - name: Syntax-check frontend and every API JavaScript file
+      - name: Syntax-check frontend and every API source file
         shell: pwsh
         run: |
           node --check frontend-v2/core/app.js
           node --check frontend-v2/core/keyboard.js
-          Get-ChildItem -Path api -Recurse -File -Filter *.js |
-            Where-Object { $_.FullName -notmatch '[\\\\/]node_modules[\\\\/]' } |
+          node --check api/app.js
+          Get-ChildItem -Path api/src -Recurse -File -Filter *.js |
             ForEach-Object {
               Write-Host "Checking $($_.FullName)"
               node --check $_.FullName
@@ -121,7 +121,7 @@ jobs:
                 throw "JavaScript syntax check failed: $($_.FullName)"
               }
             }
-      
+
       - name: Fetch bundled MongoDB
         shell: bash
         run: |
