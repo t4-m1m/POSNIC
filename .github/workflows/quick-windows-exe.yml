@@ -110,6 +110,8 @@ jobs:
       - name: Syntax-check frontend and every API source file
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           node --check frontend-v2/core/app.js
           node --check frontend-v2/core/keyboard.js
           node --check api/app.js
