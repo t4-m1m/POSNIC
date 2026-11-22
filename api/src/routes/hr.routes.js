@@ -129,7 +129,10 @@ router.get('/summary', async (req, res) => {
     res.json({ status:true, data:{ workers:workers.length, monthlyPayroll:workers.reduce((s,w)=>s+Number(w.monthly_salary||0),0)+additions, advances, overtime, payments, period } });
   } catch(e) { sendError(res,e); }
 });
-router.get('/vendors', async (req,res) => {\n  try { const rows=await (await collection('hr_workers')).find({license:req.hrContext.license,active:{$ne:false},deleted:{$ne:true}}).project({name:1,job_title:1,badge_color:1,phone:1}).sort({name:1}).toArray(); res.json({status:true,data:rows.map(w=>({...w,_id:String(w._id)}))}); } catch(e) { sendError(res,e); }\n});\nrouter.get('/workers', async (req,res) => {
+router.get('/vendors', async (req,res) => {
+  try { const rows=await (await collection('hr_workers')).find({license:req.hrContext.license,active:{$ne:false},deleted:{$ne:true}}).project({name:1,job_title:1,badge_color:1,phone:1}).sort({name:1}).toArray(); res.json({status:true,data:rows.map(w=>({...w,_id:String(w._id)}))}); } catch(e) { sendError(res,e); }
+});
+router.get('/workers', async (req,res) => {
   try {
     const rows = await (await collection('hr_workers')).find({ license:req.hrContext.license, deleted: { $ne: true } }).sort({ name:1 }).toArray();
     res.json({status:true,data:rows.map(w=>({...w,_id:String(w._id)}))});
@@ -151,7 +154,8 @@ router.put('/workers/:id', async (req,res) => {
     const {license,username}=req.hrContext,b=req.body||{},set={updated_at:new Date(),updated_by_name:username};
     if (b.name!==undefined) {set.name=String(b.name).trim();if(!set.name)return res.status(400).json({status:false,message:'Worker name is required.'});}
     if (b.job_title!==undefined)set.job_title=String(b.job_title).trim();
-    if (b.phone!==undefined)set.phone=String(b.phone).trim();\n    if (b.badge_color!==undefined)set.badge_color=String(b.badge_color||'#2563eb').slice(0,32);
+    if (b.phone!==undefined)set.phone=String(b.phone).trim();
+    if (b.badge_color!==undefined)set.badge_color=String(b.badge_color||'#2563eb').slice(0,32);
     if (b.notes!==undefined)set.notes=String(b.notes).trim();
     if (b.monthly_salary!==undefined)set.monthly_salary=amount(b.monthly_salary,'Monthly salary');
     if (b.hourly_rate!==undefined)set.hourly_rate=amount(b.hourly_rate,'Hourly rate');
