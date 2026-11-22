@@ -23,7 +23,7 @@ function context(req) {
   const permissionRows = [...(Array.isArray(user.permissions) ? user.permissions : []), ...(Array.isArray(user.permission) ? user.permission : [])];
   const permissionModules = new Set(permissionRows.filter(value => value && typeof value === 'object').map(value => String(value.module || value.resource || value.section || '').toLowerCase()));
   const fullPermissionSet = ['sales','items','purchases','customers','reports','hr','users','settings'].every(key => permissionModules.has(key));
-  const accessModules = Object.values(user.access || {}).filter(value => value && typeof value === 'object' && !Array.isArray(value));
+  const accessModules = Object.entries(user.access || {}).filter(([key,value]) => key !== 'extensions' && value && typeof value === 'object' && !Array.isArray(value)).map(([,value]) => value);
   const fullAccess = user.access?.admin === true || user.access?.all === true || user.access?.full_access === true ||
     (accessModules.length >= 5 && accessModules.every(value => value.read === true && value.write === true && (value.create === true || value.update === true)));
   const isAdmin = [user.is_admin,user.isAdmin,user.is_super_admin,user.isSuperAdmin,user.admin,user.super_admin].some(value => [true, 'true', 1, '1'].includes(value)) ||
