@@ -112,17 +112,18 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
-          node --check frontend-v2/core/app.js
-          node --check frontend-v2/core/keyboard.js
           node --check api/app.js
-          Get-ChildItem -Path api/src -Recurse -File -Filter *.js |
-            ForEach-Object {
-              Write-Host "Checking $($_.FullName)"
-              node --check $_.FullName
-              if ($LASTEXITCODE -ne 0) {
-                throw "JavaScript syntax check failed: $($_.FullName)"
-              }
+          $javascriptFiles = @(
+            Get-ChildItem -Path frontend-v2 -Recurse -File -Filter *.js
+            Get-ChildItem -Path api/src -Recurse -File -Filter *.js
+          )
+          foreach ($file in $javascriptFiles) {
+            Write-Host "Checking $($file.FullName)"
+            node --check $file.FullName
+            if ($LASTEXITCODE -ne 0) {
+              throw "JavaScript syntax check failed: $($file.FullName)"
             }
+          }
 
       - name: Fetch bundled MongoDB
         shell: bash
