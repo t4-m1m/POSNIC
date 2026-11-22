@@ -1802,12 +1802,11 @@ receivingSchema.statics.receivePartial = async function (id, payload = {}, conte
         _id: new ObjectId(key),
         license: new ObjectId(String(license)),
       });
-      if (!itemDoc || !(itemDoc.track_inventory === true || itemDoc.track_inventory === 'true')) {
-        continue;
-      }
+      if (!itemDoc) continue;
+      const tracked = itemDoc.track_inventory === true || itemDoc.track_inventory === 'true';
       const currentQty = parseFloat(itemDoc.available_quantity || 0);
-      const newQty = currentQty + delta;
-      if (stockManagement) {
+      const newQty = currentQty + (tracked ? delta : 0);
+      if (tracked && stockManagement) {
         await stockLogsCollection.insertOne({
           stocklog: stockLogStatus,
           branch_id: receiving.branch_id,
@@ -1829,9 +1828,19 @@ receivingSchema.statics.receivePartial = async function (id, payload = {}, conte
           updated_date: now,
         });
       }
-      await itemsCollection.updateOne(
+      const costLine = [...lines].reverse().find((line) => String(line.item_id) === key);
+      const itemUpdate = {};
+      if (tracked) itemUpdate.available_quantity = newQty;
+      if (costLine && Number.isFinite(Number(costLine.item_price))) {
+        itemUpdate.company_price = Math.max(0, Number(costLine.item_price));
+        itemUpdate.purchase_cost_dzd = Math.max(0, Number(costLine.item_price));
+        itemUpdate.purchase_price_eur = Number(costLine.purchase_price_eur) || 0;
+        itemUpdate.purchase_exchange_rate = Number(costLine.purchase_exchange_rate) || 0;
+        itemUpdate.purchase_extra_dzd = Number(costLine.purchase_extra_dzd) || 0;
+      }
+      if (Object.keys(itemUpdate).length) await itemsCollection.updateOne(
         { _id: itemDoc._id, license: new ObjectId(String(license)) },
-        { $set: { available_quantity: newQty } }
+        { $set: itemUpdate }
       );
     }
 
@@ -1982,7 +1991,8 @@ receivingSchema.statics.receivingInsertUpdate = async function (data, id) {
 
       const itemQuantity = parseFloat(item.item_quantity) || 0;
 
-      const itemAmount = (itemDoc.company_price || 0) * itemQuantity;
+      const effectiveUnitCost = item.purchase_cost_dzd !== undefined && item.purchase_cost_dzd !== null && item.purchase_cost_dzd !== '' && Number.isFinite(Number(item.purchase_cost_dzd)) ? Math.max(0, Number(item.purchase_cost_dzd)) : Number(itemDoc.company_price) || 0;
+      const itemAmount = effectiveUnitCost * itemQuantity;
 
       // Handle tax
       let itemTax, taxFields, taxName;
@@ -2102,7 +2112,11 @@ receivingSchema.statics.receivingInsertUpdate = async function (data, id) {
       receivingItems.push({
         item_name: itemDoc.name,
         item_sku: itemDoc.itemid,
-        item_price: parseFloat(itemDoc.company_price || 0),
+        item_price: effectiveUnitCost,
+        purchase_price_eur: Number(item.purchase_price_eur) || 0,
+        purchase_exchange_rate: Number(item.purchase_exchange_rate) || 0,
+        purchase_extra_dzd: Number(item.purchase_extra_dzd) || 0,
+        purchase_cost_dzd: effectiveUnitCost,
         item_quantity: parseFloat(itemQuantity),
         item_unit: item.item_unit || 'qty',
         item_id: item.item_id,
@@ -2402,7 +2416,7 @@ receivingSchema.statics.receivingInsertUpdate = async function (data, id) {
             // Update item quantity (PHP line 414)
             await itemsCollection.updateOne(
               { _id: itemId, license: new ObjectId(license) },
-              { $set: { available_quantity: newQty } }
+              { $set: { available_quantity: newQty, company_price: Number(item.purchase_cost_dzd ?? item.item_price ?? itemDoc.company_price) || 0, purchase_cost_dzd: Number(item.purchase_cost_dzd ?? item.item_price ?? itemDoc.company_price) || 0, purchase_price_eur: Number(item.purchase_price_eur) || 0, purchase_exchange_rate: Number(item.purchase_exchange_rate) || 0, purchase_extra_dzd: Number(item.purchase_extra_dzd) || 0 } }
             );
           }
         }
