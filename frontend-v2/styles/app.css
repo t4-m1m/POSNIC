@@ -440,3 +440,137 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 .products-workspace #product-results .quick-item .product-photo,.products-workspace #product-results .quick-item .product-monogram{width:58px!important;height:58px!important;min-width:58px!important;min-height:58px!important}
 @media(max-width:1120px){.cashier-header-row{grid-template-columns:minmax(0,1fr) minmax(215px,.9fr) 195px!important}.cashier-shortcuts .basket-tab-wrap{flex-basis:100px!important;min-width:100px!important}}
 @media(max-width:850px){.cashier-header-row{grid-template-columns:1fr!important;grid-template-areas:"keys" "customer" "total"!important}.cashier-shortcuts .basket-tab-wrap{flex-basis:112px!important;min-width:112px!important}}
+
+
+/* SamarinaPOS V2 — cashier spacing and legibility refinements. */
+@media (min-width: 1181px) {
+  .caisse-top {
+    grid-template-columns: minmax(0, 2.85fr) minmax(245px, 1.2fr) minmax(190px, .8fr) !important;
+  }
+}
+.caisse-keys .basket-strip {
+  width: 100% !important;
+  gap: 10px !important;
+}
+.caisse-keys .basket-tabs {
+  flex: 1 1 auto !important;
+  flex-wrap: nowrap !important;
+  min-width: 0 !important;
+  overflow-x: auto !important;
+}
+.caisse-keys .basket-tab-wrap {
+  flex: 1 0 132px !important;
+  min-width: 132px !important;
+  max-width: 230px !important;
+}
+.caisse-keys .basket-tab {
+  width: 100% !important;
+  min-height: 38px !important;
+  padding: 8px 12px !important;
+}
+.caisse-keys .new-sale {
+  min-width: 124px !important;
+  min-height: 38px !important;
+}
+.caisse-keys .fkey-grid {
+  grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+  gap: 7px !important;
+}
+.caisse-keys .fkey {
+  min-height: 70px !important;
+  padding: 7px 5px !important;
+  gap: 5px !important;
+}
+.caisse-keys .fkey kbd {
+  min-width: 26px !important;
+  min-height: 21px !important;
+  padding: 3px 5px !important;
+  line-height: 1 !important;
+}
+.caisse-keys .fkey .fkey-icon {
+  width: 25px !important;
+  height: 25px !important;
+  flex: 0 0 25px !important;
+}
+.caisse-keys .fkey .fkey-icon svg {
+  width: 21px !important;
+  height: 21px !important;
+}
+.caisse-keys .fkey-label {
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  font-size: 11px !important;
+  line-height: 1.15 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+.cashier-customer-card .customer-debt,
+.caisse-customer .customer-debt {
+  color: #B91C1C !important;
+  background: #FEF2F2 !important;
+  border: 1px solid #FECACA !important;
+  font-weight: 800 !important;
+}
+.cashier-customer-card .customer-debt.clear,
+.caisse-customer .customer-debt.clear {
+  color: #B91C1C !important;
+  background: #FEF2F2 !important;
+}
+.products-workspace .toolbar #barcode-search,
+.products-workspace .toolbar .quick-add {
+  height: 42px !important;
+  min-height: 42px !important;
+  max-height: 42px !important;
+  align-self: stretch !important;
+}
+.products-workspace .toolbar .quick-add {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 13px !important;
+}
+.products-workspace #product-results.quick-grid {
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)) !important;
+  gap: 4px !important;
+  grid-auto-rows: minmax(184px, auto) !important;
+}
+.products-workspace #product-results .quick-item {
+  min-height: 184px !important;
+  height: auto !important;
+  padding: 10px !important;
+  gap: 6px !important;
+}
+.products-workspace #product-results .quick-item .product-photo,
+.products-workspace #product-results .quick-item .product-monogram {
+  width: 78px !important;
+  height: 78px !important;
+  min-width: 78px !important;
+  min-height: 78px !important;
+}
+@media (max-width: 1180px) {
+  .caisse-top {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, .85fr) !important;
+    grid-template-areas: "keys keys" "customer total" !important;
+  }
+}
+@media (max-width: 760px) {
+  .caisse-top {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-areas: "keys" "customer" "total" !important;
+  }
+  .caisse-keys .basket-tab-wrap {
+    flex-basis: 132px !important;
+    min-width: 132px !important;
+  }
+  .caisse-keys .fkey-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+  .products-workspace #product-results.quick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
