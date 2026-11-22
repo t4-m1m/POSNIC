@@ -17,7 +17,7 @@ permissions:
 
 # Only build the newest snapshot; rapid fix commits must not publish stale installers.
 concurrency:
-  group: posnic-windows-installer-${{ github.ref }}
+  group: windows-installer-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -30,6 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 1
           submodules: recursive
 
       - name: Create annotated SamarinaPOS pre-release tag
@@ -73,12 +74,27 @@ jobs:
             });
             core.info(`Created annotated tag ${tag} at ${context.sha}.`);
 
+      - name: Exclude workspace from Microsoft Defender scanning
+        shell: pwsh
+        run: Add-MpPreference -ExclusionPath "${{ github.workspace }}"
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
+
+      - name: Cache Electron and electron-builder downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/AppData/Local/electron/Cache
+            ~/AppData/Local/electron-builder/Cache
+          key: ${{ runner.os }}-electron-cache-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-cache-
 
       - name: Install root dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Validate Windows workflow YAML syntax
         run: node -e "const fs=require('node:fs'); require('js-yaml').load(fs.readFileSync('.github/workflows/quick-windows-exe.yml','utf8')); console.log('Workflow YAML syntax is valid.');"
@@ -89,7 +105,7 @@ jobs:
 
       - name: Install API dependencies
         working-directory: api
-        run: npm install --no-audit --no-fund
+        run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Syntax-check updated V2 cashier frontend and keyboard module
         run: |
@@ -116,7 +132,7 @@ jobs:
         run: npm run prepare:bundle
 
       - name: Build Windows installer only
-        run: npx electron-builder --win nsis --x64 --publish never --config.compression=maximum --config.win.verifyUpdateCodeSignature=false
+        run: npx electron-builder --win nsis --x64 --publish never --config.compression=normal --config.win.verifyUpdateCodeSignature=false
 
       - name: Normalize installer filename
         shell: pwsh
