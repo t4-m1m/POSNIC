@@ -107,12 +107,20 @@ jobs:
         working-directory: api
         run: npm install --prefer-offline --no-audit --no-fund
 
-      - name: Syntax-check updated V2 cashier frontend and keyboard module
+      - name: Syntax-check frontend and every API JavaScript file
+        shell: pwsh
         run: |
           node --check frontend-v2/core/app.js
           node --check frontend-v2/core/keyboard.js
-          node --check api/src/models/receiving.model.js
-          node --check api/src/routes/hr.routes.js
+          Get-ChildItem -Path api -Recurse -File -Filter *.js |
+            Where-Object { $_.FullName -notmatch '[\\\\/]node_modules[\\\\/]' } |
+            ForEach-Object {
+              Write-Host "Checking $($_.FullName)"
+              node --check $_.FullName
+              if ($LASTEXITCODE -ne 0) {
+                throw "JavaScript syntax check failed: $($_.FullName)"
+              }
+            }
       
       - name: Fetch bundled MongoDB
         shell: bash
