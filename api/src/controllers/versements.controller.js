@@ -245,3 +245,22 @@ exports.cancel = async (req,res) => {
     return fail(res,500,'Unable to delete the versement completely. It remains available for a safe retry; stock restoration is idempotent.');
   }
 };
+
+exports.updatePending = async (req,res) => {
+  try {
+    if (!req.db) return fail(res,500,'Shop database is unavailable.');
+    if (!ObjectId.isValid(String(req.params.id))) return fail(res,400,'Invalid versement reference.');
+    const total=money(req.body?.sale_total);
+    if (!(total>0)) return fail(res,400,'The updated sale total must be positive.');
+    const collection=req.db.collection(COLLECTION),id=new ObjectId(req.params.id);
+    const current=await collection.findOne({_id:id});
+    if (!current) return fail(res,404,'Versement not found.');
+    if (current.status!=='pending') return fail(res,409,'Only a pending versement can be edited.');
+    const deposit=money(current.initial_recorded_amount??current.initial_amount);
+    if (total<deposit-0.009) return fail(res,409,'The updated sale total cannot be lower than the deposit already collected.');
+    const now=new Date(),remaining=money(Math.max(0,total-deposit));
+    const result=await collection.updateOne({_id:id,status:'pending',sale_total:current.sale_total},{$set:{sale_total:total,remaining,updated_at:now,updated_by:actor(req)},$push:{history:{type:'sale_adjusted',amount:money(total-Number(current.sale_total||0)),method:'edit',at:now,by:actor(req)}}});
+    if (!result.modifiedCount) return fail(res,409,'Versement changed while it was being edited. Refresh and retry.');
+    return res.json({type:'success',message:'Pending versement updated with the edited sale.',data:{id:String(id),sale_total:total,initial_amount:deposit,remaining}});
+  } catch(e) { console.error('[versements] update pending',e); return fail(res,500,'Unable to update pending versement.'); }
+};

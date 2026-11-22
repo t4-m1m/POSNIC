@@ -140,7 +140,7 @@ router.post('/workers', async (req,res) => {
     const {license,username,userId}=req.hrContext, b=req.body||{};
     const name=String(b.name||'').trim();
     if (!name) return res.status(400).json({status:false,message:'Worker name is required.'});
-    const now=new Date(), worker={name,job_title:String(b.job_title||'').trim(),phone:String(b.phone||'').trim(),start_date:dateValue(b.start_date,'start date'),monthly_salary:amount(b.monthly_salary,'Monthly salary'),hourly_rate:amount(b.hourly_rate||0,'Hourly rate'),active:b.active!==false,notes:String(b.notes||'').trim(),license,created_at:now,updated_at:now,created_by:userId,created_by_name:username};
+    const now=new Date(), worker={name,job_title:String(b.job_title||'').trim(),phone:String(b.phone||'').trim(),badge_color:String(b.badge_color||'#2563eb').slice(0,32),start_date:dateValue(b.start_date,'start date'),monthly_salary:amount(b.monthly_salary,'Monthly salary'),hourly_rate:amount(b.hourly_rate||0,'Hourly rate'),active:b.active!==false,notes:String(b.notes||'').trim(),license,created_at:now,updated_at:now,created_by:userId,created_by_name:username};
     const result=await (await collection('hr_workers')).insertOne(worker);
     res.status(201).json({status:true,data:{...worker,_id:String(result.insertedId)},message:'Worker saved.'});
   } catch(e) { sendError(res,e); }
@@ -151,7 +151,7 @@ router.put('/workers/:id', async (req,res) => {
     const {license,username}=req.hrContext,b=req.body||{},set={updated_at:new Date(),updated_by_name:username};
     if (b.name!==undefined) {set.name=String(b.name).trim();if(!set.name)return res.status(400).json({status:false,message:'Worker name is required.'});}
     if (b.job_title!==undefined)set.job_title=String(b.job_title).trim();
-    if (b.phone!==undefined)set.phone=String(b.phone).trim();
+    if (b.phone!==undefined)set.phone=String(b.phone).trim();\n    if (b.badge_color!==undefined)set.badge_color=String(b.badge_color||'#2563eb').slice(0,32);
     if (b.notes!==undefined)set.notes=String(b.notes).trim();
     if (b.monthly_salary!==undefined)set.monthly_salary=amount(b.monthly_salary,'Monthly salary');
     if (b.hourly_rate!==undefined)set.hourly_rate=amount(b.hourly_rate,'Hourly rate');
