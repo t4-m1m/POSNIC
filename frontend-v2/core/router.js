@@ -7,7 +7,7 @@ export const modules = [
   { id: 'clients', icon: 'users', label: 'Clients & Crédits', tabs: ['Répertoire Clients', 'Suivi Crédits & Dettes', 'Règlements TPE / BaridiMob'] },
   { id: 'zr-express', icon: 'route', label: 'ZR Express', tabs: ['Colis & Expéditions', 'Créer un Colis'] },
   { id: 'rapports', icon: 'chart', label: 'Rapports & Clôture', tabs: ['Clôture de caisse · Ticket Studio', 'Tableau de bord & statistiques', 'Rapport Achats & Marges', 'Rapports complémentaires', 'Zakat'] },
-  { id: 'parametres', icon: 'sliders', label: 'Paramètres', tabs: ['Boutique & Général', 'Devises & Formule EUR → DZD', 'Imprimantes & Ticket Studio', 'WhatsApp & Notifications', 'ZR Express API', 'Compagnon Mobile, Utilisateurs & Sauvegarde'] }
+  { id: 'parametres', icon: 'sliders', label: 'Paramètres', tabs: ['Boutique & Général', 'Devises & Formule EUR → DZD', 'Imprimantes & Ticket Studio', 'WhatsApp & Notifications', 'ZR Express API', 'Compagnon Mobile, Utilisateurs & Sauvegarde', 'Mises à jour'] }
 ];
 
 export const primaryModules = modules.filter(module => module.id !== 'parametres');

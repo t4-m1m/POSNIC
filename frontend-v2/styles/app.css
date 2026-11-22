@@ -477,8 +477,8 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
   gap: 7px !important;
 }
 .caisse-keys .fkey {
-  min-height: 70px !important;
-  padding: 7px 5px !important;
+  min-height: 86px !important;
+  padding: 9px 6px !important;
   gap: 5px !important;
 }
 .caisse-keys .fkey kbd {
@@ -488,9 +488,9 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
   line-height: 1 !important;
 }
 .caisse-keys .fkey .fkey-icon {
-  width: 25px !important;
-  height: 25px !important;
-  flex: 0 0 25px !important;
+  width: 28px !important;
+  height: 28px !important;
+  flex: 0 0 28px !important;
 }
 .caisse-keys .fkey .fkey-icon svg {
   width: 21px !important;
@@ -580,3 +580,13 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 
 /* Give the price-only quick-add action enough width beside the scanner field. */
 .products-workspace .toolbar .quick-add{min-width:78px!important}
+
+/* Legacy parity pass: full-width operational controls and compact customer rail. */
+@media(min-width:1181px){.cashier-header-row,.caisse-top{grid-template-columns:minmax(0,3.9fr) minmax(118px,.42fr) minmax(180px,.78fr)!important;gap:9px!important}.cashier-shortcuts,.caisse-keys{min-width:0!important}.cashier-customer-card,.caisse-customer{min-width:0!important;width:auto!important;padding:7px 9px!important}.cashier-customer-card .customer-info strong{font-size:12px!important}.cashier-customer-card .customer-debt{font-size:10px!important;padding:5px 6px!important}}
+.dashboard-kpis{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:14px}.dashboard-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(300px,.9fr);gap:12px;margin:12px 0}.dashboard-finance-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-hairline)}.dashboard-finance-row strong{font-variant-numeric:tabular-nums}.dashboard-bars{display:grid;gap:10px}.dashboard-bar-row{display:grid;grid-template-columns:minmax(70px,120px) minmax(80px,1fr) minmax(100px,auto);align-items:center;gap:10px;font-size:12px}.dashboard-bar-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dashboard-bar-track{height:9px;border-radius:99px;background:var(--bg-subtle);overflow:hidden}.dashboard-bar-track i{display:block;height:100%;border-radius:99px;background:var(--accent-brand)}.dashboard-bar-row b{font-variant-numeric:tabular-nums;text-align:right}.update-panel{display:grid;gap:18px}.update-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.update-overview>div{display:grid;gap:6px;padding:16px;border:1px solid var(--border-hairline);border-radius:12px;background:var(--bg-subtle)}.update-version{font-size:24px}.update-release{display:grid;gap:6px;padding:14px;border:1px solid var(--border-hairline);border-radius:10px}.update-progress{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px}.update-progress-track{height:10px;overflow:hidden;border-radius:99px;background:var(--border-hairline)}.update-progress-track span{display:block;height:100%;background:var(--accent-brand);transition:width .2s ease}.update-actions{display:flex;flex-wrap:wrap;gap:10px}.label-preview{box-shadow:0 5px 22px #0f172a12}.label-preview #label-preview-name{font-weight:700;overflow-wrap:anywhere}.label-preview #label-preview-brand{font-size:10px;color:#475569}.label-preview #label-preview-code{font-family:monospace;letter-spacing:1px;border-top:1px dashed #94a3b8;padding-top:5px;margin-top:5px}
+@media(max-width:900px){.dashboard-grid{grid-template-columns:1fr}.dashboard-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.update-overview{grid-template-columns:1fr}}
+
+.designer-shell{display:grid;grid-template-columns:minmax(175px,220px) minmax(300px,1fr) minmax(190px,250px);gap:12px;align-items:start;margin-top:14px}.designer-tools,.designer-inspector,.designer-workspace{padding:14px;min-width:0}.designer-tool{display:block;width:100%;text-align:left;margin:7px 0;padding:9px 11px;border:1px solid var(--border-hairline);border-radius:9px;background:var(--bg-canvas);color:var(--text-primary)}.designer-stage{min-height:540px;display:flex;justify-content:center;align-items:center;overflow:auto;padding:28px;background:var(--bg-canvas);border:1px dashed var(--border-hairline);border-radius:12px}.designer-artboard{position:relative;flex:none;max-height:72vh;background:#fff;color:#172033;box-shadow:0 12px 36px #0f172a22;border:1px solid #cbd5e1;overflow:hidden}.designer-object{position:absolute;z-index:1;display:flex;align-items:center;justify-content:center;padding:2px;border:1px dashed #64748b88;overflow:hidden;cursor:grab;user-select:none;white-space:pre-wrap;line-height:1.15}.designer-object.is-selected{outline:2px solid #2563eb;z-index:5}.designer-toolbar,.receipt-studio-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;margin-bottom:12px}.designer-inspector label{display:block;margin:8px 0}.designer-live-ticket,.receipt-live-sample{margin-top:16px;padding:12px;background:#fff;color:#172033;border:1px dashed #94a3b8;border-radius:6px;display:flex;flex-direction:column;gap:8px;text-align:center}.receipt-artboard{min-height:620px;max-height:72vh}.receipt-live-sample div{display:flex;justify-content:space-between;gap:10px;text-align:left}@media(max-width:1100px){.designer-shell{grid-template-columns:180px minmax(250px,1fr)}.designer-inspector{grid-column:1/-1}}@media(max-width:700px){.designer-shell{grid-template-columns:1fr}.designer-stage{min-height:360px}.designer-tools{order:2}.designer-inspector{order:3}}
+
+/* Requested checkout proportions: more room and height for the F-key strip, compact client card. */
+@media(min-width:1181px){.cashier-shortcuts .fkey-grid{min-height:92px!important}.cashier-shortcuts .fkey{min-height:84px!important}.cashier-customer-card,.caisse-customer{padding:6px 7px!important}.cashier-customer-card .customer-info strong{font-size:11px!important}.cashier-customer-card .customer-debt{font-size:9px!important;padding:4px 5px!important}}

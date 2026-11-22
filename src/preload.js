@@ -405,6 +405,7 @@ contextBridge.exposeInMainWorld('electron', {
   
   // Update-related APIs (electron-updater based)
   update: {
+    available: true,
     getStatus:  () => ipcRenderer.invoke('update:get-status'),
     check:      () => ipcRenderer.invoke('update:check'),
     download:   () => ipcRenderer.invoke('update:download'),

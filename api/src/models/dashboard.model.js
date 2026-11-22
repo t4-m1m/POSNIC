@@ -855,12 +855,14 @@ class DashboardModel extends BaseModel {
    */
   async getOverviewModel(data, options = {}) {
     const financials = !!(options && options.financials);
-    const [totalsR, paymentR, topR, lowStock, profitR] = await Promise.all([
+    const [totalsR, paymentR, topR, lowStock, profitR, performerR, expiredR] = await Promise.all([
       this.getDashboardTotalAmountsModel(data),
       this.getDashboardPaymentModeDataModel(data),
       this.getDashboardBestSellingProductsModel(data),
       this.getLowStockSummary(data),
       financials ? this.getProfitSummaryModel(data) : Promise.resolve(null),
+      this.getDashboardTopPerformersModel(data),
+      this.getDashboardExpiredProducts(data),
     ]);
 
     const totals = (totalsR && totalsR.data) || {};
@@ -928,10 +930,24 @@ class DashboardModel extends BaseModel {
           sales_amounts: salesAmounts,
           sales_count: totalData.Total_Sales_Amount || 0,
           sales_amount: round(salesAmounts.reduce((a, b) => a + b, 0)),
+          purchase_days: list.purchase_x_axis || [],
+          purchase_amounts: (list.purchase_y_axis || []).map((v) => round(v)),
+          purchase_count: totalData.Total_Purchase_Amount || 0,
+          purchase_amount: round((list.purchase_y_axis || []).reduce((a, b) => a + (Number(b) || 0), 0)),
+          return_days: list.return_x_axis || [],
+          return_amounts: (list.return_y_axis || []).map((v) => round(v)),
+          return_count: totalData.Total_Return_Amount || 0,
+          return_amount: round((list.return_y_axis || []).reduce((a, b) => a + (Number(b) || 0), 0)),
+          purchase_return_days: list.purchasereturn_x_axis || [],
+          purchase_return_amounts: (list.purchasereturn_y_axis || []).map((v) => round(v)),
+          purchase_return_count: totalData.Total_returnpurchase_Amount || 0,
+          purchase_return_amount: round((list.purchasereturn_y_axis || []).reduce((a, b) => a + (Number(b) || 0), 0)),
         },
         kpis,
         paymentMix,
         topItems: top,
+        topPerformer: (performerR && performerR.data) || {},
+        expiredStock: (expiredR && expiredR.data && expiredR.data.expired_stock_items) || [],
         lowStock,
         profit: financials ? (profitR && profitR.data) || null : null,
       },
