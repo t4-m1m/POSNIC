@@ -637,3 +637,7 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 .designer-tools label{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:5px!important;width:100%!important;min-width:0!important}
 .designer-tools .field,.designer-tools select,.designer-tools input{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important}
 .designer-tools .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+
+.studio-barcode{display:block!important;width:100%!important;max-width:100%!important;height:100%!important;max-height:100%!important;object-fit:contain!important;overflow:visible!important}
+.designer-object:has(.studio-barcode){padding:0!important;background:#fff!important;overflow:visible!important}
+.designer-object:has(.studio-barcode) .studio-barcode{width:100%!important;height:100%!important}
