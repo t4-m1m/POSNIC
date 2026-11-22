@@ -19,10 +19,17 @@ function context(req) {
     user.role_name, user.user_type, user.type, user.userType,
   ].filter(value => value !== undefined && value !== null && value !== '');
   const roles = roleValues.map(value => String(value).trim().toLowerCase().replace(/[\s-]+/g, '_'));
-  const adminRoles = ['admin', 'admin_user', 'administrator', 'owner', 'super_admin', 'superadmin', 'super_administrator'];
-  const isAdmin = [true, 'true', 1, '1'].includes(user.is_admin) ||
-    [true, 'true', 1, '1'].includes(user.admin) ||
-    roles.some(role => adminRoles.includes(role));
+  const adminRoles = ['admin', 'admin_user', 'administrator', 'owner', 'manager', 'supervisor', 'super_admin', 'superadmin', 'super_administrator'];
+  const permissionRows = [...(Array.isArray(user.permissions) ? user.permissions : []), ...(Array.isArray(user.permission) ? user.permission : [])];
+  const permissionModules = new Set(permissionRows.filter(value => value && typeof value === 'object').map(value => String(value.module || value.resource || value.section || '').toLowerCase()));
+  const fullPermissionSet = ['sales','items','purchases','customers','reports','hr','users','settings'].every(key => permissionModules.has(key));
+  const accessModules = Object.values(user.access || {}).filter(value => value && typeof value === 'object' && !Array.isArray(value));
+  const fullAccess = user.access?.admin === true || user.access?.all === true || user.access?.full_access === true ||
+    (accessModules.length >= 5 && accessModules.every(value => value.read === true && value.write === true && (value.create === true || value.update === true)));
+  const isAdmin = [user.is_admin,user.isAdmin,user.is_super_admin,user.isSuperAdmin,user.admin,user.super_admin].some(value => [true, 'true', 1, '1'].includes(value)) ||
+    roles.some(role => adminRoles.includes(role)) ||
+    permissionRows.some(value => ['*','all','admin','super_admin','superadmin','full_access'].includes(String(typeof value === 'object' ? (value.key || value.name || value.permission || '') : value).toLowerCase())) ||
+    fullPermissionSet || fullAccess;
   const quickAdvanceRoute = req.path === '/quick-advance' || req.path === '/quick-advance/workers' || req.path === '/vendors';
   if (!isAdmin && !quickAdvanceRoute) {
     const error = new Error('Only administrators can access employee salary records.');
