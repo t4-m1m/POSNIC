@@ -641,3 +641,7 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 .studio-barcode{display:block!important;width:100%!important;max-width:100%!important;height:100%!important;max-height:100%!important;object-fit:contain!important;overflow:visible!important}
 .designer-object:has(.studio-barcode){padding:0!important;background:#fff!important;overflow:visible!important}
 .designer-object:has(.studio-barcode) .studio-barcode{width:100%!important;height:100%!important}
+
+.designer-object{overflow:visible!important}
+.designer-object img{max-width:100%;max-height:100%;object-fit:contain}
+.designer-tools [data-action$="-image-upload"]{width:100%;margin:6px 0}
