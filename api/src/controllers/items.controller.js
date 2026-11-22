@@ -290,7 +290,8 @@ class ItemsController extends BaseController {
       const scoped = clauses.length === 1 ? filter : { $and: clauses };
       const projection = {
         _id: 1, name: 1, itemid: 1, barcode_id: 1, reference: 1,
-        category_name: 1, category_id: 1, brand: 1, supplier_name: 1,
+        category_name: 1, category_id: 1, brand: 1, brandId: 1, brand_id: 1,
+        brandName: 1, brand_name: 1, brand_abbreviation: 1, brand_code: 1, brandCode: 1, supplier_name: 1,
         selling_price: 1, selling_price_2: 1, selling_price_3: 1,
         company_price: 1, purchase_price_eur: 1, purchase_cost_dzd: 1,
         available_quantity: 1, quantity: 1, track_inventory: 1,

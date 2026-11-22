@@ -680,3 +680,19 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 .shell.caisse-lock .products-workspace{display:flex!important;flex-direction:column!important;justify-content:flex-start!important;gap:8px!important;}
 .shell.caisse-lock .products-workspace #product-results{flex:1 1 0!important;align-content:start!important;grid-auto-rows:max-content!important;grid-auto-flow:row!important;margin-top:0!important;}
 .shell.caisse-lock .products-workspace #product-results .catalogue-filter-active{grid-column:1/-1!important;align-self:start!important;margin:0!important;}
+
+
+/* SamarinaPOS V2: compact page flow, readable recent sales, and clean RH overlay teardown. */
+.shell:not(.caisse-lock) main{display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;gap:12px;min-height:0}
+.shell:not(.caisse-lock) main .table-wrap{margin-top:0!important;flex:0 0 auto}
+.shell:not(.caisse-lock) main>.toolbar,.shell:not(.caisse-lock) main>.table-wrap,.shell:not(.caisse-lock) main>.panel{margin-top:0!important}
+.recent-sales-list{display:flex;flex-direction:column;gap:8px;width:100%;min-width:0}
+.recent-sale{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;width:100%!important;padding:10px 12px!important;min-width:0;box-sizing:border-box}
+.recent-sale .recent-ticket{flex:1 1 auto!important;min-width:0!important;display:flex;flex-direction:column;gap:4px}
+.recent-ticket-heading{display:flex;align-items:center;gap:8px;min-width:0}
+.recent-ticket-heading strong{font-weight:800;white-space:nowrap}
+.recent-ticket-meta{display:block;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:12px;color:var(--muted,var(--text-secondary));min-width:0}
+.recent-sale-total{flex:0 0 auto!important;flex-shrink:0!important;font-weight:800!important;font-variant-numeric:tabular-nums;white-space:nowrap!important}
+.recent-sale-actions{flex:0 0 auto!important;flex-shrink:0!important;display:flex!important;align-items:center!important;gap:6px!important;white-space:nowrap}
+.recent-sale-actions .btn{flex:none!important;white-space:nowrap!important;grid-column:auto!important}
+@media(max-width:760px){.recent-sale{gap:8px!important;overflow-x:auto}.recent-sale .recent-ticket{min-width:140px}.recent-sale-actions .btn{padding:7px 8px;font-size:11px}}
