@@ -833,10 +833,22 @@ const SAMARINA_COMPANION_DIR = path.join(__dirname, '..', 'frontend', 'mobile');
 const POSNIC_NEXT_DIR = process.env.POSNIC_FRONTEND_V2_PATH || path.join(__dirname, '..', 'frontend-v2');
 app.get(['/v2', '/v2/', '/v2/index.html'], (_req, res) => res.redirect(302, '/'));
 app.get('/index.html', (_req, res) => res.redirect(302, '/'));
-app.use('/v2', express.static(POSNIC_NEXT_DIR, { index: false, fallthrough: true, etag: true, maxAge: '1h' }));
+// Never let Chromium keep executable frontend code from an older installer.
+// A stale cached module can keep the white-window SyntaxError alive even after
+// the corrected installer is installed, because the localhost origin is stable.
+const desktopAssetHeaders = (res, filePath) => {
+  if (/\\.(?:html?|mjs|js)$/i.test(filePath)) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  } else {
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+  }
+};
+app.use('/v2', express.static(POSNIC_NEXT_DIR, { index: false, fallthrough: true, etag: true, setHeaders: desktopAssetHeaders }));
 // POSNIC Next owns the desktop origin root and its root-relative assets.
 // index:false keeps this middleware from swallowing API and other app routes.
-app.use(express.static(POSNIC_NEXT_DIR, { index: false, fallthrough: true, etag: true, maxAge: '1h' }));
+app.use(express.static(POSNIC_NEXT_DIR, { index: false, fallthrough: true, etag: true, setHeaders: desktopAssetHeaders }));
 // Express's default non-strict routing makes '/mobile' also match '/mobile/'.
 // Match only the slashless URL, otherwise the canonical redirect loops forever.
 app.get(/^\/mobile$/, (_req, res) => res.redirect(308, '/mobile/'));
