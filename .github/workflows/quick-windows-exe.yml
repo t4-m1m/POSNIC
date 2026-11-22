@@ -4,6 +4,7 @@ name: Quick Windows Installer EXE (no tests)
 # Build the current feature-branch snapshot as the Windows installer only; deliberately no test steps.
 # Build the installer on each push to the active feature branch; manual dispatch remains available.
 # 2026-11-16: user-requested rebuild of the current feature-branch snapshot (packaging trigger only; no application code changes).
+# 2026-11-22: build the atomic SamarinaPOS V2 catalogue, permissions and checkout fixes.
 
 on:
   push:
