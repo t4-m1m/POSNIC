@@ -590,3 +590,26 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 
 /* Requested checkout proportions: more room and height for the F-key strip, compact client card. */
 @media(min-width:1181px){.cashier-shortcuts .fkey-grid{min-height:92px!important}.cashier-shortcuts .fkey{min-height:84px!important}.cashier-customer-card,.caisse-customer{padding:6px 7px!important}.cashier-customer-card .customer-info strong{font-size:11px!important}.cashier-customer-card .customer-debt{font-size:9px!important;padding:4px 5px!important}}
+
+/* V2 cashier ergonomics: reserve the dominant area for the eight function keys
+   and keep the customer card compact without squeezing the payable total. */
+@media(min-width:1181px){
+ .cashier-header-row{grid-template-columns:minmax(0,3.25fr) minmax(118px,.48fr) minmax(175px,.78fr)!important;gap:10px!important}
+ .cashier-shortcuts{padding:12px!important;gap:10px!important}
+ .cashier-shortcuts .fkey-grid{grid-template-columns:repeat(8,minmax(0,1fr))!important;gap:7px!important}
+ .cashier-shortcuts .fkey{height:92px!important;min-height:92px!important;padding:8px 4px!important;gap:6px!important}
+ .cashier-shortcuts .fkey .fkey-icon{width:27px!important;height:27px!important}
+ .cashier-shortcuts .fkey .fkey-icon svg{width:23px!important;height:23px!important}
+ .cashier-shortcuts .fkey kbd{font-size:11px!important}
+ .cashier-shortcuts .fkey-label{font-size:10px!important;line-height:1.2!important}
+ .cashier-customer-card,.caisse-customer{width:auto!important;min-width:0!important;padding:6px 7px!important}
+ .cashier-customer-card .customer-info strong{font-size:11px!important;overflow-wrap:anywhere}
+ .cashier-customer-card .customer-debt{font-size:9px!important;padding:4px 5px!important}
+}
+@media(max-width:1180px){
+ .cashier-shortcuts .fkey{min-height:72px!important;height:72px!important}
+ .cashier-customer-card,.caisse-customer{min-width:0!important}
+}
+.designer-artboard .designer-object{transition:outline-color .12s ease,box-shadow .12s ease}
+.designer-artboard .designer-object:hover{outline:2px solid #3b82f6;z-index:6}
+@media print{.designer-artboard{box-shadow:none!important;border:0!important}}
