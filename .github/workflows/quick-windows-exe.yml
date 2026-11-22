@@ -28,7 +28,7 @@ jobs:
       POSNIC_MINIFY: "0"
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
           submodules: recursive
@@ -78,13 +78,13 @@ jobs:
         shell: pwsh
         run: Add-MpPreference -ExclusionPath "${{ github.workspace }}"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: 'npm'
 
       - name: Cache Electron and electron-builder downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/AppData/Local/electron/Cache
@@ -105,7 +105,7 @@ jobs:
 
       - name: Install API dependencies
         working-directory: api
-        run: npm ci --prefer-offline --no-audit --no-fund
+        run: npm install --prefer-offline --no-audit --no-fund
 
       - name: Syntax-check updated V2 cashier frontend and keyboard module
         run: |
