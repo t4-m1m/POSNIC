@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const itemsController = require('../controllers/items.controller');
 const { protect, optionalProtect } = require('../middleware/auth');
+const requireAdmin = (req,res,next) => { const roles=[req.user?.role,req.user?.usertype,req.user?.user_type,req.user?.type].map(v=>String(v||'').toLowerCase()); if(roles.some(v=>['admin','administrator','super_admin','superadmin','owner'].includes(v))||req.user?.is_admin===true||req.user?.isAdmin===true)return next(); return res.status(403).json({type:'error',message:'Administrator access required.'}); };
 const { ensureKioskKey, protectOrKioskKey } = require('../middleware/kiosk-key');
 const {
   validateCreateItem,
@@ -225,7 +226,7 @@ router.get('/export/jsonld', bindController(itemsController.exportCatalogueJsonL
 // DELETE /api/items/demo - remove the sample products for good.
 // Separate from the Demo Data switch, which only hides them: this one
 // destroys, and refuses anything sold, received or edited.
-router.delete('/demo', bindController(itemsController.purgeDemoData));
+router.delete('/demo', requireAdmin, bindController(itemsController.purgeDemoData));
 
 // POST /api/items/demo - put the sample data back, for a shop that removed
 // it and later wants it. Refuses if it is already there. An optional
@@ -346,10 +347,10 @@ router.get('/getJSONhsncode', bindController(itemsController.getJSONhsncode));
 router.post('/', validateCreateItem, bindController(itemsController.add));
 
 // PHP: delete() - Delete items (DELETE /items)
-router.delete('/', bindController(itemsController.delete));
+router.delete('/', requireAdmin, bindController(itemsController.delete));
 
 // Legacy bulk delete endpoint used by frontend: DELETE /items/delete
-router.delete('/delete', bindController(itemsController.delete));
+router.delete('/delete', requireAdmin, bindController(itemsController.delete));
 
 // Legacy edit endpoint: GET /items/getItemDetails?id={id}
 router.get('/getItemDetails', bindController(itemsController.getItemDetails));

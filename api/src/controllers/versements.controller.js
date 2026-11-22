@@ -11,8 +11,13 @@ const branchOf = (req) => String(req.query.branch || req.body?.branch_id || req.
 exports.ensureForSale = async (req, sale) => {
   if (!req.db || !sale || !sale.versement_checkout) return null;
   const meta = sale.versement_checkout, key = saleKey(sale);
-  const customer = String(meta.customer_name || '').trim().slice(0, 200);
-  const phone = String(meta.phone || '').trim().slice(0, 40);
+  const customerId = String(meta.customer_id || sale.customer_id?._id || sale.customer_id || '').trim();
+  if (!ObjectId.isValid(customerId)) throw new Error('A registered customer is required for a Versement.');
+  const customerObjectId = new ObjectId(customerId);
+  const registeredCustomer = await req.db.collection('customers').findOne({ _id: customerObjectId });
+  if (!registeredCustomer) throw new Error('The selected Versement customer does not exist.');
+  const customer = String(registeredCustomer.name || registeredCustomer.customer_name || meta.customer_name || '').trim().slice(0, 200);
+  const phone = String(registeredCustomer.phone || meta.phone || '').trim().slice(0, 40);
   const initial = money(meta.initial_amount), method = String(meta.initial_method || 'cash').toLowerCase();
   const total = saleTotal(sale), branchRaw = sale.branch_id || branchOf(req);
   if (!key || !customer || !ObjectId.isValid(String(branchRaw)) || !(initial > 0) ||
@@ -29,7 +34,7 @@ exports.ensureForSale = async (req, sale) => {
     versement_number: 'V-' + now.toISOString().slice(0,10).replace(/-/g,'') + '-' + require('crypto').randomBytes(3).toString('hex').toUpperCase(),
     sale_key: key, sale_object_id: sale._id, branch_id: new ObjectId(String(branchRaw)),
     ...(sale.cashregister_id && ObjectId.isValid(String(sale.cashregister_id)) ? { register_id: new ObjectId(String(sale.cashregister_id)) } : {}),
-    customer_name: customer, phone, vendor_name: String(meta.vendor_name || sale.cashier_name || '').trim().slice(0, 80), sale_note: String(sale.sales_description || sale.sale_note || sale.sales_note || '').trim().slice(0, 1000), sale_total: total, initial_amount: initial, initial_method: method,
+    customer_id: customerObjectId, customer_name: customer, phone, vendor_name: String(meta.vendor_name || sale.cashier_name || '').trim().slice(0, 80), sale_note: String(sale.sales_description || sale.sale_note || sale.sales_note || '').trim().slice(0, 1000), sale_total: total, initial_amount: initial, initial_method: method,
     remaining: money(Math.max(0, total - initial)), status: settled ? 'settled' : 'pending',
     created_at: now, created_by: actor(req), initial_collected_at: now, initial_recorded_amount: initial,
     ...(settled ? { settled_at: now } : {}),

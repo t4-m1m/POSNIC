@@ -176,6 +176,7 @@ const findAccessibleCategory = async (req, categoryId) => {
   }).lean();
 };
 const { protect } = require('../middleware/auth');
+const requireAdmin = (req,res,next) => { const roles=[req.user?.role,req.user?.usertype,req.user?.user_type,req.user?.type].map(v=>String(v||'').toLowerCase()); if(roles.some(v=>['admin','administrator','super_admin','superadmin','owner'].includes(v))||req.user?.is_admin===true||req.user?.isAdmin===true)return next(); return res.status(403).json({type:'error',message:'Administrator access required.'}); };
 const upload = require('../middleware/upload');
 const {
   validateCreateCategory,
@@ -238,7 +239,7 @@ router.post('/uploadCategoryImage', upload.single('ImageCategory'), async (req, 
 });
 
 // PHP: categoryImageDelete() - Delete category image
-router.delete('/categoryImageDelete', async (req, res) => {
+router.delete('/categoryImageDelete', requireAdmin, async (req, res) => {
   return categoriesController.categoryImageDelete(req, res);
 });
 
@@ -254,7 +255,7 @@ router.get('/getCategoriesWithValidItems', async (req, res) => {
 
 // Legacy bulk delete endpoint: DELETE /categories/delete
 // Frontend sends: { data: [id1, id2, ...] }
-router.delete('/delete', validateBulkDelete, async (req, res) => {
+router.delete('/delete', requireAdmin, validateBulkDelete, async (req, res) => {
   return categoriesController.bulkDelete(req, res);
 });
 
@@ -357,7 +358,7 @@ router.patch('/:id/toggle-status', validateCategoryId, async (req, res) => {
 });
 
 // DELETE /api/categories/:id - Soft delete category
-router.delete('/:id', validateCategoryId, async (req, res) => {
+router.delete('/:id', requireAdmin, validateCategoryId, async (req, res) => {
   try {
     const { branch_id } = await categoriesController.resolveBranchContext(req);
     if (!branch_id) {

@@ -675,3 +675,8 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 .products-workspace #product-results .catalogue-filter-active{grid-column:1/-1!important;align-self:start!important;margin:0!important}
 .sale-edit-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border:1px solid #F59E0B;background:#FFFBEB;color:#92400E}
 .sale-edit-banner .actions{display:flex;gap:8px}
+
+/* Keep the filtered catalogue bar and first product row directly together. */
+.shell.caisse-lock .products-workspace{display:flex!important;flex-direction:column!important;justify-content:flex-start!important;gap:8px!important;}
+.shell.caisse-lock .products-workspace #product-results{flex:1 1 0!important;align-content:start!important;grid-auto-rows:max-content!important;grid-auto-flow:row!important;margin-top:0!important;}
+.shell.caisse-lock .products-workspace #product-results .catalogue-filter-active{grid-column:1/-1!important;align-self:start!important;margin:0!important;}
