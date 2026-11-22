@@ -37,28 +37,41 @@ const NEEDED = ['vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll'];
  */
 function candidateDirs() {
   const sysRoot = process.env.SystemRoot || 'C:\\Windows';
-  const dirs = [];
-  const vcRoot = path.join(process.env.ProgramFiles || 'C:\\Program Files',
-    'Microsoft Visual Studio');
-  if (fs.existsSync(vcRoot)) {
-    // .../VC/Redist/MSVC/<version>/x64/Microsoft.VC143.CRT
-    const stack = [vcRoot];
-    while (stack.length) {
-      const dir = stack.pop();
-      let entries = [];
-      try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
-      for (const e of entries) {
-        if (!e.isDirectory()) continue;
-        const full = path.join(dir, e.name);
-        if (/Microsoft\.VC\d+\.CRT$/i.test(full) && /[\\/]x64[\\/]/i.test(full)) dirs.push(full);
-        else if (stack.length < 400) stack.push(full);
+  const system32 = path.join(sysRoot, 'System32');
+
+  // The hosted Windows runner normally has all three x64 VC runtime DLLs in
+  // System32. Check that first and return immediately: recursively walking
+  // every Visual Studio folder wasted minutes even when these files existed.
+  if (NEEDED.every((dll) => fs.existsSync(path.join(system32, dll)))) {
+    return [system32];
+  }
+
+  // Bounded fallback: inspect only known redistributable roots and their
+  // version folders instead of recursively traversing the full VS installation.
+  const programFiles = process.env.ProgramFiles || 'C:\\Program Files';
+  const programFiles86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
+  const roots = [
+    path.join(programFiles, 'Microsoft Visual Studio', '2022', 'Enterprise', 'VC', 'Redist', 'MSVC'),
+    path.join(programFiles, 'Microsoft Visual Studio', '2022', 'BuildTools', 'VC', 'Redist', 'MSVC'),
+    path.join(programFiles, 'Microsoft Visual Studio', '2022', 'Community', 'VC', 'Redist', 'MSVC'),
+    path.join(programFiles, 'Microsoft Visual Studio', '2022', 'Professional', 'VC', 'Redist', 'MSVC'),
+    path.join(programFiles86, 'Microsoft Visual Studio', '2019', 'BuildTools', 'VC', 'Redist', 'MSVC'),
+  ];
+  const dirs = [system32];
+  for (const root of roots) {
+    if (!fs.existsSync(root)) continue;
+    let versions = [];
+    try { versions = fs.readdirSync(root, { withFileTypes: true }).filter((entry) => entry.isDirectory()); } catch { continue; }
+    versions.sort((left, right) => right.name.localeCompare(left.name, undefined, { numeric: true }));
+    for (const version of versions) {
+      for (const crt of ['Microsoft.VC143.CRT', 'Microsoft.VC142.CRT']) {
+        const candidate = path.join(root, version.name, 'x64', crt);
+        if (fs.existsSync(candidate)) dirs.push(candidate);
       }
     }
   }
-  dirs.push(path.join(sysRoot, 'System32'));   // x64 DLLs on an x64 Windows
   return dirs;
 }
-
 function main() {
   if (process.platform !== 'win32') {
     console.log('  not Windows; nothing to bundle');
