@@ -876,8 +876,11 @@ const STATIC_MEDIA = /\.(png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot|otf|mp3|wav)(
 function assetCacheHeaders(res, filePath) {
   if (HASHED_ASSET.test(filePath)) {
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-  } else if (filePath.endsWith('.html')) {
-    res.setHeader('Cache-Control', 'no-cache');
+  } else if (/\\.(?:html?|mjs|js)$/i.test(filePath)) {
+    // Executable files with stable names must never survive an app upgrade in Chromium's cache.
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
   } else if (STATIC_MEDIA.test(filePath)) {
     /*
      * Fonts and images went out with NO Cache-Control (this function only
