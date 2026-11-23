@@ -2163,7 +2163,6 @@ class SalesController extends BaseController {
                 { $gte: ['$reportExpenseDate', reportStart] },
                 { $lt: ['$reportExpenseDate', reportEnd] },
                 { $not: [{ $in: ['$reportExpenseType', ['credit', 'income', 'money in']] }] },
-                { $ne: [{ $ifNull: ['$payment_source', 'register'] }, 'personal'] },
               ],
             },
           },
@@ -2179,18 +2178,19 @@ class SalesController extends BaseController {
         const date = new Date(row.date || row.created_date || row.updated_date);
         const type = String(row.type || 'debit').toLowerCase();
         return Number.isFinite(date.getTime()) && date >= reportStart && date < reportEnd &&
-          !['credit','income','money in'].includes(type) && row.payment_source !== 'personal';
+          !['credit','income','money in'].includes(type);
       });
       const expenseTenderUnknown = expenseDocsInDay.some(row =>
+        row.payment_source !== 'personal' &&
         !String(row.payment_mode || row.payment_method || row.method || '').trim() && Number(row.amount || 0) > 0
       );
       const cashExpenses = roundToTwo(expenseDocsInDay.reduce((sum, row) => {
         const method = row.payment_mode || row.payment_method || row.method || '';
-        return sum + (accountingEngine.isCashTender(method) ? Number(row.amount || 0) : 0);
+        return sum + (row.payment_source !== 'personal' && accountingEngine.isCashTender(method) ? Number(row.amount || 0) : 0);
       }, 0));
       const expenseDataComplete = expenseTenderDocs.every(row => {
         const type = String(row.type || 'debit').toLowerCase();
-        if (['credit','income','money in'].includes(type) || row.payment_source === 'personal') return true;
+        if (['credit','income','money in'].includes(type)) return true;
         const date = new Date(row.date || row.created_date || row.updated_date);
         return Number.isFinite(date.getTime()) && Number.isFinite(Number(row.amount));
       });
