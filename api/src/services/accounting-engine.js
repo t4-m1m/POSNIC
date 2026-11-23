@@ -135,6 +135,11 @@ function reconstructOutstandingAsOf({
   };
   const collectionsAfter = new Map();
   const transactionIds = new Set(transactions.flatMap(row => [id(row._id), id(row.sale_id)].filter(Boolean)));
+  const transactionSaleCounts = new Map();
+  transactions.forEach(row => {
+    const saleId = id(row.sale_id);
+    if (saleId) transactionSaleCounts.set(saleId, (transactionSaleCounts.get(saleId) || 0) + 1);
+  });
   for (const payment of creditPayments.filter(row => after(row.received_at))) {
     const allocations = Array.isArray(payment.allocations) ? payment.allocations : [];
     if (!allocations.length) { complete = false; unresolved += 1; continue; }
@@ -144,10 +149,10 @@ function reconstructOutstandingAsOf({
       allocatedTotal += amount;
       const transactionId = id(allocation.transaction_id);
       const saleId = id(allocation.sale_id);
-      const keys = [transactionId, saleId].filter(Boolean);
-      const matching = keys.filter(key => transactionIds.has(key));
-      if (!matching.length) { complete = false; unresolved += 1; continue; }
-      const key = matching[0];
+      const hasTransactionId = transactionId && transactions.some(row => id(row._id) === transactionId);
+      const uniqueSaleLink = saleId && transactionSaleCounts.get(saleId) === 1;
+      if (!hasTransactionId && !uniqueSaleLink) { complete = false; unresolved += 1; continue; }
+      const key = hasTransactionId ? transactionId : saleId;
       collectionsAfter.set(key, (collectionsAfter.get(key) || 0) + amount);
     }
     if (Math.abs(allocatedTotal - (Number(payment.amount) || 0)) > 0.01) {
@@ -156,13 +161,15 @@ function reconstructOutstandingAsOf({
   }
   const editsAfter = new Map();
   editAdjustments.filter((row) => after(row.created_at)).forEach((row) => {
-    const key = id(row.sale_id || row.sales_id);
-    if (key) editsAfter.set(key, (editsAfter.get(key) || 0) + (Number(row.amount) || 0));
+    for (const key of [id(row.sale_id), id(row.sales_id)].filter(Boolean)) {
+      editsAfter.set(key, (editsAfter.get(key) || 0) + (Number(row.amount) || 0));
+    }
   });
   const returnsAfter = new Map();
   returns.filter((row) => after(row.date)).forEach((row) => {
-    const key = id(row.sale_id || row.sales_id);
-    if (key) returnsAfter.set(key, (returnsAfter.get(key) || 0) + (Number(row.amount) || 0));
+    for (const key of [id(row.sale_id), id(row.sales_id)].filter(Boolean)) {
+      returnsAfter.set(key, (returnsAfter.get(key) || 0) + (Number(row.amount) || 0));
+    }
   });
 
   const versementKeys = new Set([
