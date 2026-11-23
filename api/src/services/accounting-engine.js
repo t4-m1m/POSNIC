@@ -3,6 +3,16 @@
 const round2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
 const finite = (value) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
 const asAmount = (value) => (finite(value) ? Number(value) : null);
+const normalizeTenderName = (method) => {
+  const raw = String(method || '').trim();
+  const key = raw.toLowerCase().replaceAll(' ', '').replaceAll('_', '').replaceAll('-', '');
+  if (['cash','especes','espèce','espèces'].includes(key)) return 'CASH';
+  if (['card','tpe','carte'].includes(key)) return 'TPE';
+  if (['banktransfer','baridimob','baridi'].includes(key)) return 'BaridiMob';
+  if (['credit','crédit'].includes(key)) return 'Crédit';
+  if (['other','autre'].includes(key)) return 'Autre';
+  return raw || 'Non classé';
+};
 const isCashTender = (method) => /^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(method || '').trim());
 
 /**
@@ -238,4 +248,4 @@ function reconstructOutstandingAsOf({
   return { amount: round2(total), complete, unresolved };
 }
 
-module.exports = { round2, isCashTender, summarizeCashRegisterSessions, calculateDailyClose, reconstructOutstandingAsOf };
+module.exports = { round2, normalizeTenderName, isCashTender, summarizeCashRegisterSessions, calculateDailyClose, reconstructOutstandingAsOf };
