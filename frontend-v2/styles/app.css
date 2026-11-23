@@ -785,3 +785,35 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
  display:block!important;position:static!important;margin:0!important;width:100%!important;
 }
 @media(max-width:760px){.shell.view-catalogue>main,.shell.view-achats>main,.shell.view-clients>main,.shell.view-zr-express>main{padding:12px!important}}
+
+/* V2 operational pages: keep the heading, filters and records in one compact flow. */
+.operational-list-page{
+ display:flex;
+ flex-direction:column;
+ align-items:stretch;
+ justify-content:flex-start;
+ align-content:flex-start;
+ gap:12px;
+ width:100%;
+ min-width:0;
+}
+.operational-list-page>.page-head,
+.operational-list-page>.toolbar,
+.operational-list-page>.table-wrap{
+ position:static;
+ flex:0 0 auto;
+ align-self:stretch;
+ width:100%;
+ min-width:0;
+ margin:0;
+}
+.operational-list-page>.table-wrap{overflow:auto}
+.operational-list-page>.toolbar{display:flex;flex-wrap:wrap;align-items:center}
+.operational-list-page>.page-head{display:flex;align-items:flex-start;justify-content:space-between}
+.recent-sales-table-wrap{width:100%;max-width:100%;overflow:auto}
+.recent-sales-table{width:100%;min-width:900px;border-collapse:collapse;table-layout:auto}
+.recent-sales-table th,.recent-sales-table td{vertical-align:top;white-space:normal}
+.recent-sales-table td:first-child,.recent-sales-table td:nth-child(2),.recent-sales-table td:nth-child(5),.recent-sales-table td:last-child{white-space:nowrap}
+.recent-sales-table .recent-sale-items{min-width:200px}
+.recent-sales-table .recent-sale-item-list{display:flex;flex-direction:column;gap:3px}
+@media(max-width:760px){.operational-list-page{gap:10px}.recent-sales-table{min-width:760px}}
