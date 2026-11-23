@@ -1061,6 +1061,12 @@ const formatSaleListEntry = (saleDoc) => {
     paid_amount: amount(doc.paid_amount ?? doc.payment_received ?? doc.partial_balance ?? 0),
     payment_received: amount(doc.payment_received ?? doc.paid_amount ?? doc.partial_balance ?? 0),
     unpaid: doc.unpaid ?? false,
+    partial_check: doc.partial_check ?? false,
+    partial_balance: amount(doc.partial_balance ?? 0),
+    versement_checkout: doc.versement_checkout && typeof doc.versement_checkout === 'object'
+      ? { initial_amount: amount(doc.versement_checkout.initial_amount ?? doc.versement_checkout.initialAmount ?? 0) }
+      : null,
+    versement_settled: doc.versement_settled === true,
     multi_payment: doc.multi_payment ?? doc.payment_details ?? [],
     status: doc.status || doc.sale_process || '',
     sale_original_total: amount(doc.sale_original_total ?? doc.sales_total ?? doc.total ?? 0),
