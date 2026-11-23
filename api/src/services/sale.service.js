@@ -1832,9 +1832,19 @@ const processSale = async (
       const previousTotal = Math.max(0, round2(recordedPreviousTotal - legacyReturnedTotal, 2));
       const nextTotal = Number(salesTotalForDoc) || 0;
       const adjustment = round2(nextTotal - previousTotal, 2);
+      const hasCostSnapshot = (lines) => Array.isArray(lines) && lines.length > 0 && lines.every((line) =>
+        (line?.company_price_total !== undefined && line?.company_price_total !== null && line?.company_price_total !== '') ||
+        (line?.company_price !== undefined && line?.company_price !== null && line?.company_price !== '') ||
+        (line?.item_company_price !== undefined && line?.item_company_price !== null && line?.item_company_price !== '')
+      );
+      const oldCostLines = existingSale?.sale_original_snapshot?.items || existingSale?.items;
       const oldCostTotalRaw = existingSale?.total_companyprice ?? existingSale?.sales_total_company_price;
-      const oldCostTotal = oldCostTotalRaw == null || oldCostTotalRaw === '' ? null : Number(oldCostTotalRaw);
-      const newCostTotal = Number.isFinite(Number(sale_company_amount)) ? round2(sale_company_amount, 2) : null;
+      const oldCostTotal = hasCostSnapshot(oldCostLines) && oldCostTotalRaw != null && oldCostTotalRaw !== '' && Number.isFinite(Number(oldCostTotalRaw))
+        ? Number(oldCostTotalRaw)
+        : null;
+      const newCostTotal = hasCostSnapshot(itemsale) && Number.isFinite(Number(sale_company_amount))
+        ? round2(sale_company_amount, 2)
+        : null;
       const costAdjustment = oldCostTotal !== null && Number.isFinite(oldCostTotal) && newCostTotal !== null
         ? round2(newCostTotal - oldCostTotal, 2)
         : null;
