@@ -42,7 +42,20 @@ function context(req) {
     error.status = 400;
     throw error;
   }
-  return { license, userId: user._id || null, username: user.username || user.name || user.email || 'system' };
+  const branchRaw = req.tenantContext?.branchId || user.branch_id || user.default_branch_id || user.branch?._id || BaseModel.currentBranch;
+  if (!branchRaw || !ObjectId.isValid(String(branchRaw))) {
+    const error = new Error('An active branch is required for employee accounting.');
+    error.status = 400;
+    throw error;
+  }
+  return { license, branchId: new ObjectId(String(branchRaw)), userId: user._id || null, username: user.username || user.name || user.email || 'system' };
+}
+async function branchScope(req) {
+  const branches = await collection('branches');
+  const count = await branches.countDocuments({ license: req.hrContext.license });
+  return count > 1
+    ? { branch_id: req.hrContext.branchId }
+    : { $or: [{ branch_id: req.hrContext.branchId }, { branch_id: { $exists: false } }] };
 }
 async function collection(name) {
   const model = new BaseModel(name);
@@ -84,7 +97,7 @@ router.use((req, res, next) => { try { req.hrContext = context(req); next(); } c
 router.get('/quick-advance/workers', async (req, res) => {
   try {
     const rows = await (await collection('hr_workers')).find({
-      license: req.hrContext.license, active: { $ne: false }, deleted: { $ne: true }
+      license: req.hrContext.license, ...(await branchScope(req)), active: { $ne: false }, deleted: { $ne: true }
     }).project({ name: 1 }).sort({ name: 1 }).toArray();
     res.json({ status: true, data: rows.map(w => ({ _id: String(w._id), name: w.name })) });
   } catch (e) { sendError(res, e); }
@@ -100,7 +113,7 @@ router.post('/quick-advance', async (req, res) => {
     if (value <= 0) return res.status(400).json({ status: false, message: 'Le montant doit être supérieur à zéro.' });
     const d = dateValue(b.date), period = payrollPeriod(b.period, d);
     const existing = await (await collection('hr_transactions')).find({
-      license, worker_id: workerId, period, cancelled_at: { $exists: false }, is_cancelled: { $ne: true },
+      license, ...(await branchScope(req)), worker_id: workerId, period, cancelled_at: { $exists: false }, is_cancelled: { $ne: true },
       type: { $in: ['salary_payment', 'advance', 'overtime', 'prime_weekly', 'prime_monthly', 'adjustment'] }
     }).toArray();
     const advances = existing.filter(t => t.type === 'advance').reduce((sum,t) => sum + Number(t.amount || 0), 0);
@@ -112,7 +125,7 @@ router.post('/quick-advance', async (req, res) => {
     if (value > remaining) return res.status(400).json({ status: false, message: 'Le montant dépasse le solde de salaire disponible.' });
     const doc = { worker_id: workerId, worker_name: worker.name, type: 'advance', amount: value,
       date: d, period, method: String(b.method || 'cash'), reference: '',
-      notes: String(b.notes || 'Acompte rapide depuis la caisse').trim(), license,
+      notes: String(b.notes || 'Acompte rapide depuis la caisse').trim(), license, branch_id: req.hrContext.branchId,
       created_at: new Date(), created_by: userId, created_by_name: username };
     const result = await (await collection('hr_transactions')).insertOne(doc);
     res.status(201).json({ status: true, data: { ...doc, _id: String(result.insertedId), worker_id: String(workerId) }, message: 'Acompte enregistré.' });
@@ -122,9 +135,10 @@ router.post('/quick-advance', async (req, res) => {
 router.get('/summary', async (req, res) => {
   try {
     const { license } = req.hrContext;
+    const scope = await branchScope(req);
     const [workers, tx] = await Promise.all([
-      (await collection('hr_workers')).find({ license, active: { $ne: false }, deleted: { $ne: true } }).toArray(),
-      (await collection('hr_transactions')).find({ license, cancelled_at: { $exists: false }, is_cancelled: { $ne: true } }).sort({ date: -1 }).limit(5000).toArray()
+      (await collection('hr_workers')).find({ license, ...scope, active: { $ne: false }, deleted: { $ne: true } }).toArray(),
+      (await collection('hr_transactions')).find({ license, ...scope, cancelled_at: { $exists: false }, is_cancelled: { $ne: true } }).sort({ date: -1 }).limit(5000).toArray()
     ]);
     const now = new Date(), period = String(now.getFullYear()) + '-' + String(now.getMonth() + 1).padStart(2, '0');
     const monthTx = tx.filter(t => String(t.period || '').startsWith(period));
@@ -137,20 +151,20 @@ router.get('/summary', async (req, res) => {
   } catch(e) { sendError(res,e); }
 });
 router.get('/vendors', async (req,res) => {
-  try { const rows=await (await collection('hr_workers')).find({license:req.hrContext.license,active:{$ne:false},deleted:{$ne:true}}).project({name:1,job_title:1,badge_color:1,phone:1}).sort({name:1}).toArray(); res.json({status:true,data:rows.map(w=>({...w,_id:String(w._id)}))}); } catch(e) { sendError(res,e); }
+  try { const rows=await (await collection('hr_workers')).find({license:req.hrContext.license,...(await branchScope(req)),active:{$ne:false},deleted:{$ne:true}}).project({name:1,job_title:1,badge_color:1,phone:1}).sort({name:1}).toArray(); res.json({status:true,data:rows.map(w=>({...w,_id:String(w._id)}))}); } catch(e) { sendError(res,e); }
 });
 router.get('/workers', async (req,res) => {
   try {
-    const rows = await (await collection('hr_workers')).find({ license:req.hrContext.license, deleted: { $ne: true } }).sort({ name:1 }).toArray();
+    const rows = await (await collection('hr_workers')).find({ license:req.hrContext.license, ...(await branchScope(req)), deleted: { $ne: true } }).sort({ name:1 }).toArray();
     res.json({status:true,data:rows.map(w=>({...w,_id:String(w._id)}))});
   } catch(e) { sendError(res,e); }
 });
 const createWorker = async (req,res) => {
   try {
-    const {license,username,userId}=req.hrContext, b=req.body||{};
+    const {license,branchId,username,userId}=req.hrContext, b=req.body||{};
     const name=String(b.name||'').trim();
     if (!name) return res.status(400).json({status:false,message:'Worker name is required.'});
-    const now=new Date(), worker={name,job_title:String(b.job_title||'').trim(),phone:String(b.phone||'').trim(),badge_color:String(b.badge_color||'#2563eb').slice(0,32),start_date:dateValue(b.start_date,'start date'),monthly_salary:amount(b.monthly_salary,'Monthly salary'),hourly_rate:amount(b.hourly_rate||0,'Hourly rate'),active:b.active!==false,notes:String(b.notes||'').trim(),license,created_at:now,updated_at:now,created_by:userId,created_by_name:username};
+    const now=new Date(), worker={name,job_title:String(b.job_title||'').trim(),phone:String(b.phone||'').trim(),badge_color:String(b.badge_color||'#2563eb').slice(0,32),start_date:dateValue(b.start_date,'start date'),monthly_salary:amount(b.monthly_salary,'Monthly salary'),hourly_rate:amount(b.hourly_rate||0,'Hourly rate'),active:b.active!==false,notes:String(b.notes||'').trim(),license,branch_id:branchId,created_at:now,updated_at:now,created_by:userId,created_by_name:username};
     const result=await (await collection('hr_workers')).insertOne(worker);
     res.status(201).json({status:true,data:{...worker,_id:String(result.insertedId)},message:'Worker saved.'});
   } catch(e) { sendError(res,e); }
@@ -171,7 +185,7 @@ const updateWorker = async (req,res) => {
     if (b.hourly_rate!==undefined)set.hourly_rate=amount(b.hourly_rate,'Hourly rate');
     if (b.start_date!==undefined)set.start_date=dateValue(b.start_date,'start date');
     if (b.active!==undefined)set.active=!!b.active;
-    const col=await collection('hr_workers'),result=await col.findOneAndUpdate({_id:new ObjectId(req.params.id),license},{$set:set},{returnDocument:'after'});
+    const col=await collection('hr_workers'),result=await col.findOneAndUpdate({_id:new ObjectId(req.params.id),license,...(await branchScope(req))},{$set:set},{returnDocument:'after'});
     const updated = result && Object.prototype.hasOwnProperty.call(result, 'value') ? result.value : result;
     if(!updated)return res.status(404).json({status:false,message:'Worker not found.'});
     res.json({status:true,data:{...updated,_id:String(updated._id)},message:'Worker updated.'});
@@ -185,14 +199,14 @@ router.post('/workers/:id/delete', async (req,res) => {
     if (!ObjectId.isValid(req.params.id)) return res.status(400).json({status:false,message:'Invalid worker ID.'});
     const {license,username}=req.hrContext;
     const col=await collection('hr_workers');
-    const result=await col.updateOne({_id:new ObjectId(req.params.id),license,deleted:{$ne:true}},{$set:{active:false,deleted:true,deleted_at:new Date(),deleted_by_name:username,updated_at:new Date()}});
+    const result=await col.updateOne({_id:new ObjectId(req.params.id),license,...(await branchScope(req)),deleted:{$ne:true}},{$set:{active:false,deleted:true,deleted_at:new Date(),deleted_by_name:username,updated_at:new Date()}});
     if (!result.matchedCount) return res.status(404).json({status:false,message:'Employee not found or already deleted.'});
     res.json({status:true,message:'Employee removed from the active list. Payroll history has been preserved.'});
   } catch(e) { sendError(res,e); }
 });
 router.get('/transactions', async (req,res) => {
   try {
-    const q={license:req.hrContext.license};
+    const q={license:req.hrContext.license,...(await branchScope(req))};
     if(req.query.worker_id){if(!ObjectId.isValid(req.query.worker_id))return res.status(400).json({status:false,message:'Invalid worker ID.'});q.worker_id=new ObjectId(req.query.worker_id);}
     if(req.query.period)q.period=String(req.query.period).slice(0,7);
     const rows=await (await collection('hr_transactions')).find(q).sort({date:-1,created_at:-1}).limit(5000).toArray();
@@ -201,7 +215,7 @@ router.get('/transactions', async (req,res) => {
 });
 router.post('/transactions', async (req,res) => {
   try {
-    const {license,username,userId}=req.hrContext,b=req.body||{};
+    const {license,branchId,username,userId}=req.hrContext,b=req.body||{};
     if(!ObjectId.isValid(String(b.worker_id||'')))return res.status(400).json({status:false,message:'Select a valid worker.'});
     const workerId=new ObjectId(String(b.worker_id)), worker=await (await collection('hr_workers')).findOne({_id:workerId,license,active:{$ne:false}});
     if(!worker)return res.status(404).json({status:false,message:'Active worker not found.'});
@@ -218,7 +232,7 @@ router.post('/transactions', async (req,res) => {
     if (type === 'salary_payment' || type === 'advance') {
       // Prevent both advances and salary payments from exceeding the unpaid balance.
       const existing = await (await collection('hr_transactions'))
-        .find({ license, worker_id: workerId, period, cancelled_at: { $exists: false }, is_cancelled: { $ne: true }, type: { $in: ['salary_payment', 'advance', 'overtime', 'prime_weekly', 'prime_monthly', 'adjustment'] } })
+        .find({ license, ...(await branchScope(req)), worker_id: workerId, period, cancelled_at: { $exists: false }, is_cancelled: { $ne: true }, type: { $in: ['salary_payment', 'advance', 'overtime', 'prime_weekly', 'prime_monthly', 'adjustment'] } })
         .toArray();
       const advances = existing.filter(t => t.type === 'advance').reduce((sum, t) => sum + Number(t.amount || 0), 0);
       const paid = existing.filter(t => t.type === 'salary_payment').reduce((sum, t) => sum + Number(t.amount || 0), 0);
@@ -233,7 +247,7 @@ router.post('/transactions', async (req,res) => {
         });
       }
     }
-    const doc={worker_id:workerId,worker_name:worker.name,type,...value,date:d,period,method:String(b.method||'cash'),reference:String(b.reference||'').trim(),notes:String(b.notes||'').trim(),license,created_at:new Date(),created_by:userId,created_by_name:username};
+    const doc={worker_id:workerId,worker_name:worker.name,type,...value,date:d,period,method:String(b.method||'cash'),reference:String(b.reference||'').trim(),notes:String(b.notes||'').trim(),license,branch_id:branchId,created_at:new Date(),created_by:userId,created_by_name:username};
     const result=await (await collection('hr_transactions')).insertOne(doc);
     res.status(201).json({status:true,data:{...doc,_id:String(result.insertedId),worker_id:String(workerId)},message:'Transaction recorded.'});
   } catch(e) { sendError(res,e); }
@@ -244,7 +258,7 @@ router.post('/transactions/:id/delete', async (req,res) => {
     const col=await collection('hr_transactions');
     const result=await col.deleteOne({
       _id:new ObjectId(req.params.id),
-      license:req.hrContext.license,
+      license:req.hrContext.license,...(await branchScope(req)),
       type:{$in:['salary_payment','advance']}
     });
     if (!result.deletedCount) {
@@ -263,11 +277,11 @@ router.post('/transactions/:id/cancel', async (req,res) => {
     const col=await collection('hr_transactions');
     const now=new Date();
     const result=await col.updateOne(
-      {_id:new ObjectId(req.params.id),license,type:'salary_payment',cancelled_at:{$exists:false},is_cancelled:{$ne:true}},
+      {_id:new ObjectId(req.params.id),license,...(await branchScope(req)),type:'salary_payment',cancelled_at:{$exists:false},is_cancelled:{$ne:true}},
       {$set:{cancelled_at:now,cancelled_by:userId,cancelled_by_name:username,cancellation_note:String((req.body||{}).reason||'').trim(),updated_at:now}}
     );
     if (!result.matchedCount) {
-      const existing=await col.findOne({_id:new ObjectId(req.params.id),license});
+      const existing=await col.findOne({_id:new ObjectId(req.params.id),license,...(await branchScope(req))});
       if (!existing) return res.status(404).json({status:false,message:'Salary payment not found.'});
       if (existing.type!=='salary_payment') return res.status(400).json({status:false,message:'Only salary payments can be cancelled here.'});
       return res.status(409).json({status:false,message:'This salary payment is already cancelled.'});
