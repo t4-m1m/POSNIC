@@ -2010,7 +2010,7 @@ class SalesController extends BaseController {
         { $addFields: {
           reportRefundDate: { $convert: { input: { $ifNull: ['$return_refund_transactions.created_at', '$return_refund_transactions.return_date'] }, to: 'date', onError: null, onNull: null } },
           reportRefundAmount: { $convert: { input: '$return_refund_transactions.amount', to: 'double', onError: 0, onNull: 0 } },
-          reportRefundMethod: { $toLower: { $ifNull: ['$return_refund_transactions.refund_method', 'cash'] } },
+          reportRefundMethod: { $toLower: { $ifNull: ['$return_refund_transactions.refund_method', ''] } },
         } },
         { $match: { $expr: { $and: [
           { $gte: ['$reportRefundDate', new Date(filteredDateRange.start_date)] },
@@ -2018,7 +2018,7 @@ class SalesController extends BaseController {
         ] } } },
         { $group: { _id: '$reportRefundMethod', amount: { $sum: '$reportRefundAmount' } } },
       ]).toArray();
-      const refundLabels = { cash: 'Cash', tpe: 'TPE', baridimob: 'BaridiMob', card: 'Card' };
+      const refundLabels = { cash: 'Cash', tpe: 'TPE', baridimob: 'BaridiMob', card: 'Card', '': 'Remboursement non classé' };
       refundRows.forEach((row) => {
         const amount = roundToTwo(row.amount || 0);
         if (amount > 0) {
@@ -2151,14 +2151,48 @@ class SalesController extends BaseController {
       ]).toArray();
       const expensesTotal = roundToTwo(expenseRows.length ? expenseRows[0].total || 0 : 0);
       const expensesCount = expenseRows.length ? Number(expenseRows[0].count) || 0 : 0;
+      const expenseTenderDocs = await db.collection('expenses').find({
+        license: { $in: licenseValues }, branch_id: { $in: branchValues }, is_deleted: { $ne: true },
+      }).project({ amount: 1, type: 1, date: 1, created_date: 1, updated_date: 1, payment_source: 1, payment_mode: 1, payment_method: 1, method: 1 }).toArray();
+      const expenseDocsInDay = expenseTenderDocs.filter(row => {
+        const date = new Date(row.date || row.created_date || row.updated_date);
+        const type = String(row.type || 'debit').toLowerCase();
+        return Number.isFinite(date.getTime()) && date >= reportStart && date < reportEnd &&
+          !['credit','income','money in'].includes(type) && row.payment_source !== 'personal';
+      });
+      const expenseTenderUnknown = expenseDocsInDay.some(row =>
+        !String(row.payment_mode || row.payment_method || row.method || '').trim() && Number(row.amount || 0) > 0
+      );
+      const cashExpenses = roundToTwo(expenseDocsInDay.reduce((sum, row) => {
+        const method = row.payment_mode || row.payment_method || row.method || '';
+        return sum + (accountingEngine.isCashTender(method) ? Number(row.amount || 0) : 0);
+      }, 0));
+      const expenseDataComplete = expenseTenderDocs.every(row => {
+        const type = String(row.type || 'debit').toLowerCase();
+        if (['credit','income','money in'].includes(type) || row.payment_source === 'personal') return true;
+        const date = new Date(row.date || row.created_date || row.updated_date);
+        return Number.isFinite(date.getTime()) && Number.isFinite(Number(row.amount));
+      });
 
-      // RH salary payments live in their own ledger, not in expenses. Pull
-      // actual salary_payment transactions for this day so the ticket can
-      // disclose them by employee without silently counting advances twice.
+      const branchCount = await db.collection('branches').countDocuments({ license: { $in: licenseValues } });
+      const hrBranchScope = branchCount > 1 ? { branch_id: { $in: branchValues } } : {};
+      const legacyHrRows = branchCount > 1
+        ? await db.collection('hr_transactions').find({
+            license: { $in: licenseValues }, branch_id: { $exists: false },
+            cancelled_at: { $exists: false }, is_cancelled: { $ne: true },
+          }).project({ date: 1, amount: 1 }).toArray()
+        : [];
+      const unassignedHrInDay = legacyHrRows.filter(row => {
+        const date = row.date ? new Date(row.date) : null;
+        return date && Number.isFinite(date.getTime()) && date >= reportStart && date < reportEnd && Number(row.amount || 0) > 0;
+      });
+      const payrollBranchComplete = branchCount <= 1 || unassignedHrInDay.length === 0;
+
+      // HR salary payments are scoped to the selected branch on multi-branch licenses.
       const salaryPaymentRows = await db.collection('hr_transactions').aggregate([
         {
           $match: {
-            license: BaseModel.license || req.user.license || req.user.license_id,
+            license: { $in: licenseValues }, ...hrBranchScope,
             type: 'salary_payment',
             cancelled_at: { $exists: false },
             is_cancelled: { $ne: true },
@@ -2186,7 +2220,7 @@ class SalesController extends BaseController {
         },
         {
           $group: {
-            _id: { worker_name: '$worker_name', method: '$method', notes: { $ifNull: ['$notes', ''] } },
+            _id: { worker_name: '$worker_name', method: { $ifNull: ['$method', ''] }, notes: { $ifNull: ['$notes', ''] } },
             amount: { $sum: '$reportSalaryAmount' },
             count: { $sum: 1 },
           },
@@ -2195,7 +2229,7 @@ class SalesController extends BaseController {
       ]).toArray();
       const salaryPaymentDetails = salaryPaymentRows.map((row) => ({
         worker_name: String(row._id?.worker_name || 'Employé'),
-        method: String(row._id?.method || 'cash'),
+        method: String(row._id?.method || ''),
         notes: String(row._id?.notes || ''),
         amount: roundToTwo(row.amount || 0),
         count: Number(row.count) || 0,
@@ -2204,7 +2238,7 @@ class SalesController extends BaseController {
         salaryPaymentDetails.reduce((sum, row) => sum + row.amount, 0)
       );
       const salaryAdvanceRows = await db.collection('hr_transactions').aggregate([
-        { $match: { license: BaseModel.license || req.user.license || req.user.license_id, type: 'advance', cancelled_at: { $exists: false }, is_cancelled: { $ne: true } } },
+        { $match: { license: { $in: licenseValues }, ...hrBranchScope, type: 'advance', cancelled_at: { $exists: false }, is_cancelled: { $ne: true } } },
         { $addFields: {
           reportAdvanceDate: { $convert: { input: '$date', to: 'date', onError: null, onNull: null } },
           reportAdvanceAmount: { $convert: { input: '$amount', to: 'double', onError: 0, onNull: 0 } },
@@ -2214,14 +2248,14 @@ class SalesController extends BaseController {
           { $lt: ['$reportAdvanceDate', reportEnd] },
         ] } } },
         { $group: {
-          _id: { worker_name: '$worker_name', method: { $ifNull: ['$method', 'cash'] }, notes: { $ifNull: ['$notes', ''] } },
+          _id: { worker_name: '$worker_name', method: { $ifNull: ['$method', ''] }, notes: { $ifNull: ['$notes', ''] } },
           amount: { $sum: '$reportAdvanceAmount' }, count: { $sum: 1 },
         } },
         { $sort: { '_id.worker_name': 1 } },
       ]).toArray();
       const salaryAdvanceDetails = salaryAdvanceRows.map((row) => ({
         worker_name: String(row._id?.worker_name || 'Employé'),
-        method: String(row._id?.method || 'cash'),
+        method: String(row._id?.method || ''),
         notes: String(row._id?.notes || ''),
         amount: roundToTwo(row.amount || 0),
         count: Number(row.count) || 0,
@@ -2230,7 +2264,7 @@ class SalesController extends BaseController {
 
       const salaryPrimeRows = await db.collection('hr_transactions').aggregate([
         { $match: {
-          license: BaseModel.license || req.user.license || req.user.license_id,
+          license: { $in: licenseValues }, ...hrBranchScope,
           type: { $in: ['prime_weekly', 'prime_monthly'] },
           cancelled_at: { $exists: false },
           is_cancelled: { $ne: true },
@@ -2244,7 +2278,7 @@ class SalesController extends BaseController {
           { $lt: ['$reportPrimeDate', reportEnd] },
         ] } } },
         { $group: {
-          _id: { worker_name: '$worker_name', type: '$type', method: { $ifNull: ['$method', 'cash'] }, notes: { $ifNull: ['$notes', ''] } },
+          _id: { worker_name: '$worker_name', type: '$type', method: { $ifNull: ['$method', ''] }, notes: { $ifNull: ['$notes', ''] } },
           amount: { $sum: '$reportPrimeAmount' }, count: { $sum: 1 },
         } },
         { $sort: { '_id.worker_name': 1, '_id.type': 1 } },
@@ -2252,20 +2286,26 @@ class SalesController extends BaseController {
       const salaryPrimeDetails = salaryPrimeRows.map((row) => ({
         worker_name: String(row._id?.worker_name || 'Employé'),
         type: String(row._id?.type || 'prime_weekly'),
-        method: String(row._id?.method || 'cash'),
+        method: String(row._id?.method || ''),
         notes: String(row._id?.notes || ''),
         amount: roundToTwo(row.amount || 0),
         count: Number(row.count) || 0,
       }));
       const salaryPrimesTotal = roundToTwo(salaryPrimeDetails.reduce((sum, row) => sum + row.amount, 0));
+      const payrollCashClassificationComplete = [
+        ...salaryPaymentDetails, ...salaryAdvanceDetails, ...salaryPrimeDetails,
+      ].every(row => String(row.method || '').trim() !== '');
+      const payrollComplete = payrollBranchComplete;
       const dailyAccounting = accountingEngine.calculateDailyClose({
         salesTotal: salesNetTotal,
         costOfGoodsTotal,
         costDataComplete,
         expensesTotal,
+        expensesComplete: expenseDataComplete,
         salaryPaymentsTotal,
         salaryAdvancesTotal,
         salaryPrimesTotal,
+        payrollComplete,
         cashDataComplete: false,
       });
       grossProfitTotal = dailyAccounting.grossProfitTotal;
@@ -2284,6 +2324,34 @@ class SalesController extends BaseController {
         { $group: { _id: null, amount: { $sum: '$amount' } } },
       ]).toArray();
       const deliveryPayoutCash = roundToTwo(deliveryPayoutRows.length ? deliveryPayoutRows[0].amount || 0 : 0);
+      const refundCashUnknown = refundRows.some(row => !String(row._id || '').trim() && Number(row.amount || 0) > 0);
+      const cashRefunds = roundToTwo(refundRows.reduce((sum, row) => sum + (accountingEngine.isCashTender(row._id) ? Number(row.amount || 0) : 0), 0));
+      const debtCashCollections = roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.payment_mode) ? Number(row.amount || 0) : 0), 0));
+      const cashSales = roundToTwo(paymentDetails.filter(row => !row.is_refund).reduce((sum, row) => {
+        const method = String(row.payment_mode || '').trim();
+        if (/^(?:livraison[_\\s-]?zr|zr[_\\s-]?express)$/i.test(method)) return sum;
+        return sum + (accountingEngine.isCashTender(method) ? Number(row.sale_payment || 0) : 0);
+      }, 0));
+      const salaryCash = roundToTwo(salaryPaymentDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.method) ? Number(row.amount || 0) : 0), 0));
+      const advanceCash = roundToTwo(salaryAdvanceDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.method) ? Number(row.amount || 0) : 0), 0));
+      const primeCash = roundToTwo(salaryPrimeDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.method) ? Number(row.amount || 0) : 0), 0));
+      const cashRegisterSessions = await db.collection('cashregister').find({
+        license: { $in: licenseValues }, branch_id: { $in: branchValues },
+      }).project({ register_opendate: 1, register_closedate: 1, opening_float: 1, cashInOutDetail: 1 }).toArray();
+      const registerCash = accountingEngine.summarizeCashRegisterSessions(cashRegisterSessions, reportStart, reportEnd);
+      const cashDataComplete = registerCash.complete && expenseDataComplete && !expenseTenderUnknown && !refundCashUnknown &&
+        payrollBranchComplete && payrollCashClassificationComplete;
+      const cashAccounting = accountingEngine.calculateDailyClose({
+        salesTotal: salesNetTotal, costOfGoodsTotal, costDataComplete, expensesTotal,
+        salaryPaymentsTotal, salaryAdvancesTotal, salaryPrimesTotal, cashDataComplete,
+        cash: {
+          openingBalance: registerCash.openingBalance, cashSales,
+          cashVersements: versementCashTotal, cashCreditCollections: debtCashCollections,
+          deliveryPayouts: deliveryPayoutCash, cashExpenses, cashSalaries: salaryCash,
+          cashAdvances: advanceCash, cashBonuses: primeCash, cashRefunds,
+          otherCashOutflows: registerCash.otherCashOutflows,
+        },
+      });
 
       // ---- Build response data ----
       const responseData = {
@@ -2296,6 +2364,15 @@ class SalesController extends BaseController {
         versement_payment_total: versementPaymentTotal,
         delivery_payout_cash_total: deliveryPayoutCash,
         versement_settlement_cash_total: versementCashTotal,
+        cash_expected: cashAccounting.cashExpected,
+        cash_data_complete: cashAccounting.cashDataComplete,
+        cash_data_warnings: [
+          ...(!registerCash.complete ? ['Opening cash float or cash-register history is missing.'] : []),
+          ...(expenseTenderUnknown ? ['One or more expenses have no reliable payment method.'] : []),
+          ...(refundCashUnknown ? ['One or more refunds have no reliable payment method.'] : []),
+          ...(!payrollBranchComplete ? ['Legacy employee payments are not assigned to a branch.'] : []),
+          ...(!payrollCashClassificationComplete ? ['One or more employee payments have no reliable tender method.'] : []),
+        ],
         sales_count: salesCount,
         sales_total: salesNetTotal,
         net_sales: salesNetTotal,
@@ -2343,32 +2420,11 @@ class SalesController extends BaseController {
       responseData.cancellation_summary = cancellationSummary;
 
       if (req.cashierDayClose) {
-        const salesCash = paymentDetails.reduce((sum, row) => {
-          const method = String(row.payment_mode || '').trim();
-          if (/^(?:livraison[_\s-]?zr|zr[_\s-]?express)$/i.test(method)) return sum;
-          return sum + (isCashTender(method) ? Number(row.sale_payment || 0) : 0);
-        }, 0);
-        // Debt collections and versement payments remain disclosed separately,
-        // but are intentionally excluded from "Espèces nettes du jour".
-        const salaryCash = salaryPaymentDetails.reduce((sum, row) => sum + (isCashTender(row.method) ? Number(row.amount || 0) : 0), 0);
-        const advanceCash = salaryAdvanceDetails.reduce((sum, row) => sum + (isCashTender(row.method) ? Number(row.amount || 0) : 0), 0);
-        const primeCash = salaryPrimeDetails.reduce((sum, row) => sum + (isCashTender(row.method) ? Number(row.amount || 0) : 0), 0);
-        const cashExpected = accountingEngine.calculateDailyClose({
-          salesTotal: salesNetTotal,
-          costOfGoodsTotal,
-          costDataComplete,
-          expensesTotal,
-          salaryPaymentsTotal,
-          salaryAdvancesTotal,
-          salaryPrimesTotal,
-          cashDataComplete: false,
-          cash: {},
-        }).cashExpected;
         return this.success(res, {
           date: branchDetails.from_date,
-          cash_expected: cashExpected,
-          cash_data_complete: false,
-          cash_data_warning: 'Opening cash and all cash movements have not yet been reconciled.',
+          cash_expected: cashAccounting.cashExpected,
+          cash_data_complete: cashAccounting.cashDataComplete,
+          cash_data_warnings: responseData.cash_data_warnings,
           currency: 'DA',
         }, 'Cash expected loaded', 200);
       }

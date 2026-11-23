@@ -10,6 +10,36 @@ const isCashTender = (method) => /^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String
  * Inputs are already scoped and date-classified by the caller. Unknown
  * financial inputs remain unavailable; they are never silently coerced to zero.
  */
+function summarizeCashRegisterSessions(sessions = [], start, end) {
+  const startTime = new Date(start).getTime(), endTime = new Date(end).getTime();
+  if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) throw new Error('Valid cash-register date boundaries are required.');
+  let openingBalance = 0, otherCashOutflows = 0, complete = sessions.length > 0, unresolved = 0, matched = 0;
+  const canonicalSources = new Set(['sale','sales','expense','salary_payment','advance','prime','credit_settlement','versement','refund','zr_delivery_payout']);
+  for (const session of sessions) {
+    const opened = session.register_opendate ? new Date(session.register_opendate).getTime() : NaN;
+    const closed = session.register_closedate ? new Date(session.register_closedate).getTime() : Infinity;
+    if (!Number.isFinite(opened)) { complete = false; unresolved += 1; continue; }
+    if (opened >= endTime || closed < startTime) continue;
+    matched += 1;
+    if (!finite(session.opening_float)) { complete = false; unresolved += 1; }
+    else openingBalance += Number(session.opening_float);
+    for (const entry of Array.isArray(session.cashInOutDetail) ? session.cashInOutDetail : []) {
+      const time = entry.date || entry.created_at ? new Date(entry.date || entry.created_at).getTime() : NaN;
+      const cashIn = Number(entry.cashin_amount ?? entry.cash_in ?? 0) || 0;
+      const cashOut = Number(entry.cashout_amount ?? entry.cash_out ?? 0) || 0;
+      if (!Number.isFinite(time)) { if (cashIn || cashOut) { complete = false; unresolved += 1; } continue; }
+      if (time < opened) continue;
+      if (time < startTime) openingBalance += cashIn - cashOut;
+      else if (time < endTime) {
+        const source = String(entry.source || entry.origin || entry.category || '').trim().toLowerCase().replace(/[\\s-]+/g, '_');
+        if (!canonicalSources.has(source)) otherCashOutflows += cashOut - cashIn;
+      }
+    }
+  }
+  if (!matched) complete = false;
+  return { openingBalance: round2(openingBalance), otherCashOutflows: round2(otherCashOutflows), complete, unresolved };
+}
+
 function calculateDailyClose(input = {}) {
   const salesTotal = asAmount(input.salesTotal);
   const cost = asAmount(input.costOfGoodsTotal);
@@ -199,4 +229,4 @@ function reconstructOutstandingAsOf({
   return { amount: round2(total), complete, unresolved };
 }
 
-module.exports = { round2, isCashTender, calculateDailyClose, reconstructOutstandingAsOf };
+module.exports = { round2, isCashTender, summarizeCashRegisterSessions, calculateDailyClose, reconstructOutstandingAsOf };
