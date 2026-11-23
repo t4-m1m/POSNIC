@@ -45,6 +45,18 @@ const buildDailyPaymentAggregationPipeline = (match) => {
   const pending = asNumber({ $ifNull: ['$payment_pending', 0] });
   return [
     { $match: match },
+    { $addFields: {
+      sales_total: { $ifNull: ['$sale_original_snapshot.sales_total', '$sales_total'] },
+      total: { $ifNull: ['$sale_original_snapshot.total', '$total'] },
+      multi_payment: { $ifNull: ['$sale_original_snapshot.multi_payment', '$multi_payment'] },
+      payment_mode: { $ifNull: ['$sale_original_snapshot.payment_mode', '$payment_mode'] },
+      payment_status: { $ifNull: ['$sale_original_snapshot.payment_status', '$payment_status'] },
+      payment_pending: { $ifNull: ['$sale_original_snapshot.payment_pending', '$payment_pending'] },
+      partial_check: { $ifNull: ['$sale_original_snapshot.partial_check', '$partial_check'] },
+      partial_balance: { $ifNull: ['$sale_original_snapshot.partial_balance', '$partial_balance'] },
+      paid_amount: { $ifNull: ['$sale_original_snapshot.paid_amount', '$paid_amount'] },
+      items_total: { $ifNull: ['$sale_original_snapshot.items_total', '$items_total'] },
+    } },
     { $project: {
       sales_total: salesTotal,
       items_total: asNumber({ $ifNull: ['$items_total', 0] }),
@@ -2718,6 +2730,7 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
 
   const productPipeline = [
     { $match: match },
+    { $addFields: { items: { $ifNull: ['$sale_original_snapshot.items', '$items'] } } },
     { $unwind: '$items' },
     // Older sale snapshots do not always contain company_price. Resolve the
     // original inventory item as a fallback, but prefer the immutable cost
@@ -2845,6 +2858,7 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
 
   const taxPipeline = [
     { $match: match },
+    { $addFields: { items: { $ifNull: ['$sale_original_snapshot.items', '$items'] } } },
     { $unwind: '$items' },
     {
       $addFields: {
@@ -2899,18 +2913,40 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
     { $sort: { cancel_amount: -1 } },
   ];
 
-  const [productAgg, paymentAgg, salesPayments, taxAgg, cancellationAgg] = await Promise.all([
+  const [productAgg, paymentAgg, salesPaymentsRaw, taxAgg, cancellationAgg] = await Promise.all([
     salesRepository.aggregate(productPipeline, { SaleModel: Model }),
     salesRepository.aggregate(paymentPipeline, { SaleModel: Model }),
     salesRepository.find(
       match,
-      'dine_type table_id table_number person_count extra_discount sale_extra_discount extra_discount_type items total sales_total payment_pending',
+      'dine_type table_id table_number person_count extra_discount sale_extra_discount extra_discount_type items total sales_total payment_pending sale_original_snapshot multi_payment payment_mode payment_status partial_check partial_balance items_total discount tax',
       { SaleModel: Model }
     ),
     salesRepository.aggregate(taxPipeline, { SaleModel: Model }),
     salesRepository.aggregate(cancellationPipeline, { SaleModel: Model }),
   ]);
 
+  const salesPayments = salesPaymentsRaw.map((saleDoc) => {
+    const snapshot = saleDoc?.sale_original_snapshot;
+    if (!snapshot || typeof snapshot !== 'object') return saleDoc;
+    const plain = typeof saleDoc.toObject === 'function' ? saleDoc.toObject() : { ...saleDoc };
+    return {
+      ...plain,
+      sales_total: snapshot.sales_total ?? plain.sales_total,
+      total: snapshot.total ?? plain.total,
+      items: Array.isArray(snapshot.items) ? snapshot.items : plain.items,
+      multi_payment: snapshot.multi_payment ?? plain.multi_payment,
+      payment_mode: snapshot.payment_mode ?? plain.payment_mode,
+      payment_status: snapshot.payment_status ?? plain.payment_status,
+      payment_pending: snapshot.payment_pending ?? plain.payment_pending,
+      partial_check: snapshot.partial_check ?? plain.partial_check,
+      partial_balance: snapshot.partial_balance ?? plain.partial_balance,
+      items_total: snapshot.items_total ?? plain.items_total,
+      extra_discount: snapshot.extra_discount ?? plain.extra_discount,
+      sale_extra_discount: snapshot.sale_extra_discount ?? plain.sale_extra_discount,
+      discount: snapshot.discount ?? plain.discount,
+      tax: snapshot.tax ?? plain.tax,
+    };
+  });
   return { productAgg, paymentAgg, salesPayments, taxAgg, cancellationAgg };
 };
 

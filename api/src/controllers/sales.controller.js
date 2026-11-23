@@ -1735,6 +1735,8 @@ class SalesController extends BaseController {
           { match, cancellationMatch },
           { SaleModel }
         );
+      const editAdjustmentRows = await (await BaseModel.getDb()).collection('sale_edit_adjustments').find({ branch_id: branchObjectId, ...(BaseModel.license ? { license: BaseModel.license } : {}), created_at: { $gte: new Date(filteredDateRange.start_date), $lt: new Date(filteredDateRange.end_date) } }).toArray();
+      const editAdjustmentTotal = roundToTwo(editAdjustmentRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0));
 
       const productDetails = productAgg.map((item) => {
         const subtotal = item.subtotal ?? 0;
@@ -1925,7 +1927,8 @@ class SalesController extends BaseController {
       // discounts. Use that final payable amount as the source of truth; subtracting
       // the separately reported discount fields again would double-discount the Z report.
       const itemDiscountTotal = roundToTwo(productDetails.reduce((sum, item) => sum + Number(item.product_discount || 0), 0));
-      const salesNetTotal = roundToTwo(salesPayments.reduce((sum, saleDoc) => sum + (Number(saleDoc.sales_total ?? saleDoc.total) || 0), 0));
+      const salesNetTotal = roundToTwo(salesPayments.reduce((sum, saleDoc) => sum + (Number(saleDoc.sales_total ?? saleDoc.total) || 0), 0) + editAdjustmentTotal);
+      if (Math.abs(editAdjustmentTotal) >= 0.01) paymentDetails.push({ payment_mode: 'Crédit · modification', sale_payment: editAdjustmentTotal, credit_adjustment: editAdjustmentTotal });
       const discountTotal = roundToTwo(itemDiscountTotal + totalSaleExtraDiscount);
       grossProfitTotal = roundToTwo(salesNetTotal - costOfGoodsTotal);
 
@@ -2014,10 +2017,10 @@ class SalesController extends BaseController {
 
       // Debt created by bills in this report period. This is receivable,
       // not money collected, so it is separate from payment_details.
-      const outstandingAmount = salesPayments.reduce(
+      const outstandingAmount = Math.max(0, salesPayments.reduce(
         (sum, saleDoc) => sum + Math.max(0, Number(saleDoc.payment_pending) || 0),
         0
-      );
+      ) + editAdjustmentTotal);
 
       // The cash book stores money-in as type=credit and money-out as
       // type=debit. Only money-out is an operating expense. Normalize legacy
@@ -2205,6 +2208,7 @@ class SalesController extends BaseController {
         sales_count: salesCount,
         sales_total: salesNetTotal,
         net_sales: salesNetTotal,
+        sale_edit_adjustment_total: editAdjustmentTotal,
         discount_total: discountTotal,
         cost_of_goods_total: costOfGoodsTotal,
         gross_profit_total: grossProfitTotal,

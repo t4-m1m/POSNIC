@@ -5056,8 +5056,23 @@ class SalesRepository {
 
       const licenseId = saleDocument.license || BaseModel.license || null;
 
-      const items = Array.isArray(payload.items) ? payload.items : [];
+      const submittedItems = Array.isArray(payload.items) ? payload.items : [];
       const returnItems = Array.isArray(payload.items_return) ? payload.items_return : [];
+      const originalSaleItems = Array.isArray(saleDocument.items) ? saleDocument.items : [];
+      const returnQtyRemaining = new Map();
+      for (const returned of returnItems) addQtyToMap(returnQtyRemaining, normalizeReturnItemKey(returned), returned.item_quantity);
+      const items = originalSaleItems.map((line) => {
+        if (!line || typeof line !== 'object') return null;
+        const itemId = normalizeReturnItemKey(line);
+        const soldQty = roundQty(line.item_quantity ?? line.quantity ?? 0);
+        const returnQty = Math.min(soldQty, roundQty(returnQtyRemaining.get(itemId) || 0));
+        returnQtyRemaining.set(itemId, roundQty((returnQtyRemaining.get(itemId) || 0) - returnQty));
+        const remainingQty = roundQty(soldQty - returnQty);
+        if (!itemId || remainingQty <= 0) return null;
+        const unitPrice = toNumberSafe(line.item_price ?? line.unit_price ?? line.sale_inline_item_price ?? line.selling_price, 0);
+        const originalLineTotal = toNumberSafe(line.total_amount ?? line.total ?? line.item_price_total, soldQty * unitPrice);
+        return { ...line, item_id: itemId, item_name: line.item_name || line.name || 'Article', item_quantity: remainingQty, item_price: unitPrice, total_amount: round(originalLineTotal * (remainingQty / Math.max(soldQty, 0.001)), 2), item_available_quantity: toNumberSafe(line.item_available_quantity ?? line.available_quantity, 0), item_unit: line.item_unit || 'qty' };
+      }).filter(Boolean);
       const now = new Date();
 
       if (!returnItems.length) {
@@ -5197,7 +5212,7 @@ class SalesRepository {
 
       const salesDescriptionFromPayload =
         firstNonEmptyFromArray(returnItems, 'sales_description') ||
-        firstNonEmptyFromArray(items, 'sales_description') ||
+        firstNonEmptyFromArray(submittedItems, 'sales_description') ||
         (typeof payload.sales_description === 'string' ? payload.sales_description : null);
 
       const paymentDescriptionFromPayload =
@@ -5209,8 +5224,6 @@ class SalesRepository {
         firstNonEmptyFromArray(returnItems, 'discount_description') ||
         firstNonEmptyFromArray(items, 'discount_description') ||
         (typeof payload.discount_description === 'string' ? payload.discount_description : null);
-
-      const originalSaleItems = Array.isArray(saleDocument.items) ? saleDocument.items : [];
 
       const itemsSale = [];
 
