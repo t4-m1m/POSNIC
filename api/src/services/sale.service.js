@@ -2981,8 +2981,8 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
   ]);
 
   const salesPayments = salesPaymentsRaw.map((saleDoc) => {
-    const snapshot = saleDoc?.sale_original_snapshot;
-    if (!snapshot || typeof snapshot !== 'object') return saleDoc;
+    const snapshot = saleDoc?.sale_original_snapshot && typeof saleDoc.sale_original_snapshot === 'object' ? saleDoc.sale_original_snapshot : {};
+    if (!Object.keys(snapshot).length && saleDoc?.sale_original_total == null) return saleDoc;
     const plain = typeof saleDoc.toObject === 'function' ? saleDoc.toObject() : { ...saleDoc };
     return {
       ...plain,
@@ -2995,7 +2995,7 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
       payment_pending: snapshot.payment_pending ?? plain.payment_pending,
       partial_check: snapshot.partial_check ?? plain.partial_check,
       partial_balance: snapshot.partial_balance ?? plain.partial_balance,
-      items_total: snapshot.items_total ?? plain.items_total,
+      items_total: snapshot.items_total ?? plain.sale_original_total ?? plain.items_total,
       extra_discount: snapshot.extra_discount ?? plain.extra_discount,
       sale_extra_discount: snapshot.sale_extra_discount ?? plain.sale_extra_discount,
       discount: snapshot.discount ?? plain.discount,
