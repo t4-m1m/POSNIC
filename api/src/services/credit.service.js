@@ -273,7 +273,9 @@ class CreditService {
         throw new Error('Original POS sale ' + String(row.sale_id) + ' was not found in this branch. No payment was collected.');
       }
       const originalCustomerId = originalSale.customer_id && typeof originalSale.customer_id === 'object'
-        ? String(originalSale.customer_id._id || originalSale.customer_id.id || originalSale.customer_id)
+        ? (typeof originalSale.customer_id.toHexString === 'function'
+          ? originalSale.customer_id.toHexString()
+          : String(originalSale.customer_id._id || originalSale.customer_id.id || originalSale.customer_id.customer_id || originalSale.customer_id))
         : String(originalSale.customer_id || '');
       if (originalCustomerId && originalCustomerId !== String(customerId)) {
         throw new Error('The original POS sale belongs to a different customer. No payment was collected.');
