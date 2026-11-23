@@ -23,7 +23,8 @@ function summarizeCashRegisterSessions(sessions = [], start, end) {
     matched += 1;
     if (!finite(session.opening_float)) { complete = false; unresolved += 1; }
     else openingBalance += Number(session.opening_float);
-    for (const entry of Array.isArray(session.cashInOutDetail) ? session.cashInOutDetail : []) {
+    if (!Array.isArray(session.cashInOutDetail)) { complete = false; unresolved += 1; continue; }
+    for (const entry of session.cashInOutDetail) {
       const time = entry.date || entry.created_at ? new Date(entry.date || entry.created_at).getTime() : NaN;
       const cashIn = Number(entry.cashin_amount ?? entry.cash_in ?? 0) || 0;
       const cashOut = Number(entry.cashout_amount ?? entry.cash_out ?? 0) || 0;
@@ -208,6 +209,7 @@ function reconstructOutstandingAsOf({
 
   for (const sale of orphanVersements) {
     const saleKey = String(sale.sales_id || sale.sale_id || sale._id || '');
+    complete = false; unresolved += 1;
     const saleDate = sale.date || sale.created_date;
     if (!saleDate || !Number.isFinite(new Date(saleDate).getTime())) {
       complete = false; unresolved += 1; continue;

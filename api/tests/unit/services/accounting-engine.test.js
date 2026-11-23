@@ -62,6 +62,29 @@ describe('accounting engine daily close', () => {
     expect(result.cashExpected).toBe(820);
   });
 
+  test('uses cash register opening float plus pre-day cash movements and only manual same-day movements', () => {
+    const result = require('../../../src/services/accounting-engine').summarizeCashRegisterSessions([
+      {
+        register_opendate: '2026-11-20T08:00:00Z',
+        register_closedate: '2026-11-25T20:00:00Z',
+        opening_float: 100,
+        cashInOutDetail: [
+          { date: '2026-11-22T18:00:00Z', cashin_amount: 20, cashout_amount: 5, source: 'manual' },
+          { date: '2026-11-23T10:00:00Z', cashin_amount: 10, cashout_amount: 15, source: 'manual' },
+          { date: '2026-11-23T11:00:00Z', cashin_amount: 50, cashout_amount: 0, source: 'credit_settlement' },
+        ],
+      },
+    ], '2026-11-23T00:00:00Z', '2026-11-24T00:00:00Z');
+    expect(result.openingBalance).toBe(115);
+    expect(result.otherCashOutflows).toBe(5);
+    expect(result.complete).toBe(true);
+  });
+
+  test('marks the drawer unavailable when no matching register session exists', () => {
+    const result = require('../../../src/services/accounting-engine').summarizeCashRegisterSessions([], end, new Date('2026-11-24T00:00:00Z'));
+    expect(result.complete).toBe(false);
+  });
+
   test('keeps cash unavailable when the opening float or tender classification is unknown', () => {
     const result = calculateDailyClose({
       salesTotal: 10, costOfGoodsTotal: 5, costDataComplete: true,
@@ -96,6 +119,16 @@ describe('accounting engine historical receivables', () => {
       creditPayments: [{ amount: 30, received_at: '2026-11-24T10:00:00Z', allocations: [{ transaction_id: 't1', sale_id: 'S-1', amount: 30 }] }],
     });
     expect(result.amount).toBe(60);
+  });
+
+  test('does not add collections allocated to a debt created after the selected day', () => {
+    const result = reconstructOutstandingAsOf({
+      end,
+      transactions: [{ _id: 't-new', sale_id: 'S-new', created_date: '2026-11-24T10:00:00Z', pending: 0 }],
+      creditPayments: [{ amount: 25, received_at: '2026-11-25T10:00:00Z', allocations: [{ transaction_id: 't-new', sale_id: 'S-new', amount: 25 }] }],
+    });
+    expect(result.amount).toBe(0);
+    expect(result.complete).toBe(true);
   });
 
   test('reverses later edits and returns when reconstructing an earlier balance', () => {
