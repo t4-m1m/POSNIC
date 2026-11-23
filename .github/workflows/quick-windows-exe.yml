@@ -1,7 +1,7 @@
-name: Quick Windows Installer EXE (no tests)
+name: Quick Windows Installer EXE (accounting tests)
 # Priority rebuild requested 2026-10-27; branch concurrency cancels the older installer run.
 # Priority rebuild retry requested 2026-10-27 19:14 local.
-# Build the current feature-branch snapshot as the Windows installer only; deliberately no test steps.
+# Build the current feature-branch snapshot as the Windows installer only; run focused accounting-engine unit tests.
 # Build the installer on each push to the active feature branch; manual dispatch remains available.
 # 2026-11-16: user-requested rebuild of the current feature-branch snapshot (packaging trigger only; no application code changes).
 # 2026-11-22: build the atomic SamarinaPOS V2 catalogue, permissions and checkout fixes.
@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   build-windows:
-    name: Build Windows installer only without running tests
+    name: Build Windows installer after focused accounting tests
     runs-on: windows-latest
     env:
       POSNIC_MINIFY: "0"
@@ -107,6 +107,10 @@ jobs:
       - name: Install API dependencies
         working-directory: api
         run: npm install --prefer-offline --no-audit --no-fund
+
+      - name: Run focused accounting engine tests
+        working-directory: api
+        run: npx jest -c jest.ci.config.js tests/unit/services/accounting-engine.test.js --runInBand --forceExit
 
       - name: Syntax-check frontend and every API source file
         shell: pwsh
