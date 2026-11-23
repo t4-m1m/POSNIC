@@ -575,14 +575,22 @@ const optionalProtect = async (req, res, next) => {
 
 // The account's type may live on `usertype` (canonical) or the legacy `role`
 // field depending on how the account was made - every role check reads both.
-const effectiveType = (user) => String(user?.usertype || user?.role || '').toLowerCase();
+const effectiveTypes = (user) => {
+  const values = [user?.usertype,user?.role,user?.role_name,user?.user_type,user?.userType,user?.type]
+    .flatMap(value => value && typeof value === 'object' ? [value.name,value.role,value.usertype,value.key,value.type] : [value])
+    .filter(value => value !== undefined && value !== null && value !== '');
+  return [...new Set(values.map(value => String(value).trim().toLowerCase().replace(/[^a-z0-9]/g, '')))];
+};
+const effectiveType = (user) => effectiveTypes(user)[0] || '';
 
 // Restrict to certain roles. super_admin always satisfies an 'admin'
 // requirement - it is the higher rank of the same owner.
 const restrictTo = (...roles) => {
   return (req, res, next) => {
-    const type = effectiveType(req.user);
-    const allowed = roles.includes(type) || (type === 'super_admin' && roles.includes('admin'));
+    const types = effectiveTypes(req.user);
+    const required = roles.map(role => String(role).toLowerCase().replace(/[^a-z0-9]/g, ''));
+    const isAdmin = types.some(type => ['admin','adminuser','administrator','superadmin','superadministrator','owner','platformadmin'].includes(type));
+    const allowed = types.some(type => required.includes(type)) || (required.includes('admin') && isAdmin);
     if (!allowed) {
       return next(new AppError('You do not have permission to perform this action', 403));
     }
@@ -597,7 +605,7 @@ const restrictTo = (...roles) => {
 // Prevent unauthorized access to user data
 const restrictToUser = (req, res, next) => {
   // Allow the tenant's top accounts to access any user's data
-  if (['admin', 'super_admin'].includes(effectiveType(req.user))) return next();
+  if (effectiveTypes(req.user).some(type => ['admin','adminuser','administrator','superadmin','superadministrator','owner','platformadmin'].includes(type))) return next();
 
   // User can only access their own data
   if (req.params.id !== req.user.id) {

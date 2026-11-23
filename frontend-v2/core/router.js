@@ -10,12 +10,22 @@ export const modules = [
   { id: 'parametres', icon: 'sliders', label: 'Paramètres', tabs: ['Boutique & Général', 'Imprimantes & Ticket Studio', 'WhatsApp & Notifications', 'ZR Express API', 'Vendeurs & Utilisateurs', 'Mises à jour'] }
 ];
 export const isAdminRole = user => {
-  const roles = [user?.usertype, user?.role, user?.role_name, user?.roleName]
-    .filter(value => value !== undefined && value !== null)
-    .map(value => String(value).trim().toLowerCase().replace(/[\s-]+/g, '_'));
-  return roles.some(role => ['admin', 'super_admin', 'superadmin', 'owner'].includes(role)) ||
-    user?.is_admin === true || user?.isAdmin === true ||
-    user?.is_super_admin === true || user?.isSuperAdmin === true;
+  const candidates = [user, user?.user, user?.data?.user, user?.data].filter(Boolean);
+  const roles = [];
+  for (const candidate of candidates) {
+    for (const key of ['usertype','role','role_name','roleName','user_type','userType','type','account_type','accountType','access_role']) {
+      const value = candidate?.[key];
+      if (value && typeof value === 'object') {
+        for (const nested of [value.name,value.role,value.usertype,value.key,value.type]) if (nested != null) roles.push(nested);
+      } else if (value != null) roles.push(value);
+    }
+  }
+  const normalized = roles.map(value => String(value).trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+  const adminRoles = new Set(['admin','adminuser','administrator','superadmin','superadministrator','owner','platformadmin']);
+  const truthy = value => value === true || value === 1 || ['true','1','yes'].includes(String(value ?? '').trim().toLowerCase());
+  return normalized.some(role => adminRoles.has(role)) ||
+    candidates.some(candidate => ['is_admin','isAdmin','is_super_admin','isSuperAdmin','admin','super_admin','full_admin_access'].some(key => truthy(candidate?.[key]))) ||
+    candidates.some(candidate => { const access = candidate?.access || {}; return truthy(access.admin) || truthy(access.all) || truthy(access.full_access); });
 };
 export const allowedTabsFor = (user, module) => {
   if (isAdminRole(user)) return module.tabs.map((label, index) => ({ label, index }));
