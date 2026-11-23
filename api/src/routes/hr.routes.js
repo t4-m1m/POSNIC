@@ -296,8 +296,8 @@ router.get('/payroll/:period', async (req,res) => {
     if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(period))return res.status(400).json({status:false,message:'Period must use a valid YYYY-MM month.'});
     const {license}=req.hrContext;
     const [workers,tx]=await Promise.all([
-      (await collection('hr_workers')).find({license,active:{$ne:false},deleted:{$ne:true}}).toArray(),
-      (await collection('hr_transactions')).find({license,period,cancelled_at:{$exists:false},is_cancelled:{$ne:true}}).toArray()
+      (await collection('hr_workers')).find({license,...(await branchScope(req)),active:{$ne:false},deleted:{$ne:true}}).toArray(),
+      (await collection('hr_transactions')).find({license,...(await branchScope(req)),period,cancelled_at:{$exists:false},is_cancelled:{$ne:true}}).toArray()
     ]);
     const rows=workers.map(w=>{
       const entries=tx.filter(t=>String(t.worker_id)===String(w._id) && !t.cancelled_at && t.is_cancelled!==true);
