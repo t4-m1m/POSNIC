@@ -12,7 +12,7 @@ export const modules = [
 export const isAdminRole = user => {
   const roles = [user?.usertype, user?.role, user?.role_name, user?.roleName]
     .filter(value => value !== undefined && value !== null)
-    .map(value => String(value).trim().toLowerCase().replace(/[\\s-]+/g, '_'));
+    .map(value => String(value).trim().toLowerCase().replace(/[\s-]+/g, '_'));
   return roles.some(role => ['admin', 'super_admin', 'superadmin', 'owner'].includes(role)) ||
     user?.is_admin === true || user?.isAdmin === true ||
     user?.is_super_admin === true || user?.isSuperAdmin === true;
