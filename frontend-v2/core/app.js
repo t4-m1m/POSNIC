@@ -18,7 +18,7 @@ const rowsOf=d=>{if(typeof d==='string'){const raw=d.trim();if(!raw)return[];try
 function categoryLabel(item){const v=item?.category_name??item?.category;return String(typeof v==='object'?(v?.name||v?.label||v?._id||v?.id||''):v||'').trim()||'Sans catégorie';}
 function categoryName(item){return categoryLabel(item).toLocaleLowerCase('fr');}
 function extractBrandCode(item){const explicit=item?.brand_abbreviation??item?.brand_code??item?.brandCode;if(explicit)return String(explicit).trim();const name=String(item?.name||item?.item_name||'');const match=name.match(/\s([A-Z0-9]{2,10})-\d{2}-\d{2}\//i);return match?match[1]:'';}
-function realBrandValue(item){const value=item?.brand_name??item?.brandName??item?.brand;const raw=value&&typeof value==='object'?(value.name||value.label||''):value;return String(raw??'').trim();}
+function realBrandValue(item){const value=item?.brand??item?.brand_name??item?.brandName;const raw=value&&typeof value==='object'?(value.name||value.label||''):value;return String(raw??'').trim();}
 function brandLabel(item){const raw=realBrandValue(item);if(!raw)return 'Sans marque';const key=raw.toLocaleLowerCase('fr');const resolved=state.brandNameIndex?.[key];if(resolved)return resolved;const explicitCode=String(item?.brand_abbreviation??item?.brand_code??item?.brandCode??'').trim();return explicitCode&&explicitCode.toLocaleLowerCase('fr')===key?'Sans marque':raw;}
 function brandValues(item){const label=brandLabel(item);return label==='Sans marque'?[]:[label.toLocaleLowerCase('fr')];}
 function itemMatchesBrand(item,brand){const actual=brandLabel(item),target=String(brand?.name||brand||'').trim();return actual!=='Sans marque'&&!!target&&actual.toLocaleLowerCase('fr')===target.toLocaleLowerCase('fr');}
