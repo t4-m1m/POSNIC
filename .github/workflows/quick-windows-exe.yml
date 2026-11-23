@@ -110,7 +110,7 @@ jobs:
 
       - name: Run focused accounting engine tests
         working-directory: api
-        run: npx jest -c jest.ci.config.js tests/unit/services/accounting-engine.test.js --runInBand --forceExit
+        run: npx jest -c jest.ci.config.js tests/unit/services/accounting-engine.test.js tests/unit/controllers/sales.controller.test.js --runInBand --forceExit
 
       - name: Syntax-check frontend and every API source file
         shell: pwsh
