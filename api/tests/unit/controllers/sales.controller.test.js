@@ -1051,7 +1051,12 @@ describe('SalesController', () => {
       const dbSpy = jest.spyOn(BaseModel, 'getDb').mockResolvedValue(db);
       salesService.getDailySalesReportAggregates.mockResolvedValue({
         productAgg: [{ subtotal: 1000, totalAmount: 1000, totalQty: 2, totalCompanyPrice: 400 }],
-        paymentAgg: [], salesPayments: [], taxAgg: [], cancellationAgg: [],
+        paymentAgg: [],
+        // The controller derives gross profit from the actual sale-payment rows,
+        // not productAgg.totalAmount. Keep the sales fixture consistent with the
+        // product aggregate so this test exercises a 1,000 sale less 400 COGS.
+        salesPayments: [{ sales_total: 1000, total: 1000, items: [] }],
+        taxAgg: [], cancellationAgg: [],
       });
       try {
         const res = mockRes();
