@@ -1003,6 +1003,28 @@ describe('SalesController', () => {
       ending_date: '2025-12-31',
     };
 
+    // dailySalesReports now reads the operational ledgers used by the real
+    // closing report. Give tests a complete empty-database adapter by default,
+    // while allowing individual tests to override selected collections.
+    const emptyCursor = () => ({
+      toArray: async () => [],
+      project() { return this; },
+    });
+    const emptyCollection = () => ({
+      aggregate: jest.fn(() => emptyCursor()),
+      find: jest.fn(() => emptyCursor()),
+      countDocuments: jest.fn().mockResolvedValue(1),
+    });
+
+    beforeEach(() => {
+      const db = { collection: jest.fn(() => emptyCollection()) };
+      jest.spyOn(BaseModel, 'getDb').mockResolvedValue(db);
+    });
+
+    afterEach(() => {
+      if (BaseModel.getDb && BaseModel.getDb.mockRestore) BaseModel.getDb.mockRestore();
+    });
+
     test('200 success', async () => {
       const res = mockRes();
       await ctrl.dailySalesReports(mockReq({ query: q }), res);
@@ -1023,7 +1045,7 @@ describe('SalesController', () => {
           { _id: { worker_name: 'Nadia', method: 'bank' }, amount: 2500, count: 1 },
         ] })) },
       };
-      const db = { collection: jest.fn((name) => dbCollections[name]) };
+      const db = { collection: jest.fn((name) => dbCollections[name] || emptyCollection()) };
       const dbSpy = jest.spyOn(BaseModel, 'getDb').mockResolvedValue(db);
       salesService.getDailySalesReportAggregates.mockResolvedValue({
         productAgg: [{ subtotal: 1000, totalAmount: 1000, totalQty: 2, totalCompanyPrice: 400 }],
