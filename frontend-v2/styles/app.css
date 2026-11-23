@@ -735,3 +735,30 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 .shell.view-catalogue>main>.toolbar,.shell.view-achats>main>.toolbar,.shell.view-clients>main>.toolbar,.shell.view-zr-express>main>.toolbar{order:1!important;margin:0 0 2px!important;flex:0 0 auto!important}
 .shell.view-catalogue>main>.table-wrap,.shell.view-achats>main>.table-wrap,.shell.view-clients>main>.table-wrap,.shell.view-zr-express>main>.table-wrap,.shell.view-catalogue>main>.panel,.shell.view-achats>main>.panel,.shell.view-clients>main>.panel,.shell.view-zr-express>main>.panel{order:2!important;align-self:stretch!important;margin:0!important;flex:0 0 auto!important}
 .recent-sales-table-wrap{width:100%;max-width:100%;margin:0!important}.recent-sales-table{width:100%;min-width:780px;border-collapse:collapse;table-layout:auto}.recent-sales-table td{vertical-align:top!important;white-space:normal!important;padding:9px 11px!important}.recent-sales-table td:first-child,.recent-sales-table td:nth-child(2),.recent-sales-table td:nth-child(5),.recent-sales-table td:last-child{white-space:nowrap!important}.recent-sale-items{min-width:180px!important;margin:0!important;font-size:12px!important}.recent-sale-items-heading{font-weight:700;margin-bottom:4px}.recent-sale-item-list{display:flex!important;flex-direction:column!important;flex-wrap:nowrap!important;gap:3px!important;margin:0!important}.recent-sale-item-line{display:flex;align-items:baseline;gap:5px;min-width:0;line-height:1.35}.recent-sale-item-line b{font-weight:650;overflow-wrap:anywhere}.recent-sale-item-line small{white-space:nowrap;color:var(--text-secondary)}.recent-sale-actions{display:flex!important;align-items:center!important;gap:6px!important;white-space:nowrap!important}@media(max-width:760px){.shell.view-catalogue>main,.shell.view-achats>main,.shell.view-clients>main,.shell.view-zr-express>main{padding:12px!important;gap:8px!important}.recent-sales-table{min-width:720px}}
+
+
+/* Final layout guard: operational list content must never be pushed to the bottom. */
+.shell.view-catalogue>main,.shell.view-achats>main,.shell.view-clients>main,.shell.view-zr-express>main{
+ display:flex!important;flex-direction:column!important;justify-content:flex-start!important;align-content:flex-start!important;align-items:stretch!important;
+}
+.shell.view-catalogue>main>*,.shell.view-achats>main>*,.shell.view-clients>main>*,.shell.view-zr-express>main>*{
+ flex:0 0 auto!important;align-self:stretch!important;margin-block-start:0!important;
+}
+.shell.view-catalogue>main .panel,.shell.view-achats>main .panel,.shell.view-clients>main .panel,.shell.view-zr-express>main .panel,
+.shell.view-catalogue>main .table-wrap,.shell.view-achats>main .table-wrap,.shell.view-clients>main .table-wrap,.shell.view-zr-express>main .table-wrap{
+ height:auto!important;min-height:0!important;max-height:none!important;margin-block:0!important;align-self:stretch!important;
+}
+.shell.view-catalogue>main .stats,.shell.view-achats>main .stats,.shell.view-clients>main .stats,.shell.view-zr-express>main .stats,
+.shell.view-catalogue>main .content-grid,.shell.view-achats>main .content-grid,.shell.view-clients>main .content-grid,.shell.view-zr-express>main .content-grid{
+ align-content:start!important;align-items:start!important;justify-content:start!important;margin-block:0!important;
+}
+.recent-sales-list{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:8px!important;width:100%!important;min-width:0!important}
+.recent-sales-list .recent-sale{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;gap:16px!important;width:100%!important;min-width:0!important;box-sizing:border-box!important;padding:12px 14px!important;border:1px solid var(--border-hairline)!important;border-radius:10px!important;background:var(--bg-surface)!important}
+.recent-sales-list .recent-ticket{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;gap:5px!important;min-width:0!important}
+.recent-sales-list .recent-ticket-heading{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:8px 16px!important}
+.recent-sales-list .recent-sale-client{font-size:13px!important;font-weight:600!important}
+.recent-sales-list .recent-sale-summary{display:flex!important;flex:0 0 auto!important;flex-direction:column!important;align-items:flex-end!important;gap:8px!important;white-space:nowrap!important}
+.recent-sales-list .recent-sale-actions{display:flex!important;gap:6px!important}
+.recent-sales-list .recent-sale-item-list{display:flex!important;flex-direction:column!important;gap:3px!important;margin-top:4px!important}
+.recent-sales-list .recent-sale-item-line{display:flex!important;flex-wrap:wrap!important;gap:4px 8px!important;align-items:baseline!important}
+@media(max-width:760px){.recent-sales-list .recent-sale{align-items:flex-start!important;flex-direction:column!important}.recent-sales-list .recent-sale-summary{width:100%!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important}}
