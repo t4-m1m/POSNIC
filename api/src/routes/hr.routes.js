@@ -107,7 +107,7 @@ router.post('/quick-advance', async (req, res) => {
     const { license, username, userId } = req.hrContext, b = req.body || {};
     if (!ObjectId.isValid(String(b.worker_id || ''))) return res.status(400).json({ status: false, message: 'Choisissez un employé valide.' });
     const workerId = new ObjectId(String(b.worker_id));
-    const worker = await (await collection('hr_workers')).findOne({ _id: workerId, license, active: { $ne: false } });
+    const worker = await (await collection('hr_workers')).findOne({ _id: workerId, license, ...(await branchScope(req)), active: { $ne: false } });
     if (!worker) return res.status(404).json({ status: false, message: 'Employé actif introuvable.' });
     const value = amount(b.amount, 'Montant');
     if (value <= 0) return res.status(400).json({ status: false, message: 'Le montant doit être supérieur à zéro.' });
@@ -217,7 +217,7 @@ router.post('/transactions', async (req,res) => {
   try {
     const {license,branchId,username,userId}=req.hrContext,b=req.body||{};
     if(!ObjectId.isValid(String(b.worker_id||'')))return res.status(400).json({status:false,message:'Select a valid worker.'});
-    const workerId=new ObjectId(String(b.worker_id)), worker=await (await collection('hr_workers')).findOne({_id:workerId,license,active:{$ne:false}});
+    const workerId=new ObjectId(String(b.worker_id)), worker=await (await collection('hr_workers')).findOne({_id:workerId,license,...(await branchScope(req)),active:{$ne:false}});
     if(!worker)return res.status(404).json({status:false,message:'Active worker not found.'});
     const type=String(b.type||'');
     if(!['salary_payment','advance','overtime','prime_weekly','prime_monthly','adjustment'].includes(type))return res.status(400).json({status:false,message:'Invalid transaction type.'});
@@ -262,7 +262,7 @@ router.post('/transactions/:id/delete', async (req,res) => {
       type:{$in:['salary_payment','advance']}
     });
     if (!result.deletedCount) {
-      const existing=await col.findOne({_id:new ObjectId(req.params.id),license:req.hrContext.license});
+      const existing=await col.findOne({_id:new ObjectId(req.params.id),license:req.hrContext.license,...(await branchScope(req))});
       if (!existing) return res.status(404).json({status:false,message:'Payroll transaction not found.'});
       return res.status(400).json({status:false,message:'Only salary payments and advances can be deleted here.'});
     }
