@@ -10,8 +10,12 @@ export const modules = [
   { id: 'parametres', icon: 'sliders', label: 'Paramètres', tabs: ['Boutique & Général', 'Imprimantes & Ticket Studio', 'WhatsApp & Notifications', 'ZR Express API', 'Vendeurs & Utilisateurs', 'Mises à jour'] }
 ];
 export const isAdminRole = user => {
-  const role = String(user?.role ?? user?.usertype ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_');
-  return role === 'admin';
+  const roles = [user?.usertype, user?.role, user?.role_name, user?.roleName]
+    .filter(value => value !== undefined && value !== null)
+    .map(value => String(value).trim().toLowerCase().replace(/[\\s-]+/g, '_'));
+  return roles.some(role => ['admin', 'super_admin', 'superadmin', 'owner'].includes(role)) ||
+    user?.is_admin === true || user?.isAdmin === true ||
+    user?.is_super_admin === true || user?.isSuperAdmin === true;
 };
 export const allowedTabsFor = (user, module) => {
   if (isAdminRole(user)) return module.tabs.map((label, index) => ({ label, index }));
