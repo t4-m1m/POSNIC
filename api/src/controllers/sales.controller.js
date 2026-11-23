@@ -1776,76 +1776,11 @@ class SalesController extends BaseController {
         productDetails.reduce((sum, item) => sum + Number(item.product_profit || 0), 0)
       );
 
-      const paymentMap = new Map();
-      let paymentDataComplete = true;
-      const addSalePayment = (method, amount) => {
-        const normalized = accountingEngine.normalizeTenderName(method);
-        const value = Number(amount);
-        if (!normalized || normalized === 'Non classé' || !Number.isFinite(value)) {
-          paymentDataComplete = false;
-          return;
-        }
-        if (normalized === 'Crédit' || value <= 0) return;
-        const row = paymentMap.get(normalized) || { payment_mode: normalized, sale_payment: 0, count: 0 };
-        row.sale_payment = roundToTwo(row.sale_payment + value);
-        row.count += 1;
-        paymentMap.set(normalized, row);
-      };
-      const reportStartTime = new Date(filteredDateRange.start_date).getTime();
-      const reportEndTime = new Date(filteredDateRange.end_date).getTime();
-      for (const saleDoc of salesPayments) {
-        const events = Array.isArray(saleDoc.payments) ? saleDoc.payments : null;
-        if (events && events.length) {
-          for (const event of events) {
-            if (String(event.origin?.type || '').toLowerCase() === 'credit_settlement') continue;
-            if (String(event.method || '').toLowerCase() === 'credit') continue;
-            if (!event.date) paymentDataComplete = false;
-            const eventDate = event.date || saleDoc.date || saleDoc.created_date;
-            const eventTime = eventDate ? new Date(eventDate).getTime() : NaN;
-            if (!Number.isFinite(eventTime)) { paymentDataComplete = false; continue; }
-            if (eventTime < reportStartTime || eventTime >= reportEndTime) continue;
-            addSalePayment(event.method, event.amount);
-          }
-          continue;
-        }
-
-        // Legacy PHP sales may have no payments[] event ledger. Reconstruct
-        // only their sale-day tender from saved payment fields; later debt
-        // collections are excluded and reported in their own section.
-        const multi = saleDoc.multi_payment ?? saleDoc.multiPayment ?? saleDoc.payment_details;
-        const entries = [];
-        if (Array.isArray(multi)) {
-          multi.forEach(row => entries.push({
-            method: row?.payment_mode || row?.method || row?.type || row?.name,
-            amount: row?.amount ?? row?.sale_payment ?? row?.total ?? row?.value,
-          }));
-        } else if (multi && typeof multi === 'object') {
-          const nested = Array.isArray(multi.payments) ? multi.payments : null;
-          if (nested) nested.forEach(row => entries.push({
-            method: row?.payment_mode || row?.method || row?.type || row?.name,
-            amount: row?.amount ?? row?.sale_payment ?? row?.total ?? row?.value,
-          }));
-          else Object.entries(multi).forEach(([method, value]) => entries.push({
-            method,
-            amount: value && typeof value === 'object'
-              ? (value.amount ?? value.sale_payment ?? value.total ?? value.value)
-              : value,
-          }));
-        }
-        if (entries.length) {
-          entries.forEach(entry => addSalePayment(entry.method, entry.amount));
-          continue;
-        }
-        const method = saleDoc.payment_mode || saleDoc.payment_method;
-        const total = saleDoc.sales_total ?? saleDoc.total;
-        const pending = saleDoc.payment_pending;
-        const paid = saleDoc.paid_amount ?? saleDoc.partial_balance ??
-          (total != null && pending != null ? Number(total) - Number(pending) :
-            (String(saleDoc.payment_status || '').toLowerCase() === 'paid' ? total : 0));
-        if (!method) { paymentDataComplete = false; continue; }
-        addSalePayment(method, paid);
-      }
-      const paymentDetails = Array.from(paymentMap.values()).filter(row => row.sale_payment > 0);
+      const paymentEventSummary = accountingEngine.aggregateSalePaymentEvents(
+        salesPayments, filteredDateRange.start_date, filteredDateRange.end_date
+      );
+      const paymentDetails = paymentEventSummary.details;
+      const paymentDataComplete = paymentEventSummary.complete;
 
       // Payment aggregation, dine/table and tax aggregations are provided
       // via salesService.getDailySalesReportAggregates above.
@@ -2071,9 +2006,11 @@ class SalesController extends BaseController {
         ],
       }).toArray();
       const tenderLabels = { cash: 'CASH', card: 'TPE', tpe: 'TPE', bank_transfer: 'BaridiMob', baridimob: 'BaridiMob' };
+      let versementDataComplete = true;
       const versementPaymentMap = new Map();
       const addVersementPayment = (method, amount) => {
         const key = accountingEngine.normalizeTenderName(method);
+        if (key === 'Non classé') versementDataComplete = false;
         const row = versementPaymentMap.get(key) || { payment_mode: tenderLabels[String(method || '').toLowerCase()] || key, amount: 0, count: 0 };
         row.amount = roundToTwo(row.amount + Number(amount || 0));
         if (Number(amount || 0) > 0) row.count += 1;
@@ -2145,6 +2082,7 @@ class SalesController extends BaseController {
         count: Number(row.count) || 0,
       }));
       const debtPaymentTotal = roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + row.amount, 0));
+      const debtPaymentDataComplete = debtPaymentRows.every(row => !!row._id);
 
       // Debt created by bills in this report period. This is receivable,
       // not money collected, so it is separate from payment_details.
@@ -2443,7 +2381,7 @@ class SalesController extends BaseController {
         license: { $in: licenseValues }, branch_id: { $in: branchValues },
       }).project({ register_opendate: 1, register_closedate: 1, opening_float: 1, cashInOutDetail: 1 }).toArray();
       const registerCash = accountingEngine.summarizeCashRegisterSessions(cashRegisterSessions, reportStart, reportEnd);
-      const cashDataComplete = registerCash.complete && salesDataComplete && paymentDataComplete && expenseDataComplete && !expenseTenderUnknown && !refundCashUnknown &&
+      const cashDataComplete = registerCash.complete && salesDataComplete && paymentDataComplete && debtPaymentDataComplete && versementDataComplete && expenseDataComplete && !expenseTenderUnknown && !refundCashUnknown &&
         payrollBranchComplete && payrollCashClassificationComplete;
       const cashAccounting = accountingEngine.calculateDailyClose({
         salesTotal: salesNetTotal, costOfGoodsTotal, costDataComplete, expensesTotal,
@@ -2463,6 +2401,8 @@ class SalesController extends BaseController {
         product_details: productDetails,
         payment_details: paymentDetails,
         debt_payment_details: debtPaymentDetails,
+        payment_data_complete: paymentDataComplete,
+        debt_payment_data_complete: debtPaymentRows.every(row => !!row._id),
         debt_payment_total: debtPaymentTotal,
         versement_payment_details: versementPaymentDetails,
         versement_payment_total: versementPaymentTotal,
@@ -2475,6 +2415,8 @@ class SalesController extends BaseController {
           ...(expenseTenderUnknown ? ['One or more expenses have no reliable payment method.'] : []),
           ...(refundCashUnknown ? ['One or more refunds have no reliable payment method.'] : []),
           ...(!paymentDataComplete ? ['One or more sale payment events have no reliable date, method or amount.'] : []),
+          ...(!debtPaymentDataComplete ? ['One or more debt collections have no reliable payment method.'] : []),
+          ...(!versementDataComplete ? ['One or more Versement payments have no reliable payment method.'] : []),
           ...(!payrollBranchComplete ? ['Legacy employee payments are not assigned to a branch.'] : []),
           ...(!payrollCashClassificationComplete ? ['One or more employee payments have no reliable tender method.'] : []),
         ],

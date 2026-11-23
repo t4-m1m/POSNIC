@@ -51,6 +51,69 @@ function summarizeCashRegisterSessions(sessions = [], start, end) {
   return { openingBalance: round2(openingBalance), otherCashOutflows: round2(otherCashOutflows), complete, unresolved };
 }
 
+function aggregateSalePaymentEvents(sales = [], start, end) {
+  const startTime = new Date(start).getTime(), endTime = new Date(end).getTime();
+  if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) throw new Error('Valid payment-event date boundaries are required.');
+  const map = new Map();
+  let complete = true;
+  const add = (method, amount) => {
+    const normalized = normalizeTenderName(method);
+    const value = Number(amount);
+    if (!normalized || normalized === 'Non classé' || !Number.isFinite(value)) { complete = false; return; }
+    if (normalized === 'Crédit' || value <= 0) return;
+    const row = map.get(normalized) || { payment_mode: normalized, sale_payment: 0, count: 0 };
+    row.sale_payment = round2(row.sale_payment + value);
+    row.count += 1;
+    map.set(normalized, row);
+  };
+  for (const sale of sales) {
+    const events = Array.isArray(sale.payments) ? sale.payments : null;
+    if (events && events.length) {
+      for (const event of events) {
+        if (String(event.origin?.type || '').toLowerCase() === 'credit_settlement') continue;
+        if (String(event.method || '').toLowerCase() === 'credit') continue;
+        if (!event.date) complete = false;
+        const eventDate = event.date || sale.date || sale.created_date;
+        const time = eventDate ? new Date(eventDate).getTime() : NaN;
+        if (!Number.isFinite(time)) { complete = false; continue; }
+        if (time < startTime || time >= endTime) continue;
+        add(event.method, event.amount);
+      }
+      continue;
+    }
+    const multi = sale.multi_payment ?? sale.multiPayment ?? sale.payment_details;
+    const entries = [];
+    if (Array.isArray(multi)) {
+      multi.forEach(row => entries.push({
+        method: row?.payment_mode || row?.method || row?.type || row?.name,
+        amount: row?.amount ?? row?.sale_payment ?? row?.total ?? row?.value,
+      }));
+    } else if (multi && typeof multi === 'object') {
+      const nested = Array.isArray(multi.payments) ? multi.payments : null;
+      if (nested) nested.forEach(row => entries.push({
+        method: row?.payment_mode || row?.method || row?.type || row?.name,
+        amount: row?.amount ?? row?.sale_payment ?? row?.total ?? row?.value,
+      }));
+      else Object.entries(multi).forEach(([method, value]) => entries.push({
+        method,
+        amount: value && typeof value === 'object'
+          ? (value.amount ?? value.sale_payment ?? value.total ?? value.value)
+          : value,
+      }));
+    }
+    if (entries.length) { entries.forEach(row => add(row.method, row.amount)); continue; }
+    const method = sale.payment_mode || sale.payment_method;
+    const total = sale.sales_total ?? sale.total;
+    const pending = sale.payment_pending;
+    const paid = sale.paid_amount ?? sale.partial_balance ??
+      (total != null && pending != null ? Number(total) - Number(pending) :
+        (String(sale.payment_status || '').toLowerCase() === 'paid' ? total : 0));
+    if (!method) { complete = false; continue; }
+    add(method, paid);
+  }
+  return { details: Array.from(map.values()).filter(row => row.sale_payment > 0), complete };
+}
+
 function calculateDailyClose(input = {}) {
   const salesTotal = asAmount(input.salesTotal);
   const cost = asAmount(input.costOfGoodsTotal);
@@ -248,4 +311,4 @@ function reconstructOutstandingAsOf({
   return { amount: round2(total), complete, unresolved };
 }
 
-module.exports = { round2, normalizeTenderName, isCashTender, summarizeCashRegisterSessions, calculateDailyClose, reconstructOutstandingAsOf };
+module.exports = { round2, normalizeTenderName, isCashTender, aggregateSalePaymentEvents, summarizeCashRegisterSessions, calculateDailyClose, reconstructOutstandingAsOf };

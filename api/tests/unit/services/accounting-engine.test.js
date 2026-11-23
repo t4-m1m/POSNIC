@@ -166,3 +166,55 @@ describe('accounting engine historical receivables', () => {
     expect(result.amount).toBe(70);
   });
 });
+
+describe('sale payment event classification', () => {
+  const { aggregateSalePaymentEvents, normalizeTenderName, isCashTender } = require('../../../src/services/accounting-engine');
+  const start = '2026-11-23T00:00:00.000Z';
+  const end = '2026-11-24T00:00:00.000Z';
+
+  test('normalizes cash, TPE and BaridiMob tender labels', () => {
+    expect(normalizeTenderName('cash')).toBe('CASH');
+    expect(normalizeTenderName('card')).toBe('TPE');
+    expect(normalizeTenderName('bank_transfer')).toBe('BaridiMob');
+    expect(isCashTender('CASH')).toBe(true);
+    expect(isCashTender('TPE')).toBe(false);
+  });
+
+  test('uses dated sale payments and excludes separately recorded credit collections', () => {
+    const result = aggregateSalePaymentEvents([{
+      date: start,
+      payments: [
+        { amount: 50, date: '2026-11-23T10:00:00Z', method: 'cash' },
+        { amount: 20, date: '2026-11-23T11:00:00Z', method: 'card' },
+        { amount: 30, date: '2026-11-23T12:00:00Z', method: 'bank_transfer' },
+        { amount: 40, date: '2026-11-23T13:00:00Z', method: 'cash', origin: { type: 'credit_settlement' } },
+        { amount: 25, date: '2026-11-24T10:00:00Z', method: 'cash' },
+      ],
+    }], start, end);
+    expect(result.complete).toBe(true);
+    expect(result.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ payment_mode: 'CASH', sale_payment: 50 }),
+      expect.objectContaining({ payment_mode: 'TPE', sale_payment: 20 }),
+      expect.objectContaining({ payment_mode: 'BaridiMob', sale_payment: 30 }),
+    ]));
+    expect(result.details.reduce((sum, row) => sum + row.sale_payment, 0)).toBe(100);
+  });
+
+  test('falls back to saved legacy multi-payment data only when no event ledger exists', () => {
+    const result = aggregateSalePaymentEvents([{
+      date: start,
+      multi_payment: { Cash: 80, TPE: 20, Credit: 10 },
+    }], start, end);
+    expect(result.complete).toBe(true);
+    expect(result.details.reduce((sum, row) => sum + row.sale_payment, 0)).toBe(100);
+  });
+
+  test('marks missing payment event dates or methods as incomplete', () => {
+    const result = aggregateSalePaymentEvents([{
+      date: start,
+      payments: [{ amount: 20, method: '' }],
+    }], start, end);
+    expect(result.complete).toBe(false);
+  });
+});
+
