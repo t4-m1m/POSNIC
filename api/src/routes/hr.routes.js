@@ -145,7 +145,7 @@ router.get('/workers', async (req,res) => {
     res.json({status:true,data:rows.map(w=>({...w,_id:String(w._id)}))});
   } catch(e) { sendError(res,e); }
 });
-router.post('/workers', async (req,res) => {
+const createWorker = async (req,res) => {
   try {
     const {license,username,userId}=req.hrContext, b=req.body||{};
     const name=String(b.name||'').trim();
@@ -154,8 +154,11 @@ router.post('/workers', async (req,res) => {
     const result=await (await collection('hr_workers')).insertOne(worker);
     res.status(201).json({status:true,data:{...worker,_id:String(result.insertedId)},message:'Worker saved.'});
   } catch(e) { sendError(res,e); }
-});
-router.put('/workers/:id', async (req,res) => {
+};
+router.post('/workers', createWorker);
+router.post('/vendors', createWorker);
+
+const updateWorker = async (req,res) => {
   try {
     if (!ObjectId.isValid(req.params.id)) return res.status(400).json({status:false,message:'Invalid worker ID.'});
     const {license,username}=req.hrContext,b=req.body||{},set={updated_at:new Date(),updated_by_name:username};
@@ -173,7 +176,10 @@ router.put('/workers/:id', async (req,res) => {
     if(!updated)return res.status(404).json({status:false,message:'Worker not found.'});
     res.json({status:true,data:{...updated,_id:String(updated._id)},message:'Worker updated.'});
   } catch(e) { sendError(res,e); }
-});
+};
+router.put('/workers/:id', updateWorker);
+router.put('/vendors/:id', updateWorker);
+
 router.post('/workers/:id/delete', async (req,res) => {
   try {
     if (!ObjectId.isValid(req.params.id)) return res.status(400).json({status:false,message:'Invalid worker ID.'});
