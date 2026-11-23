@@ -762,3 +762,26 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 .recent-sales-list .recent-sale-item-list{display:flex!important;flex-direction:column!important;gap:3px!important;margin-top:4px!important}
 .recent-sales-list .recent-sale-item-line{display:flex!important;flex-wrap:wrap!important;gap:4px 8px!important;align-items:baseline!important}
 @media(max-width:760px){.recent-sales-list .recent-sale{align-items:flex-start!important;flex-direction:column!important}.recent-sales-list .recent-sale-summary{width:100%!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important}}
+
+
+/* V2 hotfix: list pages use normal document flow. The old 1fr grid row plus
+   flex main created a viewport-sized spacer and pushed the actual table below it. */
+.shell.view-catalogue,.shell.view-achats,.shell.view-clients,.shell.view-zr-express{
+ height:auto!important;min-height:100dvh!important;max-height:none!important;
+ grid-template-rows:44px auto!important;align-content:start!important;overflow:visible!important;
+}
+.shell.view-catalogue>main,.shell.view-achats>main,.shell.view-clients>main,.shell.view-zr-express>main{
+ display:block!important;position:static!important;grid-column:2!important;grid-row:2!important;
+ height:auto!important;min-height:0!important;max-height:none!important;
+ margin:0!important;padding:14px 22px 26px!important;overflow:visible!important;
+}
+.shell.view-catalogue>main>.page-head,.shell.view-achats>main>.page-head,.shell.view-clients>main>.page-head,.shell.view-zr-express>main>.page-head{
+ display:flex!important;position:static!important;margin:0 0 12px!important;
+}
+.shell.view-catalogue>main>.toolbar,.shell.view-achats>main>.toolbar,.shell.view-clients>main>.toolbar,.shell.view-zr-express>main>.toolbar{
+ display:flex!important;position:static!important;margin:0 0 12px!important;
+}
+.shell.view-catalogue>main>.table-wrap,.shell.view-achats>main>.table-wrap,.shell.view-clients>main>.table-wrap,.shell.view-zr-express>main>.table-wrap{
+ display:block!important;position:static!important;margin:0!important;width:100%!important;
+}
+@media(max-width:760px){.shell.view-catalogue>main,.shell.view-achats>main,.shell.view-clients>main,.shell.view-zr-express>main{padding:12px!important}}
