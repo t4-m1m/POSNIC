@@ -253,20 +253,34 @@ exports.updatePassword = async (req, res, next) => {
 
 // Helper function to get user data
 const getUserData = (user) => {
+  const roleValues = [user.usertype, user.role, user.role_name, user.user_type, user.type]
+    .filter(value => value !== undefined && value !== null)
+    .map(value => String(value).trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+  const isSuperAdmin = Boolean(user.is_super_admin || user.isSuperAdmin || roleValues.includes('superadmin'));
+  const isAdmin = Boolean(user.is_admin || user.isAdmin || isSuperAdmin ||
+    roleValues.some(value => ['admin','adminuser','administrator','owner','platformadmin'].includes(value)));
   return {
     id: user._id,
     name: user.name,
-    username: user.username,
+    username: user.username || user.user_name,
     email: user.email,
     role: user.role,
     usertype: user.usertype,
     role_name: user.role_name,
-    is_admin: user.is_admin,
-    isAdmin: user.isAdmin,
-    is_super_admin: user.is_super_admin,
-    isSuperAdmin: user.isSuperAdmin,
+    user_type: user.user_type,
+    type: user.type,
+    is_admin: isAdmin,
+    isAdmin,
+    is_super_admin: isSuperAdmin,
+    isSuperAdmin,
+    admin: user.admin,
+    super_admin: user.super_admin,
     permissions: user.permissions,
+    permission: user.permission,
     access: user.access,
+    branch_id: user.branch_id || user.branch,
+    default_branch_id: user.default_branch_id,
+    branch_access: user.branch_access,
     active: user.active,
   };
 };
