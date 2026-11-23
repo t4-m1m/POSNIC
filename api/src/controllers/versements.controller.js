@@ -85,11 +85,11 @@ exports.list = async (req,res) => {
         console.warn('[versements] skipped unrecoverable legacy sale', key, error?.message||error);
       }
     }
-    const rows = await req.db.collection(COLLECTION).find(filter).sort({ created_at:-1 }).limit(2000).toArray();
+    const rows = await db.collection(COLLECTION).find(filter).sort({ created_at:-1 }).limit(2000).toArray();
     const saleIds = rows.map(r => r.sale_object_id).filter(Boolean);
     const saleKeys = rows.map(r => String(r.sale_key || '')).filter(Boolean);
     const linkedSales = saleIds.length || saleKeys.length
-      ? await req.db.collection('sales').find({
+      ? await db.collection('sales').find({
           $or: [
             ...(saleIds.length ? [{ _id: { $in: saleIds } }] : []),
             ...(saleKeys.length ? [{ sales_id: { $in: saleKeys } }, { sale_id: { $in: saleKeys } }] : [])
@@ -109,7 +109,7 @@ exports.list = async (req,res) => {
 exports.create = async (req,res) => {
   try {
     const db = await shopDb(req);
-    if (!req.db) return fail(res,500,'Shop database is unavailable.');
+    if (!db) return fail(res,500,'Shop database is unavailable.');
     const saleRef = String(req.body?.sale_id || '').trim();
     const customer = String(req.body?.customer_name || '').trim().slice(0,200);
     const phone = String(req.body?.phone || '').trim().slice(0,40);
@@ -117,7 +117,7 @@ exports.create = async (req,res) => {
     if (!saleRef || !customer || initial <= 0) return fail(res,400,'Sale, customer name and a positive initial amount are required.');
     const branch = branchOf(req);
     if (!ObjectId.isValid(branch)) return fail(res,400,'A valid branch is required.');
-    const sale = await req.db.collection('sales').findOne({ $or:[{ sales_id:saleRef },{ sale_id:saleRef }, ...(ObjectId.isValid(saleRef)?[{_id:new ObjectId(saleRef)}]:[])], branch_id:new ObjectId(branch) });
+    const sale = await db.collection('sales').findOne({ $or:[{ sales_id:saleRef },{ sale_id:saleRef }, ...(ObjectId.isValid(saleRef)?[{_id:new ObjectId(saleRef)}]:[])], branch_id:new ObjectId(branch) });
     if (!sale) return fail(res,404,'The validated sale could not be found in this branch.');
     if (!sale.versement_checkout || String(sale.payment_mode || '').toLowerCase() !== 'versement') {
       return fail(res,409,'Créez les versements depuis Nouvelle vente avec F6. Une vente ordinaire ne peut pas être convertie après coup.');
@@ -126,7 +126,7 @@ exports.create = async (req,res) => {
     if (recovered) return res.json({ type:'success', message:'Versement déjà enregistré ou récupéré.', data:recovered });
     const total = saleTotal(sale);
     if (total <= 0) return fail(res,400,'The linked sale total must be greater than zero.');
-    const collection = req.db.collection(COLLECTION);
+    const collection = db.collection(COLLECTION);
     await collection.createIndex({ sale_key:1 },{ unique:true });
     await collection.createIndex({ versement_number:1 },{ unique:true });
     const existing = await collection.findOne({ sale_key:saleKey(sale) });
@@ -147,11 +147,11 @@ exports.create = async (req,res) => {
 exports.settle = async (req,res) => {
   try {
     const db = await shopDb(req);
-    if (!req.db) return fail(res,500,'Shop database is unavailable.');
+    if (!db) return fail(res,500,'Shop database is unavailable.');
     if (!ObjectId.isValid(String(req.params.id))) return fail(res,400,'Invalid versement reference.');
     const method = String(req.body?.method || '').toLowerCase();
     if (!['cash','tpe','baridimob'].includes(method)) return fail(res,400,'Choose Espèces, TPE or BaridiMob.');
-    const collection = req.db.collection(COLLECTION), id = new ObjectId(req.params.id);
+    const collection = db.collection(COLLECTION), id = new ObjectId(req.params.id);
     const current = await collection.findOne({_id:id});
     if (!current) return fail(res,404,'Versement not found.');
     if (current.status !== 'pending') return fail(res,409,'This versement is already settled or cancelled.');
@@ -159,7 +159,7 @@ exports.settle = async (req,res) => {
     const registerId = String(req.body?.register_id || req.session?.cashregister_id || req.session?.register_id || req.user?.cashregister_id || '').trim();
     const register = ObjectId.isValid(registerId) ? new ObjectId(registerId) : null;
     const saleFilter = current.sale_object_id ? {_id:current.sale_object_id} : {$or:[{sales_id:current.sale_key},{sale_id:current.sale_key}]};
-    const sale = await req.db.collection('sales').findOne(saleFilter);
+    const sale = await db.collection('sales').findOne(saleFilter);
     if (!sale) return fail(res,409,'The linked sale is missing; settlement was not recorded.');
     const claimed = await collection.updateOne({_id:id,status:'pending',remaining:current.remaining},{$set:{status:'settling',settlement_started_at:settledAt,settlement_started_by:actor(req)}});
     if (!claimed.modifiedCount) return fail(res,409,'This versement was already updated. Refresh the register.');
@@ -173,7 +173,7 @@ exports.settle = async (req,res) => {
         versement_initial_method:current.initial_method
       };
       if (register) saleUpdate.versement_settlement_register_id=register;
-      const saleResult = await req.db.collection('sales').updateOne({_id:sale._id,versement_checkout:{$exists:true}},{$set:saleUpdate});
+      const saleResult = await db.collection('sales').updateOne({_id:sale._id,versement_checkout:{$exists:true}},{$set:saleUpdate});
       if (!saleResult.matchedCount) throw new Error('Linked sale could not be marked as settled.');
       const result = await collection.updateOne({_id:id,status:'settling'},{$set:{
         status:'settled',remaining:0,settled_at:settledAt,...(register?{settlement_register_id:register}:{}),
@@ -191,9 +191,9 @@ exports.settle = async (req,res) => {
 exports.cancel = async (req,res) => {
   try {
     const db = await shopDb(req);
-    if (!req.db) return fail(res,500,'Shop database is unavailable.');
+    if (!db) return fail(res,500,'Shop database is unavailable.');
     if (!ObjectId.isValid(String(req.params.id))) return fail(res,400,'Invalid versement reference.');
-    const id=new ObjectId(req.params.id), collection=req.db.collection(COLLECTION);
+    const id=new ObjectId(req.params.id), collection=db.collection(COLLECTION);
     const current=await collection.findOne({_id:id});
     if (!current) return res.json({type:'success',message:'Versement already removed.',data:{id:String(id)}});
     if (current.status==='settled'||current.status==='settling') return fail(res,409,'A settled or settling versement cannot be cancelled.');
@@ -207,7 +207,7 @@ exports.cancel = async (req,res) => {
       }
     }
     const saleFilter=current.sale_object_id?{_id:current.sale_object_id}:{$or:[{sales_id:current.sale_key},{sale_id:current.sale_key}]};
-    const sale=await req.db.collection('sales').findOne(saleFilter);
+    const sale=await db.collection('sales').findOne(saleFilter);
     if (!sale) throw new Error('Linked sale is missing; versement retained for recovery.');
     const lines=Array.isArray(sale.itemsale)?sale.itemsale:(Array.isArray(sale.items)?sale.items:[]);
     const quantities=new Map();
@@ -220,7 +220,7 @@ exports.cancel = async (req,res) => {
           String(line.item_status||'').toLowerCase()!=='instant')
         quantities.set(itemId,(quantities.get(itemId)||0)+qty);
     }
-    const items=req.db.collection('items'), stockLogs=req.db.collection('stocklogs');
+    const items=db.collection('items'), stockLogs=db.collection('stocklogs');
     const restoreKey=String(current.sale_key||saleKey(sale))+':versement-cancel';
     for (const [itemId,qty] of quantities) {
       const itemObjectId=new ObjectId(itemId);
@@ -256,7 +256,7 @@ exports.cancel = async (req,res) => {
       };
       await stockLogs.updateOne({_id:logId},{$setOnInsert:log},{upsert:true});
     }
-    await req.db.collection('sales').deleteOne({_id:sale._id,versement_checkout:{$exists:true}});
+    await db.collection('sales').deleteOne({_id:sale._id,versement_checkout:{$exists:true}});
     await collection.deleteOne({_id:id,status:'cancelling'});
     return res.json({type:'success',message:'Versement deleted and reserved stock restored.',data:{id:String(id)}});
   } catch(e) {
@@ -268,11 +268,11 @@ exports.cancel = async (req,res) => {
 exports.updatePending = async (req,res) => {
   try {
     const db = await shopDb(req);
-    if (!req.db) return fail(res,500,'Shop database is unavailable.');
+    if (!db) return fail(res,500,'Shop database is unavailable.');
     if (!ObjectId.isValid(String(req.params.id))) return fail(res,400,'Invalid versement reference.');
     const total=money(req.body?.sale_total);
     if (!(total>0)) return fail(res,400,'The updated sale total must be positive.');
-    const collection=req.db.collection(COLLECTION),id=new ObjectId(req.params.id);
+    const collection=db.collection(COLLECTION),id=new ObjectId(req.params.id);
     const branch=branchOf(req),filter={_id:id,...(ObjectId.isValid(branch)?{branch_id:new ObjectId(branch)}:{})};
     const current=await collection.findOne(filter);
     if (!current) return fail(res,404,'Versement not found.');
