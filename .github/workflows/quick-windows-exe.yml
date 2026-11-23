@@ -108,8 +108,9 @@ jobs:
         working-directory: api
         run: npm install --prefer-offline --no-audit --no-fund
 
-      - name: Skip accounting tests for installer build
-        run: echo "Accounting tests skipped by request; installer build will proceed to syntax checks and packaging."
+      - name: Run accounting engine and sales controller tests
+        working-directory: api
+        run: npx jest -c jest.ci.config.js tests/unit/services/accounting-engine.test.js tests/unit/controllers/sales.controller.test.js --runInBand --forceExit
 
       - name: Syntax-check frontend and every API source file
         shell: pwsh
