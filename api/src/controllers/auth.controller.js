@@ -260,8 +260,13 @@ const getUserData = (user) => {
   const roleValues = [user.usertype, user.role, user.role_name, user.user_type, user.type]
     .filter(value => value !== undefined && value !== null)
     .map(value => String(value).trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
-  const isSuperAdmin = Boolean(user.is_super_admin || user.isSuperAdmin || roleValues.includes('superadmin'));
-  const isAdmin = Boolean(user.is_admin || user.isAdmin || isSuperAdmin ||
+  const truthy = value => value === true || value === 1 || ['true','1','yes'].includes(String(value ?? '').trim().toLowerCase());
+  const access = user.access || {};
+  const hasFullAdminMatrix = ['sales','receiving','customer','supplier','category','item','expense','branch','report','user'].every(key =>
+    access[key] && typeof access[key] === 'object' && truthy(access[key].read) && truthy(access[key].write) && truthy(access[key].delete)
+  ) && truthy(access.dashboard?.read) && truthy(access.dashboard?.financials) && truthy(access.plan?.read);
+  const isSuperAdmin = Boolean(user.is_super_admin || user.isSuperAdmin || user.super_admin || roleValues.includes('superadmin'));
+  const isAdmin = Boolean(user.is_admin || user.isAdmin || user.admin || isSuperAdmin || hasFullAdminMatrix ||
     roleValues.some(value => ['admin','adminuser','administrator','owner','platformadmin'].includes(value)));
   return {
     id: user._id,
