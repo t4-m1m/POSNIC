@@ -1976,9 +1976,12 @@ class SalesController extends BaseController {
         { $group: { _id: null, amount: { $sum: '$reportReturnAmount' }, count: { $sum: 1 } } },
       ]).toArray();
       const returnAdjustmentTotal = roundToTwo(returnAdjustmentRows.length ? returnAdjustmentRows[0].amount || 0 : 0);
-      const salesDataComplete = salesPayments.every(sale =>
-        Number.isFinite(Number(sale.sales_total ?? sale.total))
-      ) && editAdjustmentRows.every(row => Number.isFinite(Number(row.amount))) && returnHistoryComplete;
+      const salesDataComplete = salesPayments.every(sale => {
+        const total = sale.sales_total ?? sale.total;
+        return total !== null && total !== undefined && total !== '' && Number.isFinite(Number(total));
+      }) && editAdjustmentRows.every(row =>
+        row.amount !== null && row.amount !== undefined && row.amount !== '' && Number.isFinite(Number(row.amount))
+      ) && returnHistoryComplete;
       if (!salesDataComplete) {
         costDataComplete = false;
         costOfGoodsTotal = null;
@@ -2206,7 +2209,7 @@ class SalesController extends BaseController {
         const type = String(row.type || 'debit').toLowerCase();
         if (['credit','income','money in'].includes(type)) return true;
         const date = new Date(row.date || row.created_date || row.updated_date);
-        return Number.isFinite(date.getTime()) && Number.isFinite(Number(row.amount));
+        return Number.isFinite(date.getTime()) && row.amount !== null && row.amount !== undefined && row.amount !== '' && Number.isFinite(Number(row.amount));
       });
 
       const branchCount = await db.collection('branches').countDocuments({ license: { $in: licenseValues } });
