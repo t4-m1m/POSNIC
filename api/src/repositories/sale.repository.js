@@ -5803,6 +5803,8 @@ class SalesRepository {
           return_sale_amount = return_sale_amount_round;
         }
 
+        const originalSaleTotal = Number(saleDocument.sale_original_total ?? saleDocument.sales_total ?? saleDocument.total ?? 0) || 0;
+        const updatedSalesTotal = Math.max(0, round(originalSaleTotal - return_sale_amount, 2));
         const updatedSaleProcess = sale_total_amount > 0 ? 'PartialReturn' : 'FullReturn';
 
         const finalItemsArray = updatedSaleProcess === 'FullReturn' ? [] : itemsArray;
@@ -5822,6 +5824,9 @@ class SalesRepository {
           updated_by_id: BaseModel.loggedUser,
           items: finalItemsArray,
           number_of_items: finalNumberOfItems,
+          sale_original_total: originalSaleTotal,
+          sales_total: updatedSalesTotal,
+          total: updatedSalesTotal,
           tax: round(sale_tax_amount, 2),
           discount: round(sale_discount_amount, 2),
           items_total: round(updatedItemsTotalAmount - extraDiscSubReturnExtradisc, 2),

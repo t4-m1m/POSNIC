@@ -356,6 +356,7 @@ const saleSchema = new mongoose.Schema(
       default: Date.now,
     },
     sale_original_snapshot: { type: mongoose.Schema.Types.Mixed, default: undefined },
+    sale_original_total: { type: Number, min: 0, default: undefined },
     kitchen_closed: { type: Boolean, default: false },
     kitchen_required: { type: Boolean, default: false },
     floor_lifecycle: { type: Boolean, default: false },

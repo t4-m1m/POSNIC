@@ -1403,6 +1403,7 @@ const processSale = async (
       // Use full precision values to mirror PHP's stored doubles
       total: salesTotalForDoc,
       sales_total: salesTotalForDoc,
+      sale_original_total: round2(salesTotalForDoc + (Number(existingSale?.items_return_total) || 0), 2),
       sales_round_off: roundOffForDoc,
       round_off: roundOffForDoc,
       subtotal: sale_subtotal_amount,
