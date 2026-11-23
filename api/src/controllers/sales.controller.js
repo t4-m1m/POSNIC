@@ -1976,6 +1976,13 @@ class SalesController extends BaseController {
         { $group: { _id: null, amount: { $sum: '$reportReturnAmount' }, count: { $sum: 1 } } },
       ]).toArray();
       const returnAdjustmentTotal = roundToTwo(returnAdjustmentRows.length ? returnAdjustmentRows[0].amount || 0 : 0);
+      const salesDataComplete = salesPayments.every(sale =>
+        Number.isFinite(Number(sale.sales_total ?? sale.total))
+      ) && editAdjustmentRows.every(row => Number.isFinite(Number(row.amount))) && returnHistoryComplete;
+      if (!salesDataComplete) {
+        costDataComplete = false;
+        costOfGoodsTotal = null;
+      }
       if (returnAdjustmentTotal > 0) {
         // Returns are dated revenue adjustments. Do not reverse COGS unless the
         // return record proves usable inventory restoration and carries its cost.
@@ -2116,8 +2123,8 @@ class SalesController extends BaseController {
       const futureReturnEvents = f6AndReturnSales.flatMap(sale =>
         (Array.isArray(sale.items_return) ? sale.items_return : [])
           .filter(block => {
-            const date = block?.returnArray?.returnDate;
-            return date && new Date(date) >= reportEnd;
+            const date = block?.returnArray?.returnDate || block?.return_date;
+            return !date || !Number.isFinite(new Date(date).getTime()) || new Date(date) >= reportEnd;
           })
           .map(() => ({ sale_id: sale.sales_id || sale.sale_id || sale._id }))
       );
@@ -2131,7 +2138,14 @@ class SalesController extends BaseController {
         end: reportEnd,
       });
       const outstandingAmount = outstandingResult.amount;
-      const outstandingDataComplete = outstandingResult.complete && futureReturnEvents.length === 0;
+      const returnHistoryComplete = f6AndReturnSales.every(sale =>
+        (Array.isArray(sale.items_return) ? sale.items_return : []).every(block => {
+          const date = block?.returnArray?.returnDate || block?.return_date;
+          const amount = block?.returnArray?.itemsTotalAmount ?? block?.amount;
+          return !!date && Number.isFinite(new Date(date).getTime()) && amount !== null && amount !== undefined && amount !== '';
+        })
+      );
+      const outstandingDataComplete = outstandingResult.complete && futureReturnEvents.length === 0 && returnHistoryComplete;
 
       // The cash book stores money-in as type=credit and money-out as
       // type=debit. Only money-out is an operating expense. Normalize legacy
@@ -2318,7 +2332,7 @@ class SalesController extends BaseController {
       ].every(row => String(row.method || '').trim() !== '');
       const payrollComplete = payrollBranchComplete;
       const dailyAccounting = accountingEngine.calculateDailyClose({
-        salesTotal: salesNetTotal,
+        salesTotal: salesDataComplete ? salesNetTotal : null,
         costOfGoodsTotal,
         costDataComplete,
         expensesTotal,
@@ -2360,7 +2374,7 @@ class SalesController extends BaseController {
         license: { $in: licenseValues }, branch_id: { $in: branchValues },
       }).project({ register_opendate: 1, register_closedate: 1, opening_float: 1, cashInOutDetail: 1 }).toArray();
       const registerCash = accountingEngine.summarizeCashRegisterSessions(cashRegisterSessions, reportStart, reportEnd);
-      const cashDataComplete = registerCash.complete && expenseDataComplete && !expenseTenderUnknown && !refundCashUnknown &&
+      const cashDataComplete = registerCash.complete && salesDataComplete && expenseDataComplete && !expenseTenderUnknown && !refundCashUnknown &&
         payrollBranchComplete && payrollCashClassificationComplete;
       const cashAccounting = accountingEngine.calculateDailyClose({
         salesTotal: salesNetTotal, costOfGoodsTotal, costDataComplete, expensesTotal,
@@ -2395,8 +2409,9 @@ class SalesController extends BaseController {
           ...(!payrollCashClassificationComplete ? ['One or more employee payments have no reliable tender method.'] : []),
         ],
         sales_count: salesCount,
-        sales_total: salesNetTotal,
-        net_sales: salesNetTotal,
+        sales_total: salesDataComplete ? salesNetTotal : null,
+        net_sales: salesDataComplete ? salesNetTotal : null,
+        sales_data_complete: salesDataComplete,
         sale_edit_adjustment_total: editAdjustmentTotal,
         return_adjustment_total: returnAdjustmentTotal,
         discount_total: discountTotal,
@@ -2422,6 +2437,10 @@ class SalesController extends BaseController {
         outstanding_amount: outstandingDataComplete ? roundToTwo(outstandingAmount) : null,
         outstanding_data_complete: outstandingDataComplete,
         outstanding_unresolved_records: outstandingResult.unresolved + futureReturnEvents.length,
+        outstanding_data_warnings: [
+          ...(outstandingResult.unresolved ? ['Some debt or payment records cannot be dated or linked reliably.'] : []),
+          ...(futureReturnEvents.length ? ['Later or undated returns prevent exact historical credit reconstruction.'] : []),
+        ],
         dine_details: dineDetails,
         tax_details: taxDetails,
         extra_discount: {
