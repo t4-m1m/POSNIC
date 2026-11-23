@@ -23,13 +23,16 @@ const isCashTender = (method) => /^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String
 function summarizeCashRegisterSessions(sessions = [], start, end) {
   const startTime = new Date(start).getTime(), endTime = new Date(end).getTime();
   if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) throw new Error('Valid cash-register date boundaries are required.');
-  let openingBalance = 0, otherCashOutflows = 0, complete = sessions.length > 0, unresolved = 0, matched = 0;
+  let openingBalance = 0, otherCashOutflows = 0, complete = true, unresolved = 0, matched = 0;
   const canonicalSources = new Set(['sale','sales','expense','salary_payment','advance','prime','credit_settlement','versement','refund','zr_delivery_payout']);
   for (const session of sessions) {
-    const opened = session.register_opendate ? new Date(session.register_opendate).getTime() : NaN;
     const closed = session.register_closedate ? new Date(session.register_closedate).getTime() : Infinity;
+    // Ignore clearly unrelated historical sessions before validating their
+    // opening metadata. Old closed sessions must not poison today's close.
+    if (Number.isFinite(closed) && closed < startTime) continue;
+    const opened = session.register_opendate ? new Date(session.register_opendate).getTime() : NaN;
+    if (Number.isFinite(opened) && opened >= endTime) continue;
     if (!Number.isFinite(opened)) { complete = false; unresolved += 1; continue; }
-    if (opened >= endTime || closed < startTime) continue;
     matched += 1;
     if (!finite(session.opening_float)) { complete = false; unresolved += 1; }
     else openingBalance += Number(session.opening_float);
@@ -71,13 +74,16 @@ function aggregateSalePaymentEvents(sales = [], start, end) {
     if (events && events.length) {
       for (const event of events) {
         if (String(event.origin?.type || '').toLowerCase() === 'credit_settlement') continue;
-        if (String(event.method || '').toLowerCase() === 'credit') continue;
-        if (!event.date) complete = false;
-        const eventDate = event.date || sale.date || sale.created_date;
+        const eventDate = event.date || event.created_at || sale.date || sale.created_date;
         const time = eventDate ? new Date(eventDate).getTime() : NaN;
         if (!Number.isFinite(time)) { complete = false; continue; }
         if (time < startTime || time >= endTime) continue;
-        add(event.method, event.amount);
+        const method = event.payment_mode || event.method || event.type || event.name ||
+          sale.payment_mode || sale.payment_method;
+        if (String(method || '').trim().toLowerCase() === 'credit') continue;
+        const amount = event.amount ?? event.sale_payment ?? event.paid_amount ??
+          event.payment_amount ?? event.total ?? event.value;
+        add(method, amount);
       }
       continue;
     }
