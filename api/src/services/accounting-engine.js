@@ -102,9 +102,22 @@ function reconstructOutstandingAsOf({
     if (value && typeof value === 'object') return String(value._id || value.id || value.sale_id || '');
     return String(value || '');
   };
-  const collectionsAfter = creditPayments
-    .filter((row) => after(row.received_at))
-    .reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+  const collectionsAfter = new Map();
+  const transactionIds = new Set(transactions.map(row => id(row._id)));
+  for (const payment of creditPayments.filter(row => after(row.received_at))) {
+    const allocations = Array.isArray(payment.allocations) ? payment.allocations : [];
+    if (!allocations.length) { complete = false; unresolved += 1; continue; }
+    for (const allocation of allocations) {
+      const amount = Number(allocation.amount) || 0;
+      const transactionId = id(allocation.transaction_id);
+      const saleId = id(allocation.sale_id);
+      const keys = [transactionId, saleId].filter(Boolean);
+      const matching = keys.filter(key => transactionIds.has(key));
+      if (!matching.length) { complete = false; unresolved += 1; continue; }
+      const key = matching[0];
+      collectionsAfter.set(key, (collectionsAfter.get(key) || 0) + amount);
+    }
+  }
   const editsAfter = new Map();
   editAdjustments.filter((row) => after(row.created_at)).forEach((row) => {
     const key = id(row.sale_id || row.sales_id);
@@ -133,11 +146,9 @@ function reconstructOutstandingAsOf({
     const current = Math.max(0, Number(row.pending) || 0);
     const laterEdit = editsAfter.get(saleKey) || 0;
     const laterReturn = returnsAfter.get(saleKey) || 0;
-    total += Math.max(0, current - laterEdit + laterReturn);
+    const laterCollections = collectionsAfter.get(id(row._id)) || collectionsAfter.get(saleKey) || 0;
+    total += Math.max(0, current + laterCollections - laterEdit + laterReturn);
   }
-  // The collection journal is a single total event stream, not a per-debt
-  // amount. Add it back once after summing all current ledger rows.
-  total += collectionsAfter;
 
   for (const row of versements) {
     const saleKey = String(row.sale_key || row.sale_id || '');
