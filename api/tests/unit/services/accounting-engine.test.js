@@ -80,6 +80,19 @@ describe('accounting engine daily close', () => {
     expect(result.complete).toBe(true);
   });
 
+  test('ignores malformed sessions that were already closed before the report day', () => {
+    const result = require('../../../src/services/accounting-engine').summarizeCashRegisterSessions([
+      { register_closedate: '2026-11-22T20:00:00Z' },
+      {
+        register_opendate: '2026-11-23T08:00:00Z',
+        opening_float: 250,
+        cashInOutDetail: [],
+      },
+    ], '2026-11-23T00:00:00Z', '2026-11-24T00:00:00Z');
+    expect(result.openingBalance).toBe(250);
+    expect(result.complete).toBe(true);
+  });
+
   test('marks the drawer unavailable when no matching register session exists', () => {
     const result = require('../../../src/services/accounting-engine').summarizeCashRegisterSessions([], '2026-11-23T00:00:00Z', new Date('2026-11-24T00:00:00Z'));
     expect(result.complete).toBe(false);
@@ -207,6 +220,21 @@ describe('sale payment event classification', () => {
     }], start, end);
     expect(result.complete).toBe(true);
     expect(result.details.reduce((sum, row) => sum + row.sale_payment, 0)).toBe(100);
+  });
+
+  test('accepts legacy payment event field names and inherits the sale date', () => {
+    const result = aggregateSalePaymentEvents([{
+      date: start,
+      payments: [
+        { payment_mode: 'cash', sale_payment: 120 },
+        { type: 'card', paid_amount: 80 },
+      ],
+    }], start, end);
+    expect(result.complete).toBe(true);
+    expect(result.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ payment_mode: 'CASH', sale_payment: 120 }),
+      expect.objectContaining({ payment_mode: 'TPE', sale_payment: 80 }),
+    ]));
   });
 
   test('marks missing payment event dates or methods as incomplete', () => {
