@@ -46,8 +46,8 @@ const buildDailyPaymentAggregationPipeline = (match) => {
   return [
     { $match: match },
     { $addFields: {
-      sales_total: { $ifNull: ['$sale_original_snapshot.sales_total', '$sales_total'] },
-      total: { $ifNull: ['$sale_original_snapshot.total', '$total'] },
+      sales_total: { $ifNull: ['$sale_original_snapshot.sales_total', { $ifNull: ['$sale_original_total', '$sales_total'] }] },
+      total: { $ifNull: ['$sale_original_snapshot.total', { $ifNull: ['$sale_original_total', '$total'] }] },
       multi_payment: { $ifNull: ['$sale_original_snapshot.multi_payment', '$multi_payment'] },
       payment_mode: { $ifNull: ['$sale_original_snapshot.payment_mode', '$payment_mode'] },
       payment_status: { $ifNull: ['$sale_original_snapshot.payment_status', '$payment_status'] },
@@ -55,7 +55,7 @@ const buildDailyPaymentAggregationPipeline = (match) => {
       partial_check: { $ifNull: ['$sale_original_snapshot.partial_check', '$partial_check'] },
       partial_balance: { $ifNull: ['$sale_original_snapshot.partial_balance', '$partial_balance'] },
       paid_amount: { $ifNull: ['$sale_original_snapshot.paid_amount', '$paid_amount'] },
-      items_total: { $ifNull: ['$sale_original_snapshot.items_total', '$items_total'] },
+      items_total: { $ifNull: ['$sale_original_snapshot.items_total', { $ifNull: ['$sale_original_total', '$items_total'] }] },
     } },
     { $project: {
       sales_total: salesTotal,
@@ -1333,7 +1333,30 @@ const processSale = async (
 
     const updateData = {
       // Core PHP ordering
-      date: mongo_date,
+      date: id === '' ? mongo_date : (existingSale?.date || existingSale?.created_date || mongo_date),
+      ...(id !== '' ? { sale_original_snapshot: existingSale?.sale_original_snapshot || {
+        date: existingSale?.date || existingSale?.created_date || mongo_date,
+        sales_total: Number(existingSale?.sale_original_total ?? existingSale?.sales_total ?? existingSale?.total ?? 0),
+        total: Number(existingSale?.sale_original_total ?? existingSale?.total ?? existingSale?.sales_total ?? 0),
+        sales_sub_total: Number(existingSale?.sales_sub_total ?? existingSale?.subtotal ?? 0),
+        items: [
+          ...(Array.isArray(existingSale?.items) ? existingSale.items : []),
+          ...((Array.isArray(existingSale?.items_return) ? existingSale.items_return : []).flatMap((block) =>
+            Array.isArray(block?.returnArray?.returnValue) ? block.returnArray.returnValue : []
+          )),
+        ],
+        multi_payment: existingSale?.multi_payment || {},
+        payment_mode: existingSale?.payment_mode || 'Cash',
+        payment_status: existingSale?.payment_status || '',
+        payment_pending: Number(existingSale?.payment_pending || 0),
+        partial_check: existingSale?.partial_check,
+        partial_balance: existingSale?.partial_balance,
+        items_total: Number(existingSale?.sale_original_total ?? existingSale?.items_total ?? 0),
+        extra_discount: Number(existingSale?.extra_discount || 0),
+        sale_extra_discount: Number(existingSale?.sale_extra_discount || 0),
+        discount: Number(existingSale?.discount || 0),
+        tax: Number(existingSale?.tax || 0),
+      } } : {}),
       sale_process: saleProcess,
       ...restaurantTime,
       // Only the server's KOT path enrolls kitchen work; caller flags are ignored.
@@ -1409,16 +1432,16 @@ const processSale = async (
       subtotal: sale_subtotal_amount,
       sales_sub_total: sale_subtotal_amount,
       items_total: itemsTotalForDoc, // Mirrors PHP items_total
-      items_return_total: 0.0,
-      return_round_off: 0.0,
+      items_return_total: id === '' ? 0.0 : Number(existingSale?.items_return_total || 0),
+      return_round_off: id === '' ? 0.0 : Number(existingSale?.return_round_off || 0),
       items_subtotal: sale_subtotal_amount,
-      items_return_subtotal: 0.0,
+      items_return_subtotal: id === '' ? 0.0 : Number(existingSale?.items_return_subtotal || 0),
       total_companyprice: sale_company_amount,
       tax: sale_tax_amount,
       gst: gstFlag,
-      return_tax: 0.0,
+      return_tax: id === '' ? 0.0 : Number(existingSale?.return_tax || 0),
       discount: sale_discount_amount,
-      return_discount: 0.0,
+      return_discount: id === '' ? 0.0 : Number(existingSale?.return_discount || 0),
       updated_date: mongo_date,
       // PHP stores username/email in updated_by; mirror that while
       // keeping the ObjectId in updated_by_id.
@@ -1427,7 +1450,7 @@ const processSale = async (
       number_of_items: itemsale.length,
       items: itemsale,
       changes: existing_changes,
-      items_return: [],
+      items_return: id === '' ? [] : (Array.isArray(existingSale?.items_return) ? existingSale.items_return : []),
       cashregister_id: data.register_id || '',
       license: licenseId,
       sale_extra_discount: round2(salesExtraDiscount, 2),
@@ -1799,6 +1822,35 @@ const processSale = async (
     // For new sales use generated prefixId; for edits, keep the existing sales_id if available
     const salePrefixedId =
       id === '' ? prefixId : existingSale && existingSale.sales_id ? existingSale.sales_id : '';
+
+    // A sale edit keeps the original bill date and records only the price
+    // difference on the date of this edit. Daily reports use the immutable
+    // first-edit snapshot plus these dated deltas.
+    if (id !== '') {
+      const previousTotal = Number(existingSale?.sales_total ?? existingSale?.total ?? 0) || 0;
+      const nextTotal = Number(salesTotalForDoc) || 0;
+      const adjustment = round2(nextTotal - previousTotal, 2);
+      if (Math.abs(adjustment) >= 0.01) {
+        const adjustmentDb = await BaseModel.getDb();
+        await adjustmentDb.collection('sale_edit_adjustments').updateOne(
+          { sale_id: saleId, old_total: previousTotal, new_total: nextTotal, created_at: mongo_date },
+          { $setOnInsert: {
+            sale_id: saleId,
+            sales_id: salePrefixedId || String(existingSale?.sales_id || ''),
+            branch_id: branchId && ObjectId.isValid(String(branchId)) ? new ObjectId(String(branchId)) : branchId,
+            license: licenseId,
+            old_total: previousTotal,
+            new_total: nextTotal,
+            amount: adjustment,
+            payment_mode: 'Credit',
+            created_at: mongo_date,
+            created_by: userId,
+            created_by_name: userName,
+          } },
+          { upsert: true }
+        );
+      }
+    }
 
     // The till saves through this service; handset orders notify from the
     // repository. Wake the same kitchen queue as soon as this write commits,
@@ -2919,7 +2971,7 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
     salesRepository.aggregate(paymentPipeline, { SaleModel: Model }),
     salesRepository.find(
       match,
-      'dine_type table_id table_number person_count extra_discount sale_extra_discount extra_discount_type items total sales_total payment_pending sale_original_snapshot multi_payment payment_mode payment_status partial_check partial_balance items_total discount tax',
+      'dine_type table_id table_number person_count extra_discount sale_extra_discount extra_discount_type items total sales_total payment_pending sale_original_snapshot sale_original_total multi_payment payment_mode payment_status partial_check partial_balance items_total discount tax',
       { SaleModel: Model }
     ),
     salesRepository.aggregate(taxPipeline, { SaleModel: Model }),
@@ -2932,8 +2984,8 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
     const plain = typeof saleDoc.toObject === 'function' ? saleDoc.toObject() : { ...saleDoc };
     return {
       ...plain,
-      sales_total: snapshot.sales_total ?? plain.sales_total,
-      total: snapshot.total ?? plain.total,
+      sales_total: snapshot.sales_total ?? plain.sale_original_total ?? plain.sales_total,
+      total: snapshot.total ?? plain.sale_original_total ?? plain.total,
       items: Array.isArray(snapshot.items) ? snapshot.items : plain.items,
       multi_payment: snapshot.multi_payment ?? plain.multi_payment,
       payment_mode: snapshot.payment_mode ?? plain.payment_mode,
