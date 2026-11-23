@@ -581,6 +581,8 @@ const effectiveTypes = (user) => {
     .filter(value => value !== undefined && value !== null && value !== '');
   if ([user?.is_super_admin,user?.isSuperAdmin,user?.super_admin].some(value => value === true || value === 1 || String(value).toLowerCase() === 'true')) values.push('superadmin');
   if ([user?.is_admin,user?.isAdmin,user?.admin].some(value => value === true || value === 1 || String(value).toLowerCase() === 'true')) values.push('admin');
+  const permissionRows = [...(Array.isArray(user?.permissions)?user.permissions:[]),...(Array.isArray(user?.permission)?user.permission:[])];
+  if (permissionRows.some(value => ['*','all','admin','super_admin','superadmin','full_access'].includes(String(value && typeof value === 'object' ? (value.key||value.name||value.permission||'') : value).trim().toLowerCase()))) values.push('admin');
   return [...new Set(values.map(value => String(value).trim().toLowerCase().replace(/[^a-z0-9]/g, '')))];
 };
 const effectiveType = (user) => effectiveTypes(user)[0] || '';

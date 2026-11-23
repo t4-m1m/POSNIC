@@ -153,6 +153,8 @@ exports.restrictTo = (...roles) => {
       .filter(value => value != null);
     if ([req.user?.is_super_admin,req.user?.isSuperAdmin,req.user?.super_admin].some(value => value === true || value === 1 || String(value).toLowerCase() === 'true')) values.push('superadmin');
     if ([req.user?.is_admin,req.user?.isAdmin,req.user?.admin].some(value => value === true || value === 1 || String(value).toLowerCase() === 'true')) values.push('admin');
+    const permissionRows = [...(Array.isArray(req.user?.permissions)?req.user.permissions:[]),...(Array.isArray(req.user?.permission)?req.user.permission:[])];
+    if (permissionRows.some(value => ['*','all','admin','super_admin','superadmin','full_access'].includes(String(value && typeof value === 'object' ? (value.key||value.name||value.permission||'') : value).trim().toLowerCase()))) values.push('admin');
     values.splice(0, values.length, ...values.map(value => String(value).trim().toLowerCase().replace(/[^a-z0-9]/g, '')));
     const required = roles.map(value => String(value).trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
     const admin = values.some(value => ['admin','adminuser','administrator','superadmin','superadministrator','owner','platformadmin'].includes(value));
