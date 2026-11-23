@@ -454,14 +454,11 @@ describe('SalesController', () => {
       ...extra,
     });
 
-    test('403 when a restricted cashier applies a discount with no token', async () => {
+    test('manual discounts remain available without a manager token', async () => {
       const res = mockRes();
       await ctrl.create(mockReq({ user: cashier(), body: discountedBody() }), res, mockNext());
-      expect(res.status).toHaveBeenCalledWith(403);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ message: ERROR_MESSAGES.DISCOUNT_NEEDS_APPROVAL })
-      );
-      expect(salesService.processSale).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(salesService.processSale).toHaveBeenCalled();
     });
 
     test('a supplied remote decision cannot bypass the verified checkout gate', async () => {
@@ -527,7 +524,7 @@ describe('SalesController', () => {
       expect(salesService.processSale).toHaveBeenCalled();
     });
 
-    test('rejects a token minted for a different action', async () => {
+    test('does not require an approval token for a manual discount', async () => {
       const token = signApproval({ action: 'void_sale', cashier_user_id: VALID_ID });
       const res = mockRes();
       await ctrl.create(
@@ -535,7 +532,8 @@ describe('SalesController', () => {
         res,
         mockNext()
       );
-      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(salesService.processSale).toHaveBeenCalled();
     });
 
     test('no gate when the cashier may apply discounts', async () => {
@@ -548,7 +546,7 @@ describe('SalesController', () => {
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
-    test('403 when an allowed discount exceeds the role cap', async () => {
+    test('manual discounts are not blocked by the legacy role percentage cap', async () => {
       // 20 off a 100 subtotal = 20%, over the 10% cap.
       const res = mockRes();
       await ctrl.create(
@@ -563,7 +561,8 @@ describe('SalesController', () => {
         res,
         mockNext()
       );
-      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(salesService.processSale).toHaveBeenCalled();
     });
 
     test('within the role cap passes without approval', async () => {
