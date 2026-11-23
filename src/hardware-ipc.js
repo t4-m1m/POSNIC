@@ -304,7 +304,10 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
    * paper.
    */
   ipcMain.handle('printer:receipt-settings-get', async () => {
+    const savedPrefs = _loadPrefs();
+    const storedPrinter = String(savedPrefs.receipt_printer || savedPrefs.defaultPrinter || '').trim();
     const settings = loadReceiptSettings();
+    if (!settings.printerName && storedPrinter) settings.printerName = storedPrinter;
     const defaultPrinter = await hardwareManager.getDefaultPrinter();
     return { success: true, settings, printers: await hardwareManager.listPrinters({ fresh: true }), defaultPrinter: defaultPrinter ? defaultPrinter.name : '' };
   });
@@ -749,9 +752,36 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
   });
 
   // Printer set-default (saves to preferences)
-  ipcMain.handle('printer:set-default', (event, printerName) => {
-    _savePrefs({ defaultPrinter: printerName });
-    return { success: true };
+  ipcMain.handle('printer:get-ui-preferences', () => {
+    const saved = _loadPrefs();
+    const receipt = loadReceiptSettings();
+    return {
+      receiptPrinter: String(saved.receipt_printer || receipt.printerName || saved.defaultPrinter || ''),
+      labelPrinter: String(saved.label_printer || ''),
+      autoPrintReceipt: saved.auto_print_receipt === true,
+      autoPrintLabels: saved.auto_print_labels === true,
+    };
+  });
+
+  ipcMain.handle('printer:set-default', (event, printerName, ui = {}) => {
+    try {
+      const name = String(printerName || '').trim();
+      if (!name || name.length > 300 || /[\\r\\n\\0]/.test(name)) throw new Error('Choose a valid receipt printer.');
+      const receipt = saveReceiptSettings({ ...loadReceiptSettings(), printerName: name });
+      const pageSize = ['58mm', '80mm', '112mm'].includes(receipt.paperWidth) ? receipt.paperWidth : '80mm';
+      _savePrefs({
+        defaultPrinter: name,
+        receipt_printer: name,
+        receipt_printers: JSON.stringify([{ name, pageSize, copies: 1, printMode: 'fast' }]),
+        print_width: pageSize,
+        label_printer: String(ui.labelPrinter || '').trim(),
+        auto_print_receipt: ui.autoPrintReceipt === true,
+        auto_print_labels: ui.autoPrintLabels === true,
+      });
+      return { success: true, printerName: name, settings: receipt };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   });
 
   // ── Cash Drawer Handlers ─────────────────────────────

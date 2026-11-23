@@ -1977,7 +1977,7 @@ class SalesController extends BaseController {
         { $group: { _id: null, amount: { $sum: '$reportReturnAmount' }, count: { $sum: 1 } } },
       ]).toArray();
       const returnAdjustmentTotal = roundToTwo(returnAdjustmentRows.length ? returnAdjustmentRows[0].amount || 0 : 0);
-      const salesDataComplete = salesPayments.every(sale => {
+      let salesDataComplete = salesPayments.every(sale => {
         const total = sale.sales_total ?? sale.total;
         return total !== null && total !== undefined && total !== '' && Number.isFinite(Number(total));
       }) && editAdjustmentRows.every(row =>
@@ -2153,6 +2153,13 @@ class SalesController extends BaseController {
         })
       );
       const outstandingDataComplete = outstandingResult.complete && futureReturnEvents.length === 0 && returnHistoryComplete;
+      // The historical return audit is only available after the linked sale records are loaded.
+      // Apply it before using completeness to decide whether cost/profit figures are trustworthy.
+      salesDataComplete = salesDataComplete && returnHistoryComplete;
+      if (!salesDataComplete) {
+        costDataComplete = false;
+        costOfGoodsTotal = null;
+      }
 
       // The cash book stores money-in as type=credit and money-out as
       // type=debit. Only money-out is an operating expense. Normalize legacy
