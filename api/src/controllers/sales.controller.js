@@ -1963,6 +1963,11 @@ class SalesController extends BaseController {
       const db = await BaseModel.getDb();
       const reportStart = new Date(filteredDateRange.start_date);
       const reportEnd = new Date(filteredDateRange.end_date);
+      // These tenant filters are also used by the return-history query below.
+      // Define them before the first query so the report never hits a TDZ ReferenceError.
+      const licenseValue = BaseModel.license || req.user?.license || req.user?.license_id;
+      const licenseValues = licenseValue ? [licenseValue, String(licenseValue)] : [];
+      const branchValues = [branchObjectId, String(branchObjectId)];
       const returnAdjustmentRows = await db.collection('sales').aggregate([
         { $match: { branch_id: branchObjectId, license: { $in: licenseValues }, items_return: { $exists: true, $ne: [] } } },
         { $unwind: '$items_return' },
@@ -2086,9 +2091,6 @@ class SalesController extends BaseController {
 
       // Debt created by bills in this report period. This is receivable,
       // not money collected, so it is separate from payment_details.
-      const licenseValue = BaseModel.license || req.user.license || req.user.license_id;
-      const licenseValues = licenseValue ? [licenseValue, String(licenseValue)] : [];
-      const branchValues = [branchObjectId, String(branchObjectId)];
       const [ledgerRows, laterCreditPayments, laterEdits, allVersements, f6AndReturnSales] = await Promise.all([
         db.collection('transaction').find({ license: { $in: licenseValues }, branch_id: { $in: branchValues } }).toArray(),
         db.collection('credit_payments').find({
