@@ -5814,9 +5814,15 @@ class SalesRepository {
             ? Object.entries(saleDocument.multi_payment).map(([method, value]) => [String(method), Number(typeof value === 'object' ? (value?.amount ?? value?.paid ?? value?.total ?? 0) : value) || 0])
             : [];
         const recordedPaid = paymentRows.filter(([method, amount]) => !/^credit$/i.test(method) && amount > 0).reduce((sum, [, amount]) => sum + amount, 0);
+        const paidField = saleDocument.paid_amount ?? saleDocument.payment_received;
+        const paidFieldValue = paidField === undefined || paidField === null ? NaN : Number(paidField);
+        const expectedNetPaid = Math.max(0, currentSaleTotal - originalPending);
+        const paidFieldAlreadyNet = Number.isFinite(paidFieldValue) && Math.abs(paidFieldValue - expectedNetPaid) < 0.02;
         const originalPaid = paymentRows.some(([, amount]) => amount > 0)
           ? recordedPaid
-          : Math.max(0, originalSaleTotal - originalPending);
+          : Number.isFinite(paidFieldValue)
+            ? Math.max(0, paidFieldValue + (paidFieldAlreadyNet ? previouslyReturnedTotal : 0))
+            : Math.max(0, originalSaleTotal - originalPending);
         const netPaidAfterRefunds = Math.max(0, round(originalPaid - return_sale_amount, 2));
         const updatedPaymentPending = Math.max(0, round(updatedSalesTotal - netPaidAfterRefunds, 2));
         const updatedSaleProcess = sale_total_amount > 0 ? 'PartialReturn' : 'FullReturn';
