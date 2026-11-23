@@ -1045,7 +1045,9 @@ describe('SalesController', () => {
           { _id: { worker_name: 'Nadia', method: 'bank' }, amount: 2500, count: 1 },
         ] })) },
       };
-      const db = { collection: jest.fn((name) => dbCollections[name] || emptyCollection()) };
+      const db = {
+        collection: jest.fn((name) => Object.assign(emptyCollection(), dbCollections[name] || {})),
+      };
       const dbSpy = jest.spyOn(BaseModel, 'getDb').mockResolvedValue(db);
       salesService.getDailySalesReportAggregates.mockResolvedValue({
         productAgg: [{ subtotal: 1000, totalAmount: 1000, totalQty: 2, totalCompanyPrice: 400 }],
