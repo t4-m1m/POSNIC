@@ -1765,11 +1765,11 @@ class SalesController extends BaseController {
       });
 
       const unresolvedCostLines = productDetails.reduce((sum, item) => sum + Number(item.unresolved_cost_lines || 0), 0);
-      const costDataComplete = unresolvedCostLines === 0 && editCostDataComplete;
+      let costDataComplete = unresolvedCostLines === 0 && editCostDataComplete;
       const costOfGoodsBase = roundToTwo(
         productDetails.reduce((sum, item) => sum + Number(item.product_cost || 0), 0)
       );
-      const costOfGoodsTotal = costDataComplete
+      let costOfGoodsTotal = costDataComplete
         ? roundToTwo(costOfGoodsBase + editCostAdjustmentTotal)
         : null;
       let grossProfitTotal = roundToTwo(
@@ -1936,7 +1936,7 @@ class SalesController extends BaseController {
       // discounts. Use that final payable amount as the source of truth; subtracting
       // the separately reported discount fields again would double-discount the Z report.
       const itemDiscountTotal = roundToTwo(productDetails.reduce((sum, item) => sum + Number(item.product_discount || 0), 0));
-      const salesNetTotal = roundToTwo(salesPayments.reduce((sum, saleDoc) => sum + (Number(saleDoc.sales_total ?? saleDoc.total) || 0), 0) + editAdjustmentTotal);
+      let salesNetTotal = roundToTwo(salesPayments.reduce((sum, saleDoc) => sum + (Number(saleDoc.sales_total ?? saleDoc.total) || 0), 0) + editAdjustmentTotal);
       if (Math.abs(editAdjustmentTotal) >= 0.01) paymentDetails.push({ payment_mode: 'Crédit · modification', sale_payment: editAdjustmentTotal, credit_adjustment: editAdjustmentTotal });
       const discountTotal = roundToTwo(itemDiscountTotal + totalSaleExtraDiscount);
       grossProfitTotal = costDataComplete ? roundToTwo(salesNetTotal - costOfGoodsTotal) : null;
@@ -1962,6 +1962,27 @@ class SalesController extends BaseController {
       const db = await BaseModel.getDb();
       const reportStart = new Date(filteredDateRange.start_date);
       const reportEnd = new Date(filteredDateRange.end_date);
+      const returnAdjustmentRows = await db.collection('sales').aggregate([
+        { $match: { branch_id: branchObjectId, license: { $in: licenseValues }, items_return: { $exists: true, $ne: [] } } },
+        { $unwind: '$items_return' },
+        { $addFields: {
+          reportReturnDate: { $convert: { input: { $ifNull: ['$items_return.returnArray.returnDate', '$items_return.return_date'] }, to: 'date', onError: null, onNull: null } },
+          reportReturnAmount: { $convert: { input: { $ifNull: ['$items_return.returnArray.itemsTotalAmount', '$items_return.amount'] }, to: 'double', onError: 0, onNull: 0 } },
+        } },
+        { $match: { $expr: { $and: [
+          { $gte: ['$reportReturnDate', reportStart] },
+          { $lt: ['$reportReturnDate', reportEnd] },
+        ] } } },
+        { $group: { _id: null, amount: { $sum: '$reportReturnAmount' }, count: { $sum: 1 } } },
+      ]).toArray();
+      const returnAdjustmentTotal = roundToTwo(returnAdjustmentRows.length ? returnAdjustmentRows[0].amount || 0 : 0);
+      if (returnAdjustmentTotal > 0) {
+        // Returns are dated revenue adjustments. Do not reverse COGS unless the
+        // return record proves usable inventory restoration and carries its cost.
+        salesNetTotal = roundToTwo(salesNetTotal - returnAdjustmentTotal);
+        costDataComplete = false;
+        costOfGoodsTotal = null;
+      }
       // Initial deposits and final settlements are separate dated cash events.
       // A later settlement must never pull the original deposit into today's report.
       const versementEvents = await db.collection('sale_versements').find({
@@ -2377,6 +2398,7 @@ class SalesController extends BaseController {
         sales_total: salesNetTotal,
         net_sales: salesNetTotal,
         sale_edit_adjustment_total: editAdjustmentTotal,
+        return_adjustment_total: returnAdjustmentTotal,
         discount_total: discountTotal,
         cost_of_goods_total: costOfGoodsTotal,
         cost_data_complete: costDataComplete,
@@ -2384,6 +2406,7 @@ class SalesController extends BaseController {
         cost_data_warnings: [
           ...(unresolvedCostLines ? [`Missing historical cost snapshot on ${unresolvedCostLines} sale line(s).`] : []),
           ...(!editCostDataComplete ? ['One or more sale modifications have no historical cost adjustment.'] : []),
+          ...(returnAdjustmentTotal > 0 ? ['Returned merchandise needs verified inventory-restoration cost before COGS can be finalized.'] : []),
         ],
         profit_data_complete: dailyAccounting.profitDataComplete,
         gross_profit_total: grossProfitTotal,
