@@ -2080,7 +2080,7 @@ class SalesController extends BaseController {
         db.collection('credit_payments').find({
           license: { $in: licenseValues }, branch_id: { $in: branchValues },
           received_at: { $gte: reportEnd },
-        }).project({ amount: 1, received_at: 1 }).toArray(),
+        }).project({ amount: 1, received_at: 1, allocations: 1 }).toArray(),
         db.collection('sale_edit_adjustments').find({
           license: { $in: licenseValues }, branch_id: { $in: branchValues },
           created_at: { $gte: reportEnd },
@@ -2196,7 +2196,7 @@ class SalesController extends BaseController {
       });
 
       const branchCount = await db.collection('branches').countDocuments({ license: { $in: licenseValues } });
-      const hrBranchScope = branchCount > 1 ? { branch_id: { $in: branchValues } } : {};
+      const hrBranchScope = branchCount === 1 ? {} : { branch_id: { $in: branchValues } };
       const legacyHrRows = branchCount > 1
         ? await db.collection('hr_transactions').find({
             license: { $in: licenseValues }, branch_id: { $exists: false },
@@ -2207,7 +2207,7 @@ class SalesController extends BaseController {
         const date = row.date ? new Date(row.date) : null;
         return date && Number.isFinite(date.getTime()) && date >= reportStart && date < reportEnd && Number(row.amount || 0) > 0;
       });
-      const payrollBranchComplete = branchCount <= 1 || unassignedHrInDay.length === 0;
+      const payrollBranchComplete = branchCount === 1 || (branchCount > 1 && unassignedHrInDay.length === 0);
 
       // HR salary payments are scoped to the selected branch on multi-branch licenses.
       const salaryPaymentRows = await db.collection('hr_transactions').aggregate([

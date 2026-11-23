@@ -53,9 +53,9 @@ function context(req) {
 async function branchScope(req) {
   const branches = await collection('branches');
   const count = await branches.countDocuments({ license: req.hrContext.license });
-  return count > 1
-    ? { branch_id: req.hrContext.branchId }
-    : { $or: [{ branch_id: req.hrContext.branchId }, { branch_id: { $exists: false } }] };
+  return count === 1
+    ? { $or: [{ branch_id: req.hrContext.branchId }, { branch_id: { $exists: false } }] }
+    : { branch_id: req.hrContext.branchId };
 }
 async function collection(name) {
   const model = new BaseModel(name);
