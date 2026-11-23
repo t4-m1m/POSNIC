@@ -1982,7 +1982,7 @@ class SalesController extends BaseController {
         return total !== null && total !== undefined && total !== '' && Number.isFinite(Number(total));
       }) && editAdjustmentRows.every(row =>
         row.amount !== null && row.amount !== undefined && row.amount !== '' && Number.isFinite(Number(row.amount))
-      ) && returnHistoryComplete;
+      );
       if (!salesDataComplete) {
         costDataComplete = false;
         costOfGoodsTotal = null;
