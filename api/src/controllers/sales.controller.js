@@ -7,6 +7,7 @@ const Sale = require('../models/sale.model');
 const BaseModel = require('../models/base.model');
 const mongoose = require('mongoose');
 const salesService = require('../services/sale.service');
+const accountingEngine = require('../services/accounting-engine');
 
 /* The branch doc carries the shop's own SMTP settings; owner rule is
    theirs first, the platform chain otherwise. Absent config, bad ids
@@ -1959,23 +1960,48 @@ class SalesController extends BaseController {
       // Debt collections are cash flow received during this report period.
       // Keep them separate from sales revenue so the original sale is never counted twice.
       const db = await BaseModel.getDb();
-      const settledVersements = await db.collection('sale_versements').find({
-        branch_id: branchObjectId, status: 'settled',
-        settled_at: { $gte: new Date(filteredDateRange.start_date), $lt: new Date(filteredDateRange.end_date) },
+      const reportStart = new Date(filteredDateRange.start_date);
+      const reportEnd = new Date(filteredDateRange.end_date);
+      // Initial deposits and final settlements are separate dated cash events.
+      // A later settlement must never pull the original deposit into today's report.
+      const versementEvents = await db.collection('sale_versements').find({
+        branch_id: branchObjectId,
+        $or: [
+          { initial_collected_at: { $gte: reportStart, $lt: reportEnd } },
+          { initial_collected_at: { $exists: false }, created_at: { $gte: reportStart, $lt: reportEnd } },
+          { 'settlement.settled_at': { $gte: reportStart, $lt: reportEnd } },
+          { 'settlement.settled_at': { $exists: false }, settled_at: { $gte: reportStart, $lt: reportEnd } },
+        ],
       }).toArray();
       const tenderLabels = { cash: 'Espèces', tpe: 'TPE', baridimob: 'BaridiMob' };
       const versementPaymentMap = new Map();
       const addVersementPayment = (method, amount) => {
-        const key = String(method || 'cash').toLowerCase();
+        const key = String(method || 'other').toLowerCase();
         const row = versementPaymentMap.get(key) || { payment_mode: tenderLabels[key] || key, amount: 0, count: 0 };
         row.amount = roundToTwo(row.amount + Number(amount || 0));
         if (Number(amount || 0) > 0) row.count += 1;
         versementPaymentMap.set(key, row);
       };
-      settledVersements.forEach((v) => {
-        addVersementPayment(v.initial_method, v.initial_amount || v.initial_recorded_amount || 0);
-        addVersementPayment(v.settlement && v.settlement.method, v.settlement && v.settlement.amount || 0);
+      let versementCashTotal = 0;
+      const inReportDay = (value) => {
+        const date = value ? new Date(value) : null;
+        return date && Number.isFinite(date.getTime()) && date >= reportStart && date < reportEnd;
+      };
+      versementEvents.forEach((v) => {
+        const initialDate = v.initial_collected_at || v.created_at;
+        const initialAmount = Number(v.initial_recorded_amount ?? v.initial_amount ?? 0) || 0;
+        if (initialAmount > 0 && inReportDay(initialDate)) {
+          addVersementPayment(v.initial_method, initialAmount);
+          if (/^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(v.initial_method || ''))) versementCashTotal += initialAmount;
+        }
+        const settlementDate = v.settlement?.settled_at || v.settled_at;
+        const settlementAmount = Number(v.settlement?.amount || 0) || 0;
+        if (settlementAmount > 0 && inReportDay(settlementDate)) {
+          addVersementPayment(v.settlement?.method, settlementAmount);
+          if (/^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(v.settlement?.method || ''))) versementCashTotal += settlementAmount;
+        }
       });
+      versementCashTotal = roundToTwo(versementCashTotal);
       const versementPaymentDetails = Array.from(versementPaymentMap.values()).filter((row) => row.amount > 0);
       const versementPaymentTotal = roundToTwo(versementPaymentDetails.reduce((sum, row) => sum + row.amount, 0));
       const refundRows = await db.collection('sales').aggregate([
@@ -2029,12 +2055,11 @@ class SalesController extends BaseController {
         (sum, saleDoc) => sum + Math.max(0, Number(saleDoc.payment_pending) || 0),
         0
       ) + editAdjustmentTotal);
+      const outstandingDataComplete = false; // Replaced by the as-of ledger reconstruction once all linked legacy events are loaded.
 
       // The cash book stores money-in as type=credit and money-out as
       // type=debit. Only money-out is an operating expense. Normalize legacy
       // date strings and older created_date records before applying the day.
-      const reportStart = new Date(filteredDateRange.start_date);
-      const reportEnd = new Date(filteredDateRange.end_date);
       const expenseRows = await db.collection('expenses').aggregate([
         { $match: {
           license: BaseModel.license || req.user.license || req.user.license_id,
@@ -2178,21 +2203,22 @@ class SalesController extends BaseController {
         count: Number(row.count) || 0,
       }));
       const salaryPrimesTotal = roundToTwo(salaryPrimeDetails.reduce((sum, row) => sum + row.amount, 0));
-      const netProfitTotal = costDataComplete
-        ? roundToTwo(grossProfitTotal - expensesTotal - salaryPaymentsTotal - salaryAdvancesTotal - salaryPrimesTotal)
-        : null;
+      const dailyAccounting = accountingEngine.calculateDailyClose({
+        salesTotal: salesNetTotal,
+        costOfGoodsTotal,
+        costDataComplete,
+        expensesTotal,
+        salaryPaymentsTotal,
+        salaryAdvancesTotal,
+        salaryPrimesTotal,
+        cashDataComplete: false,
+      });
+      grossProfitTotal = dailyAccounting.grossProfitTotal;
+      const netProfitTotal = dailyAccounting.netProfitTotal;
 
       const salesCount = salesPayments.length;
-      const isCashTender = (method) => /^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(method || '').trim());
-      // Only the settlement transaction is new cash today. The initial versement
-      // was already counted with the original sale and must not be counted twice.
-      const versementCashTotal = roundToTwo(settledVersements.reduce((sum, row) => {
-        const initialCash = isCashTender(row.initial_method)
-          ? Number(row.initial_recorded_amount ?? row.initial_amount ?? 0) : 0;
-        const settlementCash = isCashTender(row.settlement && row.settlement.method)
-          ? Number(row.settlement && row.settlement.amount || 0) : 0;
-        return sum + initialCash + settlementCash;
-      }, 0));
+      const isCashTender = accountingEngine.isCashTender;
+
       // A ZR COD payout becomes physical cash only after the parcel is marked ENCAISSE.
       const deliveryPayoutRows = await db.collection('zr_delivery_payouts').aggregate([
         { $match: {
@@ -2227,6 +2253,7 @@ class SalesController extends BaseController {
           ...(unresolvedCostLines ? [`Missing historical cost snapshot on ${unresolvedCostLines} sale line(s).`] : []),
           ...(!editCostDataComplete ? ['One or more sale modifications have no historical cost adjustment.'] : []),
         ],
+        profit_data_complete: dailyAccounting.profitDataComplete,
         gross_profit_total: grossProfitTotal,
         net_profit_total: netProfitTotal,
         expenses_total: expensesTotal,
@@ -2269,8 +2296,24 @@ class SalesController extends BaseController {
         const salaryCash = salaryPaymentDetails.reduce((sum, row) => sum + (isCashTender(row.method) ? Number(row.amount || 0) : 0), 0);
         const advanceCash = salaryAdvanceDetails.reduce((sum, row) => sum + (isCashTender(row.method) ? Number(row.amount || 0) : 0), 0);
         const primeCash = salaryPrimeDetails.reduce((sum, row) => sum + (isCashTender(row.method) ? Number(row.amount || 0) : 0), 0);
-        const cashExpected = roundToTwo(salesCash + deliveryPayoutCash - expensesTotal - salaryCash - advanceCash - primeCash);
-        return this.success(res, { date: branchDetails.from_date, cash_expected: cashExpected, currency: 'DA' }, 'Cash expected loaded', 200);
+        const cashExpected = accountingEngine.calculateDailyClose({
+          salesTotal: salesNetTotal,
+          costOfGoodsTotal,
+          costDataComplete,
+          expensesTotal,
+          salaryPaymentsTotal,
+          salaryAdvancesTotal,
+          salaryPrimesTotal,
+          cashDataComplete: false,
+          cash: {},
+        }).cashExpected;
+        return this.success(res, {
+          date: branchDetails.from_date,
+          cash_expected: cashExpected,
+          cash_data_complete: false,
+          cash_data_warning: 'Opening cash and all cash movements have not yet been reconciled.',
+          currency: 'DA',
+        }, 'Cash expected loaded', 200);
       }
 
       // ---- Return success response ----
