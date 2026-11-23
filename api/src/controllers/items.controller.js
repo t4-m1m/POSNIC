@@ -267,7 +267,9 @@ class ItemsController extends BaseController {
         await ensureItemFastSearchIndexes(req.db);
         fastSearchIndexedDatabases.add(req.db);
       }
-      if (req.user?.access?.item?.read === false) return this.error(res, ERROR_MESSAGES.UNAUTHORIZED, 403);
+      const posLookup = String(req.query.context || '').toLowerCase() === 'pos';
+      const canSellItems = req.user?.access?.sales?.write === true;
+      if (req.user?.access?.item?.read === false && !(posLookup && canSellItems)) return this.error(res, ERROR_MESSAGES.UNAUTHORIZED, 403);
       const query = String(req.query.q || req.query.search || '').trim().slice(0, 100);
       const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
       const limit = Math.min(40, Math.max(1, Number.parseInt(req.query.limit, 10) || 40));
