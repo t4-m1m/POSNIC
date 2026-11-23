@@ -150,8 +150,10 @@ exports.restrictTo = (...roles) => {
     // super_admin always satisfies an 'admin' requirement.
     const values = [req.user?.usertype,req.user?.role,req.user?.role_name,req.user?.user_type,req.user?.userType,req.user?.type]
       .flatMap(value => value && typeof value === 'object' ? [value.name,value.role,value.usertype,value.key] : [value])
-      .filter(value => value != null)
-      .map(value => String(value).trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+      .filter(value => value != null);
+    if ([req.user?.is_super_admin,req.user?.isSuperAdmin,req.user?.super_admin].some(value => value === true || value === 1 || String(value).toLowerCase() === 'true')) values.push('superadmin');
+    if ([req.user?.is_admin,req.user?.isAdmin,req.user?.admin].some(value => value === true || value === 1 || String(value).toLowerCase() === 'true')) values.push('admin');
+    values.splice(0, values.length, ...values.map(value => String(value).trim().toLowerCase().replace(/[^a-z0-9]/g, '')));
     const required = roles.map(value => String(value).trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
     const admin = values.some(value => ['admin','adminuser','administrator','superadmin','superadministrator','owner','platformadmin'].includes(value));
     const allowed = values.some(value => required.includes(value)) || (required.includes('admin') && admin);
