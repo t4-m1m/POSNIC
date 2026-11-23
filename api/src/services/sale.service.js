@@ -1827,7 +1827,9 @@ const processSale = async (
     // difference on the date of this edit. Daily reports use the immutable
     // first-edit snapshot plus these dated deltas.
     if (id !== '') {
-      const previousTotal = Number(existingSale?.sales_total ?? existingSale?.total ?? 0) || 0;
+      const recordedPreviousTotal = Number(existingSale?.sales_total ?? existingSale?.total ?? 0) || 0;
+      const legacyReturnedTotal = existingSale?.sale_original_total == null ? Number(existingSale?.items_return_total || 0) : 0;
+      const previousTotal = Math.max(0, round2(recordedPreviousTotal - legacyReturnedTotal, 2));
       const nextTotal = Number(salesTotalForDoc) || 0;
       const adjustment = round2(nextTotal - previousTotal, 2);
       if (Math.abs(adjustment) >= 0.01) {
