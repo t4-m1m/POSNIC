@@ -1,4 +1,6 @@
 const { ObjectId } = require('mongodb');
+const BaseModel = require('../models/base.model');
+const shopDb = async (req) => req.db || await BaseModel.getDb();
 const crypto = require('crypto');
 const COLLECTION = 'sale_versements';
 const money = (v) => Math.round((Number(v) || 0) * 100) / 100;
@@ -9,7 +11,8 @@ const saleTotal = (s) => money(s.sales_total ?? s.grand_total ?? s.total_amount 
 const branchOf = (req) => String(req.tenantContext?.branchId || req.query.branch || req.body?.branch_id || req.session?.selectedBranchId || req.session?.branch_id || req.user?.branch_id || req.user?.branchId || req.user?.branch?._id || '');
 
 exports.ensureForSale = async (req, sale) => {
-  if (!req.db || !sale || !sale.versement_checkout) return null;
+  const db = await shopDb(req);
+  if (!db || !sale || !sale.versement_checkout) return null;
   const meta = sale.versement_checkout, key = saleKey(sale);
   const customerId = String(meta.customer_id || sale.customer_id?._id || sale.customer_id || '').trim();
   const customer = String(meta.customer_name || sale.customer_name || '').trim().slice(0, 200);
@@ -20,7 +23,7 @@ exports.ensureForSale = async (req, sale) => {
       total <= 0 || !['cash','tpe','baridimob'].includes(method)) {
     throw new Error('Invalid Versement metadata on the validated sale.');
   }
-  const collection = req.db.collection(COLLECTION);
+  const collection = db.collection(COLLECTION);
   await collection.createIndex({ sale_key: 1 }, { unique: true });
   await collection.createIndex({ versement_number: 1 }, { unique: true });
   const existing = await collection.findOne({ sale_key: key });
@@ -51,7 +54,8 @@ exports.ensureForSale = async (req, sale) => {
 
 exports.list = async (req,res) => {
   try {
-    if (!req.db) return fail(res,500,'Shop database is unavailable.');
+    const db = await shopDb(req);
+    if (!db) return fail(res,500,'Shop database is unavailable.');
     const branch = branchOf(req);
     if (!ObjectId.isValid(branch)) return fail(res,400,'A valid active branch is required to load versements.');
     const filter = { branch_id: new ObjectId(branch) };
@@ -69,7 +73,7 @@ exports.list = async (req,res) => {
     }
     const saleFilter = { versement_checkout: { $exists: true } };
     if (filter.branch_id) saleFilter.branch_id = filter.branch_id;
-    const orphanSales = await req.db.collection('sales').find(saleFilter).limit(2000).toArray();
+    const orphanSales = await db.collection('sales').find(saleFilter).limit(2000).toArray();
     const recoveryWarnings = [];
     for (const sale of orphanSales) {
       try { await exports.ensureForSale(req, sale); }
@@ -104,6 +108,7 @@ exports.list = async (req,res) => {
 
 exports.create = async (req,res) => {
   try {
+    const db = await shopDb(req);
     if (!req.db) return fail(res,500,'Shop database is unavailable.');
     const saleRef = String(req.body?.sale_id || '').trim();
     const customer = String(req.body?.customer_name || '').trim().slice(0,200);
@@ -141,6 +146,7 @@ exports.create = async (req,res) => {
 
 exports.settle = async (req,res) => {
   try {
+    const db = await shopDb(req);
     if (!req.db) return fail(res,500,'Shop database is unavailable.');
     if (!ObjectId.isValid(String(req.params.id))) return fail(res,400,'Invalid versement reference.');
     const method = String(req.body?.method || '').toLowerCase();
@@ -184,6 +190,7 @@ exports.settle = async (req,res) => {
 
 exports.cancel = async (req,res) => {
   try {
+    const db = await shopDb(req);
     if (!req.db) return fail(res,500,'Shop database is unavailable.');
     if (!ObjectId.isValid(String(req.params.id))) return fail(res,400,'Invalid versement reference.');
     const id=new ObjectId(req.params.id), collection=req.db.collection(COLLECTION);
@@ -260,6 +267,7 @@ exports.cancel = async (req,res) => {
 
 exports.updatePending = async (req,res) => {
   try {
+    const db = await shopDb(req);
     if (!req.db) return fail(res,500,'Shop database is unavailable.');
     if (!ObjectId.isValid(String(req.params.id))) return fail(res,400,'Invalid versement reference.');
     const total=money(req.body?.sale_total);
