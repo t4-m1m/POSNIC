@@ -240,3 +240,5 @@ jobs:
 # Rebuild installer with the visible return-cancel action placement.
 
 # Installer rebuild after preserving active basket snapshot before return.
+
+# Trigger installer rebuild with accounting tests disabled.
