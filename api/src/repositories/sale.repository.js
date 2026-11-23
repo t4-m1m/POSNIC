@@ -5805,6 +5805,18 @@ class SalesRepository {
 
         const originalSaleTotal = Number(saleDocument.sale_original_total ?? saleDocument.sales_total ?? saleDocument.total ?? 0) || 0;
         const updatedSalesTotal = Math.max(0, round(originalSaleTotal - return_sale_amount, 2));
+        const originalPending = Math.max(0, Number(saleDocument.payment_pending ?? saleDocument.unpaid_amount ?? 0) || 0);
+        const paymentRows = Array.isArray(saleDocument.multi_payment)
+          ? saleDocument.multi_payment.map((entry) => [String(entry?.method || entry?.payment_mode || entry?.type || ''), Number(entry?.amount ?? entry?.paid ?? entry?.total ?? 0) || 0])
+          : saleDocument.multi_payment && typeof saleDocument.multi_payment === 'object'
+            ? Object.entries(saleDocument.multi_payment).map(([method, value]) => [String(method), Number(typeof value === 'object' ? (value?.amount ?? value?.paid ?? value?.total ?? 0) : value) || 0])
+            : [];
+        const recordedPaid = paymentRows.filter(([method, amount]) => !/^credit$/i.test(method) && amount > 0).reduce((sum, [, amount]) => sum + amount, 0);
+        const originalPaid = paymentRows.some(([, amount]) => amount > 0)
+          ? recordedPaid
+          : Math.max(0, originalSaleTotal - originalPending);
+        const netPaidAfterRefunds = Math.max(0, round(originalPaid - return_sale_amount, 2));
+        const updatedPaymentPending = Math.max(0, round(updatedSalesTotal - netPaidAfterRefunds, 2));
         const updatedSaleProcess = sale_total_amount > 0 ? 'PartialReturn' : 'FullReturn';
 
         const finalItemsArray = updatedSaleProcess === 'FullReturn' ? [] : itemsArray;
@@ -5827,6 +5839,11 @@ class SalesRepository {
           sale_original_total: originalSaleTotal,
           sales_total: updatedSalesTotal,
           total: updatedSalesTotal,
+          payment_pending: updatedPaymentPending,
+          partial_balance: round(netPaidAfterRefunds, 2),
+          partial_check: updatedPaymentPending > 0 ? 'true' : 'false',
+          unpaid: netPaidAfterRefunds <= 0 ? 'true' : 'false',
+          payment_status: updatedPaymentPending > 0 ? (netPaidAfterRefunds > 0 ? 'Partialy Paid' : 'Unpaid') : 'Paid',
           tax: round(sale_tax_amount, 2),
           discount: round(sale_discount_amount, 2),
           items_total: round(updatedItemsTotalAmount - extraDiscSubReturnExtradisc, 2),
