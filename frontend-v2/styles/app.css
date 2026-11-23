@@ -817,3 +817,37 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 .recent-sales-table .recent-sale-items{min-width:200px}
 .recent-sales-table .recent-sale-item-list{display:flex;flex-direction:column;gap:3px}
 @media(max-width:760px){.operational-list-page{gap:10px}.recent-sales-table{min-width:760px}}
+
+/* V2 surgical fixes: compact list flow, cashier recent-sale cards, direct canvas controls. */
+.operational-list-page{display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;align-content:flex-start!important;gap:12px!important;width:100%!important;min-width:0!important;min-height:0!important;height:auto!important}
+.operational-list-page>.page-head,.operational-list-page>.toolbar,.operational-list-page>.table-wrap{position:static!important;flex:0 0 auto!important;align-self:stretch!important;width:100%!important;min-width:0!important;margin:0!important}
+.operational-list-page>.toolbar{display:flex!important;flex-wrap:wrap!important;align-items:center!important}
+.operational-list-page>.table-wrap{display:block!important;overflow:auto!important}
+.recent-sales-list{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:8px!important;width:100%!important;min-width:0!important}
+#product-results:has(.recent-sales-list){display:flex!important;flex:1 1 auto!important;flex-direction:column!important;align-items:stretch!important;align-content:flex-start!important;justify-content:flex-start!important;gap:8px!important;min-width:0!important;width:100%!important;overflow:auto!important}
+.recent-sales-list .recent-sale{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;width:100%!important;min-width:0!important;box-sizing:border-box!important;padding:8px 10px!important;border:1px solid var(--border-hairline)!important;border-radius:9px!important;background:var(--bg-surface)!important}
+.recent-sales-list .recent-ticket{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;gap:4px!important;min-width:0!important;overflow:hidden!important}
+.recent-sales-list .recent-ticket-heading{display:flex!important;align-items:center!important;gap:7px!important;min-width:0!important;white-space:nowrap!important;overflow:hidden!important}
+.recent-sales-list .recent-ticket-heading>strong,.recent-sales-list .recent-sale-client{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.recent-sales-list .recent-ticket-heading>strong{font-size:12.5px!important;font-weight:750!important;flex:0 0 auto!important}
+.recent-sales-list .recent-sale-client{font-size:12px!important;font-weight:600!important;flex:1 1 auto!important}
+.recent-sales-list .recent-ticket>small{font-size:11.5px!important;line-height:1.2!important}
+.recent-sales-list .recent-sale-items{min-width:0!important;font-size:11px!important}
+.recent-sales-list .recent-sale-items-heading{font-size:10.5px!important;color:var(--text-secondary)!important}
+.recent-sales-list .recent-sale-item-list{display:flex!important;flex-direction:column!important;gap:2px!important;max-height:54px!important;overflow:auto!important}
+.recent-sales-list .recent-sale-item-line{display:flex!important;flex-wrap:wrap!important;gap:2px 6px!important;align-items:baseline!important;min-width:0!important}
+.recent-sales-list .recent-sale-item-line b{font-size:11px!important;overflow-wrap:anywhere!important}
+.recent-sales-list .recent-sale-item-line small{font-size:10.5px!important;color:var(--text-secondary)!important}
+.recent-sales-list .recent-sale-summary{display:flex!important;flex:0 0 auto!important;flex-direction:column!important;align-items:flex-end!important;justify-content:center!important;gap:6px!important;min-width:0!important;text-align:right!important;white-space:nowrap!important}
+.recent-sales-list .recent-sale-summary>strong{font-size:12.5px!important;font-weight:750!important}
+.recent-sales-list .recent-sale-actions{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:flex-end!important;gap:4px!important}
+.recent-sales-list .recent-sale-actions .btn{font-size:11px!important;line-height:1.2!important;padding:3px 7px!important;white-space:nowrap!important}
+.designer-object.is-selected{overflow:visible!important;z-index:50!important}
+.designer-selection-handles{position:absolute!important;inset:-1px!important;overflow:visible!important;pointer-events:none!important;z-index:100!important}
+.designer-resize-handle{width:12px!important;height:12px!important;border:2px solid #2563eb!important;background:#fff!important;box-shadow:0 1px 5px #0f172a66!important;pointer-events:auto!important;z-index:101!important}
+.designer-rotate-handle{top:-32px!important;width:24px!important;height:24px!important;left:calc(50% - 12px)!important;font-size:15px!important;box-shadow:0 1px 5px #0f172a55!important;pointer-events:auto!important;z-index:102!important}
+.designer-rotate-handle::after{content:"";position:absolute;left:50%;top:100%;height:11px;width:2px;background:#2563eb;transform:translateX(-50%)}
+@media(max-width:520px){.recent-sales-list .recent-sale{align-items:flex-start!important}.recent-sales-list .recent-sale-summary{max-width:48%!important}.recent-sales-list .recent-sale-actions{flex-wrap:wrap!important}.recent-sales-list .recent-sale-actions .btn{font-size:10px!important;padding:3px 5px!important}}
+
+/* Let the rotation control remain visible above objects at the top edge of either studio canvas. */
+.designer-artboard{overflow:visible!important}
