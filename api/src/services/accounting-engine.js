@@ -87,6 +87,7 @@ function reconstructOutstandingAsOf({
   editAdjustments = [],
   returns = [],
   versements = [],
+  orphanVersements = [],
   saleDates = {},
   end,
 } = {}) {
@@ -96,7 +97,11 @@ function reconstructOutstandingAsOf({
     const time = value ? new Date(value).getTime() : NaN;
     return Number.isFinite(time) && time >= endTime;
   };
-  const id = (value) => String(value && typeof value === 'object' ? (value._id || value.id || value.sale_id || '') : (value || ''));
+  const id = (value) => {
+    if (value && typeof value.toHexString === 'function') return value.toHexString();
+    if (value && typeof value === 'object') return String(value._id || value.id || value.sale_id || '');
+    return String(value || '');
+  };
   const collectionsAfter = creditPayments
     .filter((row) => after(row.received_at))
     .reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
@@ -111,7 +116,10 @@ function reconstructOutstandingAsOf({
     if (key) returnsAfter.set(key, (returnsAfter.get(key) || 0) + (Number(row.amount) || 0));
   });
 
-  const versementKeys = new Set(versements.map((row) => String(row.sale_key || row.sale_id || '')));
+  const versementKeys = new Set([
+    ...versements.map((row) => String(row.sale_key || row.sale_id || '')),
+    ...orphanVersements.map((row) => String(row.sales_id || row.sale_id || row._id || '')),
+  ]);
   let total = 0;
   let complete = true;
   let unresolved = 0;
@@ -133,12 +141,12 @@ function reconstructOutstandingAsOf({
 
   for (const row of versements) {
     const saleKey = String(row.sale_key || row.sale_id || '');
-    const saleDate = row.sale_date || saleDates[saleKey] || row.created_at;
+    const saleDate = row.sale_date || saleDates[saleKey];
     if (!saleDate || !Number.isFinite(new Date(saleDate).getTime())) {
       complete = false; unresolved += 1; continue;
     }
     if (new Date(saleDate).getTime() >= endTime) continue;
-    const initialDate = row.initial_collected_at || row.created_at;
+    const initialDate = row.initial_collected_at || row.sale_date;
     const settlementDate = row.settlement?.settled_at || row.settled_at;
     let due = Math.max(0, Number(row.remaining ?? row.sale_total - (row.initial_amount || 0) - (row.settlement?.amount || 0)) || 0);
     if (!initialDate || !Number.isFinite(new Date(initialDate).getTime())) {
@@ -149,6 +157,26 @@ function reconstructOutstandingAsOf({
         complete = false; unresolved += 1;
       } else if (after(settlementDate)) due += Number(row.settlement.amount) || 0;
     }
+    total += Math.max(0, due - (editsAfter.get(saleKey) || 0) + (returnsAfter.get(saleKey) || 0));
+  }
+
+  for (const sale of orphanVersements) {
+    const saleKey = String(sale.sales_id || sale.sale_id || sale._id || '');
+    const saleDate = sale.date || sale.created_date;
+    if (!saleDate || !Number.isFinite(new Date(saleDate).getTime())) {
+      complete = false; unresolved += 1; continue;
+    }
+    if (new Date(saleDate).getTime() >= endTime) continue;
+    const meta = sale.versement_checkout || {};
+    const initialDate = meta.initial_collected_at || sale.date || sale.created_date;
+    const initial = Number(meta.initial_amount || 0) || 0;
+    let due;
+    if (finite(sale.payment_pending)) due = Math.max(0, Number(sale.payment_pending));
+    else {
+      due = Math.max(0, Number(sale.sales_total ?? sale.total ?? 0) - initial);
+      complete = false; unresolved += 1;
+    }
+    if (initial > 0 && after(initialDate)) due += initial;
     total += Math.max(0, due - (editsAfter.get(saleKey) || 0) + (returnsAfter.get(saleKey) || 0));
   }
 

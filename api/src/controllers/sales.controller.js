@@ -2051,11 +2051,66 @@ class SalesController extends BaseController {
 
       // Debt created by bills in this report period. This is receivable,
       // not money collected, so it is separate from payment_details.
-      const outstandingAmount = Math.max(0, salesPayments.reduce(
-        (sum, saleDoc) => sum + Math.max(0, Number(saleDoc.payment_pending) || 0),
-        0
-      ) + editAdjustmentTotal);
-      const outstandingDataComplete = false; // Replaced by the as-of ledger reconstruction once all linked legacy events are loaded.
+      const licenseValue = BaseModel.license || req.user.license || req.user.license_id;
+      const licenseValues = licenseValue ? [licenseValue, String(licenseValue)] : [];
+      const branchValues = [branchObjectId, String(branchObjectId)];
+      const [ledgerRows, laterCreditPayments, laterEdits, allVersements, f6AndReturnSales] = await Promise.all([
+        db.collection('transaction').find({ license: { $in: licenseValues }, branch_id: { $in: branchValues } }).toArray(),
+        db.collection('credit_payments').find({
+          license: { $in: licenseValues }, branch_id: { $in: branchValues },
+          received_at: { $gte: reportEnd },
+        }).project({ amount: 1, received_at: 1 }).toArray(),
+        db.collection('sale_edit_adjustments').find({
+          license: { $in: licenseValues }, branch_id: { $in: branchValues },
+          created_at: { $gte: reportEnd },
+        }).project({ sale_id: 1, sales_id: 1, amount: 1, created_at: 1 }).toArray(),
+        db.collection('sale_versements').find({ branch_id: { $in: branchValues } }).toArray(),
+        db.collection('sales').find({
+          license: { $in: licenseValues }, branch_id: { $in: branchValues },
+          $or: [{ versement_checkout: { $exists: true } }, { items_return: { $exists: true, $ne: [] } }],
+        }).project({
+          _id: 1, sales_id: 1, sale_id: 1, date: 1, created_date: 1, versement_checkout: 1,
+          payment_pending: 1, sales_total: 1, total: 1, items_return: 1,
+        }).toArray(),
+      ]);
+      const linkedSaleDates = {};
+      const saleByObjectId = new Map();
+      const saleByKey = new Map();
+      for (const sale of f6AndReturnSales) {
+        const saleDate = sale.date || sale.created_date;
+        const key = String(sale.sales_id || sale.sale_id || sale._id || '');
+        if (key && saleDate) linkedSaleDates[key] = saleDate;
+        linkedSaleDates[String(sale._id)] = saleDate;
+        saleByObjectId.set(String(sale._id), sale);
+        if (key) saleByKey.set(key, sale);
+      }
+      const versementKeys = new Set(allVersements.map(v => String(v.sale_key || v.sale_id || '')));
+      const linkedVersements = allVersements.map(v => {
+        const linked = saleByObjectId.get(String(v.sale_object_id || '')) || saleByKey.get(String(v.sale_key || '')) || {};
+        return { ...v, sale_date: linked.date || linked.created_date || null };
+      });
+      const orphanVersements = f6AndReturnSales.filter(sale =>
+        sale.versement_checkout && !versementKeys.has(String(sale.sales_id || sale.sale_id || sale._id || ''))
+      );
+      const futureReturnEvents = f6AndReturnSales.flatMap(sale =>
+        (Array.isArray(sale.items_return) ? sale.items_return : [])
+          .filter(block => {
+            const date = block?.returnArray?.returnDate;
+            return date && new Date(date) >= reportEnd;
+          })
+          .map(() => ({ sale_id: sale.sales_id || sale.sale_id || sale._id }))
+      );
+      const outstandingResult = accountingEngine.reconstructOutstandingAsOf({
+        transactions: ledgerRows,
+        creditPayments: laterCreditPayments,
+        editAdjustments: laterEdits,
+        versements: linkedVersements,
+        orphanVersements,
+        saleDates: linkedSaleDates,
+        end: reportEnd,
+      });
+      const outstandingAmount = outstandingResult.amount;
+      const outstandingDataComplete = outstandingResult.complete && futureReturnEvents.length === 0;
 
       // The cash book stores money-in as type=credit and money-out as
       // type=debit. Only money-out is an operating expense. Normalize legacy
@@ -2264,7 +2319,9 @@ class SalesController extends BaseController {
         salary_advance_details: salaryAdvanceDetails,
         salary_primes_total: salaryPrimesTotal,
         salary_prime_details: salaryPrimeDetails,
-        outstanding_amount: roundToTwo(outstandingAmount),
+        outstanding_amount: outstandingDataComplete ? roundToTwo(outstandingAmount) : null,
+        outstanding_data_complete: outstandingDataComplete,
+        outstanding_unresolved_records: outstandingResult.unresolved + futureReturnEvents.length,
         dine_details: dineDetails,
         tax_details: taxDetails,
         extra_discount: {
