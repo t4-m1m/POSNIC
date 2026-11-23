@@ -2060,7 +2060,7 @@ class SalesController extends BaseController {
           // payment breakdown as a negative movement; the old call referenced
           // an undefined helper and threw a 500 whenever this day had a refund.
           paymentDetails.push({
-            payment_mode: refundLabels[String(row._id || 'cash').toLowerCase()] || String(row._id || 'Cash'),
+            payment_mode: refundLabels[String(row._id || 'cash').toLowerCase()] || accountingEngine.normalizeTenderName(row._id || 'cash'),
             sale_payment: -amount,
             is_refund: true,
           });
@@ -2402,7 +2402,8 @@ class SalesController extends BaseController {
         payment_details: paymentDetails,
         debt_payment_details: debtPaymentDetails,
         payment_data_complete: paymentDataComplete,
-        debt_payment_data_complete: debtPaymentRows.every(row => !!row._id),
+        debt_payment_data_complete: debtPaymentDataComplete,
+        versement_data_complete: versementDataComplete,
         debt_payment_total: debtPaymentTotal,
         versement_payment_details: versementPaymentDetails,
         versement_payment_total: versementPaymentTotal,
