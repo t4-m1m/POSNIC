@@ -6,7 +6,7 @@ const actor = (req) => String(req.user?.username || req.user?.name || req.user?.
 const fail = (res, status, message) => res.status(status).json({ type: 'error', message });
 const saleKey = (s) => String(s.sales_id || s.sale_id || s.invoice_number || s._id || '');
 const saleTotal = (s) => money(s.sales_total ?? s.grand_total ?? s.total_amount ?? s.total ?? s.items_total ?? 0);
-const branchOf = (req) => String(req.query.branch || req.body?.branch_id || req.session?.selectedBranchId || req.session?.branch_id || req.user?.branch_id || req.user?.branchId || req.user?.branch?._id || '');
+const branchOf = (req) => String(req.tenantContext?.branchId || req.query.branch || req.body?.branch_id || req.session?.selectedBranchId || req.session?.branch_id || req.user?.branch_id || req.user?.branchId || req.user?.branch?._id || '');
 
 exports.ensureForSale = async (req, sale) => {
   if (!req.db || !sale || !sale.versement_checkout) return null;
@@ -53,7 +53,8 @@ exports.list = async (req,res) => {
   try {
     if (!req.db) return fail(res,500,'Shop database is unavailable.');
     const branch = branchOf(req);
-    const filter = branch && ObjectId.isValid(branch) ? { branch_id: new ObjectId(branch) } : {};
+    if (!ObjectId.isValid(branch)) return fail(res,400,'A valid active branch is required to load versements.');
+    const filter = { branch_id: new ObjectId(branch) };
     const status = String(req.query.status || 'all');
     if (status !== 'all') filter.status = status;
     const q = String(req.query.q || '').trim().slice(0,120);
@@ -69,7 +70,17 @@ exports.list = async (req,res) => {
     const saleFilter = { versement_checkout: { $exists: true } };
     if (filter.branch_id) saleFilter.branch_id = filter.branch_id;
     const orphanSales = await req.db.collection('sales').find(saleFilter).limit(2000).toArray();
-    for (const sale of orphanSales) await exports.ensureForSale(req, sale);
+    const recoveryWarnings = [];
+    for (const sale of orphanSales) {
+      try { await exports.ensureForSale(req, sale); }
+      catch (error) {
+        // A malformed/legacy orphan must not make the entire register unloadable.
+        // Keep the original sale untouched and report the unresolved reference.
+        const key = saleKey(sale);
+        recoveryWarnings.push({ sale_key:key, reason:String(error?.message||'Invalid legacy Versement metadata') });
+        console.warn('[versements] skipped unrecoverable legacy sale', key, error?.message||error);
+      }
+    }
     const rows = await req.db.collection(COLLECTION).find(filter).sort({ created_at:-1 }).limit(2000).toArray();
     const saleIds = rows.map(r => r.sale_object_id).filter(Boolean);
     const saleKeys = rows.map(r => String(r.sale_key || '')).filter(Boolean);
@@ -87,8 +98,8 @@ exports.list = async (req,res) => {
     return res.json({ type:'success', data: rows.map(r => {
       const linked = saleById.get(String(r.sale_object_id || '')) || saleByKey.get(String(r.sale_key || '')) || {};
       return { ...r, sale_note: String(r.sale_note || r.sales_description || linked.sales_description || linked.sale_note || linked.sales_note || '').trim(), _id:String(r._id) };
-    }) });
-  } catch(e) { console.error('[versements] list',e); return fail(res,500,'Unable to load versements.'); }
+    }), meta:{ recoveryWarnings } });
+  } catch(e) { console.error('[versements] list',e); return fail(res,500,'Unable to load versements: '+String(e?.message||'database error').slice(0,240)); }
 };
 
 exports.create = async (req,res) => {

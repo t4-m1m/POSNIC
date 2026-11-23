@@ -74,6 +74,7 @@ function getEssaeReader() {
 const RECEIPT_SETTINGS_DEFAULTS = Object.freeze({
   printerName: '',
   paperWidth: '80mm',
+  designerLayout: null,
   storeName: '',
   storeAddress: '',
   storePhone: '',
@@ -111,6 +112,15 @@ function saveReceiptSettings(settings) {
   const defaults = RECEIPT_SETTINGS_DEFAULTS.design;
   const supplied = settings && settings.design && typeof settings.design === 'object' ? settings.design : {};
   allowed.design = { ...defaults, ...supplied };
+  if (settings && settings.designerLayout !== undefined) {
+    if (settings.designerLayout === null) allowed.designerLayout = null;
+    else {
+      if (!settings.designerLayout || typeof settings.designerLayout !== 'object' || Array.isArray(settings.designerLayout)) throw new Error('Invalid receipt designer layout.');
+      const serializedLayout = JSON.stringify(settings.designerLayout);
+      if (serializedLayout.length > 1800000) throw new Error('Receipt designer layout is too large.');
+      allowed.designerLayout = JSON.parse(serializedLayout);
+    }
+  }
   ['logoText', 'note'].forEach((key) => { allowed.design[key] = String(allowed.design[key] || '').slice(0, 500); });
   ['alignment', 'titleAlignment'].forEach((key) => { if (!['left', 'center', 'right'].includes(allowed.design[key])) allowed.design[key] = defaults[key]; });
   ['titleSize', 'totalSize'].forEach((key) => { if (!['normal', 'large', 'extra'].includes(allowed.design[key])) allowed.design[key] = defaults[key]; });
