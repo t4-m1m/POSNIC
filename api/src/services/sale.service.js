@@ -1832,7 +1832,13 @@ const processSale = async (
       const previousTotal = Math.max(0, round2(recordedPreviousTotal - legacyReturnedTotal, 2));
       const nextTotal = Number(salesTotalForDoc) || 0;
       const adjustment = round2(nextTotal - previousTotal, 2);
-      if (Math.abs(adjustment) >= 0.01) {
+      const oldCostTotalRaw = existingSale?.total_companyprice ?? existingSale?.sales_total_company_price;
+      const oldCostTotal = oldCostTotalRaw == null || oldCostTotalRaw === '' ? null : Number(oldCostTotalRaw);
+      const newCostTotal = Number.isFinite(Number(sale_company_amount)) ? round2(sale_company_amount, 2) : null;
+      const costAdjustment = oldCostTotal !== null && Number.isFinite(oldCostTotal) && newCostTotal !== null
+        ? round2(newCostTotal - oldCostTotal, 2)
+        : null;
+      if (Math.abs(adjustment) >= 0.01 || (costAdjustment !== null && Math.abs(costAdjustment) >= 0.01) || costAdjustment === null) {
         const adjustmentDb = await BaseModel.getDb();
         await adjustmentDb.collection('sale_edit_adjustments').updateOne(
           { sale_id: saleId, old_total: previousTotal, new_total: nextTotal, created_at: mongo_date },
@@ -1844,6 +1850,10 @@ const processSale = async (
             old_total: previousTotal,
             new_total: nextTotal,
             amount: adjustment,
+            old_cost_total: oldCostTotal,
+            new_cost_total: newCostTotal,
+            cost_adjustment: costAdjustment,
+            cost_data_complete: costAdjustment !== null,
             payment_mode: 'Credit',
             created_at: mongo_date,
             created_by: userId,
@@ -2787,30 +2797,9 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
     { $match: match },
     { $addFields: { items: { $ifNull: ['$sale_original_snapshot.items', '$items'] } } },
     { $unwind: '$items' },
-    // Older sale snapshots do not always contain company_price. Resolve the
-    // original inventory item as a fallback, but prefer the immutable cost
-    // snapshot saved on the sale so later catalogue edits cannot rewrite history.
-    {
-      $addFields: {
-        reportItemId: {
-          $convert: {
-            input: { $ifNull: ['$items.item', '$items.item_id'] },
-            to: 'objectId',
-            onError: null,
-            onNull: null,
-          },
-        },
-      },
-    },
-    {
-      $lookup: {
-        from: 'items',
-        localField: 'reportItemId',
-        foreignField: '_id',
-        as: 'reportItem',
-      },
-    },
-    { $unwind: { path: '$reportItem', preserveNullAndEmptyArrays: true } },
+    // Only immutable sale-line cost snapshots are accepted here. Looking up
+    // the current item cost would rewrite historical COGS after a purchase-price
+    // change, so missing snapshots are reported as unresolved instead.
     {
       $addFields: {
         'items.name': { $ifNull: ['$items.name', '$items.item_name'] },
@@ -2841,12 +2830,7 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
         },
         reportUnitCost: {
           $convert: {
-            input: {
-              $ifNull: [
-                '$items.company_price',
-                { $ifNull: ['$items.item_company_price', { $ifNull: ['$reportItem.company_price', '$reportItem.item_company_price'] }] },
-              ],
-            },
+            input: { $ifNull: ['$items.company_price', '$items.item_company_price'] },
             to: 'double', onError: 0, onNull: 0,
           },
         },
@@ -2865,24 +2849,20 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
               },
             },
             {
-              $multiply: [
+              $cond: [
                 {
-                  $convert: {
-                    input: { $ifNull: ['$items.quantity', '$items.item_quantity'] },
-                    to: 'double', onError: 0, onNull: 0,
-                  },
+                  $or: [
+                    { $and: [{ $ne: ['$items.company_price', null] }, { $ne: ['$items.company_price', ''] }] },
+                    { $and: [{ $ne: ['$items.item_company_price', null] }, { $ne: ['$items.item_company_price', ''] }] },
+                  ],
                 },
                 {
-                  $convert: {
-                    input: {
-                      $ifNull: [
-                        '$items.company_price',
-                        { $ifNull: ['$items.item_company_price', { $ifNull: ['$reportItem.company_price', '$reportItem.item_company_price'] }] },
-                      ],
-                    },
-                    to: 'double', onError: 0, onNull: 0,
-                  },
+                  $multiply: [
+                    { $convert: { input: { $ifNull: ['$items.quantity', '$items.item_quantity'] }, to: 'double', onError: 0, onNull: 0 } },
+                    { $convert: { input: { $ifNull: ['$items.company_price', '$items.item_company_price'] }, to: 'double', onError: 0, onNull: 0 } },
+                  ],
                 },
+                null,
               ],
             },
           ],
@@ -2902,6 +2882,21 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
         totalAmount: { $sum: '$reportTotal' },
         subtotal: { $sum: { $subtract: ['$reportTotal', '$reportTax'] } },
         totalCompanyPrice: { $sum: '$reportLineCost' },
+        unresolvedCostLines: {
+          $sum: {
+            $cond: [
+              {
+                $or: [
+                  { $and: [{ $ne: ['$items.company_price_total', null] }, { $ne: ['$items.company_price_total', ''] }] },
+                  { $and: [{ $ne: ['$items.company_price', null] }, { $ne: ['$items.company_price', ''] }] },
+                  { $and: [{ $ne: ['$items.item_company_price', null] }, { $ne: ['$items.item_company_price', ''] }] },
+                ],
+              },
+              0,
+              1,
+            ],
+          },
+        },
         totalTax: { $sum: '$reportTax' },
         totalDiscount: { $sum: '$reportDiscount' },
       },

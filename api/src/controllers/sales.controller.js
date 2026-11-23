@@ -1737,6 +1737,8 @@ class SalesController extends BaseController {
         );
       const editAdjustmentRows = await (await BaseModel.getDb()).collection('sale_edit_adjustments').find({ branch_id: branchObjectId, ...(BaseModel.license ? { license: BaseModel.license } : {}), created_at: { $gte: new Date(filteredDateRange.start_date), $lt: new Date(filteredDateRange.end_date) } }).toArray();
       const editAdjustmentTotal = roundToTwo(editAdjustmentRows.reduce((sum, row) => sum + (Number(row.amount) || 0), 0));
+      const editCostDataComplete = editAdjustmentRows.every(row => row.cost_data_complete === true && Number.isFinite(Number(row.cost_adjustment)));
+      const editCostAdjustmentTotal = roundToTwo(editAdjustmentRows.reduce((sum, row) => sum + (Number(row.cost_adjustment) || 0), 0));
 
       const productDetails = productAgg.map((item) => {
         const subtotal = item.subtotal ?? 0;
@@ -1754,15 +1756,21 @@ class SalesController extends BaseController {
           product_cost: roundToTwo(totalCompanyPrice),
           product_discount: roundToTwo(item.totalDiscount ?? 0),
           product_tax: roundToTwo(item.totalTax ?? 0),
+          unresolved_cost_lines: Number(item.unresolvedCostLines || 0),
           product_avg: roundToTwo(totalQty ? subtotal / totalQty : 0),
           tax_type: 'inclusive',
           tax_rate: taxRate,
         };
       });
 
-      const costOfGoodsTotal = roundToTwo(
+      const unresolvedCostLines = productDetails.reduce((sum, item) => sum + Number(item.unresolved_cost_lines || 0), 0);
+      const costDataComplete = unresolvedCostLines === 0 && editCostDataComplete;
+      const costOfGoodsBase = roundToTwo(
         productDetails.reduce((sum, item) => sum + Number(item.product_cost || 0), 0)
       );
+      const costOfGoodsTotal = costDataComplete
+        ? roundToTwo(costOfGoodsBase + editCostAdjustmentTotal)
+        : null;
       let grossProfitTotal = roundToTwo(
         productDetails.reduce((sum, item) => sum + Number(item.product_profit || 0), 0)
       );
@@ -1930,7 +1938,7 @@ class SalesController extends BaseController {
       const salesNetTotal = roundToTwo(salesPayments.reduce((sum, saleDoc) => sum + (Number(saleDoc.sales_total ?? saleDoc.total) || 0), 0) + editAdjustmentTotal);
       if (Math.abs(editAdjustmentTotal) >= 0.01) paymentDetails.push({ payment_mode: 'Crédit · modification', sale_payment: editAdjustmentTotal, credit_adjustment: editAdjustmentTotal });
       const discountTotal = roundToTwo(itemDiscountTotal + totalSaleExtraDiscount);
-      grossProfitTotal = roundToTwo(salesNetTotal - costOfGoodsTotal);
+      grossProfitTotal = costDataComplete ? roundToTwo(salesNetTotal - costOfGoodsTotal) : null;
 
       const timeZone = branchDoc.time_zone || process.env.DEFAULT_TIMEZONE || 'UTC';
 
@@ -2170,7 +2178,9 @@ class SalesController extends BaseController {
         count: Number(row.count) || 0,
       }));
       const salaryPrimesTotal = roundToTwo(salaryPrimeDetails.reduce((sum, row) => sum + row.amount, 0));
-      const netProfitTotal = roundToTwo(grossProfitTotal - expensesTotal - salaryPaymentsTotal - salaryAdvancesTotal - salaryPrimesTotal);
+      const netProfitTotal = costDataComplete
+        ? roundToTwo(grossProfitTotal - expensesTotal - salaryPaymentsTotal - salaryAdvancesTotal - salaryPrimesTotal)
+        : null;
 
       const salesCount = salesPayments.length;
       const isCashTender = (method) => /^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(method || '').trim());
@@ -2211,6 +2221,12 @@ class SalesController extends BaseController {
         sale_edit_adjustment_total: editAdjustmentTotal,
         discount_total: discountTotal,
         cost_of_goods_total: costOfGoodsTotal,
+        cost_data_complete: costDataComplete,
+        unresolved_cost_lines: unresolvedCostLines,
+        cost_data_warnings: [
+          ...(unresolvedCostLines ? [`Missing historical cost snapshot on ${unresolvedCostLines} sale line(s).`] : []),
+          ...(!editCostDataComplete ? ['One or more sale modifications have no historical cost adjustment.'] : []),
+        ],
         gross_profit_total: grossProfitTotal,
         net_profit_total: netProfitTotal,
         expenses_total: expensesTotal,
