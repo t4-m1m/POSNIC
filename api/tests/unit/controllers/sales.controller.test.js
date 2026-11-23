@@ -1068,8 +1068,8 @@ describe('SalesController', () => {
         expect(data.expenses_total).toBe(1250);
         expect(data.salary_payments_total).toBe(6500);
         expect(data.salary_payment_details).toEqual([
-          { worker_name: 'Samir', method: 'cash', amount: 4000, count: 1 },
-          { worker_name: 'Nadia', method: 'bank', amount: 2500, count: 1 },
+          { worker_name: 'Samir', method: 'cash', notes: '', amount: 4000, count: 1 },
+          { worker_name: 'Nadia', method: 'bank', notes: '', amount: 2500, count: 1 },
         ]);
         expect(dbCollections.hr_transactions.aggregate).toHaveBeenCalled();
       } finally {
