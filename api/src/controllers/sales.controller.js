@@ -2111,6 +2111,34 @@ class SalesController extends BaseController {
         }).toArray(),
       ]);
       const linkedSaleDates = {};
+      // Debt ledger rows often predate the newer created_date field. Resolve
+      // their original sale dates from the sale itself instead of marking the
+      // entire historical receivables balance unavailable.
+      const ledgerSaleKeys = [...new Set(ledgerRows
+        .filter(row => !row.created_date && row.sale_id != null)
+        .map(row => String(row.sale_id))
+        .filter(Boolean))];
+      if (ledgerSaleKeys.length) {
+        const ledgerObjectIds = ledgerSaleKeys
+          .filter(value => mongoose.Types.ObjectId.isValid(value))
+          .map(value => new mongoose.Types.ObjectId(value));
+        const ledgerSales = await db.collection('sales').find({
+          license: { $in: licenseValues },
+          branch_id: { $in: branchValues },
+          $or: [
+            { sales_id: { $in: ledgerSaleKeys } },
+            { sale_id: { $in: ledgerSaleKeys } },
+            ...(ledgerObjectIds.length ? [{ _id: { $in: ledgerObjectIds } }] : []),
+          ],
+        }).project({ _id: 1, sales_id: 1, sale_id: 1, date: 1, created_date: 1 }).toArray();
+        for (const sale of ledgerSales) {
+          const saleDate = sale.date || sale.created_date;
+          if (!saleDate) continue;
+          linkedSaleDates[String(sale._id)] = saleDate;
+          if (sale.sales_id != null) linkedSaleDates[String(sale.sales_id)] = saleDate;
+          if (sale.sale_id != null) linkedSaleDates[String(sale.sale_id)] = saleDate;
+        }
+      }
       const saleByObjectId = new Map();
       const saleByKey = new Map();
       for (const sale of f6AndReturnSales) {
@@ -2218,12 +2246,13 @@ class SalesController extends BaseController {
         const method = row.payment_mode || row.payment_method || row.method || '';
         return sum + (row.payment_source !== 'personal' && accountingEngine.isCashTender(method) ? Number(row.amount || 0) : 0);
       }, 0));
-      const expenseDataComplete = expenseTenderDocs.every(row => {
-        const type = String(row.type || 'debit').toLowerCase();
-        if (['credit','income','money in'].includes(type)) return true;
-        const date = new Date(row.date || row.created_date || row.updated_date);
-        return Number.isFinite(date.getTime()) && row.amount !== null && row.amount !== undefined && row.amount !== '' && Number.isFinite(Number(row.amount));
-      });
+      // Completeness is a property of records that belong to this report day.
+      // Undated legacy expenses cannot be assigned to an arbitrary day and must
+      // not suppress profit for every later day; dated in-day expenses still
+      // require a valid amount and tender classification.
+      const expenseDataComplete = expenseDocsInDay.every(row =>
+        row.amount !== null && row.amount !== undefined && row.amount !== '' && Number.isFinite(Number(row.amount))
+      );
 
       const branchCount = await db.collection('branches').countDocuments({ license: { $in: licenseValues } });
       const hrBranchScope = branchCount === 1 ? {} : { branch_id: { $in: branchValues } };
