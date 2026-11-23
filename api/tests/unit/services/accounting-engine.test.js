@@ -86,6 +86,18 @@ describe('accounting engine historical receivables', () => {
     expect(result.complete).toBe(true);
   });
 
+  test('adds collections once across multiple debt rows', () => {
+    const result = reconstructOutstandingAsOf({
+      end,
+      transactions: [
+        { sale_id: 'S-1', created_date: '2026-11-20T10:00:00Z', pending: 20 },
+        { sale_id: 'S-2', created_date: '2026-11-21T10:00:00Z', pending: 10 },
+      ],
+      creditPayments: [{ amount: 30, received_at: '2026-11-24T10:00:00Z' }],
+    });
+    expect(result.amount).toBe(60);
+  });
+
   test('reverses later edits and returns when reconstructing an earlier balance', () => {
     const result = reconstructOutstandingAsOf({
       end,

@@ -125,8 +125,11 @@ function reconstructOutstandingAsOf({
     const current = Math.max(0, Number(row.pending) || 0);
     const laterEdit = editsAfter.get(saleKey) || 0;
     const laterReturn = returnsAfter.get(saleKey) || 0;
-    total += Math.max(0, current + collectionsAfter - laterEdit + laterReturn);
+    total += Math.max(0, current - laterEdit + laterReturn);
   }
+  // The collection journal is a single total event stream, not a per-debt
+  // amount. Add it back once after summing all current ledger rows.
+  total += collectionsAfter;
 
   for (const row of versements) {
     const saleKey = String(row.sale_key || row.sale_id || '');
