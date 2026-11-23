@@ -23,6 +23,7 @@ function matches(doc, query) {
   return Object.keys(query).every((k) => {
     const qv = query[k];
     const dv = doc[k];
+    if (k === '$or') return Array.isArray(qv) && qv.some((part) => matches(doc, part));
     if (qv && typeof qv === 'object' && !(qv instanceof ObjectId)) {
       if ('$in' in qv) return qv.$in.map(String).includes(String(dv));
       if ('$gt' in qv) return Number(dv) > Number(qv.$gt);
@@ -37,6 +38,12 @@ function makeCollection(seed = [], aggResult = null) {
     _docs: docs,
     async findOne(q) {
       return docs.find((d) => matches(d, q)) || null;
+    },
+    find(q) {
+      return {
+        sort() { return this; },
+        async toArray() { return docs.filter((d) => matches(d, q)); },
+      };
     },
     async insertOne(doc) {
       const _id = doc._id || new ObjectId();
@@ -238,5 +245,46 @@ describe('CreditService reminders', () => {
     );
     const r = await svc.runReminders(BRANCH, {});
     expect(r.data.sent).toBe(0);
+  });
+});
+
+
+describe('CreditService legacy debt reference compatibility', () => {
+  let svc;
+  beforeEach(() => {
+    svc = new CreditService();
+    BaseModel.license = 'lic-test';
+  });
+  afterEach(() => {
+    BaseModel.getDb = undefined;
+  });
+
+  test('ledger includes debts whose customer_id and branch_id were stored as strings', async () => {
+    const saleId = 'SALE-LEGACY-001';
+    const transaction = makeCollection([{
+      _id: new ObjectId(),
+      customer_id: CUST,
+      branch_id: BRANCH,
+      license: 'lic-test',
+      sale_id: saleId,
+      sale_total: 500,
+      pending: '175.50',
+      created_date: new Date('2026-11-01T10:00:00Z'),
+    }]);
+    const sales = makeCollection([{
+      _id: new ObjectId(),
+      sales_id: saleId,
+      branch_id: BRANCH,
+      license: 'lic-test',
+      customer_name: 'Legacy customer',
+      sales_total: 500,
+    }]);
+    BaseModel.getDb = jest.fn().mockResolvedValue(makeDb({ transaction, sales }));
+
+    const rows = await svc.ledger(CUST, BRANCH);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].pending).toBe(175.5);
+    expect(rows[0].receipt_number).toBe(saleId);
+    expect(rows[0].customer_name).toBe('Legacy customer');
   });
 });

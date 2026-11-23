@@ -5,6 +5,14 @@ const BaseModel = require('../models/base.model');
 
 const oid = (v) => (v && ObjectId.isValid(String(v)) ? new ObjectId(String(v)) : v);
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+const saleLookupQuery = (ref, branchId) => {
+  const value = String(ref == null ? '' : ref).trim();
+  const alternatives = [{ sales_id: value }, { sale_id: value }];
+  if (ObjectId.isValid(value)) alternatives.unshift({ _id: oid(value) });
+  const query = { license: BaseModel.license, $or: alternatives };
+  if (branchId) query.branch_id = { $in: [oid(branchId), String(branchId)] };
+  return query;
+};
 
 const DEFAULTS = {
   default_credit_limit: 0, // 0 = unlimited
@@ -189,8 +197,8 @@ class CreditService {
   async ledger(customerId, branchId) {
     if (!ObjectId.isValid(String(customerId || ''))) throw new Error('Invalid customer ID');
     const db = await BaseModel.getDb();
-    const query = { customer_id: oid(customerId), license: BaseModel.license };
-    if (branchId) query.branch_id = oid(branchId);
+    const query = { customer_id: { $in: [oid(customerId), String(customerId)] }, license: BaseModel.license };
+    if (branchId) query.branch_id = { $in: [oid(branchId), String(branchId)] };
     const rows = await db.collection('transaction').find(query).sort({ created_date: 1, _id: 1 }).toArray();
     const sales = db.collection('sales');
     const result = [];
@@ -199,15 +207,14 @@ class CreditService {
       if (pending <= 0) continue;
       let sale = null;
       if (row.sale_id) {
-        const saleQuery = ObjectId.isValid(String(row.sale_id))
-          ? { _id: oid(row.sale_id), license: BaseModel.license }
-          : { sales_id: String(row.sale_id), license: BaseModel.license };
-        sale = await sales.findOne(saleQuery, { projection: { sales_id: 1, created_date: 1, sales_total: 1, total: 1, payment_pending: 1, payment_status: 1 } });
+        const saleQuery = saleLookupQuery(row.sale_id, branchId);
+        sale = await sales.findOne(saleQuery, { projection: { sales_id: 1, sale_id: 1, customer_name: 1, created_date: 1, sales_total: 1, total: 1, payment_pending: 1, payment_status: 1 } });
       }
       result.push({
         transaction_id: String(row._id),
         sale_id: row.sale_id ? String(row.sale_id) : '',
-        receipt_number: (sale && sale.sales_id) || String(row.sale_id || ''),
+        receipt_number: (sale && (sale.sales_id || sale.sale_id)) || String(row.sale_id || ''),
+        customer_name: row.customer_name || (sale && sale.customer_name) || '',
         date: (row.created_date || (sale && sale.created_date) || row.updated_date || null),
         sale_total: round2(row.sale_total != null ? row.sale_total : (sale && (sale.sales_total || sale.total))),
         pending,
@@ -225,10 +232,10 @@ class CreditService {
     const method = methodMap[String(input.method || 'cash').toLowerCase()];
     if (!method) throw new Error('Choose a valid payment method');
     const db = await BaseModel.getDb();
-    const customer = await db.collection('customers').findOne({ _id: oid(customerId), license: BaseModel.license, is_deleted: { $ne: true } });
+    const customer = await db.collection('customers').findOne({ _id: { $in: [oid(customerId), String(customerId)] }, license: BaseModel.license, is_deleted: { $ne: true } });
     if (!customer) throw new Error('Customer not found');
-    const query = { customer_id: oid(customerId), license: BaseModel.license };
-    if (ctx.branchId) query.branch_id = oid(ctx.branchId);
+    const query = { customer_id: { $in: [oid(customerId), String(customerId)] }, license: BaseModel.license };
+    if (ctx.branchId) query.branch_id = { $in: [oid(ctx.branchId), String(ctx.branchId)] };
     const transactions = await db.collection('transaction').find(query).sort({ created_date: 1, _id: 1 }).toArray();
     const due = round2(transactions.reduce((sum, row) => sum + Math.max(0, Number(row.pending) || 0), 0));
     if (amount > due + 0.009) throw new Error('Payment exceeds the customer’s outstanding balance');
@@ -260,15 +267,15 @@ class CreditService {
       if (!row.sale_id) {
         throw new Error('This debt has no link to its original POS sale. No payment was collected; reconcile the debt record first.');
       }
-      const saleQuery = ObjectId.isValid(String(row.sale_id))
-        ? { _id: oid(row.sale_id), license: BaseModel.license }
-        : { sales_id: String(row.sale_id), license: BaseModel.license };
-      if (ctx.branchId) saleQuery.branch_id = oid(ctx.branchId);
+      const saleQuery = saleLookupQuery(row.sale_id, ctx.branchId);
       const originalSale = await db.collection('sales').findOne(saleQuery);
       if (!originalSale) {
         throw new Error('Original POS sale ' + String(row.sale_id) + ' was not found in this branch. No payment was collected.');
       }
-      if (originalSale.customer_id && String(originalSale.customer_id) !== String(customerId)) {
+      const originalCustomerId = originalSale.customer_id && typeof originalSale.customer_id === 'object'
+        ? String(originalSale.customer_id._id || originalSale.customer_id.id || originalSale.customer_id)
+        : String(originalSale.customer_id || '');
+      if (originalCustomerId && originalCustomerId !== String(customerId)) {
         throw new Error('The original POS sale belongs to a different customer. No payment was collected.');
       }
       const salePending = Number(originalSale.payment_pending);
@@ -292,10 +299,7 @@ class CreditService {
       );
       if (!changed.matchedCount) throw new Error('A debt changed during collection. Refresh the debt page and retry.');
       if (row.sale_id) {
-        const saleQuery = ObjectId.isValid(String(row.sale_id))
-          ? { _id: oid(row.sale_id), license: BaseModel.license }
-          : { sales_id: String(row.sale_id), license: BaseModel.license };
-        if (ctx.branchId) saleQuery.branch_id = oid(ctx.branchId);
+        const saleQuery = saleLookupQuery(row.sale_id, ctx.branchId);
         const sale = await db.collection('sales').findOne(saleQuery);
         if (sale) {
           const oldSalePending = Math.max(0, Number(sale.payment_pending != null ? sale.payment_pending : oldPending) || 0);
@@ -337,7 +341,7 @@ class CreditService {
       remaining = round2(remaining - paid);
     }
     const payment = {
-      customer_id: oid(customerId), customer_name: customer.name || '',
+      customer_id: customer._id, customer_name: customer.name || customer.customer_name || '',
       amount: round2(amount - remaining), method, allocations, branch_id: ctx.branchId ? oid(ctx.branchId) : null,
       license: BaseModel.license, received_by: ctx.userName || '', received_at: now,
       register_id: cashRegister ? cashRegister.register_id : (input.register_id && ObjectId.isValid(String(input.register_id)) ? oid(input.register_id) : null),

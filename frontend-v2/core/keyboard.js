@@ -1,6 +1,6 @@
 import { state, basket } from './store.js';
 
-export function installKeyboard({ render, focusSearch }) {
+export function installKeyboard({ render, focusSearch, onFunctionKey }) {
   const handler = (event) => {
     const typing = event.target?.matches?.('input,textarea,select,[contenteditable=true]');
     if (event.key === 'Escape') {
@@ -17,6 +17,15 @@ export function installKeyboard({ render, focusSearch }) {
       const index = state.baskets.findIndex((entry) => entry.id === state.activeBasket);
       state.activeBasket = state.baskets[(index + 1) % state.baskets.length].id;
       render();
+      return;
+    }
+    if (event.key === 'F6' && state.view === 'caisse' && state.tab === 0) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      if (event.repeat) return;
+      if (typeof onFunctionKey === 'function') onFunctionKey('F6');
+      else document.querySelector('.fkey-grid [data-action="F6"]')?.click();
       return;
     }
     if (state.drawer) return;
@@ -73,6 +82,6 @@ export function installKeyboard({ render, focusSearch }) {
       }
     }
   };
-  window.addEventListener('keydown', handler);
-  return () => window.removeEventListener('keydown', handler);
+  window.addEventListener('keydown', handler, true);
+  return () => window.removeEventListener('keydown', handler, true);
 }
