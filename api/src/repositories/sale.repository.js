@@ -5803,7 +5803,9 @@ class SalesRepository {
           return_sale_amount = return_sale_amount_round;
         }
 
-        const originalSaleTotal = Number(saleDocument.sale_original_total ?? saleDocument.sales_total ?? saleDocument.total ?? 0) || 0;
+        const currentSaleTotal = Number(saleDocument.sales_total ?? saleDocument.total ?? saleDocument.items_total ?? 0) || 0;
+        const previouslyReturnedTotal = Math.max(0, Number(saleDocument.items_return_total ?? saleDocument.return_amount ?? 0) || 0);
+        const originalSaleTotal = Number(saleDocument.sale_original_total ?? (currentSaleTotal + previouslyReturnedTotal)) || currentSaleTotal;
         const updatedSalesTotal = Math.max(0, round(originalSaleTotal - return_sale_amount, 2));
         const originalPending = Math.max(0, Number(saleDocument.payment_pending ?? saleDocument.unpaid_amount ?? 0) || 0);
         const paymentRows = Array.isArray(saleDocument.multi_payment)
