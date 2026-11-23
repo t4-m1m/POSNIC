@@ -103,12 +103,14 @@ function reconstructOutstandingAsOf({
     return String(value || '');
   };
   const collectionsAfter = new Map();
-  const transactionIds = new Set(transactions.map(row => id(row._id)));
+  const transactionIds = new Set(transactions.flatMap(row => [id(row._id), id(row.sale_id)].filter(Boolean)));
   for (const payment of creditPayments.filter(row => after(row.received_at))) {
     const allocations = Array.isArray(payment.allocations) ? payment.allocations : [];
     if (!allocations.length) { complete = false; unresolved += 1; continue; }
+    let allocatedTotal = 0;
     for (const allocation of allocations) {
       const amount = Number(allocation.amount) || 0;
+      allocatedTotal += amount;
       const transactionId = id(allocation.transaction_id);
       const saleId = id(allocation.sale_id);
       const keys = [transactionId, saleId].filter(Boolean);
@@ -116,6 +118,9 @@ function reconstructOutstandingAsOf({
       if (!matching.length) { complete = false; unresolved += 1; continue; }
       const key = matching[0];
       collectionsAfter.set(key, (collectionsAfter.get(key) || 0) + amount);
+    }
+    if (Math.abs(allocatedTotal - (Number(payment.amount) || 0)) > 0.01) {
+      complete = false; unresolved += 1;
     }
   }
   const editsAfter = new Map();
