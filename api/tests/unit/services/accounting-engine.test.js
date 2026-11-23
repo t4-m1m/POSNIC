@@ -81,7 +81,7 @@ describe('accounting engine daily close', () => {
   });
 
   test('marks the drawer unavailable when no matching register session exists', () => {
-    const result = require('../../../src/services/accounting-engine').summarizeCashRegisterSessions([], end, new Date('2026-11-24T00:00:00Z'));
+    const result = require('../../../src/services/accounting-engine').summarizeCashRegisterSessions([], '2026-11-23T00:00:00Z', new Date('2026-11-24T00:00:00Z'));
     expect(result.complete).toBe(false);
   });
 

@@ -32,7 +32,7 @@ function summarizeCashRegisterSessions(sessions = [], start, end) {
       if (time < opened) continue;
       if (time < startTime) openingBalance += cashIn - cashOut;
       else if (time < endTime) {
-        const source = String(entry.source || entry.origin || entry.category || '').trim().toLowerCase().replace(/[\\s-]+/g, '_');
+        const source = String(entry.source || entry.origin || entry.category || '').trim().toLowerCase().replaceAll(' ', '_').replaceAll('-', '_');
         if (!canonicalSources.has(source)) otherCashOutflows += cashOut - cashIn;
       }
     }
