@@ -2873,9 +2873,7 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
             { $gt: [{ $convert: { input: '$items.item_company_price', to: 'double', onError: 0, onNull: 0 } }, 0] },
           ],
         },
-        reportHasCurrentUnitCost: {
-          $gt: [{ $convert: { input: { $ifNull: ['$report_cost_item.company_price', { $ifNull: ['$report_cost_item.cost_price', '$report_cost_item.purchase_cost_dzd'] }] }, to: 'double', onError: 0, onNull: 0 } }, 0],
-        },
+        reportHasCurrentUnitCost: { $gt: ['$reportUnitCost', 0] },
         reportLineCost: {
           $cond: [
             {
