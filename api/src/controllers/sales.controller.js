@@ -2109,8 +2109,12 @@ class SalesController extends BaseController {
         db.collection('transaction').find({ license: { $in: licenseValues }, branch_id: { $in: branchValues } }).toArray(),
         db.collection('credit_payments').find({
           license: { $in: licenseValues }, branch_id: { $in: branchValues },
-          received_at: { $gte: reportEnd },
-        }).project({ amount: 1, received_at: 1, allocations: 1 }).toArray(),
+          $or: [
+            { received_at: { $gte: reportEnd } },
+            { received_at: { $exists: false }, created_at: { $gte: reportEnd } },
+            { received_at: { $exists: false }, created_at: { $exists: false }, date: { $gte: reportEnd } },
+          ],
+        }).project({ amount: 1, received_at: 1, created_at: 1, date: 1, allocations: 1 }).toArray(),
         db.collection('sale_edit_adjustments').find({
           license: { $in: licenseValues }, branch_id: { $in: branchValues },
           created_at: { $gte: reportEnd },
@@ -2181,7 +2185,7 @@ class SalesController extends BaseController {
       );
       const outstandingResult = accountingEngine.reconstructOutstandingAsOf({
         transactions: ledgerRows,
-        creditPayments: laterCreditPayments,
+        creditPayments: laterCreditPayments.map(row => ({ ...row, received_at: row.received_at || row.created_at || row.date })),
         editAdjustments: laterEdits,
         versements: linkedVersements,
         orphanVersements,
