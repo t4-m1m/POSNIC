@@ -2813,6 +2813,10 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
     { $unwind: { path: '$report_cost_item', preserveNullAndEmptyArrays: true } },
     {
       $addFields: {
+      },
+    },
+    {
+      $addFields: {
         'items.name': { $ifNull: ['$items.name', '$items.item_name'] },
         'items.sku': { $ifNull: ['$items.sku', '$items.item_sku'] },
         reportQuantity: {
