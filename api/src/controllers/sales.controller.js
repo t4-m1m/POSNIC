@@ -2559,11 +2559,53 @@ class SalesController extends BaseController {
       responseData.cancellation_summary = cancellationSummary;
 
       if (req.cashierDayClose) {
-        return this.success(res, {
-          ...responseData,
+        const closeAudit = {
+          ...responseData.calculation_audit,
+          calculations: responseData.calculation_audit.calculations.map(row => ({
+            ...row,
+            // Do not expose employee identities in the cashier-facing audit.
+            ...( ['salary_payments_total','salary_advances_total','salary_primes_total'].includes(row.key) && Array.isArray(row.components)
+              ? { components: { entries: row.components.length, total: row.result } }
+              : {} ),
+          })),
+        };
+        const closeData = {
           date: branchDetails.from_date,
           currency: 'DA',
-        }, 'Cash expected and daily calculation details loaded', 200);
+          sales_count: responseData.sales_count,
+          sales_total: responseData.sales_total,
+          sales_data_complete: responseData.sales_data_complete,
+          cost_of_goods_total: responseData.cost_of_goods_total,
+          cost_data_complete: responseData.cost_data_complete,
+          cost_data_estimated: responseData.cost_data_estimated,
+          estimated_cost_lines: responseData.estimated_cost_lines,
+          unresolved_cost_lines: responseData.unresolved_cost_lines,
+          cost_data_warnings: responseData.cost_data_warnings,
+          gross_profit_total: responseData.gross_profit_total,
+          net_profit_total: responseData.net_profit_total,
+          profit_data_complete: responseData.profit_data_complete,
+          expenses_total: responseData.expenses_total,
+          salary_payments_total: responseData.salary_payments_total,
+          salary_advances_total: responseData.salary_advances_total,
+          salary_primes_total: responseData.salary_primes_total,
+          payment_details: responseData.payment_details,
+          payment_data_complete: responseData.payment_data_complete,
+          debt_payment_details: responseData.debt_payment_details,
+          debt_payment_total: responseData.debt_payment_total,
+          debt_payment_data_complete: responseData.debt_payment_data_complete,
+          versement_payment_details: responseData.versement_payment_details,
+          versement_payment_total: responseData.versement_payment_total,
+          versement_data_complete: responseData.versement_data_complete,
+          delivery_payout_cash_total: responseData.delivery_payout_cash_total,
+          outstanding_amount: responseData.outstanding_amount,
+          outstanding_data_complete: responseData.outstanding_data_complete,
+          outstanding_data_warnings: responseData.outstanding_data_warnings,
+          cash_expected: responseData.cash_expected,
+          cash_data_complete: responseData.cash_data_complete,
+          cash_data_warnings: responseData.cash_data_warnings,
+          calculation_audit: closeAudit,
+        };
+        return this.success(res, closeData, 'Cash expected and daily calculation details loaded', 200);
       }
 
       // ---- Return success response ----
