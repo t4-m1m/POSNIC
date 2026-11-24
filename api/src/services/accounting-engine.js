@@ -73,7 +73,20 @@ function aggregateSalePaymentEvents(sales = [], start, end) {
     const events = Array.isArray(sale.payments) ? sale.payments : null;
     if (events && events.length) {
       for (const event of events) {
-        if (String(event.origin?.type || '').toLowerCase() === 'credit_settlement') continue;
+        const origin = event.origin && typeof event.origin === 'object' ? event.origin : {};
+        const eventSource = [
+          origin.type, origin.source, origin.kind, event.source, event.origin_type,
+          event.transaction_type, event.payment_type, event.kind,
+        ].filter(Boolean).join(' ').toLowerCase().replace(/[\\s-]+/g, '_');
+        // Debt collections live in credit_payments and must never be counted
+        // as a second sale tender, even when older event records use a
+        // different origin field name.
+        if (
+          /(?:credit|debt)_(?:settlement|collection|payment)/.test(eventSource) ||
+          event.is_credit_collection === true ||
+          event.is_debt_collection === true ||
+          !!event.credit_payment_id
+        ) continue;
         const eventDate = event.date || event.created_at || sale.date || sale.created_date;
         const time = eventDate ? new Date(eventDate).getTime() : NaN;
         if (!Number.isFinite(time)) { complete = false; continue; }
