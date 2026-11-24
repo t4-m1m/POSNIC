@@ -222,12 +222,9 @@ function reconstructOutstandingAsOf({
     return String(value || '');
   };
   const collectionsAfter = new Map();
-  const transactionIds = new Set(transactions.flatMap(row => [id(row._id), id(row.sale_id)].filter(Boolean)));
-  const transactionSaleCounts = new Map();
-  transactions.forEach(row => {
-    const saleId = id(row.sale_id);
-    if (saleId) transactionSaleCounts.set(saleId, (transactionSaleCounts.get(saleId) || 0) + 1);
-  });
+  const saleCollectionsAfter = new Map();
+  const transactionIds = new Set(transactions.map(row => id(row._id)).filter(Boolean));
+  const saleIds = new Set(transactions.map(row => id(row.sale_id)).filter(Boolean));
   let complete = true;
   let unresolved = 0;
   for (const payment of creditPayments.filter(row => after(row.received_at))) {
@@ -235,31 +232,34 @@ function reconstructOutstandingAsOf({
     if (!allocations.length) { complete = false; unresolved += 1; continue; }
     let allocatedTotal = 0;
     for (const allocation of allocations) {
-      const amount = Number(allocation.amount) || 0;
+      const amount = Number(allocation.amount);
+      if (!Number.isFinite(amount) || amount <= 0) { complete = false; unresolved += 1; continue; }
       allocatedTotal += amount;
       const transactionId = id(allocation.transaction_id);
       const saleId = id(allocation.sale_id);
-      const hasTransactionId = transactionId && transactions.some(row => id(row._id) === transactionId);
-      const uniqueSaleLink = saleId && transactionSaleCounts.get(saleId) === 1;
-      if (!hasTransactionId && !uniqueSaleLink) { complete = false; unresolved += 1; continue; }
-      const key = hasTransactionId ? transactionId : saleId;
-      collectionsAfter.set(key, (collectionsAfter.get(key) || 0) + amount);
+      if (transactionId && transactionIds.has(transactionId)) {
+        collectionsAfter.set(transactionId, (collectionsAfter.get(transactionId) || 0) + amount);
+      } else if (saleId && saleIds.has(saleId)) {
+        // Older allocations may identify only the sale. Apply them once to
+        // the grouped sale balance, never once per transaction row.
+        saleCollectionsAfter.set(saleId, (saleCollectionsAfter.get(saleId) || 0) + amount);
+      } else {
+        complete = false; unresolved += 1;
+      }
     }
     if (Math.abs(allocatedTotal - (Number(payment.amount) || 0)) > 0.01) {
       complete = false; unresolved += 1;
     }
   }
   const editsAfter = new Map();
-  editAdjustments.filter((row) => after(row.created_at)).forEach((row) => {
-    for (const key of [id(row.sale_id), id(row.sales_id)].filter(Boolean)) {
-      editsAfter.set(key, (editsAfter.get(key) || 0) + (Number(row.amount) || 0));
-    }
+  editAdjustments.filter(row => after(row.created_at)).forEach(row => {
+    const keys = [...new Set([id(row.sale_id), id(row.sales_id)].filter(Boolean))];
+    for (const key of keys) editsAfter.set(key, (editsAfter.get(key) || 0) + (Number(row.amount) || 0));
   });
   const returnsAfter = new Map();
-  returns.filter((row) => after(row.date)).forEach((row) => {
-    for (const key of [id(row.sale_id), id(row.sales_id)].filter(Boolean)) {
-      returnsAfter.set(key, (returnsAfter.get(key) || 0) + (Number(row.amount) || 0));
-    }
+  returns.filter(row => after(row.date)).forEach(row => {
+    const keys = [...new Set([id(row.sale_id), id(row.sales_id)].filter(Boolean))];
+    for (const key of keys) returnsAfter.set(key, (returnsAfter.get(key) || 0) + (Number(row.amount) || 0));
   });
 
   const versementKeys = new Set([
@@ -267,17 +267,35 @@ function reconstructOutstandingAsOf({
     ...orphanVersements.map((row) => String(row.sales_id || row.sale_id || row._id || '')),
   ]);
   let total = 0;
+  const transactionGroups = new Map();
   for (const row of transactions) {
-    const saleKey = String(row.sale_id || '');
+    const saleKey = id(row.sale_id);
+    const groupKey = saleKey || "transaction:" + id(row._id);
+    const group = transactionGroups.get(groupKey) || { saleKey, rows: [] };
+    group.rows.push(row);
+    transactionGroups.set(groupKey, group);
+  }
+  for (const group of transactionGroups.values()) {
+    const saleKey = group.saleKey;
     if (saleKey && versementKeys.has(saleKey)) continue;
-    const created = row.created_date || saleDates[saleKey];
-    if (!created || !Number.isFinite(new Date(created).getTime())) {
-      complete = false; unresolved += 1;
-    } else if (new Date(created).getTime() >= endTime) continue;
-    const current = Math.max(0, Number(row.pending) || 0);
-    const laterEdit = editsAfter.get(saleKey) || 0;
-    const laterReturn = returnsAfter.get(saleKey) || 0;
-    const laterCollections = collectionsAfter.get(id(row._id)) || collectionsAfter.get(saleKey) || 0;
+    let current = 0;
+    let rowCollections = 0;
+    let hasHistoricalRows = false;
+    for (const row of group.rows) {
+      const created = row.created_date || saleDates[saleKey];
+      if (!created || !Number.isFinite(new Date(created).getTime())) {
+        complete = false; unresolved += 1;
+        continue;
+      }
+      if (new Date(created).getTime() >= endTime) continue;
+      hasHistoricalRows = true;
+      current += Math.max(0, Number(row.pending) || 0);
+      rowCollections += collectionsAfter.get(id(row._id)) || 0;
+    }
+    if (!hasHistoricalRows) continue;
+    const laterCollections = rowCollections + (saleKey ? (saleCollectionsAfter.get(saleKey) || 0) : 0);
+    const laterEdit = saleKey ? (editsAfter.get(saleKey) || 0) : 0;
+    const laterReturn = saleKey ? (returnsAfter.get(saleKey) || 0) : 0;
     total += Math.max(0, current + laterCollections - laterEdit + laterReturn);
   }
 
