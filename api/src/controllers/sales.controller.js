@@ -1774,9 +1774,10 @@ class SalesController extends BaseController {
       // Return the best arithmetic total whenever every sold line has a
       // usable cost. Missing edit/return adjustments lower confidence but do
       // not erase the known base amount; the audit labels it as estimated.
-      let costOfGoodsTotal = unresolvedCostLines === 0
-        ? roundToTwo(costOfGoodsBase + editCostAdjustmentTotal)
-        : null;
+      // Always expose the sum of known line costs. Unknown lines are
+      // counted separately and keep cost_data_complete=false; this is a
+      // partial estimate, never silently presented as a verified total.
+      let costOfGoodsTotal = roundToTwo(costOfGoodsBase + editCostAdjustmentTotal);
       let grossProfitTotal = roundToTwo(
         productDetails.reduce((sum, item) => sum + Number(item.product_profit || 0), 0)
       );
@@ -1945,7 +1946,7 @@ class SalesController extends BaseController {
       let salesNetTotal = roundToTwo(salesPayments.reduce((sum, saleDoc) => sum + (Number(saleDoc.sales_total ?? saleDoc.total) || 0), 0) + editAdjustmentTotal);
       if (Math.abs(editAdjustmentTotal) >= 0.01) paymentDetails.push({ payment_mode: 'Crédit · modification', sale_payment: editAdjustmentTotal, credit_adjustment: editAdjustmentTotal });
       const discountTotal = roundToTwo(itemDiscountTotal + totalSaleExtraDiscount);
-      grossProfitTotal = costDataComplete ? roundToTwo(salesNetTotal - costOfGoodsTotal) : null;
+      grossProfitTotal = Number.isFinite(Number(salesNetTotal)) && Number.isFinite(Number(costOfGoodsTotal)) ? roundToTwo(salesNetTotal - costOfGoodsTotal) : null;
 
       const timeZone = branchDoc.time_zone || process.env.DEFAULT_TIMEZONE || 'UTC';
 
@@ -1994,15 +1995,15 @@ class SalesController extends BaseController {
         row.amount !== null && row.amount !== undefined && row.amount !== '' && Number.isFinite(Number(row.amount))
       );
       if (!salesDataComplete) {
+        // Keep the known cost subtotal visible; completeness remains false and
+        // the audit explains which source rows are missing.
         costDataComplete = false;
-        costOfGoodsTotal = null;
       }
       if (returnAdjustmentTotal > 0) {
-        // Returns are dated revenue adjustments. Do not reverse COGS unless the
-        // return record proves usable inventory restoration and carries its cost.
+        // The returned revenue is deducted, but do not invent a stock-restoration
+        // cost. Keep the known COGS as an explicitly partial estimate.
         salesNetTotal = roundToTwo(salesNetTotal - returnAdjustmentTotal);
         costDataComplete = false;
-        costOfGoodsTotal = null;
       }
       // Initial deposits and final settlements are separate dated cash events.
       // A later settlement must never pull the original deposit into today's report.
@@ -2493,7 +2494,7 @@ class SalesController extends BaseController {
         salary_advance_details: salaryAdvanceDetails,
         salary_primes_total: salaryPrimesTotal,
         salary_prime_details: salaryPrimeDetails,
-        outstanding_amount: outstandingDataComplete ? roundToTwo(outstandingAmount) : null,
+        outstanding_amount: Number.isFinite(Number(outstandingAmount)) ? roundToTwo(outstandingAmount) : null,
         outstanding_data_complete: outstandingDataComplete,
         outstanding_unresolved_records: outstandingResult.unresolved + futureReturnEvents.length,
         outstanding_data_warnings: [
