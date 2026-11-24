@@ -24,7 +24,14 @@ function summarizeCashRegisterSessions(sessions = [], start, end) {
   const startTime = new Date(start).getTime(), endTime = new Date(end).getTime();
   if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) throw new Error('Valid cash-register date boundaries are required.');
   let openingBalance = 0, otherCashOutflows = 0, complete = true, unresolved = 0, matched = 0;
-  const canonicalSources = new Set(['sale','sales','expense','salary_payment','advance','prime','credit_settlement','versement','refund','zr_delivery_payout']);
+  const canonicalSources = new Set([
+    'sale', 'sales', 'sale_payment', 'cash_sale', 'cash_sales',
+    'expense', 'salary_payment', 'advance', 'prime',
+    'credit_settlement', 'credit_payment', 'credit_collection',
+    'debt_settlement', 'debt_payment', 'debt_collection',
+    'customer_debt_payment', 'customer_credit_payment',
+    'versement', 'refund', 'zr_delivery_payout',
+  ]);
   for (const session of sessions) {
     const closed = session.register_closedate ? new Date(session.register_closedate).getTime() : Infinity;
     // Ignore clearly unrelated historical sessions before validating their
@@ -46,7 +53,9 @@ function summarizeCashRegisterSessions(sessions = [], start, end) {
       if (time < startTime) openingBalance += cashIn - cashOut;
       else if (time < endTime) {
         const source = String(entry.source || entry.origin || entry.category || '').trim().toLowerCase().replaceAll(' ', '_').replaceAll('-', '_');
-        if (!canonicalSources.has(source)) otherCashOutflows += cashOut - cashIn;
+        const isLedgerTrackedSource = canonicalSources.has(source) ||
+          /^(?:credit|debt|customer_credit|customer_debt)_(?:settlement|payment|collection)$/.test(source);
+        if (!isLedgerTrackedSource) otherCashOutflows += cashOut - cashIn;
       }
     }
   }
