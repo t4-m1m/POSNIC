@@ -2807,9 +2807,10 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
     { $match: match },
     { $addFields: { items: { $ifNull: ['$sale_original_snapshot.items', '$items'] } } },
     { $unwind: '$items' },
-    // Only immutable sale-line cost snapshots are accepted here. Looking up
-    // the current item cost would rewrite historical COGS after a purchase-price
-    // change, so missing snapshots are reported as unresolved instead.
+    // Prefer immutable sale-line cost snapshots. Legacy tickets without one
+    // fall back to the catalogue cost as a clearly flagged estimate.
+    { $lookup: { from: 'items', localField: 'items.item', foreignField: '_id', as: 'report_cost_item' } },
+    { $unwind: { path: '$report_cost_item', preserveNullAndEmptyArrays: true } },
     {
       $addFields: {
         'items.name': { $ifNull: ['$items.name', '$items.item_name'] },
@@ -2840,9 +2841,18 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
         },
         reportUnitCost: {
           $convert: {
-            input: { $ifNull: ['$items.company_price', '$items.item_company_price'] },
+            input: { $ifNull: ['$items.company_price', { $ifNull: ['$items.item_company_price', { $ifNull: ['$report_cost_item.company_price', { $ifNull: ['$report_cost_item.cost_price', '$report_cost_item.purchase_cost_dzd'] }] }] }] },
             to: 'double', onError: 0, onNull: 0,
           },
+        },
+        reportHasHistoricalUnitCost: {
+          $or: [
+            { $gt: [{ $convert: { input: '$items.company_price', to: 'double', onError: 0, onNull: 0 } }, 0] },
+            { $gt: [{ $convert: { input: '$items.item_company_price', to: 'double', onError: 0, onNull: 0 } }, 0] },
+          ],
+        },
+        reportHasCurrentUnitCost: {
+          $gt: [{ $convert: { input: { $ifNull: ['$report_cost_item.company_price', { $ifNull: ['$report_cost_item.cost_price', '$report_cost_item.purchase_cost_dzd'] }] }, to: 'double', onError: 0, onNull: 0 } }, 0],
         },
         reportLineCost: {
           $cond: [
@@ -2860,16 +2870,11 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
             },
             {
               $cond: [
-                {
-                  $or: [
-                    { $and: [{ $ne: ['$items.company_price', null] }, { $ne: ['$items.company_price', ''] }] },
-                    { $and: [{ $ne: ['$items.item_company_price', null] }, { $ne: ['$items.item_company_price', ''] }] },
-                  ],
-                },
+                { $gt: ['$reportUnitCost', 0] },
                 {
                   $multiply: [
                     { $convert: { input: { $ifNull: ['$items.quantity', '$items.item_quantity'] }, to: 'double', onError: 0, onNull: 0 } },
-                    { $convert: { input: { $ifNull: ['$items.company_price', '$items.item_company_price'] }, to: 'double', onError: 0, onNull: 0 } },
+                    '$reportUnitCost',
                   ],
                 },
                 null,
@@ -2895,15 +2900,25 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
         unresolvedCostLines: {
           $sum: {
             $cond: [
-              {
-                $or: [
-                  { $and: [{ $ne: ['$items.company_price_total', null] }, { $ne: ['$items.company_price_total', ''] }] },
-                  { $and: [{ $ne: ['$items.company_price', null] }, { $ne: ['$items.company_price', ''] }] },
-                  { $and: [{ $ne: ['$items.item_company_price', null] }, { $ne: ['$items.item_company_price', ''] }] },
-                ],
-              },
+              { $or: [
+                { $and: [{ $ne: ['$items.company_price_total', null] }, { $ne: ['$items.company_price_total', ''] }] },
+                { $gt: ['$reportUnitCost', 0] },
+              ] },
               0,
               1,
+            ],
+          },
+        },
+        estimatedCostLines: {
+          $sum: {
+            $cond: [
+              { $and: [
+                { $or: [{ $eq: ['$items.company_price_total', null] }, { $eq: ['$items.company_price_total', ''] }] },
+                { $eq: ['$reportHasHistoricalUnitCost', false] },
+                { $eq: ['$reportHasCurrentUnitCost', true] },
+              ] },
+              1,
+              0,
             ],
           },
         },
