@@ -98,6 +98,22 @@ describe('accounting engine daily close', () => {
     expect(result.complete).toBe(false);
   });
 
+  test('returns a provisional cash total when amounts are known but register evidence is incomplete', () => {
+    const result = calculateDailyClose({
+      salesTotal: 1000, costOfGoodsTotal: 400, costDataComplete: true,
+      expensesTotal: 0, salaryPaymentsTotal: 0, salaryAdvancesTotal: 0, salaryPrimesTotal: 0,
+      cashDataComplete: false,
+      cash: {
+        openingBalance: 0, cashSales: 9200, cashVersements: 4000,
+        cashCreditCollections: 0, deliveryPayouts: 0, cashExpenses: 0,
+        cashSalaries: 0, cashAdvances: 0, cashBonuses: 0, cashRefunds: 0,
+        otherCashOutflows: 0,
+      },
+    });
+    expect(result.cashExpected).toBe(13200);
+    expect(result.cashDataComplete).toBe(false);
+  });
+
   test('keeps cash unavailable when the opening float or tender classification is unknown', () => {
     const result = calculateDailyClose({
       salesTotal: 10, costOfGoodsTotal: 5, costDataComplete: true,
