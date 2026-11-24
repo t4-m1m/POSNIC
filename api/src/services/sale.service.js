@@ -2845,7 +2845,25 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
         },
         reportUnitCost: {
           $convert: {
-            input: { $ifNull: ['$items.company_price', { $ifNull: ['$items.item_company_price', { $ifNull: ['$report_cost_item.company_price', { $ifNull: ['$report_cost_item.cost_price', '$report_cost_item.purchase_cost_dzd'] }] }] }] },
+            input: {
+              $cond: [
+                { $gt: [{ $convert: { input: '$items.company_price', to: 'double', onError: 0, onNull: 0 } }, 0] },
+                '$items.company_price',
+                { $cond: [
+                  { $gt: [{ $convert: { input: '$items.item_company_price', to: 'double', onError: 0, onNull: 0 } }, 0] },
+                  '$items.item_company_price',
+                  { $cond: [
+                    { $gt: [{ $convert: { input: '$report_cost_item.company_price', to: 'double', onError: 0, onNull: 0 } }, 0] },
+                    '$report_cost_item.company_price',
+                    { $cond: [
+                      { $gt: [{ $convert: { input: '$report_cost_item.cost_price', to: 'double', onError: 0, onNull: 0 } }, 0] },
+                      '$report_cost_item.cost_price',
+                      '$report_cost_item.purchase_cost_dzd',
+                    ] },
+                  ] },
+                ] },
+              ],
+            },
             to: 'double', onError: 0, onNull: 0,
           },
         },
@@ -2864,6 +2882,7 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
               $and: [
                 { $ne: ['$items.company_price_total', null] },
                 { $ne: ['$items.company_price_total', ''] },
+                { $gt: [{ $convert: { input: '$items.company_price_total', to: 'double', onError: 0, onNull: 0 } }, 0] },
               ],
             },
             {
@@ -2905,7 +2924,7 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
           $sum: {
             $cond: [
               { $or: [
-                { $and: [{ $ne: ['$items.company_price_total', null] }, { $ne: ['$items.company_price_total', ''] }] },
+                { $and: [{ $ne: ['$items.company_price_total', null] }, { $ne: ['$items.company_price_total', ''] }, { $gt: [{ $convert: { input: '$items.company_price_total', to: 'double', onError: 0, onNull: 0 } }, 0] }] },
                 { $gt: ['$reportUnitCost', 0] },
               ] },
               0,
@@ -2917,7 +2936,7 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
           $sum: {
             $cond: [
               { $and: [
-                { $or: [{ $eq: ['$items.company_price_total', null] }, { $eq: ['$items.company_price_total', ''] }] },
+                { $or: [{ $eq: ['$items.company_price_total', null] }, { $eq: ['$items.company_price_total', ''] }, { $lte: [{ $convert: { input: '$items.company_price_total', to: 'double', onError: 0, onNull: 0 } }, 0] }] },
                 { $eq: ['$reportHasHistoricalUnitCost', false] },
                 { $eq: ['$reportHasCurrentUnitCost', true] },
               ] },
