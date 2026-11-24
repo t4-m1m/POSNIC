@@ -855,3 +855,64 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 
 /* Thermal receipts: stable two-column lines and store-style basket/total blocks. */
 .thermal-paper{overflow:hidden;overflow-wrap:normal;word-break:normal;line-height:1.35}.thermal-line{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:start!important;column-gap:7px!important;min-width:0!important}.thermal-line span{display:block!important;min-width:0!important;max-width:none!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;line-height:1.3!important}.thermal-line b{display:block!important;min-width:max-content!important;white-space:nowrap!important;line-height:1.3!important}.thermal-line.emphasis{align-items:center!important}.receipt-artboard .designer-object{word-break:normal!important;overflow-wrap:normal!important;white-space:normal!important;min-width:0!important}.receipt-artboard [data-receipt-object] table{width:100%!important;max-width:100%!important;table-layout:fixed!important;border-collapse:collapse!important;font-family:Tahoma,Arial,sans-serif!important;font-size:10px!important;font-weight:700!important}.receipt-artboard [data-receipt-object] th,.receipt-artboard [data-receipt-object] td{padding:3px 2px!important;border-bottom:1px dashed #9ca3af!important;vertical-align:top!important;white-space:normal!important;word-break:normal!important;overflow-wrap:break-word!important}.receipt-artboard [data-receipt-object] th:first-child,.receipt-artboard [data-receipt-object] td:first-child{width:58%!important;text-align:left!important}.receipt-artboard [data-receipt-object] th:nth-child(2),.receipt-artboard [data-receipt-object] td:nth-child(2){width:12%!important;text-align:center!important;white-space:nowrap!important}.receipt-artboard [data-receipt-object] th:last-child,.receipt-artboard [data-receipt-object] td:last-child{width:30%!important;text-align:right!important;white-space:nowrap!important}.receipt-items-block{display:block!important;width:100%!important;text-align:left!important;font-family:Tahoma,Arial,sans-serif!important}.receipt-items-block>strong{display:block!important;text-align:right!important;padding-top:4px!important;font-size:9px!important}.receipt-totals-block{display:flex!important;flex-direction:column!important;justify-content:flex-start!important;gap:4px!important;width:100%!important;font-family:Tahoma,Arial,sans-serif!important;font-size:10px!important}.receipt-totals-block>div{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:6px!important;width:100%!important;line-height:1.25!important}.receipt-totals-block>div span{flex:1 1 auto!important;min-width:0!important;text-align:left!important;white-space:normal!important;overflow-wrap:normal!important;word-break:normal!important}.receipt-totals-block>div b{flex:0 0 auto!important;white-space:nowrap!important;text-align:right!important}.receipt-totals-block .receipt-grand-total{margin-top:3px!important;padding:6px 4px!important;border-top:2px solid #111!important;border-bottom:2px solid #111!important;font-size:15px!important;font-weight:900!important;line-height:1.3!important}.receipt-totals-block .receipt-grand-total b{font-size:16px!important;font-weight:900!important}
+
+
+/* POSNIC V2 designer and cash-close visibility corrections. */
+.thermal-line-stack{
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr)!important;
+ row-gap:3px!important;
+ align-items:start!important;
+}
+.thermal-line-stack span{
+ width:100%!important;
+ max-width:none!important;
+ white-space:normal!important;
+ overflow-wrap:normal!important;
+ word-break:normal!important;
+}
+.thermal-line-stack b{justify-self:end!important}
+.thermal-line-separated{
+ border-top:1px dashed #777!important;
+ margin-top:4px!important;
+ padding-top:6px!important;
+}
+.designer-shell>.designer-workspace{
+ min-width:0!important;
+ min-height:0!important;
+ overflow:hidden!important;
+}
+.designer-workspace>.designer-stage{
+ display:flex!important;
+ flex-direction:row!important;
+ justify-content:center!important;
+ align-items:flex-start!important;
+ box-sizing:border-box!important;
+ width:100%!important;
+ min-width:0!important;
+ min-height:520px!important;
+ max-height:calc(100vh - 230px)!important;
+ overflow:auto!important;
+ padding:24px!important;
+ background:#e9edf3!important;
+ border:1px solid #d7dee8!important;
+ border-radius:12px!important;
+}
+.designer-stage>.receipt-artboard{
+ display:block!important;
+ position:relative!important;
+ flex:0 0 auto!important;
+ flex-shrink:0!important;
+ visibility:visible!important;
+ opacity:1!important;
+ background:#fff!important;
+ color:#111!important;
+ border:1px solid #cbd5e1!important;
+ box-shadow:0 8px 26px rgba(15,23,42,.16)!important;
+}
+.designer-stage>.receipt-artboard .designer-object{
+ visibility:visible!important;
+}
+@media(max-width:1050px){
+ .designer-workspace>.designer-stage{max-height:none!important;min-height:420px!important}
+}
