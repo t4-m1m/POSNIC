@@ -89,8 +89,8 @@ function aggregateSalePaymentEvents(sales = [], start, end) {
           event.source, event.origin_type, event.origin_model, event.source_type,
           event.transaction_type, event.payment_type, event.kind, event.description,
           event.label, event.title, event.reason,
-        ].filter(Boolean).join(' ').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')
-          .toLowerCase().replace(/[\\s-]+/g, '_');
+        ].filter(Boolean).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase().replace(/[\s-]+/g, '_');
         // A credit/debt collection is a separate receivable settlement, not
         // a second payment for the original sale. Legacy records use several
         // origin labels and ID field names, so classify the whole event.
