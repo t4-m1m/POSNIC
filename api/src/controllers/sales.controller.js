@@ -2449,6 +2449,8 @@ class SalesController extends BaseController {
         debt_payment_data_complete: debtPaymentDataComplete,
         versement_data_complete: versementDataComplete,
         debt_payment_total: debtPaymentTotal,
+        sales_cash_total: cashSales,
+        credit_cash_collections_total: debtCashCollections,
         versement_payment_details: versementPaymentDetails,
         versement_payment_total: versementPaymentTotal,
         delivery_payout_cash_total: deliveryPayoutCash,
