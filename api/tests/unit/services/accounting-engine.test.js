@@ -184,6 +184,35 @@ describe('accounting engine historical receivables', () => {
     expect(result.amount).toBe(35);
   });
 
+  test('applies a sale-level edit only once when the sale has multiple debt rows', () => {
+    const result = reconstructOutstandingAsOf({
+      end,
+      transactions: [
+        { _id: 't1', sale_id: 'S-5', created_date: '2026-11-20T10:00:00Z', pending: 20 },
+        { _id: 't2', sale_id: 'S-5', created_date: '2026-11-20T10:00:00Z', pending: 10 },
+      ],
+      editAdjustments: [{ sale_id: 'S-5', sales_id: 'S-5', amount: 5, created_at: '2026-11-24T10:00:00Z' }],
+    });
+    expect(result.amount).toBe(25);
+  });
+
+  test('applies a sale-only legacy allocation once across multiple debt rows', () => {
+    const result = reconstructOutstandingAsOf({
+      end,
+      transactions: [
+        { _id: 't1', sale_id: 'S-6', created_date: '2026-11-20T10:00:00Z', pending: 5 },
+        { _id: 't2', sale_id: 'S-6', created_date: '2026-11-20T10:00:00Z', pending: 5 },
+      ],
+      creditPayments: [{
+        amount: 3,
+        received_at: '2026-11-24T10:00:00Z',
+        allocations: [{ sale_id: 'S-6', amount: 3 }],
+      }],
+    });
+    expect(result.amount).toBe(13);
+    expect(result.complete).toBe(true);
+  });
+
   test('reconstructs an unsettled Versement without counting its initial deposit twice', () => {
     const result = reconstructOutstandingAsOf({
       end,
