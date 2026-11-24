@@ -257,8 +257,8 @@
             if (basketBlock) {
                 var basketHeight = (receiptItems || []).reduce(function (total, item) {
                     var itemName = PosnicPro.printItemName ? PosnicPro.printItemName(item, 'receipt') : item.item_name;
-                    var lines = Math.max(1, Math.ceil(Array.from(String(itemName || '')).length / (format === '58' ? 14 : 22)));
-                    return total + 18 * lines + 8;
+                    var lines = Math.max(1, Math.ceil(Array.from(String(itemName || '')).length / (format === '58' ? 10 : format === '112' ? 24 : 15)));
+                    return total + 28 * lines + 8;
                 }, 28);
                 dynamicItemsShift = Math.max(0, basketHeight - Math.max(28, Number(basketBlock.h) || 0));
             }
@@ -285,7 +285,7 @@
                 var anchorHeight = Math.max(18, Number(customerAnchor.h) || 18);
                 var anchorBasket = layout.blocks.find(function (entry) { return entry.type === 'items'; });
                 if (dynamicItemsShift && anchorBasket &&
-                    anchorY >= Number(anchorBasket.y) + Math.max(28, Number(anchorBasket.h) || 0)) {
+                    anchorY > Number(anchorBasket.y)) {
                     anchorY += dynamicItemsShift;
                 }
                 var clientFontSize = Number(customerAnchor.fontSize);
@@ -298,7 +298,7 @@
                     var entryY = Number(entry.y);
                     if (!Number.isFinite(entryY) || entryY < anchorY + anchorHeight) return;
                     if (dynamicItemsShift && anchorBasket && entry !== anchorBasket &&
-                        entryY >= Number(anchorBasket.y) + Math.max(28, Number(anchorBasket.h) || 0)) {
+                        entryY > Number(anchorBasket.y)) {
                         entryY += dynamicItemsShift;
                     }
                     var finalY = entryY - canvasTopOffset;
@@ -309,7 +309,7 @@
         var rendered = layout.blocks.map(function (originalBlock) {
             var b = Object.assign({}, originalBlock);
             var basket = layout.blocks.find(function (block) { return block.type === 'items'; });
-            if (dynamicItemsShift && basket && b.id !== basket.id && Number(b.y) >= Number(basket.y) + Math.max(28, Number(basket.h) || 0)) {
+            if (dynamicItemsShift && basket && b.id !== basket.id && Number(b.y) > Number(basket.y)) {
                 b.y = Number(b.y) + dynamicItemsShift;
             }
             if (layout.canvas && !sheet && canvasTopOffset > 0) b.y = Math.max(0, Number(b.y) - canvasTopOffset);
@@ -384,11 +384,8 @@
                 var sgst = items.reduce(function (n, i) { return n + Number(i.sgst_tax == null ? i.cgst_tax || 0 : i.sgst_tax); }, 0);
                 if (Array.isArray(data.receipt_tax_rows) && data.receipt_tax_rows.length) data.receipt_tax_rows.forEach(function (row) { content += pair(row.label, money(row.amount)); });
                 else if (igst || cgst || sgst) {
-                    if (igst) content += pair('IGST', money(igst));
-                    if (cgst) content += pair('CGST', money(cgst));
-                    if (sgst) content += pair('SGST', money(sgst));
+                    // Taxes remain included in the sale total; do not print a separate tax breakdown.
                 }
-                else if (Number(data.tax)) content += pair('Tax', money(data.tax));
                 (data.charges || []).forEach(function (c) { content += pair(c.name || 'Charge', money(Number(c.amount || 0) + Number(c.tax_amount || 0))); });
                 if (Number(data.round_off)) content += pair('Round Off', money(data.round_off));
                 content += pair('Total', money(data.sales_total != null ? data.sales_total : data.items_total), true);
@@ -472,8 +469,8 @@
                     if (!sheet && b.type === 'items') {
                         var estimatedRowsHeight = receiptItems.reduce(function (total, item) {
                             var itemName = PosnicPro.printItemName ? PosnicPro.printItemName(item, 'receipt') : item.item_name;
-                            var lineCount = Math.max(1, Math.ceil(Array.from(String(itemName || '')).length / (format === '58' ? 14 : 22)));
-                            return total + 18 * lineCount + 8;
+                            var lineCount = Math.max(1, Math.ceil(Array.from(String(itemName || '')).length / (format === '58' ? 10 : format === '112' ? 24 : 15)));
+                            return total + 28 * lineCount + 8;
                         }, 28);
                         // Basket height follows the actual receipt content, not a manually saved cap.
                         effectiveHeight = Math.max(estimatedRowsHeight, 28);
@@ -562,8 +559,8 @@
                 if (b.type === 'items') {
                     var rowsHeight = receiptItems.reduce(function (total, item) {
                         var itemName = PosnicPro.printItemName ? PosnicPro.printItemName(item, 'receipt') : item.item_name;
-                        var lines = Math.max(1, Math.ceil(Array.from(String(itemName || '')).length / (format === '58' ? 14 : 22)));
-                        return total + 18 * lines + 8;
+                        var lines = Math.max(1, Math.ceil(Array.from(String(itemName || '')).length / (format === '58' ? 10 : format === '112' ? 24 : 15)));
+                        return total + 28 * lines + 8;
                     }, 28);
                     height = Math.max(height, rowsHeight);
                 }
