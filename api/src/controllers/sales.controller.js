@@ -1771,7 +1771,10 @@ class SalesController extends BaseController {
       const costOfGoodsBase = roundToTwo(
         productDetails.reduce((sum, item) => sum + Number(item.product_cost || 0), 0)
       );
-      let costOfGoodsTotal = costDataComplete
+      // Return the best arithmetic total whenever every sold line has a
+      // usable cost. Missing edit/return adjustments lower confidence but do
+      // not erase the known base amount; the audit labels it as estimated.
+      let costOfGoodsTotal = unresolvedCostLines === 0
         ? roundToTwo(costOfGoodsBase + editCostAdjustmentTotal)
         : null;
       let grossProfitTotal = roundToTwo(
@@ -2470,13 +2473,13 @@ class SalesController extends BaseController {
         discount_total: discountTotal,
         cost_of_goods_total: costOfGoodsTotal,
         cost_data_complete: costDataComplete,
-        cost_data_estimated: estimatedCostLines > 0,
+        cost_data_estimated: estimatedCostLines > 0 || !editCostDataComplete || returnAdjustmentTotal > 0,
         estimated_cost_lines: estimatedCostLines,
         unresolved_cost_lines: unresolvedCostLines,
         cost_data_warnings: [
           ...(estimatedCostLines ? [`${estimatedCostLines} sale line(s) use the current catalogue cost because no historical cost snapshot exists; COGS and profit are estimates.`] : []),
           ...(unresolvedCostLines ? [`No usable cost was found for ${unresolvedCostLines} sale line(s), even in the current catalogue.`] : []),
-          ...(!editCostDataComplete ? ['One or more sale modifications have no historical cost adjustment.'] : []),
+          ...(!editCostDataComplete ? ['One or more sale modifications have no historical cost adjustment; the known base cost is shown without the missing adjustment.'] : []),
           ...(returnAdjustmentTotal > 0 ? ['Returned merchandise needs verified inventory-restoration cost before COGS can be finalized.'] : []),
         ],
         profit_data_complete: dailyAccounting.profitDataComplete,
