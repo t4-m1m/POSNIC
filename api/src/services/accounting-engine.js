@@ -84,19 +84,25 @@ function aggregateSalePaymentEvents(sales = [], start, end) {
       for (const event of events) {
         const origin = event.origin && typeof event.origin === 'object' ? event.origin : {};
         const eventSource = [
-          origin.type, origin.source, origin.kind, event.source, event.origin_type,
-          event.transaction_type, event.payment_type, event.kind,
-        ].filter(Boolean).join(' ').toLowerCase().replace(/[\\s-]+/g, '_');
-        // Debt collections live in credit_payments and must never be counted
-        // as a second sale tender, even when older event records use a
-        // different origin field name.
+          typeof event.origin === 'string' ? event.origin : '',
+          origin.type, origin.source, origin.kind, origin.name, origin.label,
+          event.source, event.origin_type, event.origin_model, event.source_type,
+          event.transaction_type, event.payment_type, event.kind, event.description,
+          event.label, event.title, event.reason,
+        ].filter(Boolean).join(' ').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')
+          .toLowerCase().replace(/[\\s-]+/g, '_');
+        // A credit/debt collection is a separate receivable settlement, not
+        // a second payment for the original sale. Legacy records use several
+        // origin labels and ID field names, so classify the whole event.
         if (
-          /(?:credit|debt)_(?:settlement|collection|payment)/.test(eventSource) ||
-          event.is_credit_collection === true ||
-          event.is_debt_collection === true ||
-          !!event.credit_payment_id
+          /(?:credit|debt).{0,32}(?:settlement|collection|payment|encaissement)|(?:settlement|collection|payment|encaissement).{0,32}(?:credit|debt)/.test(eventSource) ||
+          event.is_credit_collection === true || event.is_debt_collection === true ||
+          event.is_credit_payment === true || event.is_debt_payment === true ||
+          !!(event.credit_payment_id || event.creditPaymentId || event.debt_payment_id ||
+             event.debtPaymentId || event.credit_collection_id || event.debt_collection_id ||
+             event.settlement_id || event.collection_id)
         ) continue;
-        const eventDate = event.date || event.created_at || sale.date || sale.created_date;
+        const eventDate = event.date || event.created_at || event.createdAt || event.paid_at || event.received_at || sale.date || sale.created_date || sale.created_at;
         const time = eventDate ? new Date(eventDate).getTime() : NaN;
         if (!Number.isFinite(time)) { complete = false; continue; }
         if (time < startTime || time >= endTime) continue;
