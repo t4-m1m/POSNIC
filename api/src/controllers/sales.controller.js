@@ -2080,8 +2080,8 @@ class SalesController extends BaseController {
 
       const debtPaymentRows = await db.collection('credit_payments').aggregate([
         { $match: {
-          license: BaseModel.license || req.user.license || req.user.license_id,
-          branch_id: branchObjectId,
+          license: { $in: licenseValues },
+          branch_id: { $in: branchValues },
           received_at: { $gte: new Date(filteredDateRange.start_date), $lt: new Date(filteredDateRange.end_date) },
         } },
         { $group: { _id: '$method', amount: { $sum: '$amount' }, count: { $sum: 1 } } },
@@ -2107,7 +2107,7 @@ class SalesController extends BaseController {
           license: { $in: licenseValues }, branch_id: { $in: branchValues },
           created_at: { $gte: reportEnd },
         }).project({ sale_id: 1, sales_id: 1, amount: 1, created_at: 1 }).toArray(),
-        db.collection('sale_versements').find({ branch_id: { $in: branchValues } }).toArray(),
+        db.collection('sale_versements').find({ license: { $in: licenseValues }, branch_id: { $in: branchValues } }).toArray(),
         db.collection('sales').find({
           license: { $in: licenseValues }, branch_id: { $in: branchValues },
           $or: [{ versement_checkout: { $exists: true } }, { items_return: { $exists: true, $ne: [] } }],
@@ -2413,11 +2413,14 @@ class SalesController extends BaseController {
       const refundCashUnknown = refundRows.some(row => !String(row._id || '').trim() && Number(row.amount || 0) > 0);
       const cashRefunds = roundToTwo(refundRows.reduce((sum, row) => sum + (accountingEngine.isCashTender(row._id) ? Number(row.amount || 0) : 0), 0));
       const debtCashCollections = roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.payment_mode) ? Number(row.amount || 0) : 0), 0));
-      const cashSales = roundToTwo(paymentDetails.filter(row => !row.is_refund).reduce((sum, row) => {
+      const cashSalesGross = roundToTwo(paymentDetails.filter(row => !row.is_refund).reduce((sum, row) => {
         const method = String(row.payment_mode || '').trim();
         if (/^(?:livraison[_\\s-]?zr|zr[_\\s-]?express)$/i.test(method)) return sum;
         return sum + (accountingEngine.isCashTender(method) ? Number(row.sale_payment || 0) : 0);
       }, 0));
+      const cashSales = roundToTwo(cashSalesGross - cashRefunds);
+      const totalRefundsSigned = roundToTwo(-refundRows.reduce((sum, row) => sum + Number(row.amount || 0), 0));
+      debtPaymentDetails.push({ payment_mode: 'Retours', amount: totalRefundsSigned, count: refundRows.reduce((sum, row) => sum + Number(row.count || 0), 0), is_return: true });
       const salaryCash = roundToTwo(salaryPaymentDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.method) ? Number(row.amount || 0) : 0), 0));
       const advanceCash = roundToTwo(salaryAdvanceDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.method) ? Number(row.amount || 0) : 0), 0));
       const primeCash = roundToTwo(salaryPrimeDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.method) ? Number(row.amount || 0) : 0), 0));
@@ -2434,7 +2437,7 @@ class SalesController extends BaseController {
           openingBalance: registerCash.openingBalance, cashSales,
           cashVersements: versementCashTotal, cashCreditCollections: debtCashCollections,
           deliveryPayouts: deliveryPayoutCash, cashExpenses, cashSalaries: salaryCash,
-          cashAdvances: advanceCash, cashBonuses: primeCash, cashRefunds,
+          cashAdvances: advanceCash, cashBonuses: primeCash, cashRefunds: 0,
           otherCashOutflows: registerCash.otherCashOutflows,
         },
       });
@@ -2450,6 +2453,8 @@ class SalesController extends BaseController {
         versement_data_complete: versementDataComplete,
         debt_payment_total: debtPaymentTotal,
         sales_cash_total: cashSales,
+        sales_cash_gross_total: cashSalesGross,
+        cash_returns_total: totalRefundsSigned,
         credit_cash_collections_total: debtCashCollections,
         versement_payment_details: versementPaymentDetails,
         versement_payment_total: versementPaymentTotal,
@@ -2538,6 +2543,7 @@ class SalesController extends BaseController {
           { key: 'delivery_payout_cash_total', label: 'Livraison ZR encaissée', formula: 'Somme des versements COD marqués encaissés pendant la période.', result: deliveryPayoutCash, sources: ['zr_delivery_payouts.amount', 'zr_delivery_payouts.paid_at'], complete: true, warnings: [] },
           { key: 'payment_details', label: 'Répartition des paiements de vente', formula: 'Somme des événements de paiement de chaque vente, classés par mode.', result: paymentDetails.reduce((sum, row) => sum + Number(row.sale_payment || 0), 0), components: paymentDetails, sources: ['sales.payments', 'sales.multi_payment', 'sales.payment_mode'], complete: paymentDataComplete, warnings: paymentDataComplete ? [] : ['Un événement de paiement n’a pas de date, de mode ou de montant fiable.'] },
           { key: 'versement_payment_total', label: 'Paiements de versement', formula: 'Somme des règlements Versement enregistrés pendant la période.', result: versementPaymentTotal, components: versementPaymentDetails, sources: ['versements', 'versement settlement ledger'], complete: versementDataComplete, warnings: versementDataComplete ? [] : ['Un règlement Versement ne possède pas de mode de paiement fiable.'] },
+          { key: 'cash_returns_total', label: 'Retours', formula: 'Somme des remboursements de la période, affichée en négatif et déduite directement des espèces des ventes.', result: totalRefundsSigned, sources: ['sales.return_refund_transactions'], complete: !refundCashUnknown, warnings: refundCashUnknown ? ['Un remboursement ne possède pas de mode de paiement fiable.'] : [] },
           { key: 'debt_payment_total', label: 'Encaissements de crédits', formula: 'Somme des règlements de dettes clients reçus pendant la période.', result: debtPaymentTotal, components: debtPaymentDetails, sources: ['credit_payments', 'customer debt ledger'], complete: debtPaymentDataComplete, warnings: debtPaymentDataComplete ? [] : ['Un encaissement de crédit ne possède pas de mode de paiement fiable.'] },
           { key: 'outstanding_amount', label: 'Crédit restant à encaisser', formula: 'Solde des dettes antérieures à la clôture + règlements postérieurs réintégrés − modifications et retours postérieurs.', result: outstandingDataComplete ? roundToTwo(outstandingAmount) : null, components: { unresolved_records: outstandingResult.unresolved + futureReturnEvents.length, versements: linkedVersements.length, orphan_versements: orphanVersements.length }, sources: ['customer debt ledger', 'credit_payments', 'sale_edit_adjustments', 'sales.items_return', 'versements', 'sales'], complete: outstandingDataComplete, warnings: responseData.outstanding_data_warnings },
           { key: 'cash_expected', label: 'Espèces attendues dans la caisse', formula: 'Ouverture + ventes CASH + versements CASH + crédits CASH + versements ZR encaissés − dépenses CASH − salaires CASH − acomptes CASH − primes CASH − remboursements CASH − sorties manuelles.', result: cashAccounting.cashExpected, components: { opening_balance: registerCash.openingBalance, cash_sales: cashSales, cash_versements: versementCashTotal, cash_credit_collections: debtCashCollections, delivery_payouts: deliveryPayoutCash, cash_expenses: cashExpenses, cash_salaries: salaryCash, cash_advances: advanceCash, cash_bonuses: primeCash, cash_refunds: cashRefunds, other_cash_outflows: registerCash.otherCashOutflows, register_sessions_matched: registerCash.matched, register_unresolved: registerCash.unresolved }, sources: ['cashregister', 'sales.payments', 'versements', 'credit_payments', 'zr_delivery_payouts', 'expenses', 'hr_transactions'], complete: cashAccounting.cashDataComplete, warnings: responseData.cash_data_warnings },
