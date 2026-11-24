@@ -152,8 +152,12 @@ function calculateDailyClose(input = {}) {
     'cashRefunds',
     'otherCashOutflows',
   ];
-  const cashComplete = input.cashDataComplete === true && cashKeys.every((key) => finite(cash[key]));
-  const expectedCash = cashComplete
+  const cashInputsAvailable = cashKeys.every((key) => finite(cash[key]));
+  const cashComplete = input.cashDataComplete === true && cashInputsAvailable;
+  // Always return the arithmetic result when every component has a numeric
+  // value. Completeness remains a separate trust flag: the UI can show the
+  // provisional amount and explain missing register/payment evidence.
+  const expectedCash = cashInputsAvailable
     ? round2(
         Number(cash.openingBalance) +
         Number(cash.cashSales) +
