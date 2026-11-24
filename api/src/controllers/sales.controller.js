@@ -2554,7 +2554,7 @@ class SalesController extends BaseController {
           { label: 'Coût marchandises = coût lignes + ajustements', expected: roundToTwo(costOfGoodsBase + editCostAdjustmentTotal), actual: costOfGoodsTotal, passed: costOfGoodsTotal !== null ? Math.abs(roundToTwo(costOfGoodsBase + editCostAdjustmentTotal) - costOfGoodsTotal) <= 0.01 : null },
           { label: 'Paiements de versement = détail des règlements', expected: roundToTwo(versementPaymentDetails.reduce((sum, row) => sum + Number(row.amount || 0), 0)), actual: versementPaymentTotal, passed: Math.abs(roundToTwo(versementPaymentDetails.reduce((sum, row) => sum + Number(row.amount || 0), 0)) - versementPaymentTotal) <= 0.01 },
           { label: 'Encaissements crédits = détail des règlements', expected: roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + Number(row.amount || 0), 0)), actual: debtPaymentTotal, passed: Math.abs(roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + Number(row.amount || 0), 0)) - debtPaymentTotal) <= 0.01 },
-          { label: 'Espèces attendues = ouverture + entrées − sorties', expected: roundToTwo(registerCash.openingBalance + cashSales + versementCashTotal + debtCashCollections + deliveryPayoutCash - cashExpenses - salaryCash - advanceCash - primeCash - cashRefunds - registerCash.otherCashOutflows), actual: cashAccounting.cashExpected, passed: cashAccounting.cashExpected !== null ? Math.abs(roundToTwo(registerCash.openingBalance + cashSales + versementCashTotal + debtCashCollections + deliveryPayoutCash - cashExpenses - salaryCash - advanceCash - primeCash - cashRefunds - registerCash.otherCashOutflows) - cashAccounting.cashExpected) <= 0.01 : null },
+          { label: 'Espèces attendues = ouverture + entrées − sorties', expected: roundToTwo(registerCash.openingBalance + cashSales + versementCashTotal + debtCashCollections - cashExpenses - salaryCash - advanceCash - primeCash - cashRefunds - registerCash.otherCashOutflows), actual: cashAccounting.cashExpected, passed: cashAccounting.cashExpected !== null ? Math.abs(roundToTwo(registerCash.openingBalance + cashSales + versementCashTotal + debtCashCollections + deliveryPayoutCash - cashExpenses - salaryCash - advanceCash - primeCash - cashRefunds - registerCash.otherCashOutflows) - cashAccounting.cashExpected) <= 0.01 : null },
         ],
       };
 
@@ -2594,6 +2594,7 @@ class SalesController extends BaseController {
           net_profit_total: responseData.net_profit_total,
           profit_data_complete: responseData.profit_data_complete,
           expenses_total: responseData.expenses_total,
+          cash_returns_total: responseData.cash_returns_total,
           salary_payments_total: responseData.salary_payments_total,
           salary_advances_total: responseData.salary_advances_total,
           salary_primes_total: responseData.salary_primes_total,
