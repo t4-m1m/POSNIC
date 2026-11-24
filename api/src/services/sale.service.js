@@ -2819,7 +2819,7 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
         let: {
           reportItemId: {
             $convert: {
-              input: { $ifNull: ['$items.item', '$items.item_id'] },
+              input: { $ifNull: ['$items.item_id', '$items.item'] },
               to: 'objectId',
               onError: null,
               onNull: null,
