@@ -1757,7 +1757,8 @@ class SalesController extends BaseController {
           product_cost: roundToTwo(totalCompanyPrice),
           product_discount: roundToTwo(item.totalDiscount ?? 0),
           product_tax: roundToTwo(item.totalTax ?? 0),
-          unresolved_cost_lines: Number(item.unresolvedCostLines || 0),
+          unresolved_cost_lines: Number(item.unresolvedCost_lines ?? item.unresolvedCostLines ?? 0),
+          estimated_cost_lines: Number(item.estimatedCostLines || 0),
           product_avg: roundToTwo(totalQty ? subtotal / totalQty : 0),
           tax_type: 'inclusive',
           tax_rate: taxRate,
@@ -1765,6 +1766,7 @@ class SalesController extends BaseController {
       });
 
       const unresolvedCostLines = productDetails.reduce((sum, item) => sum + Number(item.unresolved_cost_lines || 0), 0);
+      const estimatedCostLines = productDetails.reduce((sum, item) => sum + Number(item.estimated_cost_lines || 0), 0);
       let costDataComplete = unresolvedCostLines === 0 && editCostDataComplete;
       const costOfGoodsBase = roundToTwo(
         productDetails.reduce((sum, item) => sum + Number(item.product_cost || 0), 0)
@@ -2450,7 +2452,7 @@ class SalesController extends BaseController {
         cash_expected: cashAccounting.cashExpected,
         cash_data_complete: cashAccounting.cashDataComplete,
         cash_data_warnings: [
-          ...(!registerCash.complete ? ['Opening cash float or cash-register history is missing.'] : []),
+          ...(!registerCash.complete ? [registerCash.matched ? 'Cash-register opening float or movement history is incomplete.' : 'No cash-register session overlaps this day; opening cash is provisionally assumed to be 0 DA.'] : []),
           ...(expenseTenderUnknown ? ['One or more expenses have no reliable payment method.'] : []),
           ...(refundCashUnknown ? ['One or more refunds have no reliable payment method.'] : []),
           ...(!paymentDataComplete ? ['One or more sale payment events have no reliable date, method or amount.'] : []),
@@ -2468,9 +2470,12 @@ class SalesController extends BaseController {
         discount_total: discountTotal,
         cost_of_goods_total: costOfGoodsTotal,
         cost_data_complete: costDataComplete,
+        cost_data_estimated: estimatedCostLines > 0,
+        estimated_cost_lines: estimatedCostLines,
         unresolved_cost_lines: unresolvedCostLines,
         cost_data_warnings: [
-          ...(unresolvedCostLines ? [`Missing historical cost snapshot on ${unresolvedCostLines} sale line(s).`] : []),
+          ...(estimatedCostLines ? [`${estimatedCostLines} sale line(s) use the current catalogue cost because no historical cost snapshot exists; COGS and profit are estimates.`] : []),
+          ...(unresolvedCostLines ? [`No usable cost was found for ${unresolvedCostLines} sale line(s), even in the current catalogue.`] : []),
           ...(!editCostDataComplete ? ['One or more sale modifications have no historical cost adjustment.'] : []),
           ...(returnAdjustmentTotal > 0 ? ['Returned merchandise needs verified inventory-restoration cost before COGS can be finalized.'] : []),
         ],
@@ -2503,6 +2508,32 @@ class SalesController extends BaseController {
         cancellation_summary: [],
       };
 
+      responseData.calculation_audit = {
+        period: {
+          date: branchDetails.from_date,
+          start: filteredDateRange.start_date,
+          end_exclusive: filteredDateRange.end_date,
+          timezone: branchDoc.time_zone || process.env.DEFAULT_TIMEZONE || 'UTC',
+          branch_id: String(branchObjectId),
+        },
+        calculations: [
+          { key: 'sales_total', label: 'Ventes', formula: 'Somme des ventes comptabilisées sur la période, après règles de retours et remises.', result: salesNetTotal, rows: salesCount, sources: ['sales'], complete: salesDataComplete, warnings: salesDataComplete ? [] : ['L’historique des retours ou des ventes contient des données incomplètes.'] },
+          { key: 'cost_of_goods_total', label: 'Coût des marchandises', formula: 'Somme des coûts des lignes vendues + ajustements de coût des modifications.', result: costOfGoodsTotal, components: { sale_line_costs: costOfGoodsBase, edit_cost_adjustments: editCostAdjustmentTotal, estimated_lines: estimatedCostLines, unresolved_lines: unresolvedCostLines }, sources: ['sales.sale_original_snapshot.items', 'sales.items', 'items.company_price / cost_price (estimation de secours)', 'sale_edit_adjustments'], complete: costDataComplete, warnings: responseData.cost_data_warnings },
+          { key: 'gross_profit_total', label: 'Bénéfice brut', formula: 'Ventes − coût des marchandises.', result: grossProfitTotal, components: { sales: salesNetTotal, cost_of_goods: costOfGoodsTotal }, sources: ['sales', 'sale line cost snapshots / catalogue fallback'], complete: dailyAccounting.profitDataComplete && costDataComplete, warnings: responseData.cost_data_warnings },
+          { key: 'net_profit_total', label: 'Bénéfice net', formula: 'Bénéfice brut − dépenses − salaires − acomptes − primes.', result: netProfitTotal, components: { gross_profit: grossProfitTotal, expenses: expensesTotal, salaries: salaryPaymentsTotal, advances: salaryAdvancesTotal, bonuses: salaryPrimesTotal }, sources: ['expenses', 'hr_transactions'], complete: dailyAccounting.profitDataComplete, warnings: [...(!expenseDataComplete ? ['Montant d’une dépense invalide.'] : []), ...(!payrollComplete ? ['Certaines opérations RH ne sont pas rattachées à cette agence.'] : [])] },
+          { key: 'payment_details', label: 'Répartition des paiements de vente', formula: 'Somme des événements de paiement de chaque vente, classés par mode.', result: paymentDetails.reduce((sum, row) => sum + Number(row.sale_payment || 0), 0), components: paymentDetails, sources: ['sales.payments', 'sales.multi_payment', 'sales.payment_mode'], complete: paymentDataComplete, warnings: paymentDataComplete ? [] : ['Un événement de paiement n’a pas de date, de mode ou de montant fiable.'] },
+          { key: 'versement_payment_total', label: 'Paiements de versement', formula: 'Somme des règlements Versement enregistrés pendant la période.', result: versementPaymentTotal, components: versementPaymentDetails, sources: ['versements', 'versement settlement ledger'], complete: versementDataComplete, warnings: versementDataComplete ? [] : ['Un règlement Versement ne possède pas de mode de paiement fiable.'] },
+          { key: 'debt_payment_total', label: 'Encaissements de crédits', formula: 'Somme des règlements de dettes clients reçus pendant la période.', result: debtPaymentTotal, components: debtPaymentDetails, sources: ['credit_payments', 'customer debt ledger'], complete: debtPaymentDataComplete, warnings: debtPaymentDataComplete ? [] : ['Un encaissement de crédit ne possède pas de mode de paiement fiable.'] },
+          { key: 'outstanding_amount', label: 'Crédit restant à encaisser', formula: 'Solde des dettes antérieures à la clôture + règlements postérieurs réintégrés − modifications et retours postérieurs.', result: outstandingDataComplete ? roundToTwo(outstandingAmount) : null, components: { unresolved_records: outstandingResult.unresolved + futureReturnEvents.length, versements: linkedVersements.length, orphan_versements: orphanVersements.length }, sources: ['customer debt ledger', 'credit_payments', 'sale_edit_adjustments', 'sales.items_return', 'versements', 'sales'], complete: outstandingDataComplete, warnings: responseData.outstanding_data_warnings },
+          { key: 'cash_expected', label: 'Espèces attendues dans la caisse', formula: 'Ouverture + ventes CASH + versements CASH + crédits CASH + versements ZR encaissés − dépenses CASH − salaires CASH − acomptes CASH − primes CASH − remboursements CASH − sorties manuelles.', result: cashAccounting.cashExpected, components: { opening_balance: registerCash.openingBalance, cash_sales: cashSales, cash_versements: versementCashTotal, cash_credit_collections: debtCashCollections, delivery_payouts: deliveryPayoutCash, cash_expenses: cashExpenses, cash_salaries: salaryCash, cash_advances: advanceCash, cash_bonuses: primeCash, cash_refunds: cashRefunds, other_cash_outflows: registerCash.otherCashOutflows, register_sessions_matched: registerCash.matched, register_unresolved: registerCash.unresolved }, sources: ['cashregister', 'sales.payments', 'versements', 'credit_payments', 'zr_delivery_payouts', 'expenses', 'hr_transactions'], complete: cashAccounting.cashDataComplete, warnings: responseData.cash_data_warnings },
+        ],
+        consistency_checks: [
+          { label: 'Bénéfice brut = ventes − coût', expected: salesNetTotal !== null && costOfGoodsTotal !== null ? roundToTwo(salesNetTotal - costOfGoodsTotal) : null, actual: grossProfitTotal, passed: salesNetTotal !== null && costOfGoodsTotal !== null && grossProfitTotal !== null ? Math.abs(roundToTwo(salesNetTotal - costOfGoodsTotal) - grossProfitTotal) <= 0.01 : null },
+          { label: 'Bénéfice net = bénéfice brut − charges', expected: grossProfitTotal !== null ? roundToTwo(grossProfitTotal - expensesTotal - salaryPaymentsTotal - salaryAdvancesTotal - salaryPrimesTotal) : null, actual: netProfitTotal, passed: grossProfitTotal !== null && netProfitTotal !== null ? Math.abs(roundToTwo(grossProfitTotal - expensesTotal - salaryPaymentsTotal - salaryAdvancesTotal - salaryPrimesTotal) - netProfitTotal) <= 0.01 : null },
+          { label: 'Paiements de vente = total des modes de paiement', expected: paymentDetails.reduce((sum, row) => sum + Number(row.sale_payment || 0), 0), actual: paymentDetails.reduce((sum, row) => sum + Number(row.sale_payment || 0), 0), passed: paymentDataComplete },
+        ],
+      };
+
       const cancellationSummary = cancellationAgg.map((row) => ({
         table_number: row._id?.table_number || '',
         item_name: row._id?.item_name || '',
@@ -2514,12 +2545,10 @@ class SalesController extends BaseController {
 
       if (req.cashierDayClose) {
         return this.success(res, {
+          ...responseData,
           date: branchDetails.from_date,
-          cash_expected: cashAccounting.cashExpected,
-          cash_data_complete: cashAccounting.cashDataComplete,
-          cash_data_warnings: responseData.cash_data_warnings,
           currency: 'DA',
-        }, 'Cash expected loaded', 200);
+        }, 'Cash expected and daily calculation details loaded', 200);
       }
 
       // ---- Return success response ----
