@@ -27,8 +27,10 @@ describe('accounting engine daily close', () => {
       salaryPaymentsTotal: 100, salaryAdvancesTotal: 20, salaryPrimesTotal: 30,
       payrollComplete: true,
     });
+    expect(result.costOfGoodsTotal).toBe(600);
     expect(result.grossProfitTotal).toBe(400);
     expect(result.netProfitTotal).toBe(200);
+    expect(result.costDataComplete).toBe(false);
     expect(result.profitDataComplete).toBe(false);
   });
 
