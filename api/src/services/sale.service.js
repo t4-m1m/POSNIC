@@ -2814,23 +2814,28 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
     // otherwise the fallback catalogue cost silently disappears and COGS,
     // gross profit and net profit are all reported as unavailable.
     {
-      $lookup: {
-        from: 'items',
-        let: {
-          reportItemId: {
-            $convert: {
-              input: { $ifNull: ['$items.item_id', '$items.item'] },
-              to: 'objectId',
-              onError: null,
-              onNull: null,
-            },
+      $addFields: {
+        reportItemObjectId: {
+          $convert: {
+            input: { $ifNull: ['$items.item_id', '$items.item'] },
+            to: 'objectId',
+            onError: null,
+            onNull: null,
           },
         },
-        pipeline: [
-          { $match: { $expr: { $eq: ['$_id', '$reportItemId'] } } },
-          { $project: { company_price: 1, cost_price: 1, purchase_cost_dzd: 1 } },
-        ],
+      },
+    },
+    {
+      $lookup: {
+        from: 'items',
+        localField: 'reportItemObjectId',
+        foreignField: '_id',
         as: 'report_cost_item',
+      },
+    },
+    {
+      $addFields: {
+        report_cost_item: { $arrayElemAt: ['$report_cost_item', 0] },
       },
     },
     { $unwind: { path: '$report_cost_item', preserveNullAndEmptyArrays: true } },
