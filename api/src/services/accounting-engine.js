@@ -123,18 +123,23 @@ function aggregateSalePaymentEvents(sales = [], start, end) {
 function calculateDailyClose(input = {}) {
   const salesTotal = asAmount(input.salesTotal);
   const cost = asAmount(input.costOfGoodsTotal);
-  const costComplete = input.costDataComplete === true && cost !== null && salesTotal !== null;
-  const grossProfit = costComplete ? round2(salesTotal - cost) : null;
+  const costAvailable = cost !== null && salesTotal !== null;
+  const costComplete = input.costDataComplete === true && costAvailable;
+  const grossProfit = costAvailable ? round2(salesTotal - cost) : null;
 
   const expenses = asAmount(input.expensesTotal);
   const salaries = asAmount(input.salaryPaymentsTotal);
   const advances = asAmount(input.salaryAdvancesTotal);
   const bonuses = asAmount(input.salaryPrimesTotal);
-  const profitComplete = grossProfit !== null &&
+  const netProfitAvailable = grossProfit !== null &&
+    expenses !== null && salaries !== null && advances !== null && bonuses !== null;
+  const profitComplete = costComplete &&
     input.expensesComplete !== false &&
     input.payrollComplete !== false &&
-    expenses !== null && salaries !== null && advances !== null && bonuses !== null;
-  const netProfit = profitComplete
+    netProfitAvailable;
+  // Preserve the arithmetic result when inputs exist, while keeping the
+  // completeness flag separate so estimated/incomplete records are disclosed.
+  const netProfit = netProfitAvailable
     ? round2(grossProfit - expenses - salaries - advances - bonuses)
     : null;
 
