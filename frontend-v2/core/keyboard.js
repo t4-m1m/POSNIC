@@ -74,6 +74,9 @@ export function installKeyboard({ render, focusSearch, onFunctionKey }) {
       return;
     }
     if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
+      // The event began outside the scanner input. Prevent the browser from
+      // inserting the same character again after focusSearch() moves focus.
+      event.preventDefault();
       focusSearch();
       const input = document.querySelector('#barcode-search');
       if (input) {
