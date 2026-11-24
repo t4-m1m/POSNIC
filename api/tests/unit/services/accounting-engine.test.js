@@ -49,7 +49,7 @@ describe('accounting engine daily close', () => {
     expect(result.netProfitTotal).toBeNull();
   });
 
-  test('includes opening cash, versements and credit collections but excludes non-cash tenders', () => {
+  test('includes cash credit collections but excludes ZR delivery payouts from expected drawer cash', () => {
     const result = calculateDailyClose({
       salesTotal: 1000,
       costOfGoodsTotal: 400,
@@ -73,7 +73,7 @@ describe('accounting engine daily close', () => {
         otherCashOutflows: 10,
       },
     });
-    expect(result.cashExpected).toBe(820);
+    expect(result.cashExpected).toBe(795);
   });
 
   test('uses cash register opening float plus pre-day cash movements and only manual same-day movements', () => {
