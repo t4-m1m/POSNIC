@@ -2383,7 +2383,7 @@ class SalesController extends BaseController {
       ].every(row => String(row.method || '').trim() !== '');
       const payrollComplete = payrollBranchComplete;
       const dailyAccounting = accountingEngine.calculateDailyClose({
-        salesTotal: salesDataComplete ? salesNetTotal : null,
+        salesTotal: Number.isFinite(Number(salesNetTotal)) ? salesNetTotal : null,
         costOfGoodsTotal,
         costDataComplete,
         expensesTotal,
