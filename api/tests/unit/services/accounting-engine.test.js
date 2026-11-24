@@ -20,6 +20,18 @@ describe('accounting engine daily close', () => {
     expect(result.netProfitTotal).toBe(200);
   });
 
+  test('shows provisional profit arithmetic when cost is known but not fully verified', () => {
+    const result = calculateDailyClose({
+      salesTotal: 1000, costOfGoodsTotal: 600, costDataComplete: false,
+      expensesTotal: 50, expensesComplete: true,
+      salaryPaymentsTotal: 100, salaryAdvancesTotal: 20, salaryPrimesTotal: 30,
+      payrollComplete: true,
+    });
+    expect(result.grossProfitTotal).toBe(400);
+    expect(result.netProfitTotal).toBe(200);
+    expect(result.profitDataComplete).toBe(false);
+  });
+
   test('never turns missing historical cost into zero profit cost', () => {
     const result = calculateDailyClose({
       salesTotal: 1000,
