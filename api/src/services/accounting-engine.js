@@ -148,6 +148,7 @@ function calculateDailyClose(input = {}) {
     'openingBalance',
     'cashSales',
     'cashVersements',
+    'cashCreditCollections',
     'cashExpenses',
     'cashSalaries',
     'cashAdvances',
@@ -164,7 +165,8 @@ function calculateDailyClose(input = {}) {
     ? round2(
         Number(cash.openingBalance) +
         Number(cash.cashSales) +
-        Number(cash.cashVersements) -
+        Number(cash.cashVersements) +
+        Number(cash.cashCreditCollections) -
         Number(cash.cashExpenses) -
         Number(cash.cashSalaries) -
         Number(cash.cashAdvances) -
