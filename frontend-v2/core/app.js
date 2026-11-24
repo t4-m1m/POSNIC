@@ -320,11 +320,21 @@ async function printSaleReceiptDocument(sale){
 }
 async function printStudio(kind){
  if(kind==='receipt'){
-  const sample=state.receiptSample||{};
-  const legacyHtml=buildSaleReceiptHtml(sample);
+  const sample=state.receiptSample||{},sourceItems=rowsOf(sample.items);
+  if(!sourceItems.length)throw new Error('Aucun article dans le ticket de démonstration : chargez une vente avant d’imprimer.');
+  const total=Number(sample.sales_total??sample.total??sample.items_total);
+  if(!Number.isFinite(total))throw new Error('Total du ticket invalide : impression annulée pour éviter le gaspillage de papier.');
+  const tender=sample.multi_payment||sample.payment_details||sample.payment_breakdown||{};
+  const payments=Array.isArray(tender)?tender.map(x=>({label:x.method||x.payment_mode||x.type||'Paiement',amount:Number(x.amount??x.paid??x.total)||0})):Object.entries(tender).map(([label,value])=>({label,amount:Number(typeof value==='object'?(value.amount??value.paid??value.total):value)||0}));
+  const items=sourceItems.map(x=>({name:x.item_name||x.name||x.product_name||'Article',variant:x.variant_name||x.variant||x.attributes_text||'',qty:Number(x.item_quantity??x.quantity??x.qty??1),rate:Number(x.item_price??x.selling_price??x.unit_price??x.price??0),amount:Number(x.total_amount??x.line_total??((Number(x.item_price??x.selling_price??x.unit_price??x.price)||0)*(Number(x.item_quantity??x.quantity??x.qty)||0)))}));
+  const sale={billNo:String(sample.sales_id||sample.sale_number||sample._id||''),sales_id:String(sample.sales_id||sample.sale_number||sample._id||''),date:sample.date||sample.created_at||sample.createdAt||sample.created_date||new Date().toLocaleString(),title:'TICKET DE VENTE',storeName:state.receiptStoreProfile?.store_name||state.receiptStoreProfile?.storeName||state.storeProfile?.store_name||'POSNIC',storeAddress:state.receiptStoreProfile?.store_address||state.receiptStoreProfile?.storeAddress||state.storeProfile?.store_address||'',storePhone:state.receiptStoreProfile?.store_phone||'',cashier:sample.cashier_name||sample.user_name||state.user?.name||'',branch:sample.branch_name||state.user?.branch_name||'',customer:sample.customer_name&&sample.customer_name!=='Client de passage'?[String(sample.customer_name)]:[],items,total,subTotal:Number(sample.sales_sub_total??sample.subtotal??total),discount:Number(sample.extra_discount??sample.discount??sample.discount_amount??0),tax:Number(sample.tax??sample.total_tax??0),taxes:Array.isArray(sample.receipt_tax_rows)?sample.receipt_tax_rows:[],payments:payments.length?payments:[{label:sample.payment_mode||'Paiement',amount:Number(sample.paid_amount??sample.payment_received??total)}],change:Number(sample.change_amount??sample.change??0),currency:'DA',currencyDigits:2,showThanks:true};
   const printerName=document.querySelector('#printer-form [name="printer"]')?.value||'';
-  await printHtmlDocument(legacyHtml,{pageSize:'80mm',customPageSize:{width:80,height:Math.max(145,Math.min(1200,125+rowsOf(sample.items).length*9))},printerName,silent:true,thermalRaster:false,forceHtml:true,fitReceipt:true,printBackground:true,margins:{marginType:'none'}},'Ticket imprimé avec le moteur de vente historique.');
-  return;
+  const nativePrinter=window.electronAPI?.printer?.printReceipt;
+  if(typeof nativePrinter!=='function')throw new Error('Le moteur thermique ESC/POS historique est indisponible. Aucun travail d’impression n’a été envoyé.');
+  const result=await nativePrinter(sale,{printerName,paperWidth:'80mm',kind:'receipt',source:'Receipt Studio',docName:'POSNIC Receipt Studio',copies:1,cut:true});
+  if(!result?.success)throw new Error(result?.error||'Échec de l’impression thermique. Aucun ticket confirmé.');
+  toast('Ticket envoyé au moteur thermique ESC/POS.','success');
+  return result;
  }
  const art=document.querySelector(kind==='label'?'#label-artboard':'#receipt-artboard');if(!art)throw new Error('Zone de création introuvable.');
  const width=kind==='label'?state.labelLayout.width:state.receiptLayout.width;let height=kind==='label'?state.labelLayout.height:Number(state.receiptLayout.height||360);const bridge=window.electronAPI?.printer,win=bridge?.print?null:window.open('','_blank','width=900,height=1000');if(!bridge?.print&&!win)throw new Error('Autorisez la fenêtre d’impression.');
