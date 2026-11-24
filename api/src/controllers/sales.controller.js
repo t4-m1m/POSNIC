@@ -2420,7 +2420,9 @@ class SalesController extends BaseController {
       }, 0));
       const cashSales = roundToTwo(cashSalesGross - cashRefunds);
       const totalRefundsSigned = roundToTwo(-refundRows.reduce((sum, row) => sum + Number(row.amount || 0), 0));
-      debtPaymentDetails.push({ payment_mode: 'Retours', amount: totalRefundsSigned, count: refundRows.reduce((sum, row) => sum + Number(row.count || 0), 0), is_return: true });
+      // Returns are reported separately through cash_returns_total. Do not
+      // inject them into debt_payment_details, which is reserved for actual
+      // customer credit collections.
       const salaryCash = roundToTwo(salaryPaymentDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.method) ? Number(row.amount || 0) : 0), 0));
       const advanceCash = roundToTwo(salaryAdvanceDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.method) ? Number(row.amount || 0) : 0), 0));
       const primeCash = roundToTwo(salaryPrimeDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.method) ? Number(row.amount || 0) : 0), 0));
