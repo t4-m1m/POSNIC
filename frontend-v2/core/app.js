@@ -292,7 +292,7 @@ async function printHtmlDocument(html,options,successMessage){
 function buildSaleReceiptHtml(sale){
  const layout=state.receiptLayout||(()=>{try{return JSON.parse(localStorage.getItem('samarinapos-receipt-layout-v2')||'{}')}catch(_){return {}}})();
  const profile=state.storeProfile||{},items=rowsOf(sale.items),ticket=String(sale.sales_id||sale.sale_number||sale.billNo||sale._id||'');
- const digits=ticket.replace(/\\D/g,'');
+ const digits=ticket.replace(/\D/g,'');
  const barcode=digits?digits.slice(-7).padStart(7,'0'):ticket;
  const totalValue=Number(sale.sales_total??sale.total??0);
  const discount=Number(sale.extra_discount??sale.discount??sale.discount_amount??0);
