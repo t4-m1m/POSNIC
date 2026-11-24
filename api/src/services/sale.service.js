@@ -2809,7 +2809,30 @@ const getDailySalesReportAggregates = async ({ match, cancellationMatch }, { Sal
     { $unwind: '$items' },
     // Prefer immutable sale-line cost snapshots. Legacy tickets without one
     // fall back to the catalogue cost as a clearly flagged estimate.
-    { $lookup: { from: 'items', localField: 'items.item', foreignField: '_id', as: 'report_cost_item' } },
+    // Sale lines in V2 store the catalogue reference as item_id (string),
+    // while older snapshots use item (ObjectId). Resolve both representations;
+    // otherwise the fallback catalogue cost silently disappears and COGS,
+    // gross profit and net profit are all reported as unavailable.
+    {
+      $lookup: {
+        from: 'items',
+        let: {
+          reportItemId: {
+            $convert: {
+              input: { $ifNull: ['$items.item', '$items.item_id'] },
+              to: 'objectId',
+              onError: null,
+              onNull: null,
+            },
+          },
+        },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$_id', '$reportItemId'] } } },
+          { $project: { company_price: 1, cost_price: 1, purchase_cost_dzd: 1 } },
+        ],
+        as: 'report_cost_item',
+      },
+    },
     { $unwind: { path: '$report_cost_item', preserveNullAndEmptyArrays: true } },
     {
       $addFields: {
