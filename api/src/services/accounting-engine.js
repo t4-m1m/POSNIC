@@ -180,7 +180,7 @@ function calculateDailyClose(input = {}) {
 
   return {
     salesTotal: salesTotal === null ? null : round2(salesTotal),
-    costOfGoodsTotal: costComplete ? round2(cost) : null,
+    costOfGoodsTotal: costAvailable ? round2(cost) : null,
     costDataComplete: costComplete,
     grossProfitTotal: grossProfit,
     expensesTotal: expenses === null ? null : round2(expenses),
@@ -228,6 +228,8 @@ function reconstructOutstandingAsOf({
     const saleId = id(row.sale_id);
     if (saleId) transactionSaleCounts.set(saleId, (transactionSaleCounts.get(saleId) || 0) + 1);
   });
+  let complete = true;
+  let unresolved = 0;
   for (const payment of creditPayments.filter(row => after(row.received_at))) {
     const allocations = Array.isArray(payment.allocations) ? payment.allocations : [];
     if (!allocations.length) { complete = false; unresolved += 1; continue; }
@@ -265,8 +267,6 @@ function reconstructOutstandingAsOf({
     ...orphanVersements.map((row) => String(row.sales_id || row.sale_id || row._id || '')),
   ]);
   let total = 0;
-  let complete = true;
-  let unresolved = 0;
   for (const row of transactions) {
     const saleKey = String(row.sale_id || '');
     if (saleKey && versementKeys.has(saleKey)) continue;
