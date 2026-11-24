@@ -2050,7 +2050,7 @@ class SalesController extends BaseController {
       const versementPaymentDetails = Array.from(versementPaymentMap.values()).filter((row) => row.amount > 0);
       const versementPaymentTotal = roundToTwo(versementPaymentDetails.reduce((sum, row) => sum + row.amount, 0));
       const refundRows = await db.collection('sales').aggregate([
-        { $match: { branch_id: branchObjectId, ...(BaseModel.license ? { license: BaseModel.license } : {}) } },
+        { $match: { branch_id: { $in: branchValues }, license: { $in: licenseValues } } },
         { $unwind: '$return_refund_transactions' },
         { $addFields: {
           reportRefundDate: { $convert: { input: { $ifNull: ['$return_refund_transactions.created_at', '$return_refund_transactions.return_date'] }, to: 'date', onError: null, onNull: null } },
@@ -2082,9 +2082,17 @@ class SalesController extends BaseController {
         { $match: {
           license: { $in: licenseValues },
           branch_id: { $in: branchValues },
-          received_at: { $gte: new Date(filteredDateRange.start_date), $lt: new Date(filteredDateRange.end_date) },
         } },
-        { $group: { _id: '$method', amount: { $sum: '$amount' }, count: { $sum: 1 } } },
+        { $addFields: {
+          reportCreditDate: { $convert: { input: { $ifNull: ['$received_at', { $ifNull: ['$created_at', '$date'] }] }, to: 'date', onError: null, onNull: null } },
+          reportCreditAmount: { $convert: { input: '$amount', to: 'double', onError: null, onNull: null } },
+          reportCreditMethod: { $ifNull: ['$method', '$payment_mode'] },
+        } },
+        { $match: { $expr: { $and: [
+          { $gte: ['$reportCreditDate', new Date(filteredDateRange.start_date)] },
+          { $lt: ['$reportCreditDate', new Date(filteredDateRange.end_date)] },
+        ] } } },
+        { $group: { _id: '$reportCreditMethod', amount: { $sum: { $ifNull: ['$reportCreditAmount', 0] } }, count: { $sum: 1 }, invalidAmountCount: { $sum: { $cond: [{ $eq: ['$reportCreditAmount', null] }, 1, 0] } } } },
         { $sort: { _id: 1 } },
       ]).toArray();
       const debtPaymentDetails = debtPaymentRows.map((row) => ({
@@ -2093,7 +2101,7 @@ class SalesController extends BaseController {
         count: Number(row.count) || 0,
       }));
       const debtPaymentTotal = roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + row.amount, 0));
-      const debtPaymentDataComplete = debtPaymentRows.every(row => !!row._id);
+      const debtPaymentDataComplete = debtPaymentRows.every(row => !!row._id && Number(row.invalidAmountCount || 0) === 0);
 
       // Debt created by bills in this report period. This is receivable,
       // not money collected, so it is separate from payment_details.
@@ -2202,8 +2210,8 @@ class SalesController extends BaseController {
       // date strings and older created_date records before applying the day.
       const expenseRows = await db.collection('expenses').aggregate([
         { $match: {
-          license: BaseModel.license || req.user.license || req.user.license_id,
-          branch_id: branchObjectId,
+          license: { $in: licenseValues },
+          branch_id: { $in: branchValues },
           is_deleted: { $ne: true },
         } },
         {
@@ -2539,7 +2547,7 @@ class SalesController extends BaseController {
           { key: 'cost_of_goods_total', label: 'Coût des marchandises', formula: 'Somme des coûts des lignes vendues + ajustements de coût des modifications.', result: costOfGoodsTotal, components: { sale_line_costs: costOfGoodsBase, edit_cost_adjustments: editCostAdjustmentTotal, estimated_lines: estimatedCostLines, unresolved_lines: unresolvedCostLines }, sources: ['sales.sale_original_snapshot.items', 'sales.items', 'items.company_price / cost_price (estimation de secours)', 'sale_edit_adjustments'], complete: costDataComplete, warnings: responseData.cost_data_warnings },
           { key: 'gross_profit_total', label: 'Bénéfice brut', formula: 'Ventes − coût des marchandises.', result: grossProfitTotal, components: { sales: salesNetTotal, cost_of_goods: costOfGoodsTotal }, sources: ['sales', 'sale line cost snapshots / catalogue fallback'], complete: salesDataComplete && costDataComplete, warnings: responseData.cost_data_warnings },
           { key: 'net_profit_total', label: 'Bénéfice net', formula: 'Bénéfice brut − dépenses − salaires − acomptes − primes.', result: netProfitTotal, components: { gross_profit: grossProfitTotal, expenses: expensesTotal, salaries: salaryPaymentsTotal, advances: salaryAdvancesTotal, bonuses: salaryPrimesTotal }, sources: ['expenses', 'hr_transactions'], complete: dailyAccounting.profitDataComplete, warnings: [...(!expenseDataComplete ? ['Montant d’une dépense invalide.'] : []), ...(!payrollComplete ? ['Certaines opérations RH ne sont pas rattachées à cette agence.'] : [])] },
-          { key: 'cash_sales', label: 'Ventes réglées en espèces', formula: 'Somme des paiements de vente classés CASH, hors paiements ZR.', result: cashSales, components: paymentDetails.filter(row => accountingEngine.isCashTender(row.payment_mode)), sources: ['sales.payments', 'sales.multi_payment'], complete: paymentDataComplete, warnings: paymentDataComplete ? [] : ['La répartition espèces peut être partielle.'] },
+          { key: 'cash_sales', label: 'Ventes réglées en espèces', formula: 'Somme des paiements de vente classés CASH, hors paiements ZR.', result: cashSales, components: paymentDetails.filter(row => !row.is_refund && accountingEngine.isCashTender(row.payment_mode)), sources: ['sales.payments', 'sales.multi_payment'], complete: paymentDataComplete, warnings: paymentDataComplete ? [] : ['La répartition espèces peut être partielle.'] },
           { key: 'tpe_sales', label: 'Ventes réglées par TPE', formula: 'Somme des paiements de vente classés TPE.', result: roundToTwo(paymentDetails.filter(row => accountingEngine.normalizeTenderName(row.payment_mode) === 'TPE').reduce((sum, row) => sum + Number(row.sale_payment || 0), 0)), components: paymentDetails.filter(row => accountingEngine.normalizeTenderName(row.payment_mode) === 'TPE'), sources: ['sales.payments', 'sales.multi_payment'], complete: paymentDataComplete, warnings: paymentDataComplete ? [] : ['La répartition TPE peut être partielle.'] },
           { key: 'baridimob_sales', label: 'Ventes réglées par BaridiMob', formula: 'Somme des paiements de vente classés BaridiMob.', result: roundToTwo(paymentDetails.filter(row => accountingEngine.normalizeTenderName(row.payment_mode) === 'BaridiMob').reduce((sum, row) => sum + Number(row.sale_payment || 0), 0)), components: paymentDetails.filter(row => accountingEngine.normalizeTenderName(row.payment_mode) === 'BaridiMob'), sources: ['sales.payments', 'sales.multi_payment'], complete: paymentDataComplete, warnings: paymentDataComplete ? [] : ['La répartition BaridiMob peut être partielle.'] },
           { key: 'delivery_payout_cash_total', label: 'Livraison ZR encaissée', formula: 'Somme des versements COD marqués encaissés pendant la période.', result: deliveryPayoutCash, sources: ['zr_delivery_payouts.amount', 'zr_delivery_payouts.paid_at'], complete: true, warnings: [] },
