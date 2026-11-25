@@ -2015,6 +2015,7 @@ class SalesController extends BaseController {
       // final tender methods, while capping the recognized amount at the invoice
       // total so an overpayment can never inflate sales revenue.
       const versementEvents = await db.collection('sale_versements').find({
+        license: { $in: licenseValues },
         branch_id: branchObjectId,
         status: 'settled',
         $or: [
