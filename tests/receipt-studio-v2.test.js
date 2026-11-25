@@ -71,7 +71,11 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   const app = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/core/app.js'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/styles/app.css'), 'utf8');
   assert.match(app, /receiptSaleNumber\(sale\)/);
-  assert.doesNotMatch(app, /(^|[^A-Za-z])normalizeReceiptElements\(/, 'all receipt normalizer calls must use the imported alias');
+  assert.match(app, /import\{normalizeReceiptElements,/ , 'printer settings must bind the exact normalizer name used by the studio');
+  assert.equal((app.match(/normalizeReceiptElements\(/g) || []).length, 2, 'both receipt studio paths must call the imported normalizer');
+  assert.match(app, /async function resolveLabelPrinterName\(/);
+  assert.match(app, /tsc\.\*tdp\.?225\|tdp\.?225\.\*tsc/i, 'label printing must restore the V1 TSC TDP-225 auto-selection');
+  assert.match(app, /printerName:kind==='label'\?await resolveLabelPrinterName\(\)/, 'label studio must use the dedicated label printer, not the receipt printer');
   assert.match(app, /receipt_date:receiptSaleDate\(sale\)/);
   assert.match(app, /date:savedSale\.date\|\|savedSale\.created_date/);
   assert.doesNotMatch(app, /sales_description:payload\.sales_description,date:new Date\(\)\.toLocaleString/);
