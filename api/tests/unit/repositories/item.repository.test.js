@@ -42,7 +42,7 @@ jest.mock(
   () =>
     class {
       createStockLog() {
-        return Promise.resolve();
+        return Promise.resolve({ status: true, data: { _id: 'stock-log-test' } });
       }
       updateItemNameInStockLogs() {
         return Promise.resolve();
@@ -892,13 +892,19 @@ describe('ItemRepository', () => {
   });
 
   describe('updateItemQuantity', () => {
-    test('updates quantity', async () => {
-      col.updateOne.mockResolvedValueOnce({ matchedCount: 1 });
+    test('updates quantity and writes a dated stock journal movement', async () => {
+      col.findOne.mockResolvedValueOnce({
+        _id: FAKE_ID, name: 'Legacy item', barcode_id: 'LEG-001',
+        available_quantity: 5, track_inventory: true, branch_id: FAKE_BRANCH,
+      });
       const r = await repo.updateItemQuantity(FAKE_ID, 10, {
-        licenseId: FAKE_ID,
-        branchId: FAKE_BRANCH,
+        licenseId: FAKE_ID, branchId: FAKE_BRANCH, loggedUserName: 'Owner',
       });
       expect(r.status).toBe(true);
+      expect(col.updateOne).toHaveBeenCalledWith(
+        expect.objectContaining({ _id: expect.anything(), available_quantity: 5 }),
+        expect.objectContaining({ $set: expect.objectContaining({ available_quantity: 10, updated_date: expect.any(Date) }) })
+      );
     });
     test('returns false when no scoped item matches', async () => {
       col.updateOne.mockResolvedValueOnce({ matchedCount: 0 });
