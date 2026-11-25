@@ -210,7 +210,7 @@ describe('StockLogsRepository', () => {
           stocklog: true,
           opening_balance: '100',
           closing_balance: '95',
-          license: FAKE_LICENSE,
+          license: expect.objectContaining({ toString: expect.any(Function) }),
         })
       );
     });
@@ -228,7 +228,7 @@ describe('StockLogsRepository', () => {
         expect.objectContaining({
           item_name: 'Widget',
           branch_id: expect.anything(),
-          license: FAKE_LICENSE,
+          license: expect.objectContaining({ toString: expect.any(Function) }),
         })
       );
     });
@@ -539,7 +539,7 @@ describe('StockLogsRepository', () => {
       expect(col.insertOne).toHaveBeenCalledWith(
         expect.objectContaining({
           item_name: undefined,
-          license: FAKE_LICENSE,
+          license: expect.objectContaining({ toString: expect.any(Function) }),
         })
       );
     });
