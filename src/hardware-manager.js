@@ -471,7 +471,7 @@ class HardwareManager {
     // and layout measurement below provide readiness without waiting for one.
   }
 
-  async _sendPrintJob(printWindow, printOpts) {
+  async _sendPrintJob(printWindow, printOpts, { verifySpooler = false } = {}) {
     const submit = () => new Promise((resolve) => {
       const timer = setTimeout(() => resolve({ success: false, error: 'Print callback timed out' }), 5000);
       printWindow.webContents.print(printOpts, (success, errorType) => {
@@ -484,7 +484,8 @@ class HardwareManager {
     printOpts = { ...printOpts, deviceName: printerName };
     const documentName = 'Posnic-' + require('crypto').randomUUID();
     await printWindow.webContents.executeJavaScript(`document.title = ${JSON.stringify(documentName)}`);
-    return spooler.submit({ printerName, documentName, submit, acceptUnverified: true, fastSubmit: true });
+    // Custom-size label/receipt jobs must be observed in the Windows spooler before the UI can report success. A successful Chromium callback alone can mean only that the driver accepted the request, not that a job reached the selected queue.
+    return spooler.submit({ printerName, documentName, submit, acceptUnverified: !verifySpooler, fastSubmit: !verifySpooler });
   }
 
   async _printViaPdfFallback(printWindow, deviceName, options = {}) {
@@ -737,7 +738,7 @@ class HardwareManager {
         return { success: false, diagnosticOnly: true, error: 'Receipt captured for diagnostics. Nothing was sent to the printer.' };
       }
       diagnostics?.record('print.submit', { trace, printer: deviceName, format: sizeKey });
-      let result = await this._sendPrintJob(printWindow, printOpts);
+      let result = await this._sendPrintJob(printWindow, printOpts, { verifySpooler: hasCustomPageSize });
       diagnostics?.record('print.result', { trace, success: result.success, message: result.error, retryable: result.retryable, submitted: result.submitted });
 
       if (!result.success && result.retryable !== false) {
