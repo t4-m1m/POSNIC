@@ -2019,7 +2019,7 @@ class SalesController extends BaseController {
         status: 'settled',
         $or: [
           { 'settlement.settled_at': { $gte: reportStart, $lt: reportEnd } },
-          { 'settlement.settled_at: { $exists: false }, settled_at: { $gte: reportStart, $lt: reportEnd } },
+          { 'settlement.settled_at': { $exists: false }, settled_at: { $gte: reportStart, $lt: reportEnd } },
         ],
       }).toArray();
       const tenderLabels = { cash: 'CASH', card: 'TPE', tpe: 'TPE', bank_transfer: 'BaridiMob', baridimob: 'BaridiMob' };
