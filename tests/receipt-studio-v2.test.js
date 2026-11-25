@@ -28,6 +28,13 @@ test('receipt date uses a timestamp when the first sale date field contains only
   assert.match(value, /11:42/);
 });
 
+test('receipt date parses Mongo Extended JSON millisecond timestamps', () => {
+  const value = receiptSaleDate({
+    date: { $date: { $numberLong: String(Date.UTC(2026, 10, 20, 10, 15)) } },
+  });
+  assert.match(value, /20\\/11\\/2026/);
+});
+
 test('F6 receipt uses the original sale timestamp instead of the later settlement date', () => {
   const value = receiptSaleDate({
     versement_checkout: { initial_amount: 1000 },
