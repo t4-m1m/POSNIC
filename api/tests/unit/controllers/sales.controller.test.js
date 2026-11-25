@@ -1023,6 +1023,11 @@ describe('SalesController', () => {
 
     afterEach(() => {
       if (BaseModel.getDb && BaseModel.getDb.mockRestore) BaseModel.getDb.mockRestore();
+      sessionFilterUtil.applySessionFilter.mockReset().mockResolvedValue({
+        start_date: new Date('2025-01-01T00:00:00.000Z'),
+        end_date: new Date('2025-12-31T23:59:59.000Z'),
+        session_applied: false,
+      });
     });
 
     test('200 success', async () => {
@@ -1146,6 +1151,64 @@ describe('SalesController', () => {
       expect(data.versement_payment_details).toEqual([
         expect.objectContaining({ payment_mode: 'CASH', amount: 6000 }),
       ]);
+    });
+
+    test('counts partial-sale cash on sale day and customer-credit collection only on receipt day', async () => {
+      sessionFilterUtil.applySessionFilter.mockImplementation(async (_req, range) => range);
+      const saleDate = new Date('2025-11-10T10:00:00.000Z');
+      const dbCollections = {
+        credit_payments: {
+          aggregate: jest.fn()
+            .mockReturnValueOnce({ toArray: async () => [] })
+            .mockReturnValueOnce({ toArray: async () => [
+              { _id: 'cash', amount: 3000, count: 1, invalidAmountCount: 0 },
+            ] }),
+        },
+      };
+      const db = {
+        collection: jest.fn((name) => Object.assign(emptyCollection(), dbCollections[name] || {})),
+      };
+      BaseModel.getDb.mockResolvedValue(db);
+
+      const partialSale = {
+        sales_total: 5000,
+        total: 5000,
+        date: saleDate,
+        payment_mode: 'cash',
+        payment_status: 'Partial',
+        paid_amount: 2000,
+        payment_pending: 3000,
+        payments: [
+          { method: 'cash', amount: 2000, date: saleDate },
+          { method: 'credit', amount: 3000, date: saleDate },
+        ],
+        items: [],
+      };
+      salesService.getDailySalesReportAggregates
+        .mockResolvedValueOnce({ productAgg: [], paymentAgg: [], salesPayments: [partialSale], taxAgg: [], cancellationAgg: [] })
+        .mockResolvedValueOnce({ productAgg: [], paymentAgg: [], salesPayments: [], taxAgg: [], cancellationAgg: [] });
+
+      const saleDay = mockRes();
+      await ctrl.dailySalesReports(mockReq({ query: {
+        ...q, starting_date: '2025-11-10', ending_date: '2025-11-10',
+      } }), saleDay);
+      const saleData = saleDay.json.mock.calls[0][0].data;
+      expect(saleData.sales_total).toBe(5000);
+      expect(saleData.sales_cash_total).toBe(2000);
+      expect(saleData.payment_details).toEqual([
+        expect.objectContaining({ payment_mode: 'CASH', sale_payment: 2000 }),
+      ]);
+      expect(saleData.debt_payment_total).toBe(0);
+
+      const collectionDay = mockRes();
+      await ctrl.dailySalesReports(mockReq({ query: {
+        ...q, starting_date: '2025-11-12', ending_date: '2025-11-12',
+      } }), collectionDay);
+      const collectionData = collectionDay.json.mock.calls[0][0].data;
+      expect(collectionData.sales_total).toBe(0);
+      expect(collectionData.sales_cash_total).toBe(0);
+      expect(collectionData.debt_payment_total).toBe(3000);
+      expect(collectionData.credit_cash_collections_total).toBe(3000);
     });
 
     test('403 no report permission', async () => {
