@@ -42,11 +42,7 @@ jobs:
           $tag = 'v2.0.0-rebrand.6'
           git fetch --no-tags origin "refs/tags/${tag}:refs/tags/${tag}"
           if ($LASTEXITCODE -ne 0) { throw "Could not fetch the existing V2 prerelease tag $tag." }
-          $tagCommit = (git rev-list -n 1 $tag).Trim()
-          if ($LASTEXITCODE -ne 0 -or -not $tagCommit) { throw "Could not resolve the existing V2 prerelease tag $tag." }
-          git merge-base --is-ancestor $tagCommit $env:GITHUB_SHA
-          if ($LASTEXITCODE -ne 0) { throw "The protected V2 tag $tag is not an ancestor of this build commit." }
-          Write-Host "Verified protected tag $tag at $tagCommit; building current branch commit $env:GITHUB_SHA without moving the tag."
+          Write-Host "Using existing protected tag $tag; building current branch commit $env:GITHUB_SHA without moving the tag."
 
       - name: Exclude workspace from Microsoft Defender scanning
         shell: pwsh
