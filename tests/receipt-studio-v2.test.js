@@ -20,6 +20,14 @@ test('receipt always prefers the human sale number over Mongo identifiers', () =
   assert.equal(receiptSaleNumber({ sales_id: '507f1f77bcf86cd799439011', _id: '507f1f77bcf86cd799439012' }), '');
 });
 
+test('receipt date uses a timestamp when the first sale date field contains only a date', () => {
+  const value = receiptSaleDate({
+    date: '2026-11-25',
+    created_at: '2026-11-25T11:42:00.000Z',
+  });
+  assert.match(value, /11:42/);
+});
+
 test('receipt date uses the original sale date and preserves local date/time strings', () => {
   assert.equal(receiptSaleDate({
     date: '25/11/2026 10:42 AM',
@@ -53,5 +61,7 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   assert.match(app, /font-size:inherit!important;font-weight:inherit!important/);
   assert.match(app, /art\.style\.width=state\.labelLayout\.width\+'mm'/);
   assert.match(app, /art\.style\.height=state\.labelLayout\.height\+'mm'/);
+  assert.match(app, /raw\\.width\\|\\|template\\.width\\)\\|\\|45/);
+  assert.match(app, /raw\\.height\\|\\|template\\.height\\)\\|\\|35/);
   assert.match(css, /#receipt-artboard\{overflow:visible!important\}/);
 });
