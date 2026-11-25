@@ -281,7 +281,7 @@
         if (layout.canvas && !sheet) {
             canvasTopOffset = layout.blocks.reduce(function (top, block) {
                 var y = Number(block.y);
-                return Number.isFinite(y) && y >= 0 ? Math.min(top, y) : top;
+                return Number.isFinite(y) ? Math.min(top, y) : top;
             }, Infinity);
             if (!Number.isFinite(canvasTopOffset)) canvasTopOffset = 0;
         }
