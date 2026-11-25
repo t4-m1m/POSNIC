@@ -1151,6 +1151,12 @@ describe('SalesController', () => {
       expect(data.versement_payment_details).toEqual([
         expect.objectContaining({ payment_mode: 'CASH', amount: 6000 }),
       ]);
+      // Legacy and current sale_versements rows are tenant-DB scoped and have
+      // branch_id but no license field; report queries must not hide their history.
+      expect(dbCollections.sale_versements.find.mock.calls.length).toBeGreaterThan(0);
+      expect(dbCollections.sale_versements.find.mock.calls.every(([filter]) =>
+        filter && !Object.prototype.hasOwnProperty.call(filter, 'license')
+      )).toBe(true);
     });
 
     test('counts partial-sale cash on sale day and customer-credit collection only on receipt day', async () => {
