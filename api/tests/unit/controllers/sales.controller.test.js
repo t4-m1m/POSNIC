@@ -1096,6 +1096,57 @@ describe('SalesController', () => {
       expect(data.payment_details.reduce((sum, row) => sum + Number(row.sale_payment || 0), 0)).toBe(100);
     });
 
+    test('posts the complete F6 invoice only on its final settlement day', async () => {
+      const settlementDate = new Date('2026-11-07T10:00:00.000Z');
+      const settledVersement = {
+        status: 'settled',
+        sale_total: 6000,
+        initial_amount: 1000,
+        initial_recorded_amount: 1000,
+        initial_method: 'cash',
+        settlement: { amount: 5000, method: 'cash', settled_at: settlementDate },
+        settled_at: settlementDate,
+      };
+      const dbCollections = {
+        sale_versements: { find: jest.fn(() => ({
+          toArray: async () => [settledVersement],
+          project() { return this; },
+        })) },
+      };
+      const db = {
+        collection: jest.fn((name) => Object.assign(emptyCollection(), dbCollections[name] || {})),
+      };
+      BaseModel.getDb.mockResolvedValue(db);
+      const settledSale = {
+        sales_total: 6000, total: 6000, date: settlementDate,
+        payment_mode: 'versement', payment_status: 'Paid',
+        versement_checkout: { initial_amount: 1000 }, versement_settled: true,
+        items: [],
+      };
+      salesService.getDailySalesReportAggregates
+        .mockResolvedValueOnce({ productAgg: [], paymentAgg: [], salesPayments: [], taxAgg: [], cancellationAgg: [] })
+        .mockResolvedValueOnce({ productAgg: [], paymentAgg: [], salesPayments: [settledSale], taxAgg: [], cancellationAgg: [] });
+
+      const depositDay = mockRes();
+      await ctrl.dailySalesReports(mockReq({ query: {
+        ...q, starting_date: '2026-11-05', ending_date: '2026-11-05',
+      } }), depositDay);
+      expect(depositDay.json.mock.calls[0][0].data.versement_payment_total).toBe(0);
+      expect(depositDay.json.mock.calls[0][0].data.versement_settlement_cash_total).toBe(0);
+
+      const settlementDay = mockRes();
+      await ctrl.dailySalesReports(mockReq({ query: {
+        ...q, starting_date: '2026-11-07', ending_date: '2026-11-07',
+      } }), settlementDay);
+      const data = settlementDay.json.mock.calls[0][0].data;
+      expect(data.sales_total).toBe(6000);
+      expect(data.versement_payment_total).toBe(6000);
+      expect(data.versement_settlement_cash_total).toBe(6000);
+      expect(data.versement_payment_details).toEqual([
+        expect.objectContaining({ payment_mode: 'CASH', amount: 6000 }),
+      ]);
+    });
+
     test('403 no report permission', async () => {
       const res = mockRes();
       await ctrl.dailySalesReports(mockReq({ query: q, user: restrictedUser() }), res);
