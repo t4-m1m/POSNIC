@@ -64,3 +64,21 @@ test('saved Receipt Studio sale uses the Windows driver with the saved design an
   assert.match(printedHtml, /S0000123/);
   assert.match(printedHtml, /250/);
 });
+
+test('V2 Receipt Studio preview, test print and real sale share the saved block renderer', () => {
+  const app = read('frontend-v2/core/app.js');
+  assert.match(app, /function renderReceiptStudioDocument\(sale,layout\)/);
+  assert.match(app, /function buildSaleReceiptHtml\(sale\)\{return renderReceiptStudioDocument\(sale,state\.receiptLayout\);\}/);
+  assert.match(app, /html=renderReceiptStudioDocument\(state\.receiptSample,state\.receiptLayout\)/);
+  assert.match(app, /thermalRaster:false,fastReceiptLines:null,forceHtml:true/);
+  assert.match(app, /designer-undo-receipt/);
+  assert.match(app, /designer-redo-receipt/);
+});
+
+test('V2 label preview, queued print and fast print use the same positioned label elements', () => {
+  const app = read('frontend-v2/core/app.js');
+  assert.match(app, /elements\.map\(designerElement\)/);
+  assert.match(app, /cfg\.elements\.map\(designerElement\)/);
+  assert.match(app, /function designerElement\(e\)/);
+  assert.match(app, /transform:rotate\('\+\(Number\(e\.rotation\)\|\|0\)\+'deg\)/);
+});

@@ -952,3 +952,13 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
  hyphens:none!important;
  letter-spacing:normal!important;
 }
+
+
+/* V2 designers: keep the full physical canvas measurable and scrollable. */
+.designer-shell{grid-template-columns:minmax(190px,240px) minmax(0,1fr) minmax(190px,240px);align-items:stretch;min-height:0}
+.designer-shell>.designer-workspace{min-width:0!important;min-height:640px!important;overflow:visible!important;display:flex!important;flex-direction:column!important}
+.designer-workspace>.designer-stage{display:flex!important;flex:1 1 auto!important;align-items:flex-start!important;justify-content:center!important;width:100%!important;min-width:0!important;min-height:600px!important;max-height:calc(100dvh - 190px)!important;overflow:auto!important;padding:36px!important}
+#label-artboard{transform:none!important;zoom:2.05;transform-origin:top center;flex:0 0 auto!important;margin:20px auto!important;max-width:none!important;max-height:none!important}
+#receipt-artboard{flex:0 0 auto!important;margin:0 auto!important;max-width:none!important;max-height:none!important}
+@media(max-width:1100px){.designer-shell{grid-template-columns:minmax(170px,210px) minmax(0,1fr)}.designer-shell>.designer-inspector{grid-column:1/-1}.designer-workspace>.designer-stage{max-height:none!important;min-height:520px!important}}
+@media(max-width:700px){.designer-shell{grid-template-columns:minmax(0,1fr)}.designer-shell>.designer-tools,.designer-shell>.designer-inspector{grid-column:1}.designer-workspace>.designer-stage{min-height:460px!important;max-height:none!important}}
