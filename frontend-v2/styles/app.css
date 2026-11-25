@@ -11,7 +11,7 @@
 .nav-icon{stroke-width:1.8}.status-badge,.badge{border-radius:9999px;font-size:12px;font-weight:600}.kpi-icon{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;flex:none}
 
 /* Sidebar-integrated section navigation: page-level sub-tab strips are hidden. */
-.rail{overflow-x:hidden;overflow-y:auto;scrollbar-width:none}
+.rail{overflow:hidden;scrollbar-width:none}
 .rail::-webkit-scrollbar,.nav::-webkit-scrollbar{display:none}
 .nav{display:grid;gap:5px;align-content:start;overflow-y:auto;overflow-x:hidden;min-height:0;flex:1;scrollbar-width:none}
 .nav-group{display:grid;gap:2px;min-width:0}
@@ -1101,3 +1101,6 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 #receipt-artboard{position:relative!important;box-sizing:border-box!important;width:var(--receipt-paper-px,302px)!important;min-width:var(--receipt-paper-px,302px)!important;max-width:var(--receipt-paper-px,302px)!important;flex:0 0 var(--receipt-paper-px,302px)!important;flex-shrink:0!important;margin:0 auto 36px!important;writing-mode:horizontal-tb!important;}
 #label-artboard{position:relative!important;box-sizing:border-box!important;overflow:visible!important;flex:0 0 auto!important;flex-shrink:0!important;max-width:none!important;max-height:none!important;margin:0 auto 36px!important;box-shadow:0 8px 24px rgba(15,23,42,.10)!important;}
 @media(max-width:700px){.designer-workspace>.designer-stage{justify-content:flex-start!important;padding:36px 24px!important;}}
+
+/* Z-report thermal preview hierarchy and prominent physical cash total. */
+.thermal-section-title{margin:12px 0 4px;padding:6px 0 4px;border-top:1px dashed #64748b;font-size:11px;font-weight:800;letter-spacing:.035em;text-transform:uppercase}.thermal-cash-total{margin-top:8px;padding:9px 5px!important;border-top:2px solid #111!important;border-bottom:2px solid #111!important;font-size:13px!important;font-weight:900!important;background:#f1f5f9}

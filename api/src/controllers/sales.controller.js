@@ -1997,6 +1997,7 @@ class SalesController extends BaseController {
         costOfGoodsTotal = roundToTwo(costOfGoodsTotal - returnCostAdjustmentTotal);
         if (!returnSummary.costComplete) costDataComplete = false;
       }
+      const grossSalesTotal = roundToTwo(salesNetTotal + returnAdjustmentTotal + discountTotal);
       // Initial deposits and final settlements are separate dated cash events.
       // A later settlement must never pull the original deposit into today's report.
       const versementEvents = await db.collection('sale_versements').find({
@@ -2428,12 +2429,16 @@ class SalesController extends BaseController {
       const refundCashUnknown = refundRows.some(row => !String(row._id || '').trim() && Number(row.amount || 0) > 0);
       const cashRefunds = roundToTwo(refundRows.reduce((sum, row) => sum + (accountingEngine.isCashTender(row._id) ? Number(row.amount || 0) : 0), 0));
       const debtCashCollections = roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.payment_mode) ? Number(row.amount || 0) : 0), 0));
-      const cashSalesGross = roundToTwo(paymentDetails.filter(row => !row.is_refund).reduce((sum, row) => {
+      const isDeliveryCodTender = method => /livraison|(?:^|[\s/])cod(?:$|[\s/])|zr\s*express/i.test(String(method || '').trim());
+      const deliveryCodSalesTotal = roundToTwo(paymentDetails.filter(row => !row.is_refund && isDeliveryCodTender(row.payment_mode))
+        .reduce((sum, row) => sum + Number(row.sale_payment || 0), 0));
+      const cashSalesGross = roundToTwo(paymentDetails.filter(row => !row.is_refund && !isDeliveryCodTender(row.payment_mode)).reduce((sum, row) => {
         const method = String(row.payment_mode || '').trim();
-        if (/^(?:livraison[_\\s-]?zr|zr[_\\s-]?express)$/i.test(method)) return sum;
         return sum + (accountingEngine.isCashTender(method) ? Number(row.sale_payment || 0) : 0);
       }, 0));
       const cashSales = roundToTwo(cashSalesGross - cashRefunds);
+      const electronicRefunds = roundToTwo(refundRows.reduce((sum, row) =>
+        sum + (['TPE', 'BaridiMob'].includes(accountingEngine.normalizeTenderName(row._id)) ? Number(row.amount || 0) : 0), 0));
       const totalRefundsSigned = roundToTwo(-refundRows.reduce((sum, row) => sum + Number(row.amount || 0), 0));
       // Returns are reported separately through cash_returns_total. Do not
       // inject them into debt_payment_details, which is reserved for actual
@@ -2445,16 +2450,16 @@ class SalesController extends BaseController {
         license: { $in: licenseValues }, branch_id: { $in: branchValues },
       }).project({ register_opendate: 1, register_closedate: 1, opening_float: 1, cashInOutDetail: 1 }).toArray();
       const registerCash = accountingEngine.summarizeCashRegisterSessions(cashRegisterSessions, reportStart, reportEnd);
-      const cashDataComplete = registerCash.complete && salesDataComplete && paymentDataComplete && debtPaymentDataComplete && versementDataComplete && expenseDataComplete && !expenseTenderUnknown && !refundCashUnknown &&
+      const cashDataComplete = salesDataComplete && paymentDataComplete && debtPaymentDataComplete && versementDataComplete && expenseDataComplete && !expenseTenderUnknown && !refundCashUnknown &&
         payrollBranchComplete && payrollCashClassificationComplete;
       const cashAccounting = accountingEngine.calculateDailyClose({
         salesTotal: salesNetTotal, costOfGoodsTotal, costDataComplete, expensesTotal,
         salaryPaymentsTotal, salaryAdvancesTotal, salaryPrimesTotal, cashDataComplete,
         cash: {
-          openingBalance: registerCash.openingBalance, cashSales,
+          openingBalance: registerCash.openingBalance, cashSales: cashSalesGross,
           cashVersements: versementCashTotal, cashCreditCollections: debtCashCollections,
           cashExpenses, cashSalaries: salaryCash,
-          cashAdvances: advanceCash, cashBonuses: primeCash, cashRefunds: 0,
+          cashAdvances: advanceCash, cashBonuses: primeCash, cashRefunds,
           otherCashOutflows: registerCash.otherCashOutflows,
         },
       });
@@ -2469,8 +2474,11 @@ class SalesController extends BaseController {
         debt_payment_data_complete: debtPaymentDataComplete,
         versement_data_complete: versementDataComplete,
         debt_payment_total: debtPaymentTotal,
-        sales_cash_total: cashSales,
+        sales_cash_total: cashSalesGross,
         sales_cash_gross_total: cashSalesGross,
+        delivery_cod_sales_total: deliveryCodSalesTotal,
+        cash_refunds_total: cashRefunds,
+        electronic_refunds_total: electronicRefunds,
         cash_returns_total: totalRefundsSigned,
         credit_cash_collections_total: debtCashCollections,
         versement_payment_details: versementPaymentDetails,
@@ -2480,7 +2488,7 @@ class SalesController extends BaseController {
         cash_expected: cashAccounting.cashExpected,
         cash_data_complete: cashAccounting.cashDataComplete,
         cash_data_warnings: [
-          ...(!registerCash.complete ? [registerCash.matched ? 'Cash-register opening float or movement history is incomplete.' : 'No cash-register session overlaps this day; opening cash is provisionally assumed to be 0 DA.'] : []),
+
           ...(expenseTenderUnknown ? ['One or more expenses have no reliable payment method.'] : []),
           ...(refundCashUnknown ? ['One or more refunds have no reliable payment method.'] : []),
           ...(!paymentDataComplete ? ['One or more sale payment events have no reliable date, method or amount.'] : []),
@@ -2490,6 +2498,7 @@ class SalesController extends BaseController {
           ...(!payrollCashClassificationComplete ? ['One or more employee payments have no reliable tender method.'] : []),
         ],
         sales_count: salesCount,
+        gross_sales_total: salesDataComplete ? grossSalesTotal : null,
         sales_total: salesDataComplete ? salesNetTotal : null,
         net_sales: salesDataComplete ? salesNetTotal : null,
         sales_data_complete: salesDataComplete,
@@ -2545,7 +2554,9 @@ class SalesController extends BaseController {
           branch_id: String(branchObjectId),
         },
         calculations: [
-          { key: 'sales_total', label: 'Ventes', formula: 'Somme des ventes comptabilisées sur la période, après règles de retours et remises.', result: salesNetTotal, rows: salesCount, sources: ['sales'], complete: salesDataComplete, warnings: salesDataComplete ? [] : ['L’historique des retours ou des ventes contient des données incomplètes.'] },
+          { key: 'gross_sales_total', label: 'Ventes brutes', formula: 'Ventes nettes + remises accordées + retours nets de la période.', result: grossSalesTotal, rows: salesCount, sources: ['sales.sale_original_total', 'sales.items', 'sales.items_return', 'sale_edit_adjustments'], complete: salesDataComplete, warnings: salesDataComplete ? [] : ['L’historique des retours ou des ventes contient des données incomplètes.'] },
+          { key: 'discount_total', label: 'Remises accordées', formula: 'Remises de lignes + remises panier / coupon enregistrées.', result: discountTotal, sources: ['sales.items', 'sales.extra_discount', 'sales.sale_extra_discount'], complete: salesDataComplete, warnings: salesDataComplete ? [] : ['Les remises historiques sont incomplètes.'] },
+          { key: 'sales_total', label: 'Ventes nettes', formula: 'Ventes brutes − remises − retours.', result: salesNetTotal, rows: salesCount, sources: ['sales'], complete: salesDataComplete, warnings: salesDataComplete ? [] : ['L’historique des retours ou des ventes contient des données incomplètes.'] },
           { key: 'sales_count', label: 'Nombre de ventes', formula: 'Nombre de tickets de vente comptabilisés dans la période.', result: salesCount, sources: ['sales'], complete: true, warnings: [] },
           { key: 'expenses_total', label: 'Dépenses', formula: 'Somme des dépenses de type débit sur la période, hors entrées de fonds.', result: expensesTotal, components: { count: expensesCount }, sources: ['expenses.amount', 'expenses.type', 'expenses.date'], complete: expenseDataComplete, warnings: expenseDataComplete ? [] : ['Une dépense possède un montant invalide.'] },
           { key: 'salary_payments_total', label: 'Paiements salaires', formula: 'Somme des transactions RH de type salary_payment sur la période.', result: salaryPaymentsTotal, components: salaryPaymentDetails, sources: ['hr_transactions[type=salary_payment]'], complete: payrollBranchComplete, warnings: payrollBranchComplete ? [] : ['Des transactions RH ne sont pas rattachées à cette agence.'] },
@@ -2554,7 +2565,10 @@ class SalesController extends BaseController {
           { key: 'cost_of_goods_total', label: 'Coût des marchandises', formula: 'Somme des coûts des lignes vendues + ajustements de coût des modifications.', result: costOfGoodsTotal, components: { sale_line_costs: costOfGoodsBase, edit_cost_adjustments: editCostAdjustmentTotal, estimated_lines: estimatedCostLines, unresolved_lines: unresolvedCostLines }, sources: ['sales.sale_original_snapshot.items', 'sales.items', 'items.company_price / cost_price (estimation de secours)', 'sale_edit_adjustments'], complete: costDataComplete, warnings: responseData.cost_data_warnings },
           { key: 'gross_profit_total', label: 'Bénéfice brut', formula: 'Ventes − coût des marchandises.', result: grossProfitTotal, components: { sales: salesNetTotal, cost_of_goods: costOfGoodsTotal }, sources: ['sales', 'sale line cost snapshots / catalogue fallback'], complete: salesDataComplete && costDataComplete, warnings: responseData.cost_data_warnings },
           { key: 'net_profit_total', label: 'Bénéfice net', formula: 'Bénéfice brut − dépenses − salaires − acomptes − primes.', result: netProfitTotal, components: { gross_profit: grossProfitTotal, expenses: expensesTotal, salaries: salaryPaymentsTotal, advances: salaryAdvancesTotal, bonuses: salaryPrimesTotal }, sources: ['expenses', 'hr_transactions'], complete: dailyAccounting.profitDataComplete, warnings: [...(!expenseDataComplete ? ['Montant d’une dépense invalide.'] : []), ...(!payrollComplete ? ['Certaines opérations RH ne sont pas rattachées à cette agence.'] : [])] },
-          { key: 'cash_sales', label: 'Ventes réglées en espèces', formula: 'Somme des paiements de vente classés CASH, hors paiements ZR.', result: cashSales, components: paymentDetails.filter(row => accountingEngine.isCashTender(row.payment_mode)), sources: ['sales.payments', 'sales.multi_payment', 'sales.return_refund_transactions'], complete: paymentDataComplete && !refundCashUnknown, warnings: paymentDataComplete ? [] : ['La répartition espèces peut être partielle.'] },
+          { key: 'cash_sales', label: 'Ventes réglées en espèces', formula: 'Somme des paiements de vente classés CASH, hors Livraison / COD.', result: cashSalesGross, components: paymentDetails.filter(row => accountingEngine.isCashTender(row.payment_mode)), sources: ['sales.payments', 'sales.multi_payment'], complete: paymentDataComplete && !refundCashUnknown, warnings: paymentDataComplete ? [] : ['La répartition espèces peut être partielle.'] },
+          { key: 'cash_refunds_total', label: 'Remboursements espèces', formula: 'Remboursements de retours réglés en espèces, déduits une seule fois du tiroir.', result: cashRefunds, sources: ['sales.return_refund_transactions'], complete: !refundCashUnknown, warnings: refundCashUnknown ? ['Un remboursement ne possède pas de mode de paiement fiable.'] : [] },
+          { key: 'electronic_refunds_total', label: 'Remboursements TPE / BaridiMob', formula: 'Remboursements de retours versés par les moyens électroniques.', result: electronicRefunds, sources: ['sales.return_refund_transactions'], complete: !refundCashUnknown, warnings: refundCashUnknown ? ['Un remboursement ne possède pas de mode de paiement fiable.'] : [] },
+          { key: 'delivery_cod_sales_total', label: 'Livraison / COD (hors caisse)', formula: 'Paiements de vente Livraison / COD ; exclus des espèces attendues.', result: deliveryCodSalesTotal, sources: ['sales.payments', 'sales.multi_payment', 'sales.payment_mode'], complete: paymentDataComplete, warnings: paymentDataComplete ? [] : ['La répartition COD peut être partielle.'] },
           { key: 'tpe_sales', label: 'Ventes réglées par TPE', formula: 'Somme des paiements de vente classés TPE.', result: roundToTwo(paymentDetails.filter(row => accountingEngine.normalizeTenderName(row.payment_mode) === 'TPE').reduce((sum, row) => sum + Number(row.sale_payment || 0), 0)), components: paymentDetails.filter(row => accountingEngine.normalizeTenderName(row.payment_mode) === 'TPE'), sources: ['sales.payments', 'sales.multi_payment'], complete: paymentDataComplete, warnings: paymentDataComplete ? [] : ['La répartition TPE peut être partielle.'] },
           { key: 'baridimob_sales', label: 'Ventes réglées par BaridiMob', formula: 'Somme des paiements de vente classés BaridiMob.', result: roundToTwo(paymentDetails.filter(row => accountingEngine.normalizeTenderName(row.payment_mode) === 'BaridiMob').reduce((sum, row) => sum + Number(row.sale_payment || 0), 0)), components: paymentDetails.filter(row => accountingEngine.normalizeTenderName(row.payment_mode) === 'BaridiMob'), sources: ['sales.payments', 'sales.multi_payment'], complete: paymentDataComplete, warnings: paymentDataComplete ? [] : ['La répartition BaridiMob peut être partielle.'] },
           { key: 'delivery_payout_cash_total', label: 'Livraison ZR encaissée', formula: 'Somme des versements COD marqués encaissés pendant la période.', result: deliveryPayoutCash, sources: ['zr_delivery_payouts.amount', 'zr_delivery_payouts.paid_at'], complete: true, warnings: [] },
@@ -2563,7 +2577,7 @@ class SalesController extends BaseController {
           { key: 'cash_returns_total', label: 'Retours', formula: 'Somme des remboursements de la période, affichée en négatif et déduite directement des espèces des ventes.', result: totalRefundsSigned, sources: ['sales.return_refund_transactions'], complete: !refundCashUnknown, warnings: refundCashUnknown ? ['Un remboursement ne possède pas de mode de paiement fiable.'] : [] },
           { key: 'debt_payment_total', label: 'Encaissements de crédits', formula: 'Somme des règlements de dettes clients reçus pendant la période.', result: debtPaymentTotal, components: debtPaymentDetails, sources: ['credit_payments', 'customer debt ledger'], complete: debtPaymentDataComplete, warnings: debtPaymentDataComplete ? [] : ['Un encaissement de crédit ne possède pas de mode de paiement fiable.'] },
           { key: 'outstanding_amount', label: 'Crédit restant à encaisser', formula: 'Solde des dettes antérieures à la clôture + règlements postérieurs réintégrés − modifications et retours postérieurs.', result: outstandingDataComplete ? roundToTwo(outstandingAmount) : null, components: { unresolved_records: outstandingResult.unresolved + futureReturnEvents.length, versements: linkedVersements.length, orphan_versements: orphanVersements.length }, sources: ['customer debt ledger', 'credit_payments', 'sale_edit_adjustments', 'sales.items_return', 'versements', 'sales'], complete: outstandingDataComplete, warnings: responseData.outstanding_data_warnings },
-          { key: 'cash_expected', label: 'Espèces attendues dans la caisse', formula: 'Ouverture + ventes CASH + versements CASH + encaissements de crédits CASH − dépenses CASH − salaires CASH − acomptes CASH − primes CASH − remboursements CASH − sorties manuelles. Les versements ZR encaissés sont exclus.', result: cashAccounting.cashExpected, components: { opening_balance: registerCash.openingBalance, cash_sales: cashSales, cash_versements: versementCashTotal, cash_credit_collections: debtCashCollections, cash_expenses: cashExpenses, cash_salaries: salaryCash, cash_advances: advanceCash, cash_bonuses: primeCash, cash_refunds: cashRefunds, other_cash_outflows: registerCash.otherCashOutflows, excluded_zr_delivery_payouts: deliveryPayoutCash, register_sessions_matched: registerCash.matched, register_unresolved: registerCash.unresolved }, sources: ['cashregister', 'sales.payments', 'versements', 'credit_payments', 'expenses', 'hr_transactions'], complete: cashAccounting.cashDataComplete, warnings: responseData.cash_data_warnings },
+          { key: 'cash_expected', label: 'Espèces nettes attendues en caisse', formula: 'Ventes CASH du jour + encaissements de dettes CASH + paiements de versement CASH − remboursements CASH − dépenses CASH − salaires CASH − acomptes CASH − primes CASH. Livraison / COD, fond de caisse et mouvements manuels exclus.', result: cashAccounting.cashExpected, components: { cash_sales: cashSalesGross, cash_versements: versementCashTotal, cash_credit_collections: debtCashCollections, cash_expenses: cashExpenses, cash_salaries: salaryCash, cash_advances: advanceCash, cash_bonuses: primeCash, cash_refunds: cashRefunds, excluded_delivery_cod_sales: deliveryCodSalesTotal, excluded_zr_delivery_payouts: deliveryPayoutCash, diagnostic_opening_float: registerCash.openingBalance, diagnostic_other_cash_movements: registerCash.otherCashOutflows }, sources: ['sales.payments', 'versements', 'credit_payments', 'expenses', 'hr_transactions'], complete: cashAccounting.cashDataComplete, warnings: responseData.cash_data_warnings },
         ],
         consistency_checks: [
           { label: 'Bénéfice brut = ventes − coût', expected: salesNetTotal !== null && costOfGoodsTotal !== null ? roundToTwo(salesNetTotal - costOfGoodsTotal) : null, actual: grossProfitTotal, passed: salesNetTotal !== null && costOfGoodsTotal !== null && grossProfitTotal !== null ? Math.abs(roundToTwo(salesNetTotal - costOfGoodsTotal) - grossProfitTotal) <= 0.01 : null },
@@ -2571,8 +2585,7 @@ class SalesController extends BaseController {
           { label: 'Coût marchandises = coût lignes + ajustements', expected: roundToTwo(costOfGoodsBase + editCostAdjustmentTotal), actual: costOfGoodsTotal, passed: costOfGoodsTotal !== null ? Math.abs(roundToTwo(costOfGoodsBase + editCostAdjustmentTotal) - costOfGoodsTotal) <= 0.01 : null },
           { label: 'Paiements de versement = détail des règlements', expected: roundToTwo(versementPaymentDetails.reduce((sum, row) => sum + Number(row.amount || 0), 0)), actual: versementPaymentTotal, passed: Math.abs(roundToTwo(versementPaymentDetails.reduce((sum, row) => sum + Number(row.amount || 0), 0)) - versementPaymentTotal) <= 0.01 },
           { label: 'Encaissements crédits = détail des règlements', expected: roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + Number(row.amount || 0), 0)), actual: debtPaymentTotal, passed: Math.abs(roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + Number(row.amount || 0), 0)) - debtPaymentTotal) <= 0.01 },
-          { label: 'CASH ventes = paiements CASH des ventes − remboursements CASH', expected: roundToTwo(paymentDetails.filter(row => accountingEngine.isCashTender(row.payment_mode)).reduce((sum, row) => sum + Number(row.sale_payment || 0), 0)), actual: cashSales, passed: Math.abs(roundToTwo(paymentDetails.filter(row => accountingEngine.isCashTender(row.payment_mode)).reduce((sum, row) => sum + Number(row.sale_payment || 0), 0)) - cashSales) <= 0.01 },
-          { label: 'Espèces attendues = ouverture + entrées − sorties', expected: roundToTwo(registerCash.openingBalance + cashSales + versementCashTotal + debtCashCollections - cashExpenses - salaryCash - advanceCash - primeCash - cashRefunds - registerCash.otherCashOutflows), actual: cashAccounting.cashExpected, passed: cashAccounting.cashExpected !== null ? Math.abs(roundToTwo(registerCash.openingBalance + cashSales + versementCashTotal + debtCashCollections - cashExpenses - salaryCash - advanceCash - primeCash - cashRefunds - registerCash.otherCashOutflows) - cashAccounting.cashExpected) <= 0.01 : null },
+          { label: 'Espèces nettes = entrées physiques du jour − sorties physiques du jour', expected: roundToTwo(cashSalesGross + versementCashTotal + debtCashCollections - cashRefunds - cashExpenses - salaryCash - advanceCash - primeCash), actual: cashAccounting.cashExpected, passed: cashAccounting.cashExpected !== null ? Math.abs(roundToTwo(cashSalesGross + versementCashTotal + debtCashCollections - cashRefunds - cashExpenses - salaryCash - advanceCash - primeCash) - cashAccounting.cashExpected) <= 0.01 : null },
         ],
       };
 
