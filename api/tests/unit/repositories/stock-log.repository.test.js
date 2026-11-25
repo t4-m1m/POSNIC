@@ -499,17 +499,9 @@ describe('StockLogsRepository', () => {
   describe('Multi-tenancy edge cases', () => {
     test('getStockLogs omits branch filter when currentBranch is null', async () => {
       BaseModel.currentBranch = null;
-      repo.page.mockResolvedValue({
-        status: true,
-        data: { list: [], total: 0, current_page: 1, total_pages: 0, per_page: 10 },
-        message: 'success',
-      });
-
+      col.find.mockReturnValue(mkFindChain([]));
       await repo.getStockLogs();
-
-      expect(repo.page).toHaveBeenCalledWith(
-        'stocklogs',
-        {},
+      expect(col.find).toHaveBeenCalledWith(
         expect.not.objectContaining({ branch_id: expect.anything() }),
         expect.any(Object)
       );
@@ -517,17 +509,9 @@ describe('StockLogsRepository', () => {
 
     test('getStockLogs omits license filter when license is null', async () => {
       BaseModel.license = null;
-      repo.page.mockResolvedValue({
-        status: true,
-        data: { list: [], total: 0, current_page: 1, total_pages: 0, per_page: 10 },
-        message: 'success',
-      });
-
+      col.find.mockReturnValue(mkFindChain([]));
       await repo.getStockLogs();
-
-      expect(repo.page).toHaveBeenCalledWith(
-        'stocklogs',
-        {},
+      expect(col.find).toHaveBeenCalledWith(
         expect.not.objectContaining({ license: expect.anything() }),
         expect.any(Object)
       );
