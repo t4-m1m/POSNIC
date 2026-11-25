@@ -236,8 +236,22 @@
         var beforePayment = pendingGoods || preview || !data.sales_id;
         var documentTitle = pendingGoods ? label('Bill') : beforePayment ? (present(data.branch_gstin_number) || on(data.gst) ? label('Tax invoice') : label('Bill')) : label('Receipt');
         var hasField = function (field) { return layout.blocks.some(function (b) { return b.type === 'field' && b.field === field; }); };
+        function saleTimestamp(source) {
+            var raw = source.created_date || source.date || source.order_date || source.receipt_date || '';
+            if (raw instanceof Date || (typeof raw === 'string' && /^\\d{4}-\\d{2}-\\d{2}T/.test(raw))) {
+                var parsed = raw instanceof Date ? raw : new Date(raw);
+                if (Number.isFinite(parsed.getTime())) {
+                    var day = String(parsed.getDate()).padStart(2, '0');
+                    var month = String(parsed.getMonth() + 1).padStart(2, '0');
+                    var year = parsed.getFullYear();
+                    var time = parsed.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                    return day + '/' + month + '/' + year + ' ' + time;
+                }
+            }
+            return raw;
+        }
         var values = {
-            receipt_number: data.sale_number || data.invoice_number || data.receipt_number || (data.sales_id && !/^[a-f0-9]{24}$/i.test(String(data.sales_id).trim()) ? data.sales_id : ''), receipt_date: data.created_date || data.date || data.order_date || data.receipt_date || '', seller_name: (data.versement_checkout && data.versement_checkout.vendor_name) || data.cashier_name || data.seller_name || data.steward_name || data.steward || data.created_by || data.user_name,
+            receipt_number: data.sale_number || data.invoice_number || data.receipt_number || (data.sales_id && !/^[a-f0-9]{24}$/i.test(String(data.sales_id).trim()) ? data.sales_id : ''), receipt_date: saleTimestamp(data), seller_name: (data.versement_checkout && data.versement_checkout.vendor_name) || data.cashier_name || data.seller_name || data.steward_name || data.steward || data.created_by || data.user_name,
             customer_name: data.customer_name || (data.versement_checkout && data.versement_checkout.customer_name), customer_phone: data.customer_phone || (data.versement_checkout && data.versement_checkout.phone), customer_email: data.customer_email,
             customer_tax_number: taxNumber,
             customer_address: data.customer_address, sale_note: data.sales_description || data.sale_note || data.sales_note || data.note || data.description, brand_url: data.website || PosnicPro.BRAND_URL,
