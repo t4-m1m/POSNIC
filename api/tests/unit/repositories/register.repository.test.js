@@ -499,6 +499,31 @@ describe('RegisterRepository', () => {
       expect(r.data.over_short).toBe(-10);
     });
 
+    test('includes F6 cash deposits and cash settlements in the register close once', async () => {
+      const now = new Date();
+      const session = {
+        _id: FAKE_ID, register_id: FAKE_REG, branch_id: FAKE_BRANCH,
+        register_status: REGISTER_STATUS.OPENED,
+        register_opendate: new Date(now.getTime() - 60 * 60 * 1000),
+        opening_float: 100, register_sales: [], cashInOutDetail: [], countedAmount: [],
+      };
+      col.findOne.mockResolvedValue(session);
+      const versements = {
+        find: jest.fn(() => mkChain([{
+          status: 'settled', branch_id: FAKE_BRANCH,
+          register_id: FAKE_ID, settlement_register_id: FAKE_ID,
+          sale_total: 100, initial_amount: 30, initial_recorded_amount: 30,
+          initial_method: 'cash', initial_collected_at: new Date(now.getTime() - 50 * 60 * 1000),
+          settlement: { amount: 70, method: 'cash', settled_at: new Date(now.getTime() - 10 * 60 * 1000) },
+        }])),
+      };
+      modelMock.getCollection = jest.fn(async name => name === 'sale_versements' ? versements : col);
+      const result = await repo.registercloseUpdate({ cash_register_id: FAKE_ID });
+      expect(result.status).toBe(true);
+      expect(result.data.closing_expected).toBe(200);
+      expect(versements.find).toHaveBeenCalledTimes(1);
+    });
+
     test('a blind close (nothing counted) stores expected with null counted', async () => {
       col.findOne.mockResolvedValue({
         _id: FAKE_ID,
@@ -555,6 +580,31 @@ describe('RegisterRepository', () => {
       expect(r.data.paymentTally.Cash).toBe(150);
       expect(r.data.paymentTally.Card).toBe(50);
     });
+    test('live cash tally includes F6 cash but keeps TPE separate', async () => {
+      const now = new Date();
+      const document = {
+        _id: FAKE_ID, register_id: FAKE_REG, branch_id: FAKE_BRANCH,
+        register_status: REGISTER_STATUS.OPENED,
+        register_opendate: new Date(now.getTime() - 60 * 60 * 1000),
+        opening_float: 100, register_sales: [], cashInOutDetail: [],
+      };
+      col.findOne.mockResolvedValue(document);
+      const versements = {
+        find: jest.fn(() => mkChain([{
+          status: 'settled', branch_id: FAKE_BRANCH,
+          register_id: FAKE_ID, settlement_register_id: FAKE_ID,
+          sale_total: 100, initial_amount: 30, initial_recorded_amount: 30,
+          initial_method: 'cash', initial_collected_at: new Date(now.getTime() - 50 * 60 * 1000),
+          settlement: { amount: 70, method: 'tpe', settled_at: new Date(now.getTime() - 10 * 60 * 1000) },
+        }])),
+      };
+      modelMock.getCollection = jest.fn(async name => name === 'sale_versements' ? versements : col);
+      const result = await repo.cashRegisterOpenManualModel(FAKE_REG);
+      expect(result.status).toBe(true);
+      expect(result.data.paymentTally.Cash).toBe(130);
+      expect(result.data.paymentTally.TPE).toBe(70);
+    });
+
     test('handles multi_payment', async () => {
       const doc = {
         _id: FAKE_ID,
