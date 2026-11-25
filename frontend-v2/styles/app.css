@@ -1111,3 +1111,79 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 .shell .nav{flex:1 1 0;min-height:0;max-height:none;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;}
 .shell .rail-bottom{position:sticky;bottom:0;z-index:3;flex:0 0 auto;min-height:max-content;margin-top:auto;padding-top:6px;background:var(--bg-surface);}
 .shell .settings-group .nav-subnav{max-height:min(22dvh,160px);overflow-y:auto;overscroll-behavior:contain;}
+
+
+/* V2: keep the app flush to the viewport; no artificial 56px bottom void. */
+html,body{height:100%;min-height:100%;margin:0;overflow:hidden}
+.shell,
+.shell.caisse-lock,
+.shell.caisse-scroll,
+.shell.view-catalogue,
+.shell.view-achats,
+.shell.view-clients,
+.shell.view-zr-express,
+.shell.view-rapports,
+.shell.view-parametres{
+ height:100dvh!important;
+ min-height:100dvh!important;
+ max-height:100dvh!important;
+ overflow:hidden!important;
+}
+.shell>main,
+.shell.caisse-lock>main,
+.shell.caisse-scroll>main,
+.shell.view-catalogue>main,
+.shell.view-achats>main,
+.shell.view-clients>main,
+.shell.view-zr-express>main,
+.shell.view-rapports>main,
+.shell.view-parametres>main{
+ min-height:0!important;
+ height:auto!important;
+ max-height:none!important;
+ overflow-x:hidden!important;
+ overflow-y:auto!important;
+}
+.shell.caisse-lock>main{height:auto!important;min-height:0!important;overflow:hidden!important}
+.shell .rail{height:100dvh!important;min-height:0!important;max-height:100dvh!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;gap:10px!important}
+.shell .rail>.brand{flex:0 0 44px!important}
+.shell .rail>.nav{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;min-height:0!important;max-height:none!important;overflow-x:hidden!important;overflow-y:auto!important;align-content:flex-start!important}
+.shell .rail>.rail-bottom{
+ position:relative!important;
+ inset:auto!important;
+ z-index:8!important;
+ display:flex!important;
+ flex:0 0 auto!important;
+ flex-direction:column!important;
+ align-items:stretch!important;
+ gap:5px!important;
+ width:100%!important;
+ min-height:0!important;
+ max-height:none!important;
+ margin:0!important;
+ padding:8px 0 0!important;
+ border-top:1px solid var(--border-hairline)!important;
+ background:var(--bg-surface)!important;
+}
+.shell .rail-bottom>button,
+.shell .rail-bottom>.settings-group{width:100%!important;min-width:0!important;flex:0 0 42px!important}
+.shell .rail-bottom>.settings-group{position:relative!important;overflow:visible!important}
+.shell .rail-bottom>.settings-group>.nav-subnav{
+ position:absolute!important;
+ left:0!important;
+ bottom:calc(100% + 6px)!important;
+ z-index:20!important;
+ width:210px!important;
+ max-width:min(210px,calc(100vw - 76px))!important;
+ max-height:min(42dvh,280px)!important;
+ overflow-x:hidden!important;
+ overflow-y:auto!important;
+ padding:6px!important;
+ border:1px solid var(--border-hairline)!important;
+ border-radius:10px!important;
+ background:var(--bg-surface)!important;
+ box-shadow:0 8px 24px rgba(15,23,42,.18)!important;
+}
+.shell .rail-bottom>.settings-group>.nav-subnav[hidden]{display:none!important}
+.shell .rail-bottom>.settings-group>.nav-subnav:not([hidden]){display:grid!important;gap:3px!important}
+.shell .rail-bottom>.settings-group>.nav-subnav button{width:100%!important;height:38px!important;min-height:38px!important}
