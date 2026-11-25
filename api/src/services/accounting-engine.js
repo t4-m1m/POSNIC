@@ -65,6 +65,7 @@ function summarizeCashRegisterSessions(sessions = [], start, end) {
       else if (time < endTime) {
         const source = String(entry.source || entry.origin || entry.category || '').trim().toLowerCase().replaceAll(' ', '_').replaceAll('-', '_');
         const isLedgerTrackedSource = canonicalSources.has(source) ||
+          /^versement(?:_|$)/.test(source) ||
           /^(?:credit|debt|customer_credit|customer_debt)_(?:settlement|payment|collection)$/.test(source);
         if (!isLedgerTrackedSource) otherCashOutflows += cashOut - cashIn;
       }
