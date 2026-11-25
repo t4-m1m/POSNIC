@@ -71,8 +71,8 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   const app = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/core/app.js'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/styles/app.css'), 'utf8');
   assert.match(app, /receiptSaleNumber\(sale\)/);
-  assert.match(app, /import\{normalizeReceiptElements,/ , 'printer settings must bind the exact normalizer name used by the studio');
-  assert.equal((app.match(/normalizeReceiptElements\(/g) || []).length, 2, 'both receipt studio paths must call the imported normalizer');
+  assert.match(app, /function normalizeReceiptElements\(elements\)/, 'printer settings must use a local normalizer and never depend on a stale module binding');
+  assert.ok((app.match(/normalizeReceiptElements\(/g) || []).length >= 3, 'printer settings and both receipt studio paths must use the local normalizer');
   assert.match(app, /async function resolveLabelPrinterName\(/);
   assert.ok(app.includes('find(name=>/tsc.*tdp.?225|tdp.?225.*tsc/i.test(name))'), 'label printing must restore the V1 TSC TDP-225 auto-selection');
   assert.match(app, /printerName=kind==='label'\?await resolveLabelPrinterName\(\)/, 'label studio must use the dedicated label printer, not the receipt printer');
