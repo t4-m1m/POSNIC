@@ -71,6 +71,7 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   const app = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/core/app.js'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/styles/app.css'), 'utf8');
   assert.match(app, /receiptSaleNumber\(sale\)/);
+  assert.doesNotMatch(app, /(^|[^A-Za-z])normalizeReceiptElements\(/, 'all receipt normalizer calls must use the imported alias');
   assert.match(app, /receipt_date:receiptSaleDate\(sale\)/);
   assert.match(app, /date:savedSale\.date\|\|savedSale\.created_date/);
   assert.doesNotMatch(app, /sales_description:payload\.sales_description,date:new Date\(\)\.toLocaleString/);
