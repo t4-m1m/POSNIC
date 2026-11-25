@@ -12,6 +12,9 @@ const branchOf = (req) => String(req.tenantContext?.branchId || req.query.branch
 
 async function recoverSettlingVersement(db, collection, current) {
   if (!current || current.status !== 'settling') return true;
+  // Do not race a live settle request between its claim and sale update.
+  const startedAt = new Date(current.settlement_started_at || current.updated_at || current.created_at || 0).getTime();
+  if (Number.isFinite(startedAt) && startedAt > 0 && Date.now() - startedAt < 120000) return true;
   const saleFilter = current.sale_object_id
     ? { _id: current.sale_object_id }
     : { $or: [{ sales_id: current.sale_key }, { sale_id: current.sale_key }] };
