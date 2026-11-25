@@ -96,3 +96,18 @@ test('Label Studio centers the complete sheet inside its scrollable stage', () =
   assert.ok(css.includes('padding:48px 40px!important'));
   assert.ok(css.includes('zoom:1.65!important'));
 });
+
+
+test('Receipt Studio parses persisted millimetre dimensions and repairs collapsed block geometry', () => {
+  const app = read('frontend-v2/core/app.js');
+  assert.match(app, /const designerMm=\(value,fallback,min=0,max=2000\)/);
+  assert.match(app, /designerMm\(saved\?\.width\?\?remoteLayout\?\.width\?\?r\.paperWidth,80,30,210\)/);
+  assert.match(app, /rawW<8\?fallback\.w:rawW/);
+  assert.match(app, /rawH<1\.5\?fallback\.h:rawH/);
+});
+
+test('Designer workspaces open at the top and use a smaller label zoom', () => {
+  const css = read('frontend-v2/styles/app.css');
+  assert.match(css, /align-items:flex-start!important;justify-content:center!important;overflow:auto!important/);
+  assert.match(css, /#label-artboard\{zoom:1\.35!important/);
+});

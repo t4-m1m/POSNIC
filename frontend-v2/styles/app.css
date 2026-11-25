@@ -1043,3 +1043,11 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
   .designer-workspace>.designer-stage{min-height:460px!important;max-height:none!important;padding:32px 20px!important}
   #label-artboard{zoom:1.25!important}
 }
+
+
+/* Real canvas recovery: start scroll surfaces at the top; zoom must never center-crop tall stock. */
+.designer-workspace>.designer-stage{align-items:flex-start!important;justify-content:center!important;overflow:auto!important;scrollbar-gutter:stable!important;}
+#label-artboard{zoom:1.35!important;transform:none!important;transform-origin:top center!important;margin:24px auto 32px!important;}
+#receipt-artboard{width:var(--receipt-paper-width,80mm)!important;min-width:var(--receipt-paper-width,80mm)!important;flex:0 0 auto!important;flex-shrink:0!important;max-width:none!important;margin:24px auto 32px!important;}
+#receipt-artboard>.designer-object{max-width:none!important;min-width:0!important;writing-mode:horizontal-tb!important;}
+@media(max-width:700px){#label-artboard{zoom:1.15!important}.designer-workspace>.designer-stage{justify-content:flex-start!important;padding:24px!important}}
