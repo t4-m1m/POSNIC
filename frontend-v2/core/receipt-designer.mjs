@@ -1,5 +1,5 @@
 export function receiptSaleNumber(sale = {}) {
-  const candidates = [sale.sale_number, sale.ticket_number, sale.receipt_number, sale.sales_number, sale.sales_id];
+  const candidates = [sale.sales_id, sale.ticket_number, sale.receipt_number, sale.sale_number, sale.sales_number, sale.sale_id, sale.invoice_number, sale.invoice_id, sale.number];
   for (const value of candidates) {
     const text = String(value ?? '').trim();
     if (text && !/^[a-f0-9]{24}$/i.test(text)) return text;
@@ -9,7 +9,11 @@ export function receiptSaleNumber(sale = {}) {
 }
 
 export function receiptSaleDate(sale = {}) {
-  const candidates = [sale.date, sale.created_date, sale.createdAt, sale.created_at, sale.sale_date];
+  const candidates = [
+    sale.date, sale.created_date, sale.createdAt, sale.created_at, sale.sale_date,
+    sale.transaction_date, sale.sale_datetime, sale.sold_at, sale.invoice_date, sale.timestamp,
+  ];
+  let dateOnly = '';
   for (let raw of candidates) {
     if (raw == null || raw === '') continue;
     if (typeof raw === 'object') raw = raw.$date?.$numberLong ?? raw.$date ?? raw.$numberLong ?? raw;
@@ -19,13 +23,17 @@ export function receiptSaleDate(sale = {}) {
     }
     const text = String(raw).trim();
     if (!text) continue;
-    // Preserve already-formatted local sale timestamps; Date.parse interprets
-    // DD/MM/YYYY inconsistently across Windows and Chromium versions.
-    if (/^\d{1,2}[./-]\d{1,2}[./-]\d{4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?)?$/i.test(text)) return text;
-    const date = typeof raw === 'number' ? new Date(Math.abs(raw) < 1e12 ? raw * 1000 : raw) : new Date(text);
+    if (/^\d{1,2}[./-]\d{1,2}[./-]\d{4}\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?$/i.test(text)) return text;
+    if (/^\d{1,2}[./-]\d{1,2}[./-]\d{4}$/.test(text) || /^\d{4}-\d{2}-\d{2}$/.test(text)) {
+      if (!dateOnly) dateOnly = text;
+      continue;
+    }
+    const date = typeof raw === 'number'
+      ? new Date(Math.abs(raw) < 1e12 ? raw * 1000 : raw)
+      : new Date(text);
     if (Number.isFinite(date.getTime())) return date.toLocaleString('fr-FR');
   }
-  return 'Date non renseignée';
+  return dateOnly || 'Date non renseignée';
 }
 
 export function normalizeReceiptElements(elements) {
