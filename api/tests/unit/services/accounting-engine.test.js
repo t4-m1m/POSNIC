@@ -4,6 +4,7 @@ const {
   calculateDailyClose,
   reconstructOutstandingAsOf,
   summarizeSaleReturns,
+  aggregateVersementPaymentEvents,
 } = require('../../../src/services/accounting-engine');
 
 describe('accounting engine daily close', () => {
