@@ -30,18 +30,39 @@ function setup() {
     return { dom, w, $: w.$, branch, design, sale, engine: w.PosnicPro.receiptDesigner };
 }
 
-test('paid receipts use settlement time on every paper format and keep it on reprint', () => {
+test('printed receipts use the public sale number and original sale time on every paper format', () => {
     const { dom, engine, sale, $ } = setup();
-    Object.assign(sale, { payment_status: 'Paid', created_date: '14/10/2026 8:50 AM',
+    Object.assign(sale, { payment_status: 'Paid', sales_id: '507f1f77bcf86cd799439011', sale_number: '0000128', created_date: '14/10/2026 8:50 AM',
         receipt_date: '14/10/2026 9:05 AM', updated_date: '14/10/2026 10:30 AM' });
     for (const format of Object.keys(contract.formats)) {
         const first = engine.render(sale, format, false);
         const text = $('<div>').html(first).text();
-        assert.match(text, /9:05 AM/);
-        assert.doesNotMatch(text, /8:50 AM|10:30 AM/);
+        assert.match(text, /0000128/);
+        assert.match(text, /8:50 AM/);
+        assert.doesNotMatch(text, /507f1f77bcf86cd799439011|9:05 AM|10:30 AM/);
         assert.equal(engine.render(sale, format, false), first);
     }
     assert.equal(sale.created_date, '14/10/2026 8:50 AM');
+    dom.window.close();
+});
+
+test('ISO sale timestamps render in local shop time and saved image blocks may leave the paper edge', () => {
+    const { dom, engine, design, sale, $ } = setup();
+    sale.sales_id = '507f1f77bcf86cd799439011';
+    sale.sale_number = '0000007';
+    sale.created_date = '2026-11-25T10:30:00.000Z';
+    sale.receipt_date = '2026-11-25T12:45:00.000Z';
+    const logo = design.layouts['80'].blocks.find(block => block.type === 'logo');
+    Object.assign(logo, { x: -12, y: -18, w: 145, fontSize: 64 });
+    const normalized = contract.normalize(JSON.parse(JSON.stringify(design)));
+    assert.equal(normalized.layouts['80'].blocks.find(block => block.type === 'logo').x, -12);
+    assert.equal(normalized.layouts['80'].blocks.find(block => block.type === 'logo').y, -18);
+    assert.equal(normalized.layouts['80'].blocks.find(block => block.type === 'logo').w, 145);
+    assert.equal(normalized.layouts['80'].blocks.find(block => block.type === 'logo').fontSize, 64);
+    const output = $('<div>').html(engine.render(sale, '80', false));
+    assert.match(output.text(), /0000007/);
+    assert.match(output.text(), /25\\/11\\/2026 10:30 AM/);
+    assert.doesNotMatch(output.text(), /507f1f77bcf86cd799439011|12:45 PM/);
     dom.window.close();
 });
 
