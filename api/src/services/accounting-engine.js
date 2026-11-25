@@ -53,7 +53,7 @@ function summarizeCashRegisterSessions(sessions = [], start, end) {
     if (!Number.isFinite(opened)) { complete = false; unresolved += 1; continue; }
     matched += 1;
     if (!finite(session.opening_float)) { complete = false; unresolved += 1; }
-    else openingBalance += Number(session.opening_float);
+    else openingBalance += parseAmount(session.opening_float);
     if (!Array.isArray(session.cashInOutDetail)) { complete = false; unresolved += 1; continue; }
     for (const entry of session.cashInOutDetail) {
       const time = entry.date || entry.created_at ? new Date(entry.date || entry.created_at).getTime() : NaN;
@@ -257,14 +257,14 @@ function calculateDailyClose(input = {}) {
   // provisional amount and explain missing register/payment evidence.
   const expectedCash = cashInputsAvailable
     ? round2(
-        Number(cash.cashSales) +
-        Number(cash.cashVersements) +
-        Number(cash.cashCreditCollections) -
-        Number(cash.cashRefunds) -
-        Number(cash.cashExpenses) -
-        Number(cash.cashSalaries) -
-        Number(cash.cashAdvances) -
-        Number(cash.cashBonuses)
+        parseAmount(cash.cashSales) +
+        parseAmount(cash.cashVersements) +
+        parseAmount(cash.cashCreditCollections) -
+        parseAmount(cash.cashRefunds) -
+        parseAmount(cash.cashExpenses) -
+        parseAmount(cash.cashSalaries) -
+        parseAmount(cash.cashAdvances) -
+        parseAmount(cash.cashBonuses)
       )
     : null;
 
