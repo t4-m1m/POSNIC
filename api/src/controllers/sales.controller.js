@@ -2008,27 +2008,33 @@ class SalesController extends BaseController {
         if (!returnSummary.costComplete) costDataComplete = false;
       }
       const grossSalesTotal = roundToTwo(salesNetTotal + returnAdjustmentTotal + discountTotal);
-      // Initial deposits and final settlements are separate dated cash events.
-      // A later settlement must never pull the original deposit into today's report.
+      // F6 is recognized as one complete sale on its final settlement day.
+      // Earlier deposits remain in the versement ledger for customer balances,
+      // but they must never create sales/cash turnover on their collection date.
+      // On settlement day, attribute the whole sale total to the original and
+      // final tender methods, while capping the recognized amount at the invoice
+      // total so an overpayment can never inflate sales revenue.
       const versementEvents = await db.collection('sale_versements').find({
         branch_id: branchObjectId,
+        status: 'settled',
         $or: [
-          { initial_collected_at: { $gte: reportStart, $lt: reportEnd } },
-          { initial_collected_at: { $exists: false }, created_at: { $gte: reportStart, $lt: reportEnd } },
           { 'settlement.settled_at': { $gte: reportStart, $lt: reportEnd } },
-          { 'settlement.settled_at': { $exists: false }, settled_at: { $gte: reportStart, $lt: reportEnd } },
+          { 'settlement.settled_at: { $exists: false }, settled_at: { $gte: reportStart, $lt: reportEnd } },
         ],
       }).toArray();
       const tenderLabels = { cash: 'CASH', card: 'TPE', tpe: 'TPE', bank_transfer: 'BaridiMob', baridimob: 'BaridiMob' };
       let versementDataComplete = true;
       const versementPaymentMap = new Map();
       const addVersementPayment = (method, amount) => {
+        const value = roundToTwo(Math.max(0, auditNumber(amount)));
+        if (value <= 0) return;
         const key = accountingEngine.normalizeTenderName(method);
         if (key === 'Non classé') versementDataComplete = false;
         const row = versementPaymentMap.get(key) || { payment_mode: tenderLabels[String(method || '').toLowerCase()] || key, amount: 0, count: 0 };
-        row.amount = roundToTwo(row.amount + auditNumber(amount));
-        if (auditNumber(amount) > 0) row.count += 1;
+        row.amount = roundToTwo(row.amount + value);
+        row.count += 1;
         versementPaymentMap.set(key, row);
+        if (/^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(method || ''))) versementCashTotal += value;
       };
       let versementCashTotal = 0;
       const inReportDay = (value) => {
@@ -2036,18 +2042,17 @@ class SalesController extends BaseController {
         return date && Number.isFinite(date.getTime()) && date >= reportStart && date < reportEnd;
       };
       versementEvents.forEach((v) => {
-        const initialDate = v.initial_collected_at || v.created_at;
-        const initialAmount = auditNumber(v.initial_recorded_amount ?? v.initial_amount ?? 0);
-        if (initialAmount > 0 && inReportDay(initialDate)) {
-          addVersementPayment(v.initial_method, initialAmount);
-          if (/^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(v.initial_method || ''))) versementCashTotal += initialAmount;
-        }
         const settlementDate = v.settlement?.settled_at || v.settled_at;
-        const settlementAmount = auditNumber(v.settlement?.amount || 0);
-        if (settlementAmount > 0 && inReportDay(settlementDate)) {
-          addVersementPayment(v.settlement?.method, settlementAmount);
-          if (/^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(v.settlement?.method || ''))) versementCashTotal += settlementAmount;
+        if (!inReportDay(settlementDate)) return;
+        const saleTotal = roundToTwo(Math.max(0, auditNumber(v.sale_total)));
+        if (saleTotal <= 0) {
+          versementDataComplete = false;
+          return;
         }
+        const initialAmount = Math.min(saleTotal, roundToTwo(Math.max(0, auditNumber(v.initial_recorded_amount ?? v.initial_amount ?? 0))));
+        const finalAmount = roundToTwo(Math.max(0, saleTotal - initialAmount));
+        if (initialAmount > 0) addVersementPayment(v.initial_method, initialAmount);
+        if (finalAmount > 0) addVersementPayment(v.settlement?.method, finalAmount);
       });
       versementCashTotal = roundToTwo(versementCashTotal);
       const versementPaymentDetails = Array.from(versementPaymentMap.values()).filter((row) => row.amount > 0);
