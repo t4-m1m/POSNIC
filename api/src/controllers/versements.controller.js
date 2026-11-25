@@ -10,6 +10,40 @@ const saleKey = (s) => String(s.sales_id || s.sale_id || s.invoice_number || s._
 const saleTotal = (s) => money(s.sales_total ?? s.grand_total ?? s.total_amount ?? s.total ?? s.items_total ?? 0);
 const branchOf = (req) => String(req.tenantContext?.branchId || req.query.branch || req.body?.branch_id || req.session?.selectedBranchId || req.session?.branch_id || req.user?.branch_id || req.user?.branchId || req.user?.branch?._id || '');
 
+async function recoverSettlingVersement(db, collection, current) {
+  if (!current || current.status !== 'settling') return true;
+  const saleFilter = current.sale_object_id
+    ? { _id: current.sale_object_id }
+    : { $or: [{ sales_id: current.sale_key }, { sale_id: current.sale_key }] };
+  const sale = await db.collection('sales').findOne(saleFilter);
+  if (!sale) return false;
+
+  if (sale.versement_settled === true || sale.versement_settled === 'true') {
+    const method = String(sale.payment_mode || current.settlement_started_method || '').toLowerCase();
+    const amount = money(sale.versement_settlement_amount ?? current.settlement_started_amount ?? current.remaining ?? 0);
+    if (!['cash', 'tpe', 'baridimob'].includes(method) || amount < 0) return false;
+    const settledAt = sale.versement_settled_at || sale.settled_at || current.settlement_started_at || new Date();
+    const by = String(current.settlement_started_by || current.created_by || 'System');
+    const hasHistory = Array.isArray(current.history) && current.history.some(event => event.type === 'settlement');
+    await collection.updateOne({ _id: current._id, status: 'settling' }, {
+      $set: {
+        status: 'settled', remaining: 0, settled_at: settledAt,
+        settlement: { amount, method, settled_at: settledAt, recorded_by: by },
+      },
+      ...(!hasHistory ? { $push: { history: { type: 'settlement', amount, method, at: settledAt, by } } } : {}),
+      $unset: { settlement_started_at: '', settlement_started_by: '', settlement_started_method: '', settlement_started_amount: '' },
+    });
+    return true;
+  }
+
+  // The sale update never committed: release the claim so the cashier can retry.
+  await collection.updateOne({ _id: current._id, status: 'settling' }, {
+    $set: { status: 'pending' },
+    $unset: { settlement_started_at: '', settlement_started_by: '', settlement_started_method: '', settlement_started_amount: '' },
+  });
+  return true;
+}
+
 exports.ensureForSale = async (req, sale) => {
   const db = await shopDb(req);
   if (!db || !sale || !sale.versement_checkout) return null;
@@ -83,6 +117,17 @@ exports.list = async (req,res) => {
         const key = saleKey(sale);
         recoveryWarnings.push({ sale_key:key, reason:String(error?.message||'Invalid legacy Versement metadata') });
         console.warn('[versements] skipped unrecoverable legacy sale', key, error?.message||error);
+      }
+    }
+    // Repair interrupted F6 settlement commits before applying the requested status filter.
+    // This keeps the immutable history visible and lets unfinished claims be retried safely.
+    const settlingRows = await db.collection(COLLECTION).find({ branch_id: new ObjectId(branch), status: 'settling' }).toArray();
+    for (const row of settlingRows) {
+      try {
+        const recovered = await recoverSettlingVersement(db, db.collection(COLLECTION), row);
+        if (!recovered) recoveryWarnings.push({ sale_key: row.sale_key, reason: 'Settlement is still unresolved; linked sale or tender details are missing.' });
+      } catch (error) {
+        recoveryWarnings.push({ sale_key: row.sale_key, reason: 'Settlement recovery failed: ' + String(error?.message || 'database error').slice(0, 160) });
       }
     }
     const rows = await db.collection(COLLECTION).find(filter).sort({ created_at:-1 }).limit(2000).toArray();
@@ -161,7 +206,7 @@ exports.settle = async (req,res) => {
     const saleFilter = current.sale_object_id ? {_id:current.sale_object_id} : {$or:[{sales_id:current.sale_key},{sale_id:current.sale_key}]};
     const sale = await db.collection('sales').findOne(saleFilter);
     if (!sale) return fail(res,409,'The linked sale is missing; settlement was not recorded.');
-    const claimed = await collection.updateOne({_id:id,status:'pending',remaining:current.remaining},{$set:{status:'settling',settlement_started_at:settledAt,settlement_started_by:actor(req)}});
+    const claimed = await collection.updateOne({_id:id,status:'pending',remaining:current.remaining},{$set:{status:'settling',settlement_started_at:settledAt,settlement_started_by:actor(req),settlement_started_method:method,settlement_started_amount:amount}});
     if (!claimed.modifiedCount) return fail(res,409,'This versement was already updated. Refresh the register.');
     try {
       const saleUpdate = {
