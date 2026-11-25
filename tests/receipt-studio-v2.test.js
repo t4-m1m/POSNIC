@@ -61,7 +61,7 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   assert.match(app, /font-size:inherit!important;font-weight:inherit!important/);
   assert.match(app, /art\.style\.width=state\.labelLayout\.width\+'mm'/);
   assert.match(app, /art\.style\.height=state\.labelLayout\.height\+'mm'/);
-  assert.match(app, /raw\\.width\\|\\|template\\.width\\)\\|\\|45/);
-  assert.match(app, /raw\\.height\\|\\|template\\.height\\)\\|\\|35/);
+  assert.ok(app.includes('Number(raw.width||template.width)||45'));
+  assert.ok(app.includes('Number(raw.height||template.height)||35'));
   assert.match(css, /#receipt-artboard\{overflow:visible!important\}/);
 });
