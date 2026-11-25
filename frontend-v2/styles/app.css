@@ -962,3 +962,84 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 #receipt-artboard{flex:0 0 auto!important;margin:0 auto!important;max-width:none!important;max-height:none!important}
 @media(max-width:1100px){.designer-shell{grid-template-columns:minmax(170px,210px) minmax(0,1fr)}.designer-shell>.designer-inspector{grid-column:1/-1}.designer-workspace>.designer-stage{max-height:none!important;min-height:520px!important}}
 @media(max-width:700px){.designer-shell{grid-template-columns:minmax(0,1fr)}.designer-shell>.designer-tools,.designer-shell>.designer-inspector{grid-column:1}.designer-workspace>.designer-stage{min-height:460px!important;max-height:none!important}}
+
+
+/* Studio canvas repair: never allow the receipt sheet to shrink to its content,
+   and keep the complete label sheet inside the visible scroll viewport. */
+.designer-shell{
+  grid-template-columns:minmax(175px,220px) minmax(0,1fr) minmax(190px,250px)!important;
+  width:100%!important;
+  min-width:0!important;
+  align-items:stretch!important;
+}
+.designer-shell>.designer-workspace{
+  display:flex!important;
+  flex-direction:column!important;
+  min-width:0!important;
+  min-height:0!important;
+  width:100%!important;
+  overflow:visible!important;
+}
+.designer-workspace>.designer-stage{
+  display:flex!important;
+  flex:1 1 auto!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:600px!important;
+  max-height:calc(100dvh - 210px)!important;
+  overflow:auto!important;
+  padding:48px 40px!important;
+  scroll-padding:48px!important;
+  overscroll-behavior:contain!important;
+}
+#receipt-artboard{
+  display:block!important;
+  position:relative!important;
+  flex:0 0 auto!important;
+  flex-shrink:0!important;
+  width:80mm;
+  min-width:80mm!important;
+  max-width:none!important;
+  height:160mm;
+  box-sizing:border-box!important;
+  margin:0 auto!important;
+  overflow:hidden!important;
+  writing-mode:horizontal-tb!important;
+  white-space:normal!important;
+}
+#receipt-artboard>.designer-object{
+  position:absolute!important;
+  box-sizing:border-box!important;
+  writing-mode:horizontal-tb!important;
+  white-space:pre-wrap!important;
+  word-break:normal!important;
+  overflow-wrap:break-word!important;
+  letter-spacing:normal!important;
+  line-height:1.25!important;
+}
+#label-artboard{
+  transform:none!important;
+  zoom:1.65!important;
+  transform-origin:center center!important;
+  flex:0 0 auto!important;
+  flex-shrink:0!important;
+  margin:0 auto!important;
+  max-width:none!important;
+  max-height:none!important;
+  box-sizing:border-box!important;
+}
+@media(max-width:1100px){
+  .designer-shell{grid-template-columns:minmax(160px,210px) minmax(0,1fr)!important}
+  .designer-shell>.designer-inspector{grid-column:1/-1!important}
+  .designer-workspace>.designer-stage{max-height:none!important;min-height:520px!important}
+}
+@media(max-width:700px){
+  .designer-shell{grid-template-columns:minmax(0,1fr)!important}
+  .designer-shell>.designer-tools,.designer-shell>.designer-inspector{grid-column:1!important}
+  .designer-workspace>.designer-stage{min-height:460px!important;max-height:none!important;padding:32px 20px!important}
+  #label-artboard{zoom:1.25!important}
+}

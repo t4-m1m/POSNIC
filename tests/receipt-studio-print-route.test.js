@@ -82,3 +82,17 @@ test('V2 label preview, queued print and fast print use the same positioned labe
   assert.match(app, /function designerElement\(e\)/);
   assert.match(app, /transform:rotate\('\+\(Number\(e\.rotation\)\|\|0\)\+'deg\)/);
 });
+
+
+test('Receipt Studio canvas cannot shrink below the selected paper width', () => {
+  const app = read('frontend-v2/core/app.js');
+  const css = read('frontend-v2/styles/app.css');
+  assert.ok(app.includes("min-width:'+state.receiptLayout.width+'mm"));
+  assert.ok(css.includes('#receipt-artboard{') && css.includes('min-width:80mm!important'));
+});
+
+test('Label Studio centers the complete sheet inside its scrollable stage', () => {
+  const css = read('frontend-v2/styles/app.css');
+  assert.ok(css.includes('padding:48px 40px!important'));
+  assert.ok(css.includes('zoom:1.65!important'));
+});
