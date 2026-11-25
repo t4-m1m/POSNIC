@@ -1094,3 +1094,10 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 @media(max-width:900px){
  .designer-workspace>.designer-stage{justify-content:flex-start!important}
 }
+
+
+/* POSNIC V2 designer canvas: deterministic paper sizing and an uncropped scroll viewport. */
+.designer-workspace>.designer-stage{display:flex!important;flex-direction:row!important;justify-content:center!important;align-items:flex-start!important;overflow:auto!important;min-height:360px!important;padding:36px 24px!important;position:relative!important;box-sizing:border-box!important;scrollbar-gutter:stable!important;}
+#receipt-artboard{position:relative!important;box-sizing:border-box!important;width:var(--receipt-paper-px,302px)!important;min-width:var(--receipt-paper-px,302px)!important;max-width:var(--receipt-paper-px,302px)!important;flex:0 0 var(--receipt-paper-px,302px)!important;flex-shrink:0!important;margin:0 auto 36px!important;writing-mode:horizontal-tb!important;}
+#label-artboard{position:relative!important;box-sizing:border-box!important;overflow:visible!important;flex:0 0 auto!important;flex-shrink:0!important;max-width:none!important;max-height:none!important;margin:0 auto 36px!important;box-shadow:0 8px 24px rgba(15,23,42,.10)!important;}
+@media(max-width:700px){.designer-workspace>.designer-stage{justify-content:flex-start!important;padding:36px 24px!important;}}

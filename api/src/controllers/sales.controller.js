@@ -1939,11 +1939,11 @@ class SalesController extends BaseController {
         count_sales: data.count_sales,
       }));
 
-      // sales_total is persisted by calculateSaleHeader after item-level and cart-level
-      // discounts. Use that final payable amount as the source of truth; subtracting
-      // the separately reported discount fields again would double-discount the Z report.
+      // sale_original_total preserves the discounted invoice amount before returns. Use it
+      // as the invoice base, then subtract returns on their actual return date below;
+      // sales_total is already reduced by the return workflow and would double-subtract.
       const itemDiscountTotal = roundToTwo(productDetails.reduce((sum, item) => sum + Number(item.product_discount || 0), 0));
-      let salesNetTotal = roundToTwo(salesPayments.reduce((sum, saleDoc) => sum + (Number(saleDoc.sales_total ?? saleDoc.total) || 0), 0) + editAdjustmentTotal);
+      let salesNetTotal = roundToTwo(salesPayments.reduce((sum, saleDoc) => sum + (Number(saleDoc.sale_original_total ?? ((Number(saleDoc.sales_total ?? saleDoc.total) || 0) + (Number(saleDoc.items_return_total ?? saleDoc.return_total) || 0))) || 0), 0) + editAdjustmentTotal);
       if (Math.abs(editAdjustmentTotal) >= 0.01) paymentDetails.push({ payment_mode: 'Crédit · modification', sale_payment: editAdjustmentTotal, credit_adjustment: editAdjustmentTotal });
       const discountTotal = roundToTwo(itemDiscountTotal + totalSaleExtraDiscount);
       grossProfitTotal = Number.isFinite(Number(salesNetTotal)) && Number.isFinite(Number(costOfGoodsTotal)) ? roundToTwo(salesNetTotal - costOfGoodsTotal) : null;
@@ -1974,20 +1974,13 @@ class SalesController extends BaseController {
       const licenseValue = BaseModel.license || req.user?.license || req.user?.license_id;
       const licenseValues = licenseValue ? [licenseValue, String(licenseValue)] : [];
       const branchValues = [branchObjectId, String(branchObjectId)];
-      const returnAdjustmentRows = await db.collection('sales').aggregate([
-        { $match: { branch_id: branchObjectId, license: { $in: licenseValues }, items_return: { $exists: true, $ne: [] } } },
-        { $unwind: '$items_return' },
-        { $addFields: {
-          reportReturnDate: { $convert: { input: { $ifNull: ['$items_return.returnArray.returnDate', '$items_return.return_date'] }, to: 'date', onError: null, onNull: null } },
-          reportReturnAmount: { $convert: { input: { $ifNull: ['$items_return.returnArray.itemsTotalAmount', '$items_return.amount'] }, to: 'double', onError: 0, onNull: 0 } },
-        } },
-        { $match: { $expr: { $and: [
-          { $gte: ['$reportReturnDate', reportStart] },
-          { $lt: ['$reportReturnDate', reportEnd] },
-        ] } } },
-        { $group: { _id: null, amount: { $sum: '$reportReturnAmount' }, count: { $sum: 1 } } },
-      ]).toArray();
-      const returnAdjustmentTotal = roundToTwo(returnAdjustmentRows.length ? returnAdjustmentRows[0].amount || 0 : 0);
+      const returnSalesRows = await db.collection('sales').find({
+        branch_id: branchObjectId, license: { $in: licenseValues },
+        items_return: { $exists: true, $ne: [] },
+      }).project({ _id: 1, sales_id: 1, sale_id: 1, items: 1, sale_original_snapshot: 1, items_return: 1 }).toArray();
+      const returnSummary = accountingEngine.summarizeSaleReturns(returnSalesRows, reportStart, reportEnd);
+      const returnAdjustmentTotal = returnSummary.amount;
+      const returnCostAdjustmentTotal = returnSummary.cost;
       let salesDataComplete = salesPayments.every(sale => {
         const total = sale.sales_total ?? sale.total;
         return total !== null && total !== undefined && total !== '' && Number.isFinite(Number(total));
@@ -2000,10 +1993,9 @@ class SalesController extends BaseController {
         costDataComplete = false;
       }
       if (returnAdjustmentTotal > 0) {
-        // The returned revenue is deducted, but do not invent a stock-restoration
-        // cost. Keep the known COGS as an explicitly partial estimate.
         salesNetTotal = roundToTwo(salesNetTotal - returnAdjustmentTotal);
-        costDataComplete = false;
+        costOfGoodsTotal = roundToTwo(costOfGoodsTotal - returnCostAdjustmentTotal);
+        if (!returnSummary.costComplete) costDataComplete = false;
       }
       // Initial deposits and final settlements are separate dated cash events.
       // A later settlement must never pull the original deposit into today's report.
@@ -2183,10 +2175,21 @@ class SalesController extends BaseController {
           })
           .map(() => ({ sale_id: sale.sales_id || sale.sale_id || sale._id }))
       );
+      const returnLedgerEvents = f6AndReturnSales.flatMap(sale =>
+        (Array.isArray(sale.items_return) ? sale.items_return : []).map(block => {
+          const record = block?.returnArray || block || {};
+          return {
+            sale_id: sale.sales_id || sale.sale_id || sale._id,
+            date: record.returnDate || record.return_date || block?.return_date || null,
+            amount: record.itemsTotalAmount ?? record.amount ?? block?.amount ?? null,
+          };
+        })
+      );
       const outstandingResult = accountingEngine.reconstructOutstandingAsOf({
         transactions: ledgerRows,
         creditPayments: laterCreditPayments.map(row => ({ ...row, received_at: row.received_at || row.created_at || row.date })),
         editAdjustments: laterEdits,
+        returns: returnLedgerEvents,
         versements: linkedVersements,
         orphanVersements,
         saleDates: linkedSaleDates,
@@ -2502,7 +2505,7 @@ class SalesController extends BaseController {
           ...(estimatedCostLines ? [`${estimatedCostLines} sale line(s) use the current catalogue cost because no historical cost snapshot exists; COGS and profit are estimates.`] : []),
           ...(unresolvedCostLines ? [`No usable cost was found for ${unresolvedCostLines} sale line(s), even in the current catalogue.`] : []),
           ...(!editCostDataComplete ? ['One or more sale modifications have no historical cost adjustment; the known base cost is shown without the missing adjustment.'] : []),
-          ...(returnAdjustmentTotal > 0 ? ['Returned merchandise needs verified inventory-restoration cost before COGS can be finalized.'] : []),
+          ...(returnAdjustmentTotal > 0 && !returnSummary.costComplete ? ['One or more return lines have no persisted historical cost snapshot; returned COGS is partial.'] : []),
         ],
         profit_data_complete: dailyAccounting.profitDataComplete,
         gross_profit_total: grossProfitTotal,

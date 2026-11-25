@@ -148,6 +148,63 @@ function aggregateSalePaymentEvents(sales = [], start, end) {
   return { details: Array.from(map.values()).filter(row => row.sale_payment > 0), complete };
 }
 
+function summarizeSaleReturns(sales = [], start, end) {
+  const startTime = new Date(start).getTime();
+  const endTime = new Date(end).getTime();
+  if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime)
+    throw new Error('Valid return-report date boundaries are required.');
+  let amount = 0, cost = 0, complete = true, costComplete = true, count = 0;
+  const events = [];
+  for (const sale of sales) {
+    const saleId = sale.sales_id || sale.sale_id || sale._id;
+    for (const block of Array.isArray(sale.items_return) ? sale.items_return : []) {
+      const record = block && block.returnArray ? block.returnArray : block || {};
+      const rawDate = record.returnDate || record.return_date || block.return_date;
+      const time = rawDate ? new Date(rawDate).getTime() : NaN;
+      const rawAmount = record.itemsTotalAmount ?? record.amount ?? block.amount;
+      const value = rawAmount === null || rawAmount === undefined || rawAmount === '' ? NaN : Number(rawAmount);
+      if (!Number.isFinite(time) || !Number.isFinite(value) || value < 0) {
+        complete = false;
+        if (time >= startTime && time < endTime) costComplete = false;
+        continue;
+      }
+      events.push({ sale_id: saleId, date: new Date(time), amount: round2(value) });
+      if (time < startTime || time >= endTime) continue;
+      amount += value;
+      count += 1;
+      const lines = Array.isArray(record.returnValue) ? record.returnValue : [];
+      if (!lines.length && value > 0) costComplete = false;
+      const originalItems = Array.isArray(sale.sale_original_snapshot?.items) ? sale.sale_original_snapshot.items : [];
+      const itemKey = (line) => String(line?.item_id || line?.item || line?.itemId || line?.id || '');
+      const originalById = new Map(originalItems.map(line => [itemKey(line), line]).filter(([key]) => key));
+      for (const line of lines) {
+        const qty = Number(line.item_quantity ?? line.quantity);
+        const original = originalById.get(itemKey(line));
+        const soldQty = Number(original?.item_quantity ?? original?.quantity);
+        let unitCost = null;
+        if (original && Number.isFinite(soldQty) && soldQty > 0) {
+          if (original.company_price_total !== null && original.company_price_total !== undefined && original.company_price_total !== '' && Number.isFinite(Number(original.company_price_total))) unitCost = Number(original.company_price_total) / soldQty;
+          else if (Number.isFinite(Number(original.company_price ?? original.item_company_price))) unitCost = Number(original.company_price ?? original.item_company_price);
+        }
+        if (unitCost === null || !Number.isFinite(unitCost) || !Number.isFinite(qty) || qty < 0) {
+          // The return transaction stores the cost used at return time. Keep it as
+          // an estimate only when the immutable invoice snapshot is unavailable.
+          if (line.company_price_total !== null && line.company_price_total !== undefined && line.company_price_total !== '' && Number.isFinite(Number(line.company_price_total))) {
+            cost += Number(line.company_price_total);
+            costComplete = false;
+          } else if (Number.isFinite(Number(line.company_price ?? line.item_company_price)) && Number.isFinite(qty)) {
+            cost += Number(line.company_price ?? line.item_company_price) * qty;
+            costComplete = false;
+          } else costComplete = false;
+        } else {
+          cost += unitCost * qty;
+        }
+      }
+    }
+  }
+  return { amount: round2(amount), cost: round2(cost), complete, costComplete, count, events };
+}
+
 function calculateDailyClose(input = {}) {
   const salesTotal = asAmount(input.salesTotal);
   const cost = asAmount(input.costOfGoodsTotal);
@@ -370,4 +427,4 @@ function reconstructOutstandingAsOf({
   return { amount: round2(total), complete, unresolved };
 }
 
-module.exports = { round2, normalizeTenderName, isCashTender, aggregateSalePaymentEvents, summarizeCashRegisterSessions, calculateDailyClose, reconstructOutstandingAsOf };
+module.exports = { round2, normalizeTenderName, isCashTender, aggregateSalePaymentEvents, summarizeCashRegisterSessions, summarizeSaleReturns, calculateDailyClose, reconstructOutstandingAsOf };

@@ -3,6 +3,7 @@
 const {
   calculateDailyClose,
   reconstructOutstandingAsOf,
+  summarizeSaleReturns,
 } = require('../../../src/services/accounting-engine');
 
 describe('accounting engine daily close', () => {
@@ -305,3 +306,64 @@ describe('sale payment event classification', () => {
   });
 });
 
+
+describe('daily close sale return reconciliation', () => {
+  test('subtracts dated returned merchandise revenue and its persisted returned COGS', () => {
+    const result = summarizeSaleReturns([{
+      sales_id: 'S-RET-1',
+      sale_original_snapshot: { items: [
+        { item_id: 'ret-a', item_quantity: 2, company_price_total: 20 },
+        { item_id: 'ret-b', item_quantity: 1, company_price_total: 8 },
+      ] },
+      items_return: [
+        { returnArray: { returnDate: '2026-11-23T10:00:00Z', itemsTotalAmount: 45, returnValue: [
+          { item_id: 'ret-a', item_quantity: 2, company_price_total: 20 },
+          { item_id: 'ret-b', item_quantity: 1, company_price_total: 8 },
+        ] } },
+        { returnArray: { returnDate: '2026-11-24T10:00:00Z', itemsTotalAmount: 10, returnValue: [
+          { item_quantity: 1, company_price_total: 4 },
+        ] } },
+      ],
+    }], '2026-11-23T00:00:00Z', '2026-11-24T00:00:00Z');
+    expect(result).toMatchObject({ amount: 45, cost: 28, complete: true, costComplete: true, count: 1 });
+    expect(result.events).toHaveLength(2);
+  });
+
+  test('does not invent returned COGS when the return snapshot has no cost', () => {
+    const result = summarizeSaleReturns([{
+      sales_id: 'S-RET-2',
+      items_return: [{ returnArray: { returnDate: '2026-11-23T10:00:00Z', itemsTotalAmount: 10, returnValue: [
+        { item_quantity: 1, item_price: 10 },
+      ] } }],
+    }], '2026-11-23T00:00:00Z', '2026-11-24T00:00:00Z');
+    expect(result.amount).toBe(10);
+    expect(result.costComplete).toBe(false);
+  });
+});
+
+describe('sale return historical cost snapshots', () => {
+  test('uses original invoice unit cost, not the catalogue cost recorded at return time', () => {
+    const result = summarizeSaleReturns([{
+      sales_id: 'S-RET-COST',
+      sale_original_snapshot: { items: [
+        { item_id: 'item-1', item_quantity: 4, company_price_total: 80 },
+      ] },
+      items_return: [{ returnArray: { returnDate: '2026-11-23T10:00:00Z', itemsTotalAmount: 30, returnValue: [
+        { item_id: 'item-1', item_quantity: 2, company_price_total: 120 },
+      ] } }],
+    }], '2026-11-23T00:00:00Z', '2026-11-24T00:00:00Z');
+    expect(result.cost).toBe(40);
+    expect(result.costComplete).toBe(true);
+  });
+});
+
+test('return-only day keeps returned COGS as a negative adjustment instead of clamping it to zero', () => {
+  const returned = summarizeSaleReturns([{
+    sales_id: 'S-RET-ONLY',
+    sale_original_snapshot: { items: [{ item_id: 'item-2', item_quantity: 1, company_price_total: 30 }] },
+    items_return: [{ returnArray: { returnDate: '2026-11-23T10:00:00Z', itemsTotalAmount: 50, returnValue: [
+      { item_id: 'item-2', item_quantity: 1, company_price_total: 90 },
+    ] } }],
+  }], '2026-11-23T00:00:00Z', '2026-11-24T00:00:00Z');
+  expect(Math.round((0 - returned.cost) * 100) / 100).toBe(-30);
+});

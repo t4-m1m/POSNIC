@@ -122,3 +122,29 @@ test('Designer artboards keep physical width and disable label zoom/cropping in 
  assert.match(css, /#label-artboard\{[\s\S]*?zoom:1!important/);
  assert.match(css, /#receipt-artboard\{[\s\S]*?flex-shrink:0!important/);
 });
+
+test('printer test action uses the same active Receipt Studio renderer as the saved design', () => {
+  const app = read('frontend-v2/core/app.js');
+  assert.match(app, /else if\(action==='test-printer'\)\{await printStudio\('receipt'\);\}/);
+  assert.match(app, /const designerPaperPx=width=>\(\{58:220,80:302,112:420,210:595\}/);
+});
+
+test('receipt paper has fixed pixel width and both designer stages keep their top edge reachable', () => {
+  const app = read('frontend-v2/core/app.js');
+  const css = read('frontend-v2/styles/app.css');
+  assert.match(app, /width:'\+designerPaperPx\(state\.receiptLayout\.width\)\+'px!important/);
+  assert.match(css, /align-items:flex-start!important;overflow:auto!important;min-height:360px!important;padding:36px 24px!important/);
+  assert.match(css, /#label-artboard\{[\s\S]*?overflow:visible!important/);
+});
+
+test('Receipt Studio does not inject fabricated sales or customer records when no real sale exists', () => {
+  const app = read('frontend-v2/core/app.js');
+  assert.doesNotMatch(app, /DEMO-0000158|Article de démonstration|Client de démonstration/);
+});
+
+test('Label Studio loads the persisted server template and logo when local layout is absent', () => {
+  const app = read('frontend-v2/core/app.js');
+  assert.match(app, /elements=saved\?\.elements\|\|t\.elements\|\|/);
+  assert.match(app, /logoDataUrl:saved\?\.logoDataUrl\|\|t\.logoDataUrl\|\|''/);
+  assert.match(app, /logoDataUrl:raw\.logoDataUrl\|\|template\.logoDataUrl\|\|''/);
+});
