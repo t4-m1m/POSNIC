@@ -34,7 +34,7 @@ export function receiptSaleDate(sale = {}) {
       if (!dateOnly) dateOnly = text;
       continue;
     }
-    const numericTimestamp = typeof raw === 'number' ? raw : (/^\\d{10,}$/.test(text) ? Number(text) : null);
+    const numericTimestamp = typeof raw === 'number' ? raw : (/^\d{10,}$/.test(text) ? Number(text) : null);
     const date = numericTimestamp !== null
       ? new Date(Math.abs(numericTimestamp) < 1e12 ? numericTimestamp * 1000 : numericTimestamp)
       : new Date(text);
