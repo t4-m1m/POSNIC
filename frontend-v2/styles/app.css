@@ -1104,3 +1104,10 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 
 /* Z-report thermal preview hierarchy and prominent physical cash total. */
 .thermal-section-title{margin:12px 0 4px;padding:6px 0 4px;border-top:1px dashed #64748b;font-size:11px;font-weight:800;letter-spacing:.035em;text-transform:uppercase}.thermal-cash-total{margin-top:8px;padding:9px 5px!important;border-top:2px solid #111!important;border-bottom:2px solid #111!important;font-size:13px!important;font-weight:900!important;background:#f1f5f9}
+
+
+/* Sidebar footer stays visible on every scrollable workspace. */
+.shell .rail{height:100%;min-height:0;overflow:hidden;}
+.shell .nav{flex:1 1 0;min-height:0;max-height:none;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;}
+.shell .rail-bottom{position:sticky;bottom:0;z-index:3;flex:0 0 auto;min-height:max-content;margin-top:auto;padding-top:6px;background:var(--bg-surface);}
+.shell .settings-group .nav-subnav{max-height:min(22dvh,160px);overflow-y:auto;overscroll-behavior:contain;}

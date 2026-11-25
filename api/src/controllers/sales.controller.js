@@ -1942,8 +1942,14 @@ class SalesController extends BaseController {
       // sale_original_total preserves the discounted invoice amount before returns. Use it
       // as the invoice base, then subtract returns on their actual return date below;
       // sales_total is already reduced by the return workflow and would double-subtract.
-      const itemDiscountTotal = roundToTwo(productDetails.reduce((sum, item) => sum + Number(item.product_discount || 0), 0));
-      let salesNetTotal = roundToTwo(salesPayments.reduce((sum, saleDoc) => sum + (Number(saleDoc.sale_original_total ?? ((Number(saleDoc.sales_total ?? saleDoc.total) || 0) + (Number(saleDoc.items_return_total ?? saleDoc.return_total) || 0))) || 0), 0) + editAdjustmentTotal);
+      const itemDiscountTotal = roundToTwo(productDetails.reduce((sum, item) => sum + auditNumber(item.product_discount), 0));
+      let salesNetTotal = roundToTwo(salesPayments.reduce((sum, saleDoc) => {
+        const original = saleDoc.sale_original_total;
+        const invoiceBase = original !== null && original !== undefined && original !== ''
+          ? auditNumber(original)
+          : auditNumber(saleDoc.sales_total ?? saleDoc.total) + auditNumber(saleDoc.items_return_total ?? saleDoc.return_total);
+        return sum + invoiceBase;
+      }, 0) + editAdjustmentTotal);
       if (Math.abs(editAdjustmentTotal) >= 0.01) paymentDetails.push({ payment_mode: 'Crédit · modification', sale_payment: editAdjustmentTotal, credit_adjustment: editAdjustmentTotal });
       const discountTotal = roundToTwo(itemDiscountTotal + totalSaleExtraDiscount);
       grossProfitTotal = Number.isFinite(Number(salesNetTotal)) && Number.isFinite(Number(costOfGoodsTotal)) ? roundToTwo(salesNetTotal - costOfGoodsTotal) : null;

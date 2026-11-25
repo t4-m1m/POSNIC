@@ -992,3 +992,19 @@ describe('RegisterRepository', () => {
     });
   });
 });
+
+
+describe('legacy cash-register amount compatibility', () => {
+  const RegisterRepository = require('../../../src/repositories/register.repository');
+  test('parses localized monetary strings without truncating totals', () => {
+    expect(RegisterRepository.parseRegisterAmount('1,200.50')).toBe(1200.5);
+    expect(RegisterRepository.parseRegisterAmount('1 200,50 DZD')).toBe(1200.5);
+    expect(RegisterRepository.parseRegisterAmount('1200')).toBe(1200);
+    expect(RegisterRepository.parseRegisterAmount({ amount: '300,25' })).toBe(300.25);
+  });
+  test('counts quantities from legacy return blocks', () => {
+    expect(RegisterRepository.returnedItemCount({ items_return: [
+      { returnArray: { returnValue: [{ item_quantity: '2' }, { quantity: '1' }] } },
+    ] })).toBe(3);
+  });
+});

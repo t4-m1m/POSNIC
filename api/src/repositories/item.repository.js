@@ -6023,20 +6023,49 @@ class ItemRepository extends BaseModel {
     }
   }
 
-  async updateItemQuantity(id, value, context) {
+  async updateItemQuantity(id, value, context = {}) {
     try {
       const collection = await this.getCollection(this.collectionName);
       const objectId = ObjectId.isValid(id) ? new ObjectId(id) : id;
-
       const quantity = Number(value);
-      if (value === '' || value === null || !Number.isFinite(quantity))
-        throw new Error('Invalid quantity');
-      const result = await collection.updateOne(
-        { _id: objectId, ...require('../utils/record-scope').scope(context) },
-        { $set: { available_quantity: quantity } }
-      );
-      if (!result.matchedCount) return { status: false, message: 'Item not found' };
-
+      if (value === '' || value === null || !Number.isFinite(quantity) || quantity < 0) throw new Error('Invalid quantity');
+      const scope = require('../utils/record-scope').scope(context);
+      const item = await collection.findOne({ _id: objectId, ...scope },
+        { projection: { name: 1, barcode_id: 1, available_quantity: 1, quantity: 1, track_inventory: 1, branch_id: 1 } });
+      if (!item) return { status: false, message: 'Item not found' };
+      const oldQuantity = Number(item.available_quantity ?? item.quantity ?? 0);
+      if (!Number.isFinite(oldQuantity)) throw new Error('Stored item quantity is invalid.');
+      if (oldQuantity === quantity) return { status: true, message: 'Quantity unchanged' };
+      const now = new Date();
+      const updated = await collection.updateOne({ _id: objectId, ...scope, available_quantity: item.available_quantity },
+        { $set: { available_quantity: quantity, updated_date: now,
+          updated_by: context.loggedUserName || context.userName || '',
+          updated_by_id: context.loggedUserId || context.userId || null } });
+      if (!updated.matchedCount) return { status: false, message: 'Stock changed concurrently. Reload and retry.' };
+      if (item.track_inventory === true) {
+        const branchId = context.branchId || item.branch_id || BaseModel.currentBranch;
+        let stockLogStatus = true;
+        if (branchId && ObjectId.isValid(String(branchId))) {
+          const branch = await this.getCollection('branches').then((col) => col.findOne({ _id: new ObjectId(String(branchId)) }));
+          stockLogStatus = branch?.stock_management_log !== false;
+        }
+        const difference = oldQuantity - quantity;
+        const log = await new StockLogsRepository().createStockLog({
+          branch_id: branchId, license: context.licenseId || BaseModel.license,
+          view_item_id: item._id, item_barcode_id: item.barcode_id, item_name: item.name,
+          item_quantity: String(quantity), process: 'Edit Quantity', reference: item.barcode_id || String(item._id),
+          date: now, action: quantity > oldQuantity ? 'Add' : 'Subtract', stocklog: stockLogStatus,
+          opening_balance: String(oldQuantity), closing_balance: String(quantity),
+          count: difference < 0 ? String(Math.abs(difference)) : '-' + String(difference),
+          changed_by_userid: context.loggedUserId || context.userId || BaseModel.loggedUser,
+          changed_by: context.loggedUserName || context.userName || BaseModel.loggedUserName || '',
+        });
+        if (!log.status) {
+          await collection.updateOne({ _id: objectId, ...scope, available_quantity: quantity },
+            { $set: { available_quantity: oldQuantity } });
+          throw new Error(log.message || 'Could not write the inventory movement.');
+        }
+      }
       return { status: true, message: 'Quantity updated' };
     } catch (error) {
       console.error('Error in ItemRepository.updateItemQuantity:', error);

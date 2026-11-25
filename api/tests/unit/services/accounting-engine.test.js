@@ -367,3 +367,50 @@ test('return-only day keeps returned COGS as a negative adjustment instead of cl
   }], '2026-11-23T00:00:00Z', '2026-11-24T00:00:00Z');
   expect(Math.round((0 - returned.cost) * 100) / 100).toBe(-30);
 });
+
+
+describe('fourteen-day business accounting regression fixture', () => {
+  test('keeps sales, returns, profit and cash-flow events separate across two weeks', () => {
+    const { parseAmount, calculateDailyClose, summarizeSaleReturns, aggregateSalePaymentEvents } =
+      require('../../../src/services/accounting-engine');
+    expect(parseAmount('1,200.50')).toBe(1200.5);
+    expect(parseAmount('1 200,50 DZD')).toBe(1200.5);
+    const daily = Array.from({ length: 14 }, (_, index) => {
+      const start = new Date(Date.UTC(2026, 10, 1 + index));
+      const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+      const result = calculateDailyClose({
+        salesTotal: '1,000.00', costOfGoodsTotal: '600,00', costDataComplete: true,
+        expensesTotal: '50,00', salaryPaymentsTotal: 100, salaryAdvancesTotal: 20,
+        salaryPrimesTotal: 30, cashDataComplete: true,
+        cash: { cashSales: '200,00', cashVersements: 100, cashCreditCollections: 75,
+          cashExpenses: 50, cashSalaries: 0, cashAdvances: 0, cashBonuses: 0,
+          cashRefunds: 20, deliveryPayouts: 9999, openingBalance: 500 },
+      });
+      const payments = aggregateSalePaymentEvents([{
+        date: start.toISOString(), payments: [
+          { amount: '50,00', method: 'cash', date: start.toISOString() },
+          { amount: '20.00', method: 'card', date: start.toISOString() },
+          { amount: '30,00', method: 'bank_transfer', date: start.toISOString() },
+          { amount: '75,00', method: 'cash', date: start.toISOString(), origin: { type: 'credit_settlement' } },
+        ],
+      }], start, end);
+      expect(payments.complete).toBe(true);
+      expect(payments.details.reduce((sum, row) => sum + row.sale_payment, 0)).toBe(100);
+      expect(result.grossProfitTotal).toBe(400);
+      expect(result.netProfitTotal).toBe(200);
+      expect(result.cashExpected).toBe(305);
+      return result;
+    });
+    expect(daily).toHaveLength(14);
+    expect(daily.reduce((sum, row) => sum + row.grossProfitTotal, 0)).toBe(5600);
+    expect(daily.reduce((sum, row) => sum + row.netProfitTotal, 0)).toBe(2800);
+    expect(daily.reduce((sum, row) => sum + row.cashExpected, 0)).toBe(4270);
+    const returned = summarizeSaleReturns([{
+      sales_id: 'LEGACY-RETURN-14D',
+      sale_original_snapshot: { items: [{ item_id: 'legacy-item', item_quantity: 2, company_price_total: 40 }] },
+      items_return: [{ returnArray: { returnDate: '2026-11-07T12:00:00Z', itemsTotalAmount: '60,00',
+        returnValue: [{ item_id: 'legacy-item', item_quantity: 1 }] } }],
+    }], '2026-11-01T00:00:00Z', '2026-11-15T00:00:00Z');
+    expect(returned).toMatchObject({ amount: 60, cost: 20, count: 1, complete: true, costComplete: true });
+  });
+});

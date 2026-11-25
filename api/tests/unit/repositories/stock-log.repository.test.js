@@ -107,76 +107,30 @@ describe('StockLogsRepository', () => {
   // ── getStockLogs ────────────────────────────────────────────────────────────
 
   describe('getStockLogs', () => {
-    test('returns paginated stock logs', async () => {
-      const pageResult = {
-        status: true,
-        data: { list: [{ _id: FAKE_ID }], total: 1, current_page: 1, total_pages: 1, per_page: 10 },
-        message: 'success',
-      };
-      repo.page.mockResolvedValue(pageResult);
-
+    test('reads legacy string ids and V2 ObjectIds with pagination', async () => {
+      const rows = [{ _id: FAKE_ID }];
+      col.find.mockReturnValue(mkFindChain(rows));
+      col.countDocuments.mockResolvedValue(1);
       const r = await repo.getStockLogs({}, { page: 1, limit: 10 });
-
       expect(r.status).toBe(true);
-      expect(r.data.list).toEqual([{ _id: FAKE_ID }]);
-      expect(r.message).toBe(SUCCESS_MESSAGES.STOCK_LOGS_RETRIEVED);
+      expect(r.data.list).toEqual(rows);
+      expect(col.find).toHaveBeenCalledWith(expect.objectContaining({
+        is_deleted: { $ne: true },
+        license: { $in: [FAKE_LICENSE, String(FAKE_LICENSE)] },
+        branch_id: { $in: [FAKE_BRANCH, String(FAKE_BRANCH)] },
+      }), expect.objectContaining({ skip: 0, limit: 10, sort: expect.any(Object) }));
     });
-
-    test('applies license and branch filters', async () => {
-      repo.page.mockResolvedValue({
-        status: true,
-        data: { list: [], total: 0, current_page: 1, total_pages: 0, per_page: 10 },
-        message: 'success',
-      });
-
-      await repo.getStockLogs({ process: 'sale' });
-
-      expect(repo.page).toHaveBeenCalledWith(
-        'stocklogs',
-        {},
-        expect.objectContaining({
-          process: 'sale',
-          is_deleted: { $ne: true },
-          license: FAKE_LICENSE,
-          branch_id: FAKE_BRANCH,
-        }),
-        expect.objectContaining({ page: 1, limit: 10 })
-      );
+    test('supports older journal pages and caps large page sizes', async () => {
+      col.find.mockReturnValue(mkFindChain([]));
+      const r = await repo.getStockLogs({}, { page: 2, limit: 10000 });
+      expect(r.status).toBe(true);
+      expect(col.find).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({ skip: 500, limit: 500 }));
     });
-
-    test('uses default pagination values', async () => {
-      repo.page.mockResolvedValue({
-        status: true,
-        data: { list: [], total: 0, current_page: 1, total_pages: 0, per_page: 10 },
-        message: 'success',
-      });
-
-      await repo.getStockLogs();
-
-      expect(repo.page).toHaveBeenCalledWith(
-        'stocklogs',
-        {},
-        expect.objectContaining({ is_deleted: { $ne: true } }),
-        expect.objectContaining({ page: 1, limit: 10 })
-      );
-    });
-
-    test('returns error when page fails', async () => {
-      repo.page.mockResolvedValue({ status: false, message: 'page error' });
-
+    test('returns an error when the collection query fails', async () => {
+      col.find.mockImplementation(() => { throw new Error('query failed'); });
       const r = await repo.getStockLogs();
-
       expect(r.status).toBe(false);
-      expect(r.message).toBe('page error');
-    });
-
-    test('catches exception and returns error', async () => {
-      repo.page.mockRejectedValue(new Error('db fail'));
-
-      const r = await repo.getStockLogs();
-
-      expect(r.status).toBe(false);
-      expect(r.message).toBe('db fail');
+      expect(r.message).toBe('query failed');
     });
   });
 

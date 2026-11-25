@@ -9,6 +9,28 @@ const {
   REGISTER_STATUS,
 } = require('../constants/registers.constants');
 
+function parseRegisterAmount(value) {
+  if (value && typeof value === 'object') value = value.amount ?? value.value ?? value.total ?? value.paid ?? value.sale_payment;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  let raw = String(value ?? '').trim().replace(/[^0-9,.-]/g, '');
+  if (!raw) return 0;
+  const dot = raw.lastIndexOf('.'), comma = raw.lastIndexOf(',');
+  if (dot >= 0 && comma >= 0) raw = comma > dot ? raw.split('.').join('').replace(',', '.') : raw.replace(/,/g, '');
+  else if (comma >= 0) raw = raw.length - comma - 1 <= 2 ? raw.replace(',', '.') : raw.replace(/,/g, '');
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+function returnedItemCount(sale) {
+  const direct = sale?.returned_items_count ?? sale?.registerItems_return_count ?? sale?.items_return_count ?? sale?.number_of_items_return;
+  if (direct !== undefined && direct !== null && direct !== '') return parseRegisterAmount(direct);
+  return (Array.isArray(sale?.items_return) ? sale.items_return : []).reduce((sum, block) => {
+    const record = block?.returnArray || block || {};
+    return sum + (Array.isArray(record.returnValue) ? record.returnValue : []).reduce(
+      (n, line) => n + parseRegisterAmount(line.item_quantity ?? line.quantity ?? line.qty), 0
+    );
+  }, 0);
+}
+
 class RegisterRepository {
   constructor(model) {
     this.model = model || new RegisterModel();
@@ -230,20 +252,20 @@ class RegisterRepository {
         if (register.register_sales && Array.isArray(register.register_sales)) {
           register.register_sales.forEach((sale, index) => {
             // Only use register_amount (it already includes returns)
-            const saleAmount = parseFloat(sale.register_amount || 0);
+            const saleAmount = parseRegisterAmount(sale.register_amount);
 
             calculatedRegisterAmount += saleAmount;
           });
         }
 
         // Add opening float to the calculated amount
-        calculatedRegisterAmount += parseFloat(register.opening_float || 0);
+        calculatedRegisterAmount += parseRegisterAmount(register.opening_float);
 
         // Add cash in amounts
-        calculatedRegisterAmount += parseFloat(register.cashin_amount || 0);
+        calculatedRegisterAmount += parseRegisterAmount(register.cashin_amount);
 
         // Subtract cash out amounts
-        calculatedRegisterAmount -= parseFloat(register.cashout_amount || 0);
+        calculatedRegisterAmount -= parseRegisterAmount(register.cashout_amount);
 
         // Format dates
         const openDate = register.register_opendate
@@ -885,19 +907,19 @@ class RegisterRepository {
         Object.keys(multiPayment).length > 0
       ) {
         for (const [method, amount] of Object.entries(multiPayment)) {
-          if (String(method).toLowerCase() === 'cash') cashSales += parseFloat(amount) || 0;
+          if (String(method).toLowerCase() === 'cash') cashSales += parseRegisterAmount(amount);
         }
       } else if (String(regSale.register_paymentmode || '').toLowerCase() === 'cash') {
-        cashSales += parseFloat(regSale.register_amount) || 0;
+        cashSales += parseRegisterAmount(regSale.register_amount);
       }
     }
     let cashIn = 0;
     let cashOut = 0;
     for (const entry of document.cashInOutDetail || []) {
-      cashIn += parseFloat(entry.cashin_amount) || 0;
-      cashOut += parseFloat(entry.cashout_amount) || 0;
+      cashIn += parseRegisterAmount(entry.cashin_amount);
+      cashOut += parseRegisterAmount(entry.cashout_amount);
     }
-    const openingFloat = parseFloat(document.opening_float) || 0;
+    const openingFloat = parseRegisterAmount(document.opening_float);
     return Math.round((openingFloat + cashSales + cashIn - cashOut - (parseFloat(cashRefunds) || 0)) * 100) / 100;
   }
 
@@ -971,7 +993,7 @@ class RegisterRepository {
           const countedEntry = (session.countedAmount || []).find(
             (c) => String(c.paymenttype || '').toLowerCase() === 'cash'
           );
-          const counted = countedEntry ? parseFloat(countedEntry.value) || 0 : null;
+          const counted = countedEntry ? parseRegisterAmount(countedEntry.value) : null;
           registerCollectionData.closing_expected = expected;
           registerCollectionData.closing_counted = counted;
           registerCollectionData.over_short =
@@ -1086,7 +1108,7 @@ class RegisterRepository {
             ) {
               hasMultiPayment = true;
               for (const [method, amount] of Object.entries(multiPayment)) {
-                const amt = parseFloat(amount) || 0;
+                const amt = parseRegisterAmount(amount);
                 if (amt > 0) {
                   const methodKey = method.charAt(0).toUpperCase() + method.slice(1).toLowerCase();
                   paymentTally[methodKey] = (paymentTally[methodKey] || 0) + amt;
@@ -1098,7 +1120,7 @@ class RegisterRepository {
           // Use single payment mode if no multi_payment
           if (!hasMultiPayment) {
             const paymentMode = regSale.register_paymentmode || '';
-            const amount = parseFloat(regSale.register_amount) || 0;
+            const amount = parseRegisterAmount(regSale.register_amount);
 
             if (amount > 0 && paymentMode) {
               let methodKey =
@@ -1144,7 +1166,7 @@ class RegisterRepository {
         cashOutAmount += refundRows.length ? Number(refundRows[0].total) || 0 : 0;
       }
 
-      const openingFloat = parseFloat(document.opening_float) || 0;
+      const openingFloat = parseRegisterAmount(document.opening_float);
       if (paymentTally['Cash']) {
         paymentTally['Cash'] = openingFloat + paymentTally['Cash'] + cashInAmount - cashOutAmount;
       } else if (openingFloat > 0 || cashInAmount > 0 || cashOutAmount > 0) {
@@ -1219,7 +1241,7 @@ class RegisterRepository {
           const quantity = Number((item && (item.quantity || item.qty)) || 1);
           return sum + (rawUnitCost != null && Number.isFinite(unitCost) ? unitCost * quantity : 0);
         }, 0);
-        const total = Number(sale.sales_total ?? sale.grand_total ?? sale.total ?? entry.register_amount ?? 0);
+        const total = parseRegisterAmount(sale.sales_total ?? sale.grand_total ?? sale.total ?? entry.register_amount ?? 0);
         return {
           ...entry,
           sales_total: total,
@@ -1495,8 +1517,9 @@ class RegisterRepository {
           sale_id: displaySaleId,
           date: saleDate,
           register_paymentmode: sale.register_paymentmode || '',
-          register_amount: parseFloat(sale.register_amount || 0),
-          register_return_total: parseFloat(sale.registerItems_return_total || 0),
+          register_amount: parseRegisterAmount(sale.register_amount),
+          register_return_total: parseRegisterAmount(sale.registerItems_return_total ?? sale.register_return_total),
+          returned_items_count: returnedItemCount(sale),
         };
       });
 
@@ -1505,8 +1528,9 @@ class RegisterRepository {
       const countedAmounts = {};
 
       const normalizePaymentMethod = (method) => {
-        const normalized = method.toLowerCase().trim();
-        if (normalized === 'creditcard' || normalized === 'credit card') return 'card';
+        const normalized = String(method || '').toLowerCase().trim();
+        if (normalized === 'creditcard' || normalized === 'credit card' || normalized === 'tpe') return 'card';
+        if (normalized === 'baridimob') return 'bank_transfer';
         return normalized;
       };
 
@@ -1533,20 +1557,21 @@ class RegisterRepository {
             ) {
               hasMultiPayment = true;
 
-              for (const [method, amount] of Object.entries(multiPayment)) {
-                const amt = parseFloat(amount) || 0;
-                const methodNormalized = normalizePaymentMethod(method);
-                if (amt > 0) {
-                  expectedAmounts[methodNormalized] =
-                    (expectedAmounts[methodNormalized] || 0) + amt;
-                }
+              const entries = Array.isArray(multiPayment)
+                ? multiPayment.map((row) => ({ method: row?.payment_mode || row?.method || row?.type || row?.name,
+                    amount: row?.amount ?? row?.sale_payment ?? row?.total ?? row?.value }))
+                : Object.entries(multiPayment).map(([method, amount]) => ({ method, amount }));
+              for (const entry of entries) {
+                const amt = parseRegisterAmount(entry.amount);
+                const methodNormalized = normalizePaymentMethod(entry.method);
+                if (amt > 0 && methodNormalized) expectedAmounts[methodNormalized] = (expectedAmounts[methodNormalized] || 0) + amt;
               }
             }
           }
 
           if (!hasMultiPayment) {
             const paymentMode = sale.register_paymentmode || '';
-            const amount = parseFloat(sale.register_amount || 0);
+            const amount = parseRegisterAmount(sale.register_amount);
             const methodNormalized = normalizePaymentMethod(paymentMode);
 
             if (amount > 0 && methodNormalized) {
@@ -1560,7 +1585,7 @@ class RegisterRepository {
       if (register.countedAmount && Array.isArray(register.countedAmount)) {
         register.countedAmount.forEach((counted) => {
           const paymentType = counted.paymenttype || '';
-          const value = parseFloat(counted.value || 0);
+          const value = parseRegisterAmount(counted.value);
           const methodNormalized = normalizePaymentMethod(paymentType);
           if (value > 0 && methodNormalized) {
             countedAmounts[methodNormalized] = (countedAmounts[methodNormalized] || 0) + value;
@@ -2025,3 +2050,6 @@ class RegisterRepository {
 }
 
 module.exports = RegisterRepository;
+
+module.exports.parseRegisterAmount = parseRegisterAmount;
+module.exports.returnedItemCount = returnedItemCount;

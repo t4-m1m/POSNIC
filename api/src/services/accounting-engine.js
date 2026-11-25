@@ -1,8 +1,19 @@
 'use strict';
 
-const round2 = (value) => Math.round((Number(value) || 0) * 100) / 100;
-const finite = (value) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
-const asAmount = (value) => (finite(value) ? Number(value) : null);
+const parseAmount = (value) => {
+  if (value && typeof value === 'object') value = value.amount ?? value.value ?? value.total ?? value.sale_payment ?? value.$numberDecimal ?? value.$numberLong;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : NaN;
+  let raw = String(value ?? '').trim().replace(/[^0-9,.-]/g, '');
+  if (!raw) return NaN;
+  const dot = raw.lastIndexOf('.'), comma = raw.lastIndexOf(',');
+  if (dot >= 0 && comma >= 0) raw = comma > dot ? raw.split('.').join('').replace(',', '.') : raw.replace(/,/g, '');
+  else if (comma >= 0) raw = raw.length - comma - 1 <= 2 ? raw.replace(',', '.') : raw.replace(/,/g, '');
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : NaN;
+};
+const round2 = (value) => Math.round((parseAmount(value) || 0) * 100) / 100;
+const finite = (value) => value !== null && value !== undefined && value !== '' && Number.isFinite(parseAmount(value));
+const asAmount = (value) => (finite(value) ? parseAmount(value) : null);
 const normalizeTenderName = (method) => {
   const raw = String(method || '').trim();
   const key = raw.toLowerCase().replaceAll(' ', '').replaceAll('_', '').replaceAll('-', '');
@@ -46,8 +57,8 @@ function summarizeCashRegisterSessions(sessions = [], start, end) {
     if (!Array.isArray(session.cashInOutDetail)) { complete = false; unresolved += 1; continue; }
     for (const entry of session.cashInOutDetail) {
       const time = entry.date || entry.created_at ? new Date(entry.date || entry.created_at).getTime() : NaN;
-      const cashIn = Number(entry.cashin_amount ?? entry.cash_in ?? 0) || 0;
-      const cashOut = Number(entry.cashout_amount ?? entry.cash_out ?? 0) || 0;
+      const cashIn = parseAmount(entry.cashin_amount ?? entry.cash_in ?? 0) || 0;
+      const cashOut = parseAmount(entry.cashout_amount ?? entry.cash_out ?? 0) || 0;
       if (!Number.isFinite(time)) { if (cashIn || cashOut) { complete = false; unresolved += 1; } continue; }
       if (time < opened) continue;
       if (time < startTime) openingBalance += cashIn - cashOut;
@@ -70,7 +81,7 @@ function aggregateSalePaymentEvents(sales = [], start, end) {
   let complete = true;
   const add = (method, amount) => {
     const normalized = normalizeTenderName(method);
-    const value = Number(amount);
+    const value = parseAmount(amount);
     if (!normalized || normalized === 'Non classé' || !Number.isFinite(value)) { complete = false; return; }
     if (normalized === 'Crédit' || value <= 0) return;
     const row = map.get(normalized) || { payment_mode: normalized, sale_payment: 0, count: 0 };
@@ -140,7 +151,7 @@ function aggregateSalePaymentEvents(sales = [], start, end) {
     const total = sale.sales_total ?? sale.total;
     const pending = sale.payment_pending;
     const paid = sale.paid_amount ?? sale.partial_balance ??
-      (total != null && pending != null ? Number(total) - Number(pending) :
+      (total != null && pending != null ? parseAmount(total) - parseAmount(pending) :
         (String(sale.payment_status || '').toLowerCase() === 'paid' ? total : 0));
     if (!method) { complete = false; continue; }
     add(method, paid);
@@ -162,7 +173,7 @@ function summarizeSaleReturns(sales = [], start, end) {
       const rawDate = record.returnDate || record.return_date || block.return_date;
       const time = rawDate ? new Date(rawDate).getTime() : NaN;
       const rawAmount = record.itemsTotalAmount ?? record.amount ?? block.amount;
-      const value = rawAmount === null || rawAmount === undefined || rawAmount === '' ? NaN : Number(rawAmount);
+      const value = rawAmount === null || rawAmount === undefined || rawAmount === '' ? NaN : parseAmount(rawAmount);
       if (!Number.isFinite(time) || !Number.isFinite(value) || value < 0) {
         complete = false;
         if (time >= startTime && time < endTime) costComplete = false;
@@ -423,4 +434,4 @@ function reconstructOutstandingAsOf({
   return { amount: round2(total), complete, unresolved };
 }
 
-module.exports = { round2, normalizeTenderName, isCashTender, aggregateSalePaymentEvents, summarizeCashRegisterSessions, summarizeSaleReturns, calculateDailyClose, reconstructOutstandingAsOf };
+module.exports = { parseAmount, round2, normalizeTenderName, isCashTender, aggregateSalePaymentEvents, summarizeCashRegisterSessions, summarizeSaleReturns, calculateDailyClose, reconstructOutstandingAsOf };

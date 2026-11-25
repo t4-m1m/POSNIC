@@ -258,6 +258,7 @@ class StockLogController extends BaseController {
    */
   async create(req, res) {
     try {
+      await this.setRequestContext(req);
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return this.sendError(
@@ -268,7 +269,13 @@ class StockLogController extends BaseController {
         );
       }
 
-      const logData = req.body;
+      const logData = { ...req.body,
+        branch_id: BaseModel.currentBranch || req.tenantContext?.branchId,
+        license: BaseModel.license || req.tenantContext?.licenseId,
+        changed_by: BaseModel.loggedUserName || req.user?.username || req.user?.name || '',
+        changed_by_userid: BaseModel.loggedUser || req.user?._id,
+        date: req.body.date || req.body.created_date || req.body.createdAt || req.body.created_at || new Date(),
+      };
       const result = await this.service.createStockLog(logData);
 
       if (!result.status) {

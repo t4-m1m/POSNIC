@@ -20,54 +20,24 @@ class StockLogsRepository extends BaseModel {
    */
   async getStockLogs(filters = {}, options = {}) {
     try {
-      const { page = 1, limit = 10, sort = { _id: -1 } } = options;
-
-      // Build the query with soft-delete filtering; apply license and branch when set
-      const query = {
-        ...filters,
-        is_deleted: { $ne: true },
-      };
-
-      if (BaseModel.license) {
-        query.license = BaseModel.license;
-      }
-
-      if (BaseModel.currentBranch) {
-        query.branch_id = BaseModel.currentBranch;
-      }
-
-      // Apply date range filters for all date fields (created_date, updated_date, etc.)
+      const page = Math.max(1, parseInt(options.page, 10) || 1);
+      const limit = Math.min(500, Math.max(1, parseInt(options.limit, 10) || 10));
+      const sort = options.sort || { date: -1, created_date: -1, _id: -1 };
+      const query = { ...filters, is_deleted: { $ne: true } };
+      if (BaseModel.license) query.license = { $in: [BaseModel.license, String(BaseModel.license)] };
+      if (BaseModel.currentBranch) query.branch_id = { $in: [BaseModel.currentBranch, String(BaseModel.currentBranch)] };
       applyDateRangeFilters(query, filters);
-
-      // Get paginated results using BaseModel.page helper.
-      // Signature: page(collectionName, limitCheck, filter, options, fields)
-      const result = await this.page(
-        this.collectionName,
-        {}, // no plan/limit check for stock logs
-        query,
-        {
-          page: parseInt(page, 10),
-          limit: parseInt(limit, 10),
-          sort,
-        }
-      );
-
-      if (!result.status) {
-        throw new Error(result.message || ERROR_MESSAGES.FAILED_TO_FETCH_STOCK_LOGS);
-      }
-
-      return {
-        status: true,
-        data: result.data,
-        message: SUCCESS_MESSAGES.STOCK_LOGS_RETRIEVED,
-      };
+      const collection = await this.getCollection(this.collectionName);
+      const [list, total] = await Promise.all([
+        collection.find(query, { skip: (page - 1) * limit, limit, sort }).toArray(),
+        collection.countDocuments(query),
+      ]);
+      return { status: true, data: { total, current_page: page, total_pages: Math.ceil(total / limit),
+        per_page: limit, list: list.map((item) => BaseModel.simplifyFields(item)) },
+        message: SUCCESS_MESSAGES.STOCK_LOGS_RETRIEVED };
     } catch (error) {
       console.error('Error in StockLogsRepository.getStockLogs:', error);
-      return {
-        status: false,
-        data: null,
-        message: error.message || ERROR_MESSAGES.FAILED_TO_RETRIEVE_STOCK_LOGS,
-      };
+      return { status: false, data: null, message: error.message || ERROR_MESSAGES.FAILED_TO_RETRIEVE_STOCK_LOGS };
     }
   }
 
@@ -153,7 +123,7 @@ class StockLogsRepository extends BaseModel {
         count: logData.count,
         changed_by: logData.changed_by,
         changed_by_userid: logData.changed_by_userid,
-        license: BaseModel.license,
+        license: logData.license || BaseModel.license,
       };
 
       // Convert string IDs to ObjectId safely (check if already ObjectId)
