@@ -1187,3 +1187,19 @@ html,body{height:100%;min-height:100%;margin:0;overflow:hidden}
 .shell .rail-bottom>.settings-group>.nav-subnav[hidden]{display:none!important}
 .shell .rail-bottom>.settings-group>.nav-subnav:not([hidden]){display:grid!important;gap:3px!important}
 .shell .rail-bottom>.settings-group>.nav-subnav button{width:100%!important;height:38px!important;min-height:38px!important}
+
+
+/* Correct V2 viewport and sidebar rail layout: controls stay in the rail, not in the page flow. */
+html,body,#app{width:100%;height:100%;min-height:0;margin:0;overflow:hidden}
+.shell{width:100%;height:100dvh!important;min-height:0!important;max-height:100dvh!important;grid-template-rows:44px minmax(0,1fr)!important;overflow:hidden!important}
+.shell>.rail{grid-column:1;grid-row:1/3;display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:8px!important;min-height:0!important;height:100%!important;max-height:100%!important;overflow:hidden!important;padding:10px 8px!important}
+.shell>.rail>.brand{flex:0 0 44px!important;min-height:44px!important}
+.shell>.rail>.nav{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;align-content:flex-start!important;min-height:0!important;overflow-x:hidden!important;overflow-y:auto!important}
+.shell>.rail>.rail-bottom{position:relative!important;display:flex!important;flex:0 0 auto!important;flex-direction:column!important;gap:5px!important;width:100%!important;min-height:max-content!important;margin:0!important;padding:7px 0 0!important;border-top:1px solid var(--border-hairline)!important;background:var(--bg-surface)!important;overflow:visible!important}
+.shell>.rail>.rail-bottom>button{display:flex!important;align-items:center!important;flex:0 0 40px!important;min-height:40px!important;width:100%!important;margin:0!important}
+.shell>.rail>.rail-bottom>.settings-group{position:relative!important;display:block!important;flex:0 0 40px!important;min-height:40px!important;width:100%!important;margin:0!important;overflow:visible!important}
+.shell>.rail>.rail-bottom>.settings-group>.nav-subnav{position:absolute!important;left:calc(100% + 8px)!important;bottom:0!important;top:auto!important;z-index:50!important;width:220px!important;max-width:calc(100vw - 84px)!important;max-height:min(55dvh,360px)!important;overflow:auto!important;padding:7px!important;border:1px solid var(--border-hairline)!important;border-radius:10px!important;background:var(--bg-surface)!important;box-shadow:0 8px 28px #0003!important}
+.shell>.rail>.rail-bottom>.settings-group>.nav-subnav[hidden]{display:none!important}
+.shell>.rail>.rail-bottom>.settings-group>.nav-subnav:not([hidden]){display:grid!important;gap:3px!important}
+.shell>.rail>.rail-bottom>.settings-group>.nav-subnav button{width:100%!important;min-height:36px!important;height:auto!important;padding:7px 9px!important;text-align:left!important}
+.shell>main{grid-column:2;grid-row:2;min-width:0;min-height:0;overflow:auto!important}
