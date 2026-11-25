@@ -87,6 +87,8 @@ describe('accounting engine daily close', () => {
           { date: '2026-11-22T18:00:00Z', cashin_amount: 20, cashout_amount: 5, source: 'manual' },
           { date: '2026-11-23T10:00:00Z', cashin_amount: 10, cashout_amount: 15, source: 'manual' },
           { date: '2026-11-23T11:00:00Z', cashin_amount: 50, cashout_amount: 0, source: 'credit_settlement' },
+          { date: '2026-11-23T12:00:00Z', cashin_amount: 30, cashout_amount: 0, source: 'versement_initial_deposit' },
+          { date: '2026-11-23T13:00:00Z', cashin_amount: 70, cashout_amount: 0, source: 'versement_settlement' },
         ],
       },
     ], '2026-11-23T00:00:00Z', '2026-11-24T00:00:00Z');
