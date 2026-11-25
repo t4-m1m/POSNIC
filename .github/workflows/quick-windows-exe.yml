@@ -79,7 +79,7 @@ jobs:
 
       - name: Run accounting, register, stock journal and quantity audit tests
         working-directory: api
-        run: npx jest -c jest.ci.config.js tests/unit/services/accounting-engine.test.js tests/unit/controllers/sales.controller.test.js tests/unit/services/register.service.test.js tests/unit/controllers/versements.controller.test.js tests/unit/repositories/stock-log.repository.test.js tests/unit/repositories/register.repository.test.js --runInBand --forceExit && npx jest -c jest.ci.config.js tests/unit/repositories/item.repository.test.js --runInBand --forceExit --testNamePattern=updateItemQuantity
+        run: npx jest -c jest.ci.config.js tests/unit/services/accounting-engine.test.js tests/unit/controllers/sales.controller.test.js tests/unit/services/register.service.test.js tests/unit/controllers/versements.controller.test.js tests/unit/repositories/stock-log.repository.test.js tests/unit/repositories/register.repository.test.js --runInBand --forceExit && npx jest -c jest.ci.config.js tests/unit/repositories/item.repository.test.js --runInBand --forceExit --testNamePattern=updateItemQuantity && node --test ../tests/receipt-studio-v2.test.js
 
       - name: Syntax-check frontend and every API source file
         shell: pwsh
@@ -87,6 +87,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
           node --check api/app.js
+          node --check frontend-v2/core/receipt-designer.mjs
           $javascriptFiles = @(
             Get-ChildItem -Path frontend-v2 -Recurse -File -Filter *.js
             Get-ChildItem -Path api/src -Recurse -File -Filter *.js
