@@ -123,7 +123,7 @@ test('legacy stock journal rows remain readable and new V2 movement rows persist
     assert.deepEqual(new Set(result.data.list.map((row) => row.item_name)), new Set(['Legacy article', 'V2 article']));
 
     const created = await repository.createStockLog({
-      branch_id: branchId, license: licenseId, view_item_id: itemId,
+      branch_id: branchId, license: String(licenseId), view_item_id: itemId,
       item_barcode_id: 'V2-001', item_name: 'Newly adjusted article',
       item_quantity: '7', process: 'Edit Quantity', reference: 'V2-001',
       date: new Date('2025-02-03T10:00:00.000Z'), action: 'Add',
@@ -134,6 +134,7 @@ test('legacy stock journal rows remain readable and new V2 movement rows persist
     const saved = await db.collection('stocklogs').findOne({ process: 'Edit Quantity', item_barcode_id: 'V2-001' });
     assert.ok(saved);
     assert.equal(saved.branch_id.toString(), branchId.toString());
+    assert.ok(saved.license instanceof ObjectId);
     assert.equal(saved.license.toString(), licenseId.toString());
     assert.equal(new Date(saved.date).toISOString(), '2025-02-03T10:00:00.000Z');
     result = await repository.getStockLogs({}, { page: 1, limit: 50 });

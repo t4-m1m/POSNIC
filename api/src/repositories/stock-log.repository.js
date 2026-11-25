@@ -136,6 +136,9 @@ class StockLogsRepository extends BaseModel {
       if (newLog.branch_id && !(newLog.branch_id instanceof ObjectId)) {
         newLog.branch_id = new ObjectId(newLog.branch_id);
       }
+      if (newLog.license && !(newLog.license instanceof ObjectId) && ObjectId.isValid(String(newLog.license))) {
+        newLog.license = new ObjectId(String(newLog.license));
+      }
 
       console.log('[STOCK LOG] Creating stock log:', {
         process: newLog.process,
