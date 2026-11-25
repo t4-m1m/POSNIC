@@ -404,7 +404,10 @@ function reconstructOutstandingAsOf({
     if (new Date(saleDate).getTime() >= endTime) continue;
     const initialDate = row.initial_collected_at || row.sale_date;
     const settlementDate = row.settlement?.settled_at || row.settled_at;
-    let due = Math.max(0, Number(row.remaining ?? row.sale_total - (row.initial_amount || 0) - (row.settlement?.amount || 0)) || 0);
+    const remainingAmount = row.remaining !== null && row.remaining !== undefined && row.remaining !== ''
+      ? parseAmount(row.remaining)
+      : parseAmount(row.sale_total) - (parseAmount(row.initial_amount || 0) || 0) - (parseAmount(row.settlement?.amount || 0) || 0);
+    let due = Math.max(0, Number.isFinite(remainingAmount) ? remainingAmount : 0);
     if (!initialDate || !Number.isFinite(new Date(initialDate).getTime())) {
       complete = false; unresolved += 1;
     } else if (after(initialDate)) due += parseAmount(row.initial_recorded_amount ?? row.initial_amount) || 0;
