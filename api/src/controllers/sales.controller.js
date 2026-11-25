@@ -2503,6 +2503,8 @@ class SalesController extends BaseController {
         delivery_payout_cash_total: deliveryPayoutCash,
         versement_settlement_cash_total: versementCashTotal,
         cash_expected: cashAccounting.cashExpected,
+        cash_opening_balance: registerCash.openingBalance,
+        cash_other_movements_net_outflow: registerCash.otherCashOutflows,
         cash_data_complete: cashAccounting.cashDataComplete,
         cash_data_warnings: [
 
@@ -2511,6 +2513,7 @@ class SalesController extends BaseController {
           ...(!paymentDataComplete ? ['One or more sale payment events have no reliable date, method or amount.'] : []),
           ...(!debtPaymentDataComplete ? ['One or more debt collections have no reliable payment method.'] : []),
           ...(!versementDataComplete ? ['One or more Versement payments have no reliable payment method.'] : []),
+          ...(!registerCash.complete ? ['No reliable cash-register session or opening/movement history is available for this period.'] : []),
           ...(!payrollBranchComplete ? ['Legacy employee payments are not assigned to a branch.'] : []),
           ...(!payrollCashClassificationComplete ? ['One or more employee payments have no reliable tender method.'] : []),
         ],
