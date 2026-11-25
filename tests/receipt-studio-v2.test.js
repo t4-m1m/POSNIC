@@ -78,7 +78,7 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   assert.match(app, /async function sendLabelPrintJob\(/, 'V2 labels must use the shared V1 HTML printer bridge');
   assert.match(app, /pageSize:'custom',customPageSize:\{width:Number\(width\),height:Number\(height\)\}/, 'label jobs must use the V1 custom-paper print contract');
   assert.ok(app.includes('find(name=>/tsc.*tdp.?225|tdp.?225.*tsc/i.test(name))'), 'label printing must restore the V1 TSC TDP-225 auto-selection');
-  assert.match(app, /printerName=kind==='label'\?await resolveLabelPrinterName\(\)/, 'label studio must use the dedicated label printer, not the receipt printer');
+  assert.match(app, /sendLabelPrintJob\(html,state\.labelLayout\.paper===\x27a4\x27\?210:width/, 'label studio must use the shared V1 label print route and dedicated printer');
   assert.match(app, /receipt_date:receiptSaleDate\(sale\)/);
   assert.match(app, /date:savedSale\.date\|\|savedSale\.created_date/);
   assert.doesNotMatch(app, /sales_description:payload\.sales_description,date:new Date\(\)\.toLocaleString/);
