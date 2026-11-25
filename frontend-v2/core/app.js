@@ -4,7 +4,36 @@ import{modules,current,isAdminRole,allowedTabsFor,canAccessRoute}from'./router.j
 import{installKeyboard}from'./keyboard.js';
 import{renderHR,handleHRAction,handleHRSubmit,cleanupHRState}from'./hr.js';
 import{toast}from'./toast.js';
-import{normalizeReceiptElements,receiptSaleDate,receiptSaleNumber,moveReceiptElement}from'./receipt-designer.mjs';
+import{receiptSaleDate,receiptSaleNumber,moveReceiptElement}from'./receipt-designer.mjs';
+// Keep receipt settings independent of the designer module binding. This
+// normalizer is intentionally local so the settings screen cannot fail at
+// runtime when an older cached module graph is present.
+function normalizeReceiptElements(elements){
+ const list=Array.isArray(elements)?elements.map(item=>({...item})):[];
+ const defaults=[
+  {id:'logo',type:'logo',x:20,y:2,w:60,h:13,fontFamily:'Tahoma',fontWeight:900},
+  {id:'address',type:'address',x:5,y:16,w:90,h:7,fontFamily:'Tahoma',fontWeight:900},
+  {id:'date',type:'date',x:5,y:24,w:90,h:4,fontFamily:'Tahoma',fontWeight:900},
+  {id:'ticket',type:'ticket',x:5,y:29,w:90,h:4,fontFamily:'Tahoma',fontWeight:900},
+  {id:'cashier',type:'cashier',x:5,y:34,w:90,h:4,fontFamily:'Tahoma',fontWeight:900},
+  {id:'customer',type:'customer',x:5,y:39,w:90,h:4,fontFamily:'Tahoma',fontWeight:900},
+  {id:'items',type:'items',x:5,y:45,w:90,h:36,fontFamily:'Tahoma',fontWeight:900},
+  {id:'totals',type:'totals',x:5,y:83,w:90,h:25,fontFamily:'Tahoma',fontWeight:900},
+  {id:'note',type:'note',x:5,y:110,w:90,h:6,fontFamily:'Tahoma',fontWeight:900},
+  {id:'barcode',type:'barcode',x:15,y:118,w:70,h:10,fontFamily:'Tahoma',fontWeight:900}
+ ];
+ for(const item of list){
+  const fallback=defaults.find(entry=>entry.type===item.type)||{x:5,y:5,w:90,h:6};
+  const number=(value,fallbackValue,min,max)=>{const parsed=Number(value);return Number.isFinite(parsed)?Math.max(min,Math.min(max,parsed)):fallbackValue;};
+  item.x=number(item.x,fallback.x,-250,300);item.y=number(item.y,fallback.y,-500,1500);
+  item.w=number(item.w??item.width,fallback.w,1,250);item.h=number(item.h??item.height,fallback.h,1,2000);
+  item.fontSize=number(item.fontSize,12,5,96);
+ }
+ for(const entry of defaults)if(!list.some(item=>item.type===entry.type))list.push({...entry});
+ const items=list.find(item=>item.type==='items'),totals=list.find(item=>item.type==='totals'),ticket=list.find(item=>item.type==='ticket');
+ return [...list.filter(item=>item!==items&&item!==totals&&item!==ticket&&!['discount','total','paid','balance','payment'].includes(item.type)),ticket,items,totals].filter(Boolean).sort((a,b)=>Number(a.y||0)-Number(b.y||0));
+}
+
 const root=document.querySelector('#app');let searchTimer=null,unmountKeyboard=null,searchResults=[],lastView='',customerDebtCache=null,customerDebtCachePromise=null,customerSearchSequence=0;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const designerMm=(value,fallback,min=0,max=2000)=>{const parsed=typeof value==='number'?value:parseFloat(String(value??'').replace(',','.'));return Number.isFinite(parsed)?Math.min(max,Math.max(min,parsed)):fallback;};
