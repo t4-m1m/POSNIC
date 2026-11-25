@@ -740,22 +740,22 @@ describe('RegisterService', () => {
       expect(result.data.calculated.cashout).toBe(100);
     });
 
-    test('computes payment_data = total_amount + opening + cashin', async () => {
-      // 2300 + 1000 + 200 = 3500
+    test('computes payment_data = cash sales + opening + cashin (not electronic tenders)', async () => {
+      // 1500 cash + 1000 opening + 200 cash-in = 2700
       repo.getRegisterReportDetailsPage.mockResolvedValue(makeReportDetailsResult());
 
       const result = await service.getRegisterReportPdfDetails(INPUT_DATA);
 
-      expect(result.data.calculated.payment_data).toBe(3500);
+      expect(result.data.calculated.payment_data).toBe(2700);
     });
 
-    test('computes expectedval_data = payment_data - cashout', async () => {
-      // 3500 - 100 = 3400
+    test('computes expectedval_data = physical cash available - cashout', async () => {
+      // 2700 - 100 = 2600
       repo.getRegisterReportDetailsPage.mockResolvedValue(makeReportDetailsResult());
 
       const result = await service.getRegisterReportPdfDetails(INPUT_DATA);
 
-      expect(result.data.calculated.expectedval_data).toBe(3400);
+      expect(result.data.calculated.expectedval_data).toBe(2600);
     });
 
     test('computes netsale = recive_payement - refund', async () => {
@@ -767,13 +767,13 @@ describe('RegisterService', () => {
       expect(result.data.calculated.netsale).toBe(2300);
     });
 
-    test('computes difference = counted_amount - total', async () => {
-      // counted=2500, total=2400 → difference=100
+    test('computes difference = counted_amount - expected drawer cash', async () => {
+      // counted=2500, expected drawer cash=2600 → shortage=-100
       repo.getRegisterReportDetailsPage.mockResolvedValue(makeReportDetailsResult());
 
       const result = await service.getRegisterReportPdfDetails(INPUT_DATA);
 
-      expect(result.data.calculated.difference).toBe(100);
+      expect(result.data.calculated.difference).toBe(-100);
     });
 
     test('reads counted_amount from common_details', async () => {
@@ -973,8 +973,8 @@ describe('RegisterService', () => {
     });
 
     // ── Bug documentation test (= vs +=) ──────────────────────────────────────
-    test('NOTE(production-bug): second Cash row overwrites first (= not +=)', async () => {
-      // Two Cash rows — second overwrites the first due to assignment (=)
+    test('accumulates multiple Cash rows instead of overwriting earlier tender amounts', async () => {
+      // Two Cash rows must be added together.
       repo.getRegisterReportDetailsPage.mockResolvedValue({
         status: true,
         data: {
@@ -989,8 +989,7 @@ describe('RegisterService', () => {
 
       const result = await service.getRegisterReportPdfDetails(INPUT_DATA);
 
-      // Bug: register_report_cash should be 1000 (accumulated) but is 700 (last value)
-      expect(result.data.calculated.register_report_cash).toBe(700);
+      expect(result.data.calculated.register_report_cash).toBe(1000);
       // total still accumulates correctly
       expect(result.data.calculated.total).toBe(1000);
     });
