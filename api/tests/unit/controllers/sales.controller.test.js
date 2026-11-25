@@ -1078,6 +1078,24 @@ describe('SalesController', () => {
       }
     });
 
+    test('recognizes a settled F6 sale as revenue but never double-counts it as a normal tender', async () => {
+      salesService.getDailySalesReportAggregates.mockResolvedValue({
+        productAgg: [{ subtotal: 200, totalAmount: 200, totalQty: 2, totalCompanyPrice: 80 }],
+        paymentAgg: [],
+        salesPayments: [
+          { sales_total: 100, total: 100, payment_mode: 'cash', payment_status: 'Paid', multi_payment: {} },
+          { sales_total: 100, total: 100, payment_mode: 'cash', payment_status: 'Paid', multi_payment: {},
+            versement_checkout: { initial_amount: 30 }, versement_settled: true },
+        ],
+        taxAgg: [], cancellationAgg: [],
+      });
+      const res = mockRes();
+      await ctrl.dailySalesReports(mockReq({ query: q }), res);
+      const data = res.json.mock.calls[0][0].data;
+      expect(data.sales_total).toBe(200);
+      expect(data.payment_details.reduce((sum, row) => sum + Number(row.sale_payment || 0), 0)).toBe(100);
+    });
+
     test('403 no report permission', async () => {
       const res = mockRes();
       await ctrl.dailySalesReports(mockReq({ query: q, user: restrictedUser() }), res);
