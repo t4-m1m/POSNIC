@@ -73,6 +73,20 @@ test('the real designer previews A4, prints the same sheets and restores its lay
     output.window.close(); dom.window.close();
 });
 
+test('new label sessions start at 45 by 35 mm and keep both dimensions editable', async () => {
+    const { dom, w, $ } = setup();
+    w.PosnicShelfLabels.open(); await tick();
+    assert.equal($('#sl-width').val(), '45');
+    assert.equal($('#sl-height').val(), '35');
+    assert.equal($('#sl-width').prop('disabled'), false);
+    assert.equal($('#sl-height').prop('disabled'), false);
+    $('#sl-width').val('50').trigger('change');
+    $('#sl-height').val('40').trigger('change');
+    assert.equal($('#sl-width').val(), '50');
+    assert.equal($('#sl-height').val(), '40');
+    dom.window.close();
+});
+
 test('a failed select-all request cannot print the previously loaded subset', async () => {
     const { dom, w, $, getPrint, selectAll } = setup(true);
     w.PosnicShelfLabels.open(); await tick();
