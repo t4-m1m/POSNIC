@@ -33,7 +33,7 @@ async function recoverSettlingVersement(db, collection, current) {
         settlement: { amount, method, settled_at: settledAt, recorded_by: by, ...(registerId ? { register_id: registerId } : {}) },
       },
       ...(!hasHistory ? { $push: { history: { type: 'settlement', amount, method, at: settledAt, by } } } : {}),
-      $unset: { settlement_started_at: '', settlement_started_by: '', settlement_started_method: '', settlement_started_amount: '' },
+      $unset: { settlement_started_at: '', settlement_started_by: '', settlement_started_method: '', settlement_started_amount: '', settlement_started_register_id: '' },
     });
     return true;
   }
@@ -41,7 +41,7 @@ async function recoverSettlingVersement(db, collection, current) {
   // The sale update never committed: release the claim so the cashier can retry.
   await collection.updateOne({ _id: current._id, status: 'settling' }, {
     $set: { status: 'pending' },
-    $unset: { settlement_started_at: '', settlement_started_by: '', settlement_started_method: '', settlement_started_amount: '' },
+    $unset: { settlement_started_at: '', settlement_started_by: '', settlement_started_method: '', settlement_started_amount: '', settlement_started_register_id: '' },
   });
   return true;
 }
