@@ -238,7 +238,7 @@
         var hasField = function (field) { return layout.blocks.some(function (b) { return b.type === 'field' && b.field === field; }); };
         function saleTimestamp(source) {
             var raw = source.created_date || source.date || source.order_date || source.receipt_date || '';
-            if (raw instanceof Date || (typeof raw === 'string' && /^\\d{4}-\\d{2}-\\d{2}T/.test(raw))) {
+            if (raw instanceof Date || (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(raw))) {
                 var parsed = raw instanceof Date ? raw : new Date(raw);
                 if (Number.isFinite(parsed.getTime())) {
                     var day = String(parsed.getDate()).padStart(2, '0');
