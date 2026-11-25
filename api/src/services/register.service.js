@@ -153,10 +153,10 @@ class RegisterService {
     const opening = commonDetails.opening_float || 0;
     const cashin = cashDetails.cashin_amount || 0;
     const cashout = cashDetails.cashout_amount || 0;
-    const loggedDebtCash = parseRegisterAmount(cashDetails.cashin_credit_settlement || 0);
+    const loggedDebtCash = Number(cashDetails.cashin_credit_settlement) || 0;
     const debtCashCollections = debtPaymentDetails.reduce((sum, row) =>
       sum + (/^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(row.payment_mode || row.method || '').trim())
-        ? parseRegisterAmount(row.amount) : 0), 0);
+        ? (Number(row.amount) || 0) : 0), 0);
     // CreditService journals cash debt collections in cashInOutDetail when an
     // open drawer is available. Add any unjournaled collection from the dated
     // credit ledger, but subtract the journaled part first to prevent duplicates.
