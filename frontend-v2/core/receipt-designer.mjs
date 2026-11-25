@@ -34,8 +34,9 @@ export function receiptSaleDate(sale = {}) {
       if (!dateOnly) dateOnly = text;
       continue;
     }
-    const date = typeof raw === 'number'
-      ? new Date(Math.abs(raw) < 1e12 ? raw * 1000 : raw)
+    const numericTimestamp = typeof raw === 'number' ? raw : (/^\\d{10,}$/.test(text) ? Number(text) : null);
+    const date = numericTimestamp !== null
+      ? new Date(Math.abs(numericTimestamp) < 1e12 ? numericTimestamp * 1000 : numericTimestamp)
       : new Date(text);
     if (Number.isFinite(date.getTime())) return date.toLocaleString('fr-FR');
   }
