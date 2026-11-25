@@ -1032,6 +1032,7 @@ describe('SalesController', () => {
       expect(reportMatch.$and).toContainEqual(
         require('../../../src/helpers/reportable-sales').reportableSales()
       );
+      expect(reportMatch.$and).toContainEqual({ $or: [{ versement_checkout: { $exists: false } }, { versement_settled: true }] });
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
     });
@@ -1344,6 +1345,8 @@ describe('SalesController', () => {
       await ctrl.salesReports(mockReq({ query: {}, salesReportsFilters: filters }), res);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
+      const historyMatch = salesService.getSalesReportsData.mock.calls[0][0].match;
+      expect(historyMatch.$and).toContainEqual({ $or: [{ versement_checkout: { $exists: false } }, { versement_settled: true }] });
     });
 
     test('403 no permission', async () => {
