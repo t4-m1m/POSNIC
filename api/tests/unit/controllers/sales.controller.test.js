@@ -1110,6 +1110,8 @@ describe('SalesController', () => {
         initial_amount: 1000,
         initial_recorded_amount: 1000,
         initial_method: 'cash',
+        initial_collected_at: new Date('2025-11-05T10:00:00.000Z'),
+        created_at: new Date('2025-11-05T10:00:00.000Z'),
         settlement: { amount: 5000, method: 'cash', settled_at: settlementDate },
         settled_at: settlementDate,
       };
@@ -1137,8 +1139,8 @@ describe('SalesController', () => {
       await ctrl.dailySalesReports(mockReq({ query: {
         ...q, starting_date: '2025-11-05', ending_date: '2025-11-05',
       } }), depositDay);
-      expect(depositDay.json.mock.calls[0][0].data.versement_payment_total).toBe(0);
-      expect(depositDay.json.mock.calls[0][0].data.versement_settlement_cash_total).toBe(0);
+      expect(depositDay.json.mock.calls[0][0].data.versement_payment_total).toBe(1000);
+      expect(depositDay.json.mock.calls[0][0].data.versement_settlement_cash_total).toBe(1000);
 
       const settlementDay = mockRes();
       await ctrl.dailySalesReports(mockReq({ query: {
@@ -1146,10 +1148,10 @@ describe('SalesController', () => {
       } }), settlementDay);
       const data = settlementDay.json.mock.calls[0][0].data;
       expect(data.sales_total).toBe(6000);
-      expect(data.versement_payment_total).toBe(6000);
-      expect(data.versement_settlement_cash_total).toBe(6000);
+      expect(data.versement_payment_total).toBe(5000);
+      expect(data.versement_settlement_cash_total).toBe(5000);
       expect(data.versement_payment_details).toEqual([
-        expect.objectContaining({ payment_mode: 'CASH', amount: 6000 }),
+        expect.objectContaining({ payment_mode: 'CASH', amount: 5000 }),
       ]);
       // Legacy and current sale_versements rows are tenant-DB scoped and have
       // branch_id but no license field; report queries must not hide their history.
