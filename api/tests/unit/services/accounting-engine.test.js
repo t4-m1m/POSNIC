@@ -411,6 +411,6 @@ describe('fourteen-day business accounting regression fixture', () => {
       items_return: [{ returnArray: { returnDate: '2026-11-07T12:00:00Z', itemsTotalAmount: '60,00',
         returnValue: [{ item_id: 'legacy-item', item_quantity: 1 }] } }],
     }], '2026-11-01T00:00:00Z', '2026-11-15T00:00:00Z');
-    expect(returned).toMatchObject({ amount: 60, cost: 20, count: 1, complete: true, costComplete: true });
+    expect(returned).toMatchObject({ amount: 60, cost: 20, count: 1, itemsCount: 1, complete: true, costComplete: true });
   });
 });

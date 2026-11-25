@@ -164,7 +164,7 @@ function summarizeSaleReturns(sales = [], start, end) {
   const endTime = new Date(end).getTime();
   if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime <= startTime)
     throw new Error('Valid return-report date boundaries are required.');
-  let amount = 0, cost = 0, complete = true, costComplete = true, count = 0;
+  let amount = 0, cost = 0, complete = true, costComplete = true, count = 0, itemsCount = 0;
   const events = [];
   for (const sale of sales) {
     const saleId = sale.sales_id || sale.sale_id || sale._id;
@@ -189,22 +189,28 @@ function summarizeSaleReturns(sales = [], start, end) {
       const itemKey = (line) => String(line?.item_id || line?.item || line?.itemId || line?.id || '');
       const originalById = new Map(originalItems.map(line => [itemKey(line), line]).filter(([key]) => key));
       for (const line of lines) {
-        const qty = Number(line.item_quantity ?? line.quantity);
+        const qty = parseAmount(line.item_quantity ?? line.quantity ?? line.qty);
+        if (Number.isFinite(qty) && qty >= 0) itemsCount += qty;
+        else { complete = false; costComplete = false; }
         const original = originalById.get(itemKey(line));
-        const soldQty = Number(original?.item_quantity ?? original?.quantity);
+        const soldQty = parseAmount(original?.item_quantity ?? original?.quantity);
         let unitCost = null;
         if (original && Number.isFinite(soldQty) && soldQty > 0) {
-          if (original.company_price_total !== null && original.company_price_total !== undefined && original.company_price_total !== '' && Number.isFinite(Number(original.company_price_total))) unitCost = Number(original.company_price_total) / soldQty;
-          else if (Number.isFinite(Number(original.company_price ?? original.item_company_price))) unitCost = Number(original.company_price ?? original.item_company_price);
+          const originalTotalCost = parseAmount(original.company_price_total);
+          const originalUnitCost = parseAmount(original.company_price ?? original.item_company_price);
+          if (Number.isFinite(originalTotalCost)) unitCost = originalTotalCost / soldQty;
+          else if (Number.isFinite(originalUnitCost)) unitCost = originalUnitCost;
         }
         if (unitCost === null || !Number.isFinite(unitCost) || !Number.isFinite(qty) || qty < 0) {
           // The return transaction stores the cost used at return time. Keep it as
           // an estimate only when the immutable invoice snapshot is unavailable.
-          if (line.company_price_total !== null && line.company_price_total !== undefined && line.company_price_total !== '' && Number.isFinite(Number(line.company_price_total))) {
-            cost += Number(line.company_price_total);
+          const returnedTotalCost = parseAmount(line.company_price_total);
+          const returnedUnitCost = parseAmount(line.company_price ?? line.item_company_price);
+          if (Number.isFinite(returnedTotalCost)) {
+            cost += returnedTotalCost;
             costComplete = false;
-          } else if (Number.isFinite(Number(line.company_price ?? line.item_company_price)) && Number.isFinite(qty)) {
-            cost += Number(line.company_price ?? line.item_company_price) * qty;
+          } else if (Number.isFinite(returnedUnitCost) && Number.isFinite(qty)) {
+            cost += returnedUnitCost * qty;
             costComplete = false;
           } else costComplete = false;
         } else {
@@ -213,7 +219,7 @@ function summarizeSaleReturns(sales = [], start, end) {
       }
     }
   }
-  return { amount: round2(amount), cost: round2(cost), complete, costComplete, count, events };
+  return { amount: round2(amount), cost: round2(cost), complete, costComplete, count, itemsCount: round2(itemsCount), events };
 }
 
 function calculateDailyClose(input = {}) {

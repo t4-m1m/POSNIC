@@ -1989,9 +1989,9 @@ class SalesController extends BaseController {
       const returnCostAdjustmentTotal = returnSummary.cost;
       let salesDataComplete = salesPayments.every(sale => {
         const total = sale.sales_total ?? sale.total;
-        return total !== null && total !== undefined && total !== '' && Number.isFinite(Number(total));
+        return total !== null && total !== undefined && total !== '' && Number.isFinite(parseAuditNumber(total));
       }) && editAdjustmentRows.every(row =>
-        row.amount !== null && row.amount !== undefined && row.amount !== '' && Number.isFinite(Number(row.amount))
+        row.amount !== null && row.amount !== undefined && row.amount !== '' && Number.isFinite(parseAuditNumber(row.amount))
       );
       if (!salesDataComplete) {
         // Keep the known cost subtotal visible; completeness remains false and
@@ -2022,8 +2022,8 @@ class SalesController extends BaseController {
         const key = accountingEngine.normalizeTenderName(method);
         if (key === 'Non classé') versementDataComplete = false;
         const row = versementPaymentMap.get(key) || { payment_mode: tenderLabels[String(method || '').toLowerCase()] || key, amount: 0, count: 0 };
-        row.amount = roundToTwo(row.amount + Number(amount || 0));
-        if (Number(amount || 0) > 0) row.count += 1;
+        row.amount = roundToTwo(row.amount + auditNumber(amount));
+        if (auditNumber(amount) > 0) row.count += 1;
         versementPaymentMap.set(key, row);
       };
       let versementCashTotal = 0;
@@ -2033,13 +2033,13 @@ class SalesController extends BaseController {
       };
       versementEvents.forEach((v) => {
         const initialDate = v.initial_collected_at || v.created_at;
-        const initialAmount = Number(v.initial_recorded_amount ?? v.initial_amount ?? 0) || 0;
+        const initialAmount = auditNumber(v.initial_recorded_amount ?? v.initial_amount ?? 0);
         if (initialAmount > 0 && inReportDay(initialDate)) {
           addVersementPayment(v.initial_method, initialAmount);
           if (/^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(v.initial_method || ''))) versementCashTotal += initialAmount;
         }
         const settlementDate = v.settlement?.settled_at || v.settled_at;
-        const settlementAmount = Number(v.settlement?.amount || 0) || 0;
+        const settlementAmount = auditNumber(v.settlement?.amount || 0);
         if (settlementAmount > 0 && inReportDay(settlementDate)) {
           addVersementPayment(v.settlement?.method, settlementAmount);
           if (/^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(v.settlement?.method || ''))) versementCashTotal += settlementAmount;
@@ -2268,18 +2268,18 @@ class SalesController extends BaseController {
       });
       const expenseTenderUnknown = expenseDocsInDay.some(row =>
         row.payment_source !== 'personal' &&
-        !String(row.payment_mode || row.payment_method || row.method || '').trim() && Number(row.amount || 0) > 0
+        !String(row.payment_mode || row.payment_method || row.method || '').trim() && auditNumber(row.amount) > 0
       );
       const cashExpenses = roundToTwo(expenseDocsInDay.reduce((sum, row) => {
         const method = row.payment_mode || row.payment_method || row.method || '';
-        return sum + (row.payment_source !== 'personal' && accountingEngine.isCashTender(method) ? Number(row.amount || 0) : 0);
+        return sum + (row.payment_source !== 'personal' && accountingEngine.isCashTender(method) ? auditNumber(row.amount) : 0);
       }, 0));
       // Completeness is a property of records that belong to this report day.
       // Undated legacy expenses cannot be assigned to an arbitrary day and must
       // not suppress profit for every later day; dated in-day expenses still
       // require a valid amount and tender classification.
       const expenseDataComplete = expenseDocsInDay.every(row =>
-        row.amount !== null && row.amount !== undefined && row.amount !== '' && Number.isFinite(Number(row.amount))
+        row.amount !== null && row.amount !== undefined && row.amount !== '' && Number.isFinite(parseAuditNumber(row.amount))
       );
 
       const branchCount = await db.collection('branches').countDocuments({ license: { $in: licenseValues } });
@@ -2292,7 +2292,7 @@ class SalesController extends BaseController {
         : [];
       const unassignedHrInDay = legacyHrRows.filter(row => {
         const date = row.date ? new Date(row.date) : null;
-        return date && Number.isFinite(date.getTime()) && date >= reportStart && date < reportEnd && Number(row.amount || 0) > 0;
+        return date && Number.isFinite(date.getTime()) && date >= reportStart && date < reportEnd && auditNumber(row.amount) > 0;
       });
       const payrollBranchComplete = branchCount === 1 || (branchCount > 1 && unassignedHrInDay.length === 0);
 
@@ -2432,26 +2432,26 @@ class SalesController extends BaseController {
         { $group: { _id: null, amount: { $sum: '$amount' } } },
       ]).toArray();
       const deliveryPayoutCash = roundToTwo(deliveryPayoutRows.length ? deliveryPayoutRows[0].amount || 0 : 0);
-      const refundCashUnknown = refundRows.some(row => !String(row._id || '').trim() && Number(row.amount || 0) > 0);
-      const cashRefunds = roundToTwo(refundRows.reduce((sum, row) => sum + (accountingEngine.isCashTender(row._id) ? Number(row.amount || 0) : 0), 0));
-      const debtCashCollections = roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.payment_mode) ? Number(row.amount || 0) : 0), 0));
+      const refundCashUnknown = refundRows.some(row => !String(row._id || '').trim() && auditNumber(row.amount) > 0);
+      const cashRefunds = roundToTwo(refundRows.reduce((sum, row) => sum + (accountingEngine.isCashTender(row._id) ? auditNumber(row.amount) : 0), 0));
+      const debtCashCollections = roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.payment_mode) ? auditNumber(row.amount) : 0), 0));
       const isDeliveryCodTender = method => /livraison|(?:^|[\s/])cod(?:$|[\s/])|zr\s*express/i.test(String(method || '').trim());
       const deliveryCodSalesTotal = roundToTwo(paymentDetails.filter(row => !row.is_refund && isDeliveryCodTender(row.payment_mode))
-        .reduce((sum, row) => sum + Number(row.sale_payment || 0), 0));
+        .reduce((sum, row) => sum + auditNumber(row.sale_payment), 0));
       const cashSalesGross = roundToTwo(paymentDetails.filter(row => !row.is_refund && !isDeliveryCodTender(row.payment_mode)).reduce((sum, row) => {
         const method = String(row.payment_mode || '').trim();
-        return sum + (accountingEngine.isCashTender(method) ? Number(row.sale_payment || 0) : 0);
+        return sum + (accountingEngine.isCashTender(method) ? auditNumber(row.sale_payment) : 0);
       }, 0));
       const cashSales = roundToTwo(cashSalesGross - cashRefunds);
       const electronicRefunds = roundToTwo(refundRows.reduce((sum, row) =>
-        sum + (['TPE', 'BaridiMob'].includes(accountingEngine.normalizeTenderName(row._id)) ? Number(row.amount || 0) : 0), 0));
-      const totalRefundsSigned = roundToTwo(-refundRows.reduce((sum, row) => sum + Number(row.amount || 0), 0));
+        sum + (['TPE', 'BaridiMob'].includes(accountingEngine.normalizeTenderName(row._id)) ? auditNumber(row.amount) : 0), 0));
+      const totalRefundsSigned = roundToTwo(-refundRows.reduce((sum, row) => sum + auditNumber(row.amount), 0));
       // Returns are reported separately through cash_returns_total. Do not
       // inject them into debt_payment_details, which is reserved for actual
       // customer credit collections.
-      const salaryCash = roundToTwo(salaryPaymentDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.method) ? Number(row.amount || 0) : 0), 0));
-      const advanceCash = roundToTwo(salaryAdvanceDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.method) ? Number(row.amount || 0) : 0), 0));
-      const primeCash = roundToTwo(salaryPrimeDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.method) ? Number(row.amount || 0) : 0), 0));
+      const salaryCash = roundToTwo(salaryPaymentDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.method) ? auditNumber(row.amount) : 0), 0));
+      const advanceCash = roundToTwo(salaryAdvanceDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.method) ? auditNumber(row.amount) : 0), 0));
+      const primeCash = roundToTwo(salaryPrimeDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.method) ? auditNumber(row.amount) : 0), 0));
       const cashRegisterSessions = await db.collection('cashregister').find({
         license: { $in: licenseValues }, branch_id: { $in: branchValues },
       }).project({ register_opendate: 1, register_closedate: 1, opening_float: 1, cashInOutDetail: 1 }).toArray();
@@ -2510,6 +2510,8 @@ class SalesController extends BaseController {
         sales_data_complete: salesDataComplete,
         sale_edit_adjustment_total: editAdjustmentTotal,
         return_adjustment_total: returnAdjustmentTotal,
+        returned_items_count: returnSummary.itemsCount,
+        return_transactions_count: returnSummary.count,
         discount_total: discountTotal,
         cost_of_goods_total: costOfGoodsTotal,
         cost_data_complete: costDataComplete,
@@ -2575,10 +2577,10 @@ class SalesController extends BaseController {
           { key: 'cash_refunds_total', label: 'Remboursements espèces', formula: 'Remboursements de retours réglés en espèces, déduits une seule fois du tiroir.', result: cashRefunds, sources: ['sales.return_refund_transactions'], complete: !refundCashUnknown, warnings: refundCashUnknown ? ['Un remboursement ne possède pas de mode de paiement fiable.'] : [] },
           { key: 'electronic_refunds_total', label: 'Remboursements TPE / BaridiMob', formula: 'Remboursements de retours versés par les moyens électroniques.', result: electronicRefunds, sources: ['sales.return_refund_transactions'], complete: !refundCashUnknown, warnings: refundCashUnknown ? ['Un remboursement ne possède pas de mode de paiement fiable.'] : [] },
           { key: 'delivery_cod_sales_total', label: 'Livraison / COD (hors caisse)', formula: 'Paiements de vente Livraison / COD ; exclus des espèces attendues.', result: deliveryCodSalesTotal, sources: ['sales.payments', 'sales.multi_payment', 'sales.payment_mode'], complete: paymentDataComplete, warnings: paymentDataComplete ? [] : ['La répartition COD peut être partielle.'] },
-          { key: 'tpe_sales', label: 'Ventes réglées par TPE', formula: 'Somme des paiements de vente classés TPE.', result: roundToTwo(paymentDetails.filter(row => accountingEngine.normalizeTenderName(row.payment_mode) === 'TPE').reduce((sum, row) => sum + Number(row.sale_payment || 0), 0)), components: paymentDetails.filter(row => accountingEngine.normalizeTenderName(row.payment_mode) === 'TPE'), sources: ['sales.payments', 'sales.multi_payment'], complete: paymentDataComplete, warnings: paymentDataComplete ? [] : ['La répartition TPE peut être partielle.'] },
-          { key: 'baridimob_sales', label: 'Ventes réglées par BaridiMob', formula: 'Somme des paiements de vente classés BaridiMob.', result: roundToTwo(paymentDetails.filter(row => accountingEngine.normalizeTenderName(row.payment_mode) === 'BaridiMob').reduce((sum, row) => sum + Number(row.sale_payment || 0), 0)), components: paymentDetails.filter(row => accountingEngine.normalizeTenderName(row.payment_mode) === 'BaridiMob'), sources: ['sales.payments', 'sales.multi_payment'], complete: paymentDataComplete, warnings: paymentDataComplete ? [] : ['La répartition BaridiMob peut être partielle.'] },
+          { key: 'tpe_sales', label: 'Ventes réglées par TPE', formula: 'Somme des paiements de vente classés TPE.', result: roundToTwo(paymentDetails.filter(row => accountingEngine.normalizeTenderName(row.payment_mode) === 'TPE').reduce((sum, row) => sum + auditNumber(row.sale_payment), 0)), components: paymentDetails.filter(row => accountingEngine.normalizeTenderName(row.payment_mode) === 'TPE'), sources: ['sales.payments', 'sales.multi_payment'], complete: paymentDataComplete, warnings: paymentDataComplete ? [] : ['La répartition TPE peut être partielle.'] },
+          { key: 'baridimob_sales', label: 'Ventes réglées par BaridiMob', formula: 'Somme des paiements de vente classés BaridiMob.', result: roundToTwo(paymentDetails.filter(row => accountingEngine.normalizeTenderName(row.payment_mode) === 'BaridiMob').reduce((sum, row) => sum + auditNumber(row.sale_payment), 0)), components: paymentDetails.filter(row => accountingEngine.normalizeTenderName(row.payment_mode) === 'BaridiMob'), sources: ['sales.payments', 'sales.multi_payment'], complete: paymentDataComplete, warnings: paymentDataComplete ? [] : ['La répartition BaridiMob peut être partielle.'] },
           { key: 'delivery_payout_cash_total', label: 'Livraison ZR encaissée', formula: 'Somme des versements COD marqués encaissés pendant la période.', result: deliveryPayoutCash, sources: ['zr_delivery_payouts.amount', 'zr_delivery_payouts.paid_at'], complete: true, warnings: [] },
-          { key: 'payment_details', label: 'Répartition des paiements de vente', formula: 'Somme des événements de paiement de chaque vente, classés par mode.', result: paymentDetails.reduce((sum, row) => sum + Number(row.sale_payment || 0), 0), components: paymentDetails, sources: ['sales.payments', 'sales.multi_payment', 'sales.payment_mode'], complete: paymentDataComplete, warnings: paymentDataComplete ? [] : ['Un événement de paiement n’a pas de date, de mode ou de montant fiable.'] },
+          { key: 'payment_details', label: 'Répartition des paiements de vente', formula: 'Somme des événements de paiement de chaque vente, classés par mode.', result: paymentDetails.reduce((sum, row) => sum + auditNumber(row.sale_payment), 0), components: paymentDetails, sources: ['sales.payments', 'sales.multi_payment', 'sales.payment_mode'], complete: paymentDataComplete, warnings: paymentDataComplete ? [] : ['Un événement de paiement n’a pas de date, de mode ou de montant fiable.'] },
           { key: 'versement_payment_total', label: 'Paiements de versement', formula: 'Somme des règlements Versement enregistrés pendant la période.', result: versementPaymentTotal, components: versementPaymentDetails, sources: ['versements', 'versement settlement ledger'], complete: versementDataComplete, warnings: versementDataComplete ? [] : ['Un règlement Versement ne possède pas de mode de paiement fiable.'] },
           { key: 'cash_returns_total', label: 'Retours', formula: 'Somme des remboursements de la période, affichée en négatif et déduite directement des espèces des ventes.', result: totalRefundsSigned, sources: ['sales.return_refund_transactions'], complete: !refundCashUnknown, warnings: refundCashUnknown ? ['Un remboursement ne possède pas de mode de paiement fiable.'] : [] },
           { key: 'debt_payment_total', label: 'Encaissements de crédits', formula: 'Somme des règlements de dettes clients reçus pendant la période.', result: debtPaymentTotal, components: debtPaymentDetails, sources: ['credit_payments', 'customer debt ledger'], complete: debtPaymentDataComplete, warnings: debtPaymentDataComplete ? [] : ['Un encaissement de crédit ne possède pas de mode de paiement fiable.'] },
@@ -2589,8 +2591,8 @@ class SalesController extends BaseController {
           { label: 'Bénéfice brut = ventes − coût', expected: salesNetTotal !== null && costOfGoodsTotal !== null ? roundToTwo(salesNetTotal - costOfGoodsTotal) : null, actual: grossProfitTotal, passed: salesNetTotal !== null && costOfGoodsTotal !== null && grossProfitTotal !== null ? Math.abs(roundToTwo(salesNetTotal - costOfGoodsTotal) - grossProfitTotal) <= 0.01 : null },
           { label: 'Bénéfice net = bénéfice brut − charges', expected: grossProfitTotal !== null ? roundToTwo(grossProfitTotal - expensesTotal - salaryPaymentsTotal - salaryAdvancesTotal - salaryPrimesTotal) : null, actual: netProfitTotal, passed: grossProfitTotal !== null && netProfitTotal !== null ? Math.abs(roundToTwo(grossProfitTotal - expensesTotal - salaryPaymentsTotal - salaryAdvancesTotal - salaryPrimesTotal) - netProfitTotal) <= 0.01 : null },
           { label: 'Coût marchandises = coût lignes + ajustements', expected: roundToTwo(costOfGoodsBase + editCostAdjustmentTotal), actual: costOfGoodsTotal, passed: costOfGoodsTotal !== null ? Math.abs(roundToTwo(costOfGoodsBase + editCostAdjustmentTotal) - costOfGoodsTotal) <= 0.01 : null },
-          { label: 'Paiements de versement = détail des règlements', expected: roundToTwo(versementPaymentDetails.reduce((sum, row) => sum + Number(row.amount || 0), 0)), actual: versementPaymentTotal, passed: Math.abs(roundToTwo(versementPaymentDetails.reduce((sum, row) => sum + Number(row.amount || 0), 0)) - versementPaymentTotal) <= 0.01 },
-          { label: 'Encaissements crédits = détail des règlements', expected: roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + Number(row.amount || 0), 0)), actual: debtPaymentTotal, passed: Math.abs(roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + Number(row.amount || 0), 0)) - debtPaymentTotal) <= 0.01 },
+          { label: 'Paiements de versement = détail des règlements', expected: roundToTwo(versementPaymentDetails.reduce((sum, row) => sum + auditNumber(row.amount), 0)), actual: versementPaymentTotal, passed: Math.abs(roundToTwo(versementPaymentDetails.reduce((sum, row) => sum + auditNumber(row.amount), 0)) - versementPaymentTotal) <= 0.01 },
+          { label: 'Encaissements crédits = détail des règlements', expected: roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + auditNumber(row.amount), 0)), actual: debtPaymentTotal, passed: Math.abs(roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + auditNumber(row.amount), 0)) - debtPaymentTotal) <= 0.01 },
           { label: 'Espèces nettes = entrées physiques du jour − sorties physiques du jour', expected: roundToTwo(cashSalesGross + versementCashTotal + debtCashCollections - cashRefunds - cashExpenses - salaryCash - advanceCash - primeCash), actual: cashAccounting.cashExpected, passed: cashAccounting.cashExpected !== null ? Math.abs(roundToTwo(cashSalesGross + versementCashTotal + debtCashCollections - cashRefunds - cashExpenses - salaryCash - advanceCash - primeCash) - cashAccounting.cashExpected) <= 0.01 : null },
         ],
       };
