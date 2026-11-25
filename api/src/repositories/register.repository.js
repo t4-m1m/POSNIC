@@ -884,13 +884,69 @@ class RegisterRepository {
     }
   }
 
+
+  async _versementTenderTotalsForSession(session, periodEnd = new Date()) {
+    const totals = { cash: 0, tpe: 0, baridimob: 0 };
+    if (!session?.branch_id || !session?.register_opendate) return totals;
+    const ids = [session._id, session.register_id].filter(Boolean);
+    if (!ids.length) return totals;
+    const idStrings = new Set(ids.map(value => String(value)));
+    const queryIds = ids.flatMap(value => {
+      const text = String(value);
+      return [value, text, ...(ObjectId.isValid(text) ? [new ObjectId(text)] : [])];
+    });
+    const collection = await this.model.getCollection('sale_versements');
+    const rows = await collection.find({
+      branch_id: session.branch_id,
+      $or: [
+        { register_id: { $in: queryIds } },
+        { settlement_register_id: { $in: queryIds } },
+      ],
+    }).toArray();
+    const start = new Date(session.register_opendate).getTime();
+    const end = new Date(periodEnd).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return totals;
+    const inSession = value => {
+      const time = value ? new Date(value).getTime() : NaN;
+      return Number.isFinite(time) && time >= start && time <= end;
+    };
+    const belongs = value => value != null && idStrings.has(String(value));
+    const tender = value => {
+      const method = String(value || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (['cash', 'especes', 'espece'].includes(method)) return 'cash';
+      if (['tpe', 'card', 'creditcard'].includes(method)) return 'tpe';
+      if (['baridimob', 'bank_transfer', 'transfer'].includes(method)) return 'baridimob';
+      return '';
+    };
+    for (const row of rows) {
+      const initialDate = row.initial_collected_at || row.created_at;
+      if (belongs(row.register_id) && inSession(initialDate)) {
+        const method = tender(row.initial_method);
+        const raw = parseRegisterAmount(row.initial_recorded_amount ?? row.initial_amount);
+        const saleTotal = parseRegisterAmount(row.sale_total);
+        const amount = saleTotal > 0 ? Math.min(saleTotal, Math.max(0, raw)) : Math.max(0, raw);
+        if (method && amount > 0) totals[method] += amount;
+      }
+      const settlementDate = row.settlement?.settled_at || row.settled_at;
+      const settlementRegister = row.settlement_register_id || row.settlement?.register_id || row.register_id;
+      const settled = String(row.status || '').toLowerCase() === 'settled' || !!row.settlement?.settled_at;
+      if (settled && belongs(settlementRegister) && inSession(settlementDate)) {
+        const method = tender(row.settlement?.method || row.settlement_started_method);
+        const amount = parseRegisterAmount(row.settlement?.amount ?? row.settlement_started_amount);
+        if (method && amount > 0) totals[method] += amount;
+      }
+    }
+    for (const key of Object.keys(totals)) totals[key] = Math.round(totals[key] * 100) / 100;
+    return totals;
+  }
+
   /*
    * Expected CASH in the drawer for a session document, by the one agreed
    * formula: opening float + cash takings (single-mode cash sales and the
    * cash slice of multi-payments) + Σ cash-in − Σ cash-out. Mirrors the tally
    * cashRegisterOpenManualModel shows live.
    */
-  _expectedCashAtClose(document, cashRefunds = 0) {
+  _expectedCashAtClose(document, cashRefunds = 0, cashVersements = 0) {
     let cashSales = 0;
     for (const regSale of document.register_sales || []) {
       let multiPayment = regSale.multi_payment;
@@ -920,7 +976,7 @@ class RegisterRepository {
       cashOut += parseRegisterAmount(entry.cashout_amount);
     }
     const openingFloat = parseRegisterAmount(document.opening_float);
-    return Math.round((openingFloat + cashSales + cashIn - cashOut - (parseFloat(cashRefunds) || 0)) * 100) / 100;
+    return Math.round((openingFloat + cashSales + cashIn + (parseFloat(cashVersements) || 0) - cashOut - (parseFloat(cashRefunds) || 0)) * 100) / 100;
   }
 
   async registercloseUpdate(data) {
@@ -989,7 +1045,8 @@ class RegisterRepository {
             ]).toArray();
             cashRefunds = refundRows.length ? Number(refundRows[0].total) || 0 : 0;
           }
-          const expected = this._expectedCashAtClose(session, cashRefunds);
+          const versementTotals = await this._versementTenderTotalsForSession(session, mongoDate);
+          const expected = this._expectedCashAtClose(session, cashRefunds, versementTotals.cash);
           const countedEntry = (session.countedAmount || []).find(
             (c) => String(c.paymenttype || '').toLowerCase() === 'cash'
           );
@@ -1166,6 +1223,10 @@ class RegisterRepository {
         cashOutAmount += refundRows.length ? Number(refundRows[0].total) || 0 : 0;
       }
 
+      const versementTotals = await this._versementTenderTotalsForSession(document, new Date());
+      if (versementTotals.cash > 0) paymentTally.Cash = (paymentTally.Cash || 0) + versementTotals.cash;
+      if (versementTotals.tpe > 0) paymentTally.TPE = (paymentTally.TPE || 0) + versementTotals.tpe;
+      if (versementTotals.baridimob > 0) paymentTally.BaridiMob = (paymentTally.BaridiMob || 0) + versementTotals.baridimob;
       const openingFloat = parseRegisterAmount(document.opening_float);
       if (paymentTally['Cash']) {
         paymentTally['Cash'] = openingFloat + paymentTally['Cash'] + cashInAmount - cashOutAmount;
