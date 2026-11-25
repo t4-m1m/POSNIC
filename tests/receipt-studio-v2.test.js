@@ -75,7 +75,7 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   assert.equal((app.match(/normalizeReceiptElements\(/g) || []).length, 2, 'both receipt studio paths must call the imported normalizer');
   assert.match(app, /async function resolveLabelPrinterName\(/);
   assert.match(app, /tsc\.\*tdp\.?225\|tdp\.?225\.\*tsc/i, 'label printing must restore the V1 TSC TDP-225 auto-selection');
-  assert.match(app, /printerName:kind==='label'\?await resolveLabelPrinterName\(\)/, 'label studio must use the dedicated label printer, not the receipt printer');
+  assert.match(app, /printerName=kind==='label'\?await resolveLabelPrinterName\(\)/, 'label studio must use the dedicated label printer, not the receipt printer');
   assert.match(app, /receipt_date:receiptSaleDate\(sale\)/);
   assert.match(app, /date:savedSale\.date\|\|savedSale\.created_date/);
   assert.doesNotMatch(app, /sales_description:payload\.sales_description,date:new Date\(\)\.toLocaleString/);
