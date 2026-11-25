@@ -313,15 +313,16 @@ async function openFastLabelPrint(item){
  await render();
 }
 async function resolveLabelPrinterName(){
- const selected=String(document.querySelector('#printer-form [name="label_printer"]')?.value||localStorage.getItem('samarinapos-label-printer')||'').trim();
- if(selected)return selected;
  const bridge=window.electronAPI?.printer;
- if(typeof bridge?.list==='function'){
-  const printers=await bridge.list().catch(()=>[]),names=(Array.isArray(printers)?printers:[]).map(p=>typeof p==='string'?p:String(p?.name||p?.displayName||''));
-  const match=names.find(name=>/tsc.*tdp.?225|tdp.?225.*tsc/i.test(name))||names.find(name=>/tdp.?225/i.test(name));
-  if(match){localStorage.setItem('samarinapos-label-printer',match);const select=document.querySelector('#printer-form [name="label_printer"]');if(select)select.value=match;return match;}
- }
- return '';
+ if(typeof bridge?.list!=='function')throw new Error('La liste des imprimantes Windows est indisponible.');
+ const printers=await bridge.list(),names=(Array.isArray(printers)?printers:[]).map(p=>typeof p==='string'?p:String(p?.name||p?.displayName||'')).filter(Boolean);
+ const selected=String(document.querySelector('#printer-form [name="label_printer"]')?.value||localStorage.getItem('samarinapos-label-printer')||'').trim();
+ const installed=selected&&names.find(name=>name.toLocaleLowerCase()===selected.toLocaleLowerCase());
+ const match=installed||names.find(name=>/tsc.*tdp.?225|tdp.?225.*tsc/i.test(name))||names.find(name=>/tdp.?225/i.test(name));
+ if(!match)throw new Error(selected?'L’imprimante d’étiquettes enregistrée est introuvable dans Windows. Choisissez-la à nouveau dans Imprimantes & Ticket Studio.':'Aucune TSC TDP-225 détectée. Sélectionnez votre imprimante d’étiquettes dans Imprimantes & Ticket Studio.');
+ localStorage.setItem('samarinapos-label-printer',match);
+ const select=document.querySelector('#printer-form [name="label_printer"]');if(select)select.value=match;
+ return match;
 }
 async function fastPrintLabel(item,copies){
  if(!item)throw new Error('Article introuvable pour l’impression.');
