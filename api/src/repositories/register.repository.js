@@ -1702,6 +1702,9 @@ class RegisterRepository {
               cashout_amount: {
                 $sum: '$cashInOutDetail.cashout_amount',
               },
+              cashin_credit_settlement: {
+                $sum: { $cond: [{ $eq: ['$cashInOutDetail.source', 'credit_settlement'] }, '$cashInOutDetail.cashin_amount', 0] },
+              },
             },
           },
           { $sort: { cashin_amount: 1 } },
@@ -1711,6 +1714,7 @@ class RegisterRepository {
       const cashData = cashList.map((doc) => ({
         cashin_amount: doc.cashin_amount,
         cashout_amount: doc.cashout_amount,
+        cashin_credit_settlement: doc.cashin_credit_settlement || 0,
       }));
 
       // Debt collections belong to the date received, not the original sale date.
