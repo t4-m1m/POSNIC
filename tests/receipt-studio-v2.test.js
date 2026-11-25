@@ -72,6 +72,6 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   assert.match(app, /art\.style\.height=state\.labelLayout\.height\+'mm'/);
   assert.ok(app.includes('legacyPortraitDefault?45'));
   assert.ok(app.includes('legacyPortraitDefault?35'));
-  assert.doesNotMatch(app, /date:savedSale\\.date\\|\\|savedSale\\.created_date[^}]*new Date\\(\\)\\.toLocaleString/);
+  assert.ok(app.includes("date:savedSale.date||savedSale.created_date||savedSale.createdAt||savedSale.created_at||savedSale.sale_date||savedSale.transaction_date||payload.date||payload.created_date||payload.created_at||payload.sale_date||''"));
   assert.match(css, /#receipt-artboard\{overflow:visible!important\}/);
 });
