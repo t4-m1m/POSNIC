@@ -2417,7 +2417,7 @@ class SalesController extends BaseController {
         { $group: { _id: null, amount: { $sum: '$amount' } } },
       ]).toArray();
       const deliveryPayoutCash = roundToTwo(deliveryPayoutRows.length ? deliveryPayoutRows[0].amount || 0 : 0);
-      const refundCashUnknown = refundRows.some(row => !String(row._id || '').trim() && auditNumber(row.amount) > 0);
+      const refundCashUnknown = refundRows.some(row => auditNumber(row.amount) > 0 && !['CASH', 'TPE', 'BaridiMob'].includes(accountingEngine.normalizeTenderName(row._id)));
       const cashRefunds = roundToTwo(refundRows.reduce((sum, row) => sum + (accountingEngine.isCashTender(row._id) ? auditNumber(row.amount) : 0), 0));
       const debtCashCollections = roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + (accountingEngine.isCashTender(row.payment_mode) ? auditNumber(row.amount) : 0), 0));
       const isDeliveryCodTender = method => /livraison|(?:^|[\s/])cod(?:$|[\s/])|zr\s*express/i.test(String(method || '').trim());
