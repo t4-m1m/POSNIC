@@ -103,7 +103,7 @@ test('Receipt Studio parses persisted millimetre dimensions and repairs collapse
   assert.match(app, /const designerMm=\(value,fallback,min=0,max=2000\)/);
   assert.match(app, /designerMm\(saved\?\.width\?\?remoteLayout\?\.width\?\?r\.paperWidth,80,30,210\)/);
   assert.match(app, /rawW<8\?fallback\.w:rawW/);
-  assert.match(app, /rawH<1\.5\?fallback\.h:rawH/);
+  assert.match(app, /rawH<1\.5\?fallback\.h:rawH/);\n  assert.ok(app.includes('designerMm(layout.width,80,30,210)'));
 });
 
 test('Designer workspaces open at the top and use a smaller label zoom', () => {

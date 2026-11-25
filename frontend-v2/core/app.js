@@ -339,14 +339,14 @@ function renderReceiptStudioDocument(sale,layout){
 }
 function buildSaleReceiptHtml(sale){return renderReceiptStudioDocument(sale,state.receiptLayout);}
 async function printSaleReceiptDocument(sale){
- const layout=state.receiptLayout||{},width=Math.max(30,Number(layout.width)||80),isA4=layout.format==='a4'||width===210,height=isA4?297:Math.max(80,Number(layout.height)||160),html=buildSaleReceiptHtml(sale);
+ const layout=state.receiptLayout||{},width=designerMm(layout.width,80,30,210),isA4=layout.format==='a4'||width===210,height=isA4?297:designerMm(layout.height,160,80,1500),html=buildSaleReceiptHtml(sale);
  const result=await window.electronAPI?.printer?.print?.(html,{pageSize:isA4?'A4':width+'mm',customPageSize:isA4?undefined:{width,height},printerName:document.querySelector('#printer-form [name="printer"]')?.value||'',silent:true,copies:1,thermalRaster:false,fastReceiptLines:null,forceHtml:true,fitReceipt:!isA4,printBackground:true,margins:{marginType:'none'}});
  if(!result?.success)throw new Error(result?.error||'Échec de l’impression du ticket.');
  return result;
 }
 async function printStudio(kind){
  if(kind==='receipt'){
-  const width=Math.max(30,Number(state.receiptLayout?.width)||80),isA4=state.receiptLayout?.format==='a4'||width===210,height=isA4?297:Math.max(80,Number(state.receiptLayout?.height)||160),html=renderReceiptStudioDocument(state.receiptSample,state.receiptLayout),bridge=window.electronAPI?.printer;
+  const width=designerMm(state.receiptLayout?.width,80,30,210),isA4=state.receiptLayout?.format==='a4'||width===210,height=isA4?297:designerMm(state.receiptLayout?.height,160,80,1500),html=renderReceiptStudioDocument(state.receiptSample,state.receiptLayout),bridge=window.electronAPI?.printer;
   if(bridge?.print){const result=await bridge.print(html,{pageSize:isA4?'A4':width+'mm',customPageSize:isA4?undefined:{width,height},printerName:document.querySelector('#printer-form [name="printer"]')?.value||'',silent:true,copies:1,thermalRaster:false,fastReceiptLines:null,forceHtml:true,fitReceipt:!isA4,printBackground:true,margins:{marginType:'none'}});if(!result?.success)throw new Error(result?.error||'Échec de l’impression du modèle.');toast('Modèle Receipt Studio imprimé via le pilote Windows.','success');return result;}
   const win=window.open('','_blank','width=900,height=1000');if(!win)throw new Error('Autorisez la fenêtre d’impression.');win.document.write(html);win.document.close();win.focus();win.print();toast('Fenêtre d’impression du modèle ouverte.','info');return {success:null};
  }
