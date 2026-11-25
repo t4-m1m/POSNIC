@@ -25,10 +25,12 @@ async function recoverSettlingVersement(db, collection, current) {
     const settledAt = sale.versement_settled_at || sale.settled_at || current.settlement_started_at || new Date();
     const by = String(current.settlement_started_by || current.created_by || 'System');
     const hasHistory = Array.isArray(current.history) && current.history.some(event => event.type === 'settlement');
+    const registerId = sale.versement_settlement_register_id || current.settlement_started_register_id || null;
     await collection.updateOne({ _id: current._id, status: 'settling' }, {
       $set: {
         status: 'settled', remaining: 0, settled_at: settledAt,
-        settlement: { amount, method, settled_at: settledAt, recorded_by: by },
+        ...(registerId ? { settlement_register_id: registerId } : {}),
+        settlement: { amount, method, settled_at: settledAt, recorded_by: by, ...(registerId ? { register_id: registerId } : {}) },
       },
       ...(!hasHistory ? { $push: { history: { type: 'settlement', amount, method, at: settledAt, by } } } : {}),
       $unset: { settlement_started_at: '', settlement_started_by: '', settlement_started_method: '', settlement_started_amount: '' },
@@ -206,7 +208,7 @@ exports.settle = async (req,res) => {
     const saleFilter = current.sale_object_id ? {_id:current.sale_object_id} : {$or:[{sales_id:current.sale_key},{sale_id:current.sale_key}]};
     const sale = await db.collection('sales').findOne(saleFilter);
     if (!sale) return fail(res,409,'The linked sale is missing; settlement was not recorded.');
-    const claimed = await collection.updateOne({_id:id,status:'pending',remaining:current.remaining},{$set:{status:'settling',settlement_started_at:settledAt,settlement_started_by:actor(req),settlement_started_method:method,settlement_started_amount:amount}});
+    const claimed = await collection.updateOne({_id:id,status:'pending',remaining:current.remaining},{$set:{status:'settling',settlement_started_at:settledAt,settlement_started_by:actor(req),settlement_started_method:method,settlement_started_amount:amount,...(register?{settlement_started_register_id:register}:{})}});
     if (!claimed.modifiedCount) return fail(res,409,'This versement was already updated. Refresh the register.');
     try {
       const saleUpdate = {
