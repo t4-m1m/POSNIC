@@ -111,3 +111,13 @@ test('Designer workspaces open at the top and use a smaller label zoom', () => {
   assert.match(css, /align-items:flex-start!important;justify-content:center!important;overflow:auto!important/);
   assert.match(css, /#label-artboard\{zoom:1\.35!important/);
 });
+
+
+test('Designer artboards keep physical width and disable label zoom/cropping in the actual markup', () => {
+ const app = read('frontend-v2/core/app.js');
+ const css = read('frontend-v2/styles/app.css');
+ assert.match(app, /flex:0 0 '\+state\.receiptLayout\.width\+'mm/);
+ assert.match(app, /zoom:1;background:/);
+ assert.match(css, /#label-artboard\{[\s\S]*?zoom:1!important/);
+ assert.match(css, /#receipt-artboard\{[\s\S]*?flex-shrink:0!important/);
+});
