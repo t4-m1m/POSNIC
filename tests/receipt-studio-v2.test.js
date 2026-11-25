@@ -48,6 +48,8 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   const css = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/styles/app.css'), 'utf8');
   assert.match(app, /receiptSaleNumber\(sale\)/);
   assert.match(app, /receipt_date:receiptSaleDate\(sale\)/);
+  assert.match(app, /date:savedSale\.date\|\|savedSale\.created_date/);
+  assert.doesNotMatch(app, /sales_description:payload\.sales_description,date:new Date\(\)\.toLocaleString/);
   assert.match(app, /font-size:inherit!important;font-weight:inherit!important/);
   assert.match(app, /art\.style\.width=state\.labelLayout\.width\+'mm'/);
   assert.match(app, /art\.style\.height=state\.labelLayout\.height\+'mm'/);
