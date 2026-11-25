@@ -1001,8 +1001,8 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
   position:relative!important;
   flex:0 0 auto!important;
   flex-shrink:0!important;
-  width:80mm;
-  min-width:80mm!important;
+  width:var(--receipt-paper-width,80mm)!important;
+  min-width:var(--receipt-paper-width,80mm)!important;
   max-width:none!important;
   height:160mm;
   box-sizing:border-box!important;

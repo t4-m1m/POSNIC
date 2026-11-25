@@ -88,7 +88,7 @@ test('Receipt Studio canvas cannot shrink below the selected paper width', () =>
   const app = read('frontend-v2/core/app.js');
   const css = read('frontend-v2/styles/app.css');
   assert.ok(app.includes("min-width:'+state.receiptLayout.width+'mm"));
-  assert.ok(css.includes('#receipt-artboard{') && css.includes('min-width:80mm!important'));
+  assert.ok(css.includes('#receipt-artboard{') && css.includes('min-width:var(--receipt-paper-width,80mm)!important'));
 });
 
 test('Label Studio centers the complete sheet inside its scrollable stage', () => {
