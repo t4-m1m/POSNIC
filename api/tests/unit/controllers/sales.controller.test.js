@@ -1097,7 +1097,7 @@ describe('SalesController', () => {
     });
 
     test('posts the complete F6 invoice only on its final settlement day', async () => {
-      const settlementDate = new Date('2026-11-07T10:00:00.000Z');
+      const settlementDate = new Date('2025-11-07T10:00:00.000Z');
       const settledVersement = {
         status: 'settled',
         sale_total: 6000,
@@ -1129,14 +1129,14 @@ describe('SalesController', () => {
 
       const depositDay = mockRes();
       await ctrl.dailySalesReports(mockReq({ query: {
-        ...q, starting_date: '2026-11-05', ending_date: '2026-11-05',
+        ...q, starting_date: '2025-11-05', ending_date: '2025-11-05',
       } }), depositDay);
       expect(depositDay.json.mock.calls[0][0].data.versement_payment_total).toBe(0);
       expect(depositDay.json.mock.calls[0][0].data.versement_settlement_cash_total).toBe(0);
 
       const settlementDay = mockRes();
       await ctrl.dailySalesReports(mockReq({ query: {
-        ...q, starting_date: '2026-11-07', ending_date: '2026-11-07',
+        ...q, starting_date: '2025-11-07', ending_date: '2025-11-07',
       } }), settlementDay);
       const data = settlementDay.json.mock.calls[0][0].data;
       expect(data.sales_total).toBe(6000);
