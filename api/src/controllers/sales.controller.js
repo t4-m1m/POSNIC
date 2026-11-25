@@ -2017,7 +2017,7 @@ class SalesController extends BaseController {
       const versementEvents = await db.collection('sale_versements').find({
         // This ledger is in the tenant-scoped shop DB; its documents carry
         // branch_id but no license field. Filtering by license hides all F6 history.
-        branch_id: branchObjectId,
+        branch_id: { $in: branchValues },
         status: 'settled',
         $or: [
           { 'settlement.settled_at': { $gte: reportStart, $lt: reportEnd } },
@@ -2607,7 +2607,7 @@ class SalesController extends BaseController {
           { label: 'Coût marchandises = coût lignes + ajustements', expected: roundToTwo(costOfGoodsBase + editCostAdjustmentTotal), actual: costOfGoodsTotal, passed: costOfGoodsTotal !== null ? Math.abs(roundToTwo(costOfGoodsBase + editCostAdjustmentTotal) - costOfGoodsTotal) <= 0.01 : null },
           { label: 'Paiements de versement = détail des règlements', expected: roundToTwo(versementPaymentDetails.reduce((sum, row) => sum + auditNumber(row.amount), 0)), actual: versementPaymentTotal, passed: Math.abs(roundToTwo(versementPaymentDetails.reduce((sum, row) => sum + auditNumber(row.amount), 0)) - versementPaymentTotal) <= 0.01 },
           { label: 'Encaissements crédits = détail des règlements', expected: roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + auditNumber(row.amount), 0)), actual: debtPaymentTotal, passed: Math.abs(roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + auditNumber(row.amount), 0)) - debtPaymentTotal) <= 0.01 },
-          { label: 'Espèces nettes = entrées physiques du jour − sorties physiques du jour', expected: roundToTwo(registerCash.openingBalance + cashSalesGross + versementCashTotal + debtCashCollections - cashRefunds - cashExpenses - salaryCash - advanceCash - primeCash - registerCash.otherCashOutflows), actual: cashAccounting.cashExpected, passed: cashAccounting.cashExpected !== null ? Math.abs(roundToTwo(registerCash.openingBalance + cashSalesGross + versementCashTotal + debtCashCollections - cashRefunds - cashExpenses - salaryCash - advanceCash - primeCash - registerCash.otherCashOutflows) - cashAccounting.cashExpected) <= 0.01 : null },
+          { label: 'Solde de caisse = fond initial + entrées − sorties', expected: roundToTwo(registerCash.openingBalance + cashSalesGross + versementCashTotal + debtCashCollections - cashRefunds - cashExpenses - salaryCash - advanceCash - primeCash - registerCash.otherCashOutflows), actual: cashAccounting.cashExpected, passed: cashAccounting.cashExpected !== null ? Math.abs(roundToTwo(registerCash.openingBalance + cashSalesGross + versementCashTotal + debtCashCollections - cashRefunds - cashExpenses - salaryCash - advanceCash - primeCash - registerCash.otherCashOutflows) - cashAccounting.cashExpected) <= 0.01 : null },
         ],
       };
 
