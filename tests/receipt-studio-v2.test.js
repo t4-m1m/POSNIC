@@ -32,7 +32,7 @@ test('receipt date parses Mongo Extended JSON millisecond timestamps', () => {
   const value = receiptSaleDate({
     date: { $date: { $numberLong: String(Date.UTC(2026, 10, 20, 10, 15)) } },
   });
-  assert.match(value, /20\\/11\\/2026/);
+  assert.match(value, /20\/11\/2026/);
 });
 
 test('F6 receipt uses the original sale timestamp instead of the later settlement date', () => {
@@ -41,7 +41,7 @@ test('F6 receipt uses the original sale timestamp instead of the later settlemen
     created_date: '2026-11-20T10:15:00.000Z',
     date: '2026-11-24T18:30:00.000Z',
   });
-  assert.match(value, /20\\/11\\/2026/);
+  assert.match(value, /20\/11\/2026/);
 });
 
 test('receipt date uses the original sale date and preserves local date/time strings', () => {
