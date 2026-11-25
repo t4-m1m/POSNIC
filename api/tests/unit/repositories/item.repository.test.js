@@ -42,7 +42,7 @@ jest.mock(
   () =>
     class {
       createStockLog() {
-        return Promise.resolve({ status: true, data: { _id: 'stock-log-test' } });
+        return Promise.resolve();
       }
       updateItemNameInStockLogs() {
         return Promise.resolve();

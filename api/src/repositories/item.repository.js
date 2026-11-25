@@ -6050,19 +6050,28 @@ class ItemRepository extends BaseModel {
           stockLogStatus = branch?.stock_management_log !== false;
         }
         const difference = oldQuantity - quantity;
-        const log = await new StockLogsRepository().createStockLog({
-          branch_id: branchId, license: context.licenseId || BaseModel.license,
-          view_item_id: item._id, item_barcode_id: item.barcode_id, item_name: item.name,
-          item_quantity: String(quantity), process: 'Edit Quantity', reference: item.barcode_id || String(item._id),
-          date: now, action: quantity > oldQuantity ? 'Add' : 'Subtract', stocklog: stockLogStatus,
-          opening_balance: String(oldQuantity), closing_balance: String(quantity),
-          count: difference < 0 ? String(Math.abs(difference)) : '-' + String(difference),
-          changed_by_userid: context.loggedUserId || context.userId || BaseModel.loggedUser,
-          changed_by: context.loggedUserName || context.userName || BaseModel.loggedUserName || '',
-        });
-        if (!log.status) {
-          await collection.updateOne({ _id: objectId, ...scope, available_quantity: quantity },
-            { $set: { available_quantity: oldQuantity } });
+        const rollbackQuantity = () => collection.updateOne(
+          { _id: objectId, ...scope, available_quantity: quantity },
+          { $set: { available_quantity: oldQuantity } }
+        );
+        let log;
+        try {
+          log = await new StockLogsRepository().createStockLog({
+            branch_id: branchId, license: context.licenseId || BaseModel.license,
+            view_item_id: item._id, item_barcode_id: item.barcode_id, item_name: item.name,
+            item_quantity: String(quantity), process: 'Edit Quantity', reference: item.barcode_id || String(item._id),
+            date: now, action: quantity > oldQuantity ? 'Add' : 'Subtract', stocklog: stockLogStatus,
+            opening_balance: String(oldQuantity), closing_balance: String(quantity),
+            count: difference < 0 ? String(Math.abs(difference)) : '-' + String(difference),
+            changed_by_userid: context.loggedUserId || context.userId || BaseModel.loggedUser,
+            changed_by: context.loggedUserName || context.userName || BaseModel.loggedUserName || '',
+          });
+        } catch (logError) {
+          await rollbackQuantity();
+          throw logError;
+        }
+        if (log && log.status === false) {
+          await rollbackQuantity();
           throw new Error(log.message || 'Could not write the inventory movement.');
         }
       }
