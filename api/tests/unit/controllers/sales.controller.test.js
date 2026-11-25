@@ -1097,6 +1097,7 @@ describe('SalesController', () => {
     });
 
     test('posts the complete F6 invoice only on its final settlement day', async () => {
+      sessionFilterUtil.applySessionFilter.mockImplementation(async (_req, range) => range);
       const settlementDate = new Date('2025-11-07T10:00:00.000Z');
       const settledVersement = {
         status: 'settled',
