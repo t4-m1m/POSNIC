@@ -412,5 +412,17 @@ describe('fourteen-day business accounting regression fixture', () => {
         returnValue: [{ item_id: 'legacy-item', item_quantity: 1 }] } }],
     }], '2026-11-01T00:00:00Z', '2026-11-15T00:00:00Z');
     expect(returned).toMatchObject({ amount: 60, cost: 20, count: 1, itemsCount: 1, complete: true, costComplete: true });
+    const outstanding = require('../../../src/services/accounting-engine').reconstructOutstandingAsOf({
+      end: '2026-11-15T00:00:00Z',
+      transactions: [{ _id: 'tx-legacy', sale_id: 'sale-legacy', pending: '100,00', created_date: '2026-11-01T10:00:00Z' }],
+      creditPayments: [{ received_at: '2026-11-20T10:00:00Z', amount: '20,00',
+        allocations: [{ transaction_id: 'tx-legacy', amount: '20,00' }] }],
+      editAdjustments: [{ sale_id: 'sale-legacy', created_at: '2026-11-20T10:00:00Z', amount: '5,00' }],
+      returns: [{ sale_id: 'sale-legacy', date: '2026-11-20T10:00:00Z', amount: '10,00' }],
+      versements: [{ sale_id: 'sale-versement', sale_date: '2026-11-01T10:00:00Z',
+        sale_total: '150,00', initial_amount: '50,00', initial_collected_at: '2026-11-01T10:00:00Z',
+        settlement: { amount: '20,00', settled_at: '2026-11-20T10:00:00Z' }, remaining: '80,00' }],
+    });
+    expect(outstanding).toMatchObject({ amount: 225, complete: true, unresolved: 0 });
   });
 });

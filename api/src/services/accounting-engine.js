@@ -328,7 +328,7 @@ function reconstructOutstandingAsOf({
     if (!allocations.length) { complete = false; unresolved += 1; continue; }
     let allocatedTotal = 0;
     for (const allocation of allocations) {
-      const amount = Number(allocation.amount);
+      const amount = parseAmount(allocation.amount);
       if (!Number.isFinite(amount) || amount <= 0) { complete = false; unresolved += 1; continue; }
       allocatedTotal += amount;
       const transactionId = id(allocation.transaction_id);
@@ -343,19 +343,19 @@ function reconstructOutstandingAsOf({
         complete = false; unresolved += 1;
       }
     }
-    if (Math.abs(allocatedTotal - (Number(payment.amount) || 0)) > 0.01) {
+    if (Math.abs(allocatedTotal - (parseAmount(payment.amount) || 0)) > 0.01) {
       complete = false; unresolved += 1;
     }
   }
   const editsAfter = new Map();
   editAdjustments.filter(row => after(row.created_at)).forEach(row => {
     const keys = [...new Set([id(row.sale_id), id(row.sales_id)].filter(Boolean))];
-    for (const key of keys) editsAfter.set(key, (editsAfter.get(key) || 0) + (Number(row.amount) || 0));
+    for (const key of keys) editsAfter.set(key, (editsAfter.get(key) || 0) + (parseAmount(row.amount) || 0));
   });
   const returnsAfter = new Map();
   returns.filter(row => after(row.date)).forEach(row => {
     const keys = [...new Set([id(row.sale_id), id(row.sales_id)].filter(Boolean))];
-    for (const key of keys) returnsAfter.set(key, (returnsAfter.get(key) || 0) + (Number(row.amount) || 0));
+    for (const key of keys) returnsAfter.set(key, (returnsAfter.get(key) || 0) + (parseAmount(row.amount) || 0));
   });
 
   const versementKeys = new Set([
@@ -385,7 +385,7 @@ function reconstructOutstandingAsOf({
       }
       if (new Date(created).getTime() >= endTime) continue;
       hasHistoricalRows = true;
-      current += Math.max(0, Number(row.pending) || 0);
+      current += Math.max(0, parseAmount(row.pending) || 0);
       rowCollections += collectionsAfter.get(id(row._id)) || 0;
     }
     if (!hasHistoricalRows) continue;
@@ -407,11 +407,11 @@ function reconstructOutstandingAsOf({
     let due = Math.max(0, Number(row.remaining ?? row.sale_total - (row.initial_amount || 0) - (row.settlement?.amount || 0)) || 0);
     if (!initialDate || !Number.isFinite(new Date(initialDate).getTime())) {
       complete = false; unresolved += 1;
-    } else if (after(initialDate)) due += Number(row.initial_recorded_amount ?? row.initial_amount) || 0;
-    if (Number(row.settlement?.amount || 0) > 0) {
+    } else if (after(initialDate)) due += parseAmount(row.initial_recorded_amount ?? row.initial_amount) || 0;
+    if (parseAmount(row.settlement?.amount || 0) > 0) {
       if (!settlementDate || !Number.isFinite(new Date(settlementDate).getTime())) {
         complete = false; unresolved += 1;
-      } else if (after(settlementDate)) due += Number(row.settlement.amount) || 0;
+      } else if (after(settlementDate)) due += parseAmount(row.settlement.amount) || 0;
     }
     total += Math.max(0, due - (editsAfter.get(saleKey) || 0) + (returnsAfter.get(saleKey) || 0));
   }
@@ -426,11 +426,11 @@ function reconstructOutstandingAsOf({
     if (new Date(saleDate).getTime() >= endTime) continue;
     const meta = sale.versement_checkout || {};
     const initialDate = meta.initial_collected_at || sale.date || sale.created_date;
-    const initial = Number(meta.initial_amount || 0) || 0;
+    const initial = parseAmount(meta.initial_amount || 0) || 0;
     let due;
-    if (finite(sale.payment_pending)) due = Math.max(0, Number(sale.payment_pending));
+    if (finite(sale.payment_pending)) due = Math.max(0, parseAmount(sale.payment_pending));
     else {
-      due = Math.max(0, Number(sale.sales_total ?? sale.total ?? 0) - initial);
+      due = Math.max(0, parseAmount(sale.sales_total ?? sale.total ?? 0) - initial);
       complete = false; unresolved += 1;
     }
     if (initial > 0 && after(initialDate)) due += initial;
