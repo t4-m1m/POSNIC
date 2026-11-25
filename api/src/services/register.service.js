@@ -134,13 +134,13 @@ class RegisterService {
       total += row.sale_total || 0;
 
       if (row.payment_mode === 'Cash') {
-        register_report_cash = row.sale_total;
+        register_report_cash += row.sale_total || 0;
       }
       if (row.payment_mode === 'Cheque') {
-        register_report_Cheque = row.sale_total;
+        register_report_Cheque += row.sale_total || 0;
       }
       if (row.payment_mode === 'CreditCard') {
-        register_report_CreditCard = row.sale_total;
+        register_report_CreditCard += row.sale_total || 0;
       }
       if (row.payment_mode === 'Pending') {
         pendingtotal += row.sale_total || 0;
@@ -153,10 +153,13 @@ class RegisterService {
     const opening = commonDetails.opening_float || 0;
     const cashin = cashDetails.cashin_amount || 0;
     const cashout = cashDetails.cashout_amount || 0;
-    const payment_data = total_amount + opening + cashin;
+    // The physical drawer contains CASH sale receipts, not electronic tenders.
+    // Customer cash-debt collections are already journaled in cashin_amount by
+    // CreditService, so do not add debt_payment_total a second time here.
+    const payment_data = register_report_cash + opening + cashin;
     const expectedval_data = payment_data - cashout;
     const netsale = recive_payement - refund;
-    const difference = counted_amount - total;
+    const difference = counted_amount - expectedval_data;
 
     return {
       status: true,
