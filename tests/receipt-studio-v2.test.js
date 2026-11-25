@@ -28,6 +28,15 @@ test('receipt date uses a timestamp when the first sale date field contains only
   assert.match(value, /11:42/);
 });
 
+test('F6 receipt uses the original sale timestamp instead of the later settlement date', () => {
+  const value = receiptSaleDate({
+    versement_checkout: { initial_amount: 1000 },
+    created_date: '2026-11-20T10:15:00.000Z',
+    date: '2026-11-24T18:30:00.000Z',
+  });
+  assert.match(value, /20\\/11\\/2026/);
+});
+
 test('receipt date uses the original sale date and preserves local date/time strings', () => {
   assert.equal(receiptSaleDate({
     date: '25/11/2026 10:42 AM',
