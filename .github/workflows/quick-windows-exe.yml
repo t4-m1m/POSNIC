@@ -145,6 +145,14 @@ jobs:
           rm -rf mongodb.zip mongodb-temp
           node scripts/check-mongodb-binaries.js
 
+      - name: Run MongoDB-backed register-close and stock-journal integration tests
+        working-directory: api
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:MONGOMS_SYSTEM_BINARY = (Resolve-Path "../mongodb/bin/mongod.exe").Path
+          node --test tests/business-register-close.integration.cjs tests/extension-stock-journal.integration.cjs
+
       - name: Prepare bundled app resources
         run: npm run prepare:bundle
 
