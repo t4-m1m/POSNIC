@@ -237,7 +237,7 @@
         var documentTitle = pendingGoods ? label('Bill') : beforePayment ? (present(data.branch_gstin_number) || on(data.gst) ? label('Tax invoice') : label('Bill')) : label('Receipt');
         var hasField = function (field) { return layout.blocks.some(function (b) { return b.type === 'field' && b.field === field; }); };
         var values = {
-            receipt_number: data.sales_id || data.sale_number || '', receipt_date: data.receipt_date || data.created_date || data.date || '', seller_name: (data.versement_checkout && data.versement_checkout.vendor_name) || data.cashier_name || data.seller_name || data.steward_name || data.steward || data.created_by || data.user_name,
+            receipt_number: data.sale_number || data.invoice_number || data.receipt_number || (data.sales_id && !/^[a-f0-9]{24}$/i.test(String(data.sales_id).trim()) ? data.sales_id : ''), receipt_date: data.created_date || data.date || data.order_date || data.receipt_date || '', seller_name: (data.versement_checkout && data.versement_checkout.vendor_name) || data.cashier_name || data.seller_name || data.steward_name || data.steward || data.created_by || data.user_name,
             customer_name: data.customer_name || (data.versement_checkout && data.versement_checkout.customer_name), customer_phone: data.customer_phone || (data.versement_checkout && data.versement_checkout.phone), customer_email: data.customer_email,
             customer_tax_number: taxNumber,
             customer_address: data.customer_address, sale_note: data.sales_description || data.sale_note || data.sales_note || data.note || data.description, brand_url: data.website || PosnicPro.BRAND_URL,
@@ -463,7 +463,7 @@
                 style += ';transform:rotate(' + Math.max(-180, Math.min(180, Number(b.rotation))) + 'deg);transform-origin:center center;';
             }
             if (layout.canvas && Number.isFinite(Number(b.x)) && Number.isFinite(Number(b.y))) {
-                style += ';position:absolute;left:' + Math.max(-250, Math.min(300, Number(b.x))) + '%;top:' + Math.max(0, Number(b.y)) + 'px;width:' + Math.max(5, Math.min(250, Number(b.w) || 100)) + '%;margin:0;';
+                style += ';position:absolute;left:' + Math.max(-250, Math.min(300, Number(b.x))) + '%;top:' + Math.max(-1200, Math.min(8000, Number(b.y))) + 'px;width:' + Math.max(5, Math.min(250, Number(b.w) || 100)) + '%;margin:0;';
                 if (Number.isFinite(Number(b.h)) && Number(b.h) > 0) {
                     var effectiveHeight = Number(b.h);
                     if (!sheet && b.type === 'items') {
