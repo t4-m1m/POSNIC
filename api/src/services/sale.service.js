@@ -44,7 +44,10 @@ const buildDailyPaymentAggregationPipeline = (match) => {
   const salesTotal = asNumber({ $ifNull: [{ $ifNull: ['$sales_total', '$total'] }, '$items_total'] });
   const pending = asNumber({ $ifNull: ['$payment_pending', 0] });
   return [
-    { $match: match },
+    // F6 initial deposits and final settlements are recorded in sale_versements,
+    // not as ordinary sale tenders. Counting the updated Paid sale here would
+    // count the whole invoice again on settlement day.
+    { $match: { $and: [match, { versement_checkout: { $exists: false } }] } },
     { $addFields: {
       sales_total: { $ifNull: ['$sale_original_snapshot.sales_total', { $ifNull: ['$sale_original_total', '$sales_total'] }] },
       total: { $ifNull: ['$sale_original_snapshot.total', { $ifNull: ['$sale_original_total', '$total'] }] },
