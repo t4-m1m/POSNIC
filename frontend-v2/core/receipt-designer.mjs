@@ -21,7 +21,7 @@ export function receiptSaleDate(sale = {}) {
     if (!text) continue;
     // Preserve already-formatted local sale timestamps; Date.parse interprets
     // DD/MM/YYYY inconsistently across Windows and Chromium versions.
-    if (/^\\d{1,2}[./-]\\d{1,2}[./-]\\d{4}(?:\\s+\\d{1,2}:\\d{2}(?::\\d{2})?\\s*(?:AM|PM)?)?$/i.test(text)) return text;
+    if (/^\d{1,2}[./-]\d{1,2}[./-]\d{4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?)?$/i.test(text)) return text;
     const date = typeof raw === 'number' ? new Date(Math.abs(raw) < 1e12 ? raw * 1000 : raw) : new Date(text);
     if (Number.isFinite(date.getTime())) return date.toLocaleString('fr-FR');
   }
