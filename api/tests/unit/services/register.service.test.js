@@ -118,7 +118,11 @@ function makeReportDetailsResult(overrides = {}) {
     status: true,
     data: {
       common_details: [{ opening_float: 1000, counted_amount: 2500 }],
-      cash_details: [{ cashin_amount: 200, cashout_amount: 100 }],
+      cash_details: [{ cashin_amount: 200, cashout_amount: 100, cashin_credit_settlement: 100 }],
+      debt_payment_details: [
+        { payment_mode: 'cash', amount: 100, count: 1 },
+        { payment_mode: 'tpe', amount: 300, count: 1 },
+      ],
       sale_details: [
         { payment_mode: 'Cash', sale_total: 1500, return_total: 50, count: 10 },
         { payment_mode: 'Cheque', sale_total: 500, return_total: 0, count: 3 },
@@ -746,6 +750,30 @@ describe('RegisterService', () => {
 
       const result = await service.getRegisterReportPdfDetails(INPUT_DATA);
 
+      expect(result.data.calculated.payment_data).toBe(2700);
+    });
+
+    test('adds cash debt collections once when they are already in the cash-in journal', async () => {
+      repo.getRegisterReportDetailsPage.mockResolvedValue(makeReportDetailsResult());
+
+      const result = await service.getRegisterReportPdfDetails(INPUT_DATA);
+
+      expect(result.data.calculated.logged_debt_cash_collections).toBe(100);
+      expect(result.data.calculated.debt_cash_collections).toBe(100);
+      expect(result.data.calculated.other_cash_in).toBe(100);
+      expect(result.data.calculated.payment_data).toBe(2700);
+    });
+
+    test('adds cash debt collections when no matching cash-in journal entry exists', async () => {
+      const details = makeReportDetailsResult();
+      details.data.cash_details[0].cashin_amount = 100;
+      details.data.cash_details[0].cashin_credit_settlement = 0;
+      repo.getRegisterReportDetailsPage.mockResolvedValue(details);
+
+      const result = await service.getRegisterReportPdfDetails(INPUT_DATA);
+
+      expect(result.data.calculated.debt_cash_collections).toBe(100);
+      expect(result.data.calculated.other_cash_in).toBe(100);
       expect(result.data.calculated.payment_data).toBe(2700);
     });
 
