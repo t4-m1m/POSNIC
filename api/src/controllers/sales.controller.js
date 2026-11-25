@@ -2015,50 +2015,24 @@ class SalesController extends BaseController {
       // final tender methods, while capping the recognized amount at the invoice
       // total so an overpayment can never inflate sales revenue.
       const versementEvents = await db.collection('sale_versements').find({
-        // This ledger is in the tenant-scoped shop DB; its documents carry
-        // branch_id but no license field. Filtering by license hides all F6 history.
+        // Initial deposits and final settlements are independent cash events.
+        // Include pending records so a deposit appears on the day it was received.
         branch_id: { $in: branchValues },
-        status: 'settled',
+        status: { $nin: ['cancelled', 'cancelling'] },
         $or: [
+          { initial_collected_at: { $gte: reportStart, $lt: reportEnd } },
+          { initial_collected_at: { $exists: false }, created_at: { $gte: reportStart, $lt: reportEnd } },
           { 'settlement.settled_at': { $gte: reportStart, $lt: reportEnd } },
           { 'settlement.settled_at': { $exists: false }, settled_at: { $gte: reportStart, $lt: reportEnd } },
         ],
       }).toArray();
-      const tenderLabels = { cash: 'CASH', card: 'TPE', tpe: 'TPE', bank_transfer: 'BaridiMob', baridimob: 'BaridiMob' };
-      let versementDataComplete = true;
-      const versementPaymentMap = new Map();
-      const addVersementPayment = (method, amount) => {
-        const value = roundToTwo(Math.max(0, auditNumber(amount)));
-        if (value <= 0) return;
-        const key = accountingEngine.normalizeTenderName(method);
-        if (key === 'Non classé') versementDataComplete = false;
-        const row = versementPaymentMap.get(key) || { payment_mode: tenderLabels[String(method || '').toLowerCase()] || key, amount: 0, count: 0 };
-        row.amount = roundToTwo(row.amount + value);
-        row.count += 1;
-        versementPaymentMap.set(key, row);
-        if (/^(cash|esp[eè]ces?|esp[eè]ce)$/i.test(String(method || ''))) versementCashTotal += value;
-      };
-      let versementCashTotal = 0;
-      const inReportDay = (value) => {
-        const date = value ? new Date(value) : null;
-        return date && Number.isFinite(date.getTime()) && date >= reportStart && date < reportEnd;
-      };
-      versementEvents.forEach((v) => {
-        const settlementDate = v.settlement?.settled_at || v.settled_at;
-        if (!inReportDay(settlementDate)) return;
-        const saleTotal = roundToTwo(Math.max(0, auditNumber(v.sale_total)));
-        if (saleTotal <= 0) {
-          versementDataComplete = false;
-          return;
-        }
-        const initialAmount = Math.min(saleTotal, roundToTwo(Math.max(0, auditNumber(v.initial_recorded_amount ?? v.initial_amount ?? 0))));
-        const finalAmount = roundToTwo(Math.max(0, saleTotal - initialAmount));
-        if (initialAmount > 0) addVersementPayment(v.initial_method, initialAmount);
-        if (finalAmount > 0) addVersementPayment(v.settlement?.method, finalAmount);
-      });
-      versementCashTotal = roundToTwo(versementCashTotal);
-      const versementPaymentDetails = Array.from(versementPaymentMap.values()).filter((row) => row.amount > 0);
-      const versementPaymentTotal = roundToTwo(versementPaymentDetails.reduce((sum, row) => sum + row.amount, 0));
+      const versementSummary = accountingEngine.aggregateVersementPaymentEvents(
+        versementEvents, reportStart, reportEnd
+      );
+      const versementDataComplete = versementSummary.complete;
+      const versementPaymentDetails = versementSummary.details;
+      const versementPaymentTotal = versementSummary.total;
+      const versementCashTotal = versementSummary.cashTotal;
       const refundRows = await db.collection('sales').aggregate([
         { $match: { branch_id: { $in: branchValues }, license: { $in: licenseValues } } },
         { $unwind: '$return_refund_transactions' },
