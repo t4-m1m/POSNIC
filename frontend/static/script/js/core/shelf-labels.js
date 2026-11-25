@@ -561,7 +561,7 @@
         state.filters = {};
         state.elementLayout = readElementLayout();
         $('#sl-search').val(''); $('#sl-category').val(''); $('#sl-from').val(1); $('#sl-batch').val(1); $('#sl-copies').val(1);
-        $('#sl-width').val(30); $('#sl-height').val(45); $('#sl-paper').val('roll');
+        $('#sl-width').val(45); $('#sl-height').val(35); $('#sl-paper').val('roll');
         try {
             var saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-layout') || 'null');
             if (saved) {
@@ -658,8 +658,8 @@
         var saved = {};
         try { saved = JSON.parse(root.localStorage.getItem('posnic.shelf-label-layout') || '{}') || {}; } catch (_) {}
         $('#sl-paper').val(['a4', 'roll'].includes(saved.paper) ? saved.paper : 'roll');
-        $('#sl-width').val(Number.isFinite(Number(saved.width)) && Number(saved.width) > 0 ? Number(saved.width) : 30);
-        $('#sl-height').val(Number.isFinite(Number(saved.height)) && Number(saved.height) > 0 ? Number(saved.height) : 45);
+        $('#sl-width').val(Number.isFinite(Number(saved.width)) && Number(saved.width) > 0 ? Number(saved.width) : 45);
+        $('#sl-height').val(Number.isFinite(Number(saved.height)) && Number(saved.height) > 0 ? Number(saved.height) : 35);
         $('#sl-margin').val(Number.isFinite(Number(saved.margin)) ? Number(saved.margin) : 0);
         $('#sl-gap').val(Number.isFinite(Number(saved.gap)) ? Number(saved.gap) : 0);
         $('#sl-start').val(Number.isFinite(Number(saved.start)) ? Number(saved.start) : 1);
