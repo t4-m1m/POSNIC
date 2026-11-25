@@ -34,19 +34,19 @@ jobs:
           fetch-depth: 1
           submodules: recursive
 
-      - name: Create annotated SamarinaPOS pre-release tag
+      - name: Verify existing protected SamarinaPOS V2 pre-release tag
         if: github.ref == 'refs/heads/feat/posnic-v2-rebrand'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $tag = 'v2.0.0-rebrand.6'
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git tag --force --annotate $tag --message 'SamarinaPOS v2 Rebrand Pre-Release 6' $env:GITHUB_SHA
-          if ($LASTEXITCODE -ne 0) { throw 'Could not create the annotated V2 prerelease tag.' }
-          git push --force origin "refs/tags/$tag"
-          if ($LASTEXITCODE -ne 0) { throw 'Could not push the annotated V2 prerelease tag.' }
-          Write-Host "Updated annotated tag $tag at $env:GITHUB_SHA."
+          git fetch --no-tags origin "refs/tags/$tag:refs/tags/$tag"
+          if ($LASTEXITCODE -ne 0) { throw "Could not fetch the existing V2 prerelease tag $tag." }
+          $tagCommit = (git rev-list -n 1 $tag).Trim()
+          if ($LASTEXITCODE -ne 0 -or -not $tagCommit) { throw "Could not resolve the existing V2 prerelease tag $tag." }
+          git merge-base --is-ancestor $tagCommit $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { throw "The protected V2 tag $tag is not an ancestor of this build commit." }
+          Write-Host "Verified protected tag $tag at $tagCommit; building current branch commit $env:GITHUB_SHA without moving the tag."
 
       - name: Exclude workspace from Microsoft Defender scanning
         shell: pwsh
