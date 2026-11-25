@@ -922,6 +922,14 @@ input,button,select,textarea{font-variant-numeric:tabular-nums}
 #label-artboard{transform:scale(2.05);transform-origin:center center;box-shadow:0 14px 38px #0f172a30!important;border:1px solid #cbd5e1!important;background:#fff!important;color:#111!important}
 #receipt-artboard{overflow:visible!important;background:#fff!important;color:#172033!important;box-shadow:0 14px 38px #0f172a30!important;border:1px solid #cbd5e1!important;min-height:0!important;flex:none!important}
 #receipt-artboard .designer-object,#label-artboard .designer-object{touch-action:none}
+#receipt-artboard .receipt-items-block,
+#receipt-artboard .receipt-items-block *,
+#receipt-artboard .receipt-totals-block,
+#receipt-artboard .receipt-totals-block *{
+ font-family:inherit!important;
+ font-size:inherit!important;
+ font-weight:inherit!important;
+}
 #receipt-artboard .designer-object.is-selected,#label-artboard .designer-object.is-selected{outline:2px solid #2563eb!important;outline-offset:1px!important}
 #receipt-artboard .designer-rotate-handle,#label-artboard .designer-rotate-handle{top:-29px!important;width:22px!important;height:22px!important;z-index:20!important}
 #receipt-artboard .designer-resize-handle,#label-artboard .designer-resize-handle{width:11px!important;height:11px!important;z-index:20!important}
