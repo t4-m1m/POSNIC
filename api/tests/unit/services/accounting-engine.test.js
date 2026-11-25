@@ -50,7 +50,7 @@ describe('accounting engine daily close', () => {
     expect(result.netProfitTotal).toBeNull();
   });
 
-  test('uses only selected-day physical cash movements and excludes opening float and COD payouts', () => {
+  test('includes opening float and manual drawer outflows while excluding COD payouts', () => {
     const result = calculateDailyClose({
       salesTotal: 1000,
       costOfGoodsTotal: 400,
@@ -74,7 +74,7 @@ describe('accounting engine daily close', () => {
         otherCashOutflows: 10,
       },
     });
-    expect(result.cashExpected).toBe(305);
+    expect(result.cashExpected).toBe(795);
   });
 
   test('uses cash register opening float plus pre-day cash movements and only manual same-day movements', () => {
@@ -384,7 +384,7 @@ describe('fourteen-day business accounting regression fixture', () => {
         salaryPrimesTotal: 30, cashDataComplete: true,
         cash: { cashSales: '200,00', cashVersements: 100, cashCreditCollections: 75,
           cashExpenses: 50, cashSalaries: 0, cashAdvances: 0, cashBonuses: 0,
-          cashRefunds: 20, deliveryPayouts: 9999, openingBalance: 500 },
+          cashRefunds: 20, deliveryPayouts: 9999, openingBalance: 500, otherCashOutflows: 0 },
       });
       const payments = aggregateSalePaymentEvents([{
         date: start.toISOString(), payments: [
@@ -398,13 +398,13 @@ describe('fourteen-day business accounting regression fixture', () => {
       expect(payments.details.reduce((sum, row) => sum + row.sale_payment, 0)).toBe(100);
       expect(result.grossProfitTotal).toBe(400);
       expect(result.netProfitTotal).toBe(200);
-      expect(result.cashExpected).toBe(305);
+      expect(result.cashExpected).toBe(805);
       return result;
     });
     expect(daily).toHaveLength(14);
     expect(daily.reduce((sum, row) => sum + row.grossProfitTotal, 0)).toBe(5600);
     expect(daily.reduce((sum, row) => sum + row.netProfitTotal, 0)).toBe(2800);
-    expect(daily.reduce((sum, row) => sum + row.cashExpected, 0)).toBe(4270);
+    expect(daily.reduce((sum, row) => sum + row.cashExpected, 0)).toBe(11270);
     const returned = summarizeSaleReturns([{
       sales_id: 'LEGACY-RETURN-14D',
       sale_original_snapshot: { items: [{ item_id: 'legacy-item', item_quantity: 2, company_price_total: 40 }] },
