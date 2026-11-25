@@ -36,44 +36,17 @@ jobs:
 
       - name: Create annotated SamarinaPOS pre-release tag
         if: github.ref == 'refs/heads/feat/posnic-v2-rebrand'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const tag = 'v2.0.0-rebrand.6';
-            try {
-              const existing = await github.rest.git.getRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: `tags/${tag}`
-              });
-              if (existing.data.object.sha === context.sha) {
-                core.info(`Tag ${tag} already points to this commit.`);
-                return;
-              }
-              await github.rest.git.deleteRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: `tags/${tag}`
-              });
-              core.info(`Moving test-only prerelease tag ${tag} to the current branch commit.`);
-            } catch (error) {
-              if (error.status !== 404) throw error;
-            }
-            const annotated = await github.rest.git.createTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag,
-              message: 'SamarinaPOS v2 Rebrand Pre-Release 6',
-              object: context.sha,
-              type: 'commit'
-            });
-            await github.rest.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: `refs/tags/${tag}`,
-              sha: annotated.data.sha
-            });
-            core.info(`Created annotated tag ${tag} at ${context.sha}.`);
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = 'v2.0.0-rebrand.6'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag --force --annotate $tag --message 'SamarinaPOS v2 Rebrand Pre-Release 6' $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create the annotated V2 prerelease tag.' }
+          git push --force origin "refs/tags/$tag"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push the annotated V2 prerelease tag.' }
+          Write-Host "Updated annotated tag $tag at $env:GITHUB_SHA."
 
       - name: Exclude workspace from Microsoft Defender scanning
         shell: pwsh
