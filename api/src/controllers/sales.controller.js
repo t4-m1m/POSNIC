@@ -2015,7 +2015,8 @@ class SalesController extends BaseController {
       // final tender methods, while capping the recognized amount at the invoice
       // total so an overpayment can never inflate sales revenue.
       const versementEvents = await db.collection('sale_versements').find({
-        license: { $in: licenseValues },
+        // This ledger is in the tenant-scoped shop DB; its documents carry
+        // branch_id but no license field. Filtering by license hides all F6 history.
         branch_id: branchObjectId,
         status: 'settled',
         $or: [
@@ -2128,7 +2129,7 @@ class SalesController extends BaseController {
           license: { $in: licenseValues }, branch_id: { $in: branchValues },
           created_at: { $gte: reportEnd },
         }).project({ sale_id: 1, sales_id: 1, amount: 1, created_at: 1 }).toArray(),
-        db.collection('sale_versements').find({ license: { $in: licenseValues }, branch_id: { $in: branchValues } }).toArray(),
+        db.collection('sale_versements').find({ branch_id: { $in: branchValues } }).toArray(),
         db.collection('sales').find({
           license: { $in: licenseValues }, branch_id: { $in: branchValues },
           $or: [{ versement_checkout: { $exists: true } }, { items_return: { $exists: true, $ne: [] } }],
@@ -2467,7 +2468,7 @@ class SalesController extends BaseController {
       }).project({ register_opendate: 1, register_closedate: 1, opening_float: 1, cashInOutDetail: 1 }).toArray();
       const registerCash = accountingEngine.summarizeCashRegisterSessions(cashRegisterSessions, reportStart, reportEnd);
       const cashDataComplete = salesDataComplete && paymentDataComplete && debtPaymentDataComplete && versementDataComplete && expenseDataComplete && !expenseTenderUnknown && !refundCashUnknown &&
-        payrollBranchComplete && payrollCashClassificationComplete;
+        payrollBranchComplete && payrollCashClassificationComplete && registerCash.complete;
       const cashAccounting = accountingEngine.calculateDailyClose({
         salesTotal: salesNetTotal, costOfGoodsTotal, costDataComplete, expensesTotal,
         salaryPaymentsTotal, salaryAdvancesTotal, salaryPrimesTotal, cashDataComplete,
@@ -2595,7 +2596,7 @@ class SalesController extends BaseController {
           { key: 'cash_returns_total', label: 'Retours', formula: 'Somme des remboursements de la période, affichée en négatif et déduite directement des espèces des ventes.', result: totalRefundsSigned, sources: ['sales.return_refund_transactions'], complete: !refundCashUnknown, warnings: refundCashUnknown ? ['Un remboursement ne possède pas de mode de paiement fiable.'] : [] },
           { key: 'debt_payment_total', label: 'Encaissements de crédits', formula: 'Somme des règlements de dettes clients reçus pendant la période.', result: debtPaymentTotal, components: debtPaymentDetails, sources: ['credit_payments', 'customer debt ledger'], complete: debtPaymentDataComplete, warnings: debtPaymentDataComplete ? [] : ['Un encaissement de crédit ne possède pas de mode de paiement fiable.'] },
           { key: 'outstanding_amount', label: 'Crédit restant à encaisser', formula: 'Solde des dettes antérieures à la clôture + règlements postérieurs réintégrés − modifications et retours postérieurs.', result: outstandingDataComplete ? roundToTwo(outstandingAmount) : null, components: { unresolved_records: outstandingResult.unresolved + futureReturnEvents.length, versements: linkedVersements.length, orphan_versements: orphanVersements.length }, sources: ['customer debt ledger', 'credit_payments', 'sale_edit_adjustments', 'sales.items_return', 'versements', 'sales'], complete: outstandingDataComplete, warnings: responseData.outstanding_data_warnings },
-          { key: 'cash_expected', label: 'Espèces nettes attendues en caisse', formula: 'Ventes CASH du jour + encaissements de dettes CASH + paiements de versement CASH − remboursements CASH − dépenses CASH − salaires CASH − acomptes CASH − primes CASH. Livraison / COD, fond de caisse et mouvements manuels exclus.', result: cashAccounting.cashExpected, components: { cash_sales: cashSalesGross, cash_versements: versementCashTotal, cash_credit_collections: debtCashCollections, cash_expenses: cashExpenses, cash_salaries: salaryCash, cash_advances: advanceCash, cash_bonuses: primeCash, cash_refunds: cashRefunds, excluded_delivery_cod_sales: deliveryCodSalesTotal, excluded_zr_delivery_payouts: deliveryPayoutCash, diagnostic_opening_float: registerCash.openingBalance, diagnostic_other_cash_movements: registerCash.otherCashOutflows }, sources: ['sales.payments', 'versements', 'credit_payments', 'expenses', 'hr_transactions'], complete: cashAccounting.cashDataComplete, warnings: responseData.cash_data_warnings },
+          { key: 'cash_expected', label: 'Espèces nettes attendues en caisse', formula: 'Fond de caisse + mouvements manuels nets antérieurs + ventes CASH + encaissements de dettes CASH + paiements de versement CASH − remboursements CASH − dépenses CASH − salaires CASH − acomptes CASH − primes CASH − sorties manuelles nettes du jour. Livraison / COD exclue.', result: cashAccounting.cashExpected, components: { cash_sales: cashSalesGross, cash_versements: versementCashTotal, cash_credit_collections: debtCashCollections, cash_expenses: cashExpenses, cash_salaries: salaryCash, cash_advances: advanceCash, cash_bonuses: primeCash, cash_refunds: cashRefunds, excluded_delivery_cod_sales: deliveryCodSalesTotal, excluded_zr_delivery_payouts: deliveryPayoutCash, opening_balance_and_pre_day_cash: registerCash.openingBalance, other_cash_movements_net_outflow: registerCash.otherCashOutflows }, sources: ['sales.payments', 'versements', 'credit_payments', 'expenses', 'hr_transactions'], complete: cashAccounting.cashDataComplete, warnings: responseData.cash_data_warnings },
         ],
         consistency_checks: [
           { label: 'Bénéfice brut = ventes − coût', expected: salesNetTotal !== null && costOfGoodsTotal !== null ? roundToTwo(salesNetTotal - costOfGoodsTotal) : null, actual: grossProfitTotal, passed: salesNetTotal !== null && costOfGoodsTotal !== null && grossProfitTotal !== null ? Math.abs(roundToTwo(salesNetTotal - costOfGoodsTotal) - grossProfitTotal) <= 0.01 : null },
@@ -2603,7 +2604,7 @@ class SalesController extends BaseController {
           { label: 'Coût marchandises = coût lignes + ajustements', expected: roundToTwo(costOfGoodsBase + editCostAdjustmentTotal), actual: costOfGoodsTotal, passed: costOfGoodsTotal !== null ? Math.abs(roundToTwo(costOfGoodsBase + editCostAdjustmentTotal) - costOfGoodsTotal) <= 0.01 : null },
           { label: 'Paiements de versement = détail des règlements', expected: roundToTwo(versementPaymentDetails.reduce((sum, row) => sum + auditNumber(row.amount), 0)), actual: versementPaymentTotal, passed: Math.abs(roundToTwo(versementPaymentDetails.reduce((sum, row) => sum + auditNumber(row.amount), 0)) - versementPaymentTotal) <= 0.01 },
           { label: 'Encaissements crédits = détail des règlements', expected: roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + auditNumber(row.amount), 0)), actual: debtPaymentTotal, passed: Math.abs(roundToTwo(debtPaymentDetails.reduce((sum, row) => sum + auditNumber(row.amount), 0)) - debtPaymentTotal) <= 0.01 },
-          { label: 'Espèces nettes = entrées physiques du jour − sorties physiques du jour', expected: roundToTwo(cashSalesGross + versementCashTotal + debtCashCollections - cashRefunds - cashExpenses - salaryCash - advanceCash - primeCash), actual: cashAccounting.cashExpected, passed: cashAccounting.cashExpected !== null ? Math.abs(roundToTwo(cashSalesGross + versementCashTotal + debtCashCollections - cashRefunds - cashExpenses - salaryCash - advanceCash - primeCash) - cashAccounting.cashExpected) <= 0.01 : null },
+          { label: 'Espèces nettes = entrées physiques du jour − sorties physiques du jour', expected: roundToTwo(registerCash.openingBalance + cashSalesGross + versementCashTotal + debtCashCollections - cashRefunds - cashExpenses - salaryCash - advanceCash - primeCash - registerCash.otherCashOutflows), actual: cashAccounting.cashExpected, passed: cashAccounting.cashExpected !== null ? Math.abs(roundToTwo(registerCash.openingBalance + cashSalesGross + versementCashTotal + debtCashCollections - cashRefunds - cashExpenses - salaryCash - advanceCash - primeCash - registerCash.otherCashOutflows) - cashAccounting.cashExpected) <= 0.01 : null },
         ],
       };
 
