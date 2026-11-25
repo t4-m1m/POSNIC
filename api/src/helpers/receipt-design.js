@@ -145,7 +145,7 @@
         // Preserve visual-editor geometry. Dropping these fields during API
         // normalization made every save silently reset drag, resize and rotation.
         for (const [key, min, max] of [
-          ['x', 0, 100], ['y', 0, 5000], ['w', 2, 100], ['h', 8, 2000],
+          ['x', -250, 300], ['y', -1200, 8000], ['w', 2, 250], ['h', 8, 2000],
           ['rotation', -180, 180],
         ]) {
           if (block[key] != null && block[key] !== '') {
@@ -255,8 +255,8 @@
           }
           if (block.fontSize != null && block.fontSize !== '') {
             const fontSize = Number(block.fontSize);
-            if (!Number.isFinite(fontSize) || fontSize < 8 || fontSize > 32)
-              throw new Error('Block text size must be between 8 and 32 px.');
+            if (!Number.isFinite(fontSize) || fontSize < 8 || fontSize > 96)
+              throw new Error('Block text size must be between 8 and 96 px.');
             b.fontSize = fontSize;
           }
           if (block.fontWeight != null && block.fontWeight !== '') {
