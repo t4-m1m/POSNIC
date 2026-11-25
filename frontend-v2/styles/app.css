@@ -1203,3 +1203,11 @@ html,body,#app{width:100%;height:100%;min-height:0;margin:0;overflow:hidden}
 .shell>.rail>.rail-bottom>.settings-group>.nav-subnav:not([hidden]){display:grid!important;gap:3px!important}
 .shell>.rail>.rail-bottom>.settings-group>.nav-subnav button{width:100%!important;min-height:36px!important;height:auto!important;padding:7px 9px!important;text-align:left!important}
 .shell>main{grid-column:2;grid-row:2;min-width:0;min-height:0;overflow:auto!important}
+
+
+/* Receipt Studio: selected artwork and its blue handles may cross the paper edge.
+   The paper itself still clips at print time; only the editor viewport stays visible. */
+#receipt-artboard{overflow:visible!important}
+#receipt-artboard .designer-object.is-selected{overflow:visible!important}
+#receipt-artboard .designer-selection-handles{overflow:visible!important;inset:-1px!important}
+#receipt-artboard .designer-rotate-handle{top:-29px!important}
