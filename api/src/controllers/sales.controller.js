@@ -1723,6 +1723,8 @@ class SalesController extends BaseController {
           reportableSales(),
           period.match('date', filteredDateRange.start_date),
           { branch_id: branchObjectId },
+          // F6 Versement sales are recognized only once the full balance is settled.
+          { $or: [{ versement_checkout: { $exists: false } }, { versement_settled: true }] },
         ],
       };
 
@@ -2805,6 +2807,7 @@ class SalesController extends BaseController {
             $or: [{ branch: branchObjectId }, { branch_id: branchObjectId }],
           },
           period.match('date', filteredDateRange.start_date),
+          { $or: [{ versement_checkout: { $exists: false } }, { versement_settled: true }] },
         ],
         status: { $ne: SALE_STATUS.CANCELLED },
       };
@@ -3944,6 +3947,8 @@ class SalesController extends BaseController {
         $and: [
           { branch_id: { $in: branchObjectIds } },
           reportableSales(),
+          // Pending F6 tickets are not sales yet; settle() stamps date with the full-settlement time.
+          { $or: [{ versement_checkout: { $exists: false } }, { versement_settled: true }] },
           {
             date: { $gte: startDate, $lte: endDate },
             license: new ObjectId(req.user.license || req.user.licenseId),
