@@ -1785,7 +1785,9 @@ class SalesController extends BaseController {
       );
 
       const paymentEventSummary = accountingEngine.aggregateSalePaymentEvents(
-        salesPayments, filteredDateRange.start_date, filteredDateRange.end_date
+        // F6 deposits and final settlements are classified from sale_versements only.
+        salesPayments.filter(saleDoc => !saleDoc.versement_checkout),
+        filteredDateRange.start_date, filteredDateRange.end_date
       );
       const paymentDetails = paymentEventSummary.details;
       const paymentDataComplete = paymentEventSummary.complete;
