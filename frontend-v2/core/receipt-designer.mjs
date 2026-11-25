@@ -9,10 +9,16 @@ export function receiptSaleNumber(sale = {}) {
 }
 
 export function receiptSaleDate(sale = {}) {
-  const candidates = [
+  const ordinaryCandidates = [
     sale.date, sale.created_date, sale.createdAt, sale.created_at, sale.sale_date,
     sale.transaction_date, sale.sale_datetime, sale.sold_at, sale.invoice_date, sale.timestamp,
   ];
+  // F6 settlement updates sales.date to the final-payment day. The immutable
+  // created_date remains the original sale timestamp and must win on its ticket.
+  const candidates = sale.versement_checkout
+    ? [sale.created_date, sale.createdAt, sale.created_at, sale.date, sale.sale_date,
+       sale.transaction_date, sale.sale_datetime, sale.sold_at, sale.invoice_date, sale.timestamp]
+    : ordinaryCandidates;
   let dateOnly = '';
   for (let raw of candidates) {
     if (raw == null || raw === '') continue;
