@@ -77,11 +77,39 @@ router.put('/settings/label-template', async (req, res) => {
   try {
     if (req.user?.access?.setting?.write === false) return res.status(403).json({ type: 'error', message: 'Unauthorized.' });
     const filter = scope(req);
-    const width = Number(req.body?.width), height = Number(req.body?.height), copies = Number(req.body?.copies || 1);
-    if (!Number.isFinite(width) || width < 10 || width > 210 || !Number.isFinite(height) || height < 10 || height > 297 || !Number.isInteger(copies) || copies < 1 || copies > 500) {
+    const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+    const serialized = JSON.stringify(body);
+    if (serialized.length > 2 * 1024 * 1024) return res.status(413).json({ type: 'error', message: 'Label template is too large (maximum 2 MB).' });
+    const width = Number(body.width), height = Number(body.height), copies = Number(body.copies || 1);
+    if (!Number.isFinite(width) || width < 15 || width > 210 || !Number.isFinite(height) || height < 15 || height > 1500 || !Number.isInteger(copies) || copies < 1 || copies > 999) {
       return res.status(400).json({ type: 'error', message: 'Label dimensions or copy count are outside supported limits.' });
     }
-    const labelTemplate = { width, height, copies, showName: req.body?.showName !== false, showPrice: req.body?.showPrice !== false, showBarcode: req.body?.showBarcode !== false, updatedAt: new Date() };
+    let elements;
+    if (body.elements !== undefined) {
+      if (!Array.isArray(body.elements) || body.elements.length > 100) return res.status(400).json({ type: 'error', message: 'A label template may contain at most 100 design objects.' });
+      elements = body.elements.map((element, index) => {
+        if (!element || typeof element !== 'object' || Array.isArray(element)) throw new Error('Invalid label design object at position ' + (index + 1) + '.');
+        const item = { ...element, id: String(element.id || 'label-object-' + (index + 1)).slice(0, 100), type: String(element.type || 'custom').slice(0, 40) };
+        for (const key of ['x', 'y', 'w', 'h', 'rotation', 'fontSize']) {
+          if (item[key] === undefined) continue;
+          const number = Number(item[key]);
+          if (!Number.isFinite(number) || Math.abs(number) > 10000) throw new Error('Invalid ' + key + ' value in label design object ' + (index + 1) + '.');
+          item[key] = number;
+        }
+        return item;
+      });
+    }
+    const labelTemplate = {
+      ...body,
+      width,
+      height,
+      copies,
+      showName: body.showName !== false,
+      showPrice: body.showPrice !== false,
+      showBarcode: body.showBarcode !== false,
+      ...(elements ? { elements } : {}),
+      updatedAt: new Date(),
+    };
     await ensureIndex(req);
     await collection(req).updateOne(filter, { $set: { labelTemplate, updated_at: new Date() }, $setOnInsert: { created_at: new Date() } }, { upsert: true });
     return res.json({ type: 'success', data: labelTemplate, message: 'Label template saved.' });
