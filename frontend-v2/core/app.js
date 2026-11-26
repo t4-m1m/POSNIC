@@ -293,7 +293,7 @@ function receiptDesignerElement(e){const sale=state.receiptSample||{},items=rows
   paymentHtml=visibleLines.map(x=>'<div style="'+totalRowStyle+'"><span style="'+totalPartStyle+'">'+esc(x.name)+'</span><b style="'+totalPartStyle+'">'+money(x.amount)+' DZD</b></div>').join('');
   if(!paymentHtml){const methods=[sale.payment_mode,sale.payment_method,sale.payment_type].filter(Boolean);paymentHtml=methods.length?methods.map(method=>'<div style="'+totalRowStyle+'"><span style="'+totalPartStyle+'">'+esc(method)+'</span><b style="'+totalPartStyle+'">'+money(paid)+' DZD</b></div>').join(''):'<div style="'+totalRowStyle+'"><span style="'+totalPartStyle+'">Paiement</span><b style="'+totalPartStyle+'">'+money(paid)+' DZD</b></div>';}
  }
- body='<div class="receipt-legacy-totals" style="'+totalFontStyle+';display:flex;flex-direction:column;align-items:stretch;width:100%">'+[['Subtotal',sub],...(regularDiscount>0?[['Discount',-regularDiscount]]:[]),...(extraDiscount>0?[['Extra discount',-extraDiscount]]:[]),...(Number(sale.round_off)?[['Round Off',Number(sale.round_off)]]:[]),['Total',sum,true]].map(([label,value,isTotal])=>'<div class="rd-total-row'+(isTotal?' rd-grand-total':'')+'" style="'+totalRowStyle+'"><span style="'+totalPartStyle+'">'+label+'</span><b style="'+totalPartStyle+'">'+'DZD '+money(Math.abs(value))+'</b></div>').join('')+paymentHtml+(due>0?'<div class="rd-total-row" style="'+totalRowStyle+'"><span style="'+totalPartStyle+'">Reste à payer</span><b style="'+totalPartStyle+'">'+money(due)+' DZD</b></div>':'')+'</div>';
+ body='<div class="receipt-legacy-totals" style="'+totalFontStyle+';display:flex;flex-direction:column;align-items:stretch;width:100%">'+[['Subtotal',sub],...(regularDiscount>0?[['Discount',-regularDiscount]]:[]),...(extraDiscount>0?[['Extra discount',-extraDiscount]]:[]),...(Number(sale.round_off)?[['Round Off',Number(sale.round_off)]]:[]),['Total',sum,true]].map(([label,value,isTotal])=>'<div class="rd-total-row'+(isTotal?' rd-grand-total':'')+'" style="'+totalRowStyle+'"><span style="'+totalPartStyle+'">'+label+'</span><b style="'+totalPartStyle+'">'+'DZD '+money(Math.abs(value))+'</b></div>').join('')+paymentHtml+'</div>';
 }return '<div class="designer-object" data-receipt-object="'+esc(e.id)+'" style="left:'+e.x+'%;top:'+e.y+'%;width:'+e.w+'%;height:'+e.h+'%;font-size:'+(e.fontSize||12)+'px;color:'+(e.color||'#172033')+';background:'+((e.type==='logo'||e.type==='image')?'transparent':(e.background||'transparent'))+';font-family:'+esc(e.fontFamily||'Tahoma')+';font-weight:'+(e.fontWeight||900)+';text-align:'+(e.type==='totals'?'left':(e.align||'center'))+';border:'+(e.border||'0')+';opacity:'+(e.opacity??1)+';transform:rotate('+(Number(e.rotation)||0)+'deg);transform-origin:center center;display:'+(e.visible===false?'none':'flex')+';align-items:'+(['items','totals'].includes(e.type)?'flex-start':'center')+';justify-content:'+(['items','totals'].includes(e.type)?'flex-start':'center')+'">'+(e.type==='barcode'?barcodeMarkup(labels):e.type==='qr'?'<span class="designer-barcode-text">▦ '+esc(labels)+'</span>':(e.type==='logo'||e.type==='image')&&String(labels).startsWith('data:image/')?'<img src="'+esc(labels)+'" alt="" style="width:100%;height:100%;object-fit:contain">':body)+'</div>';}
 function zrSettings(d){return `<form id="zr-settings-form" class="form-grid"><div class="form-field full"><label>Tenant ID</label><input class="field" name="tenantId" value="${esc(d.tenantId||'')}" required></div><div class="form-field full"><label>API Key</label><input class="field" name="apiKey" type="password" value="${esc(d.apiKey||'')}" required></div><div class="form-field full"><button class="btn primary">Enregistrer dans le stockage sécurisé</button> <button type="button" class="btn" data-action="test-zr">Tester catalogue & tarifs</button></div></form>`;}
 function backupSettings(d){const backups=rowsOf(d.backups);return `<div class="actions"><button class="btn primary" data-action="backup-now">Créer une sauvegarde MongoDB</button><button class="btn" data-action="manage-pin">Gérer le PIN utilisateur</button></div><h3>Appareils Samarina</h3>${handsetSettings(d.devices||[])}<h3>Sauvegardes disponibles</h3>${table(backups,[{label:'Sauvegarde',keys:['name','folderName','path','folderPath']},{label:'Date',keys:['date','createdAt','created_at']},{label:'Action',render:r=>`<button class="btn" data-restore-backup="${esc(r.folderPath||r.path||r.folder||r.name||'')}">Restaurer</button>`}])}`;}
@@ -482,13 +482,13 @@ function renderReceiptStudioDocument(sale,layout){
  const gapMm=3;
  const itemFont=Math.max(10,Number(itemsElement?.fontSize)||12),itemFontFamily=itemsElement?.fontFamily||'Tahoma',itemFontWeight=Number(itemsElement?.fontWeight)||700;
  const totalsFont=Math.max(10,Number(totalsElement?.fontSize)||13),totalsFontFamily=totalsElement?.fontFamily||'Tahoma',totalsFontWeight=Number(totalsElement?.fontWeight)||700;
- const itemColumnMm=Math.max(18,width*(Number(itemsElement?.w||90)/100)*0.66-4),itemCharsPerLine=Math.max(12,Math.floor(itemColumnMm/Math.max(1.1,itemFont*0.13))),itemLineMm=Math.max(5.5,itemFont*0.4);
+ const itemColumnMm=Math.max(18,width*(Number(itemsElement?.w||90)/100)*0.66-4),itemCharsPerLine=Math.max(12,Math.floor(itemColumnMm/Math.max(1.1,itemFont*0.13))),itemLineMm=Math.max(6.2,itemFont*0.48);
  const itemVisualLines=saleItems.reduce((count,item)=>{const name=String(item.item_name||item.name||item.product_name||'Article'),detail=String(item.item_description||'');return count+Math.max(1,Math.ceil(name.length/itemCharsPerLine))+(detail?Math.max(1,Math.ceil(detail.length/itemCharsPerLine)):0)+((Number(item.item_discount)||Number(item.item_discount_percentage))?1:0);},0);
  const requiredItemsMm=Math.max(18,8+itemVisualLines*itemLineMm);
  const originalItemsMm=itemsElement?Number(itemsElement.h||36)*baseHeight/100:36*baseHeight/100;
  const itemsHeight=Math.max(originalItemsMm,requiredItemsMm);
  const oldTotalsHeight=totalsElement?Number(totalsElement.h||25)*baseHeight/100:25*baseHeight/100;
- const totalsLabels=['Subtotal','Total',...(Number(sale.discount||sale.discount_amount||0)>0?['Discount']:[]),...(Number(sale.sale_extra_discount??sale.extra_discount??0)>0?['Extra discount']:[]),...(Number(sale.round_off)?['Round Off']:[]),...receiptTenderRows(sale).map(row=>String(row.method||'Paiement')),...(receiptAmountDue(sale)>0.009?['Reste à payer']:[])],totalsCharsPerLine=Math.max(16,Math.floor((width*(Number(totalsElement?.w||90)/100)-8)/Math.max(1.1,totalsFont*0.13))),totalsLineCount=totalsLabels.reduce((n,label)=>n+Math.max(1,Math.ceil((label.length+14)/totalsCharsPerLine)),0);
+ const totalsLabels=['Subtotal','Total',...(Number(sale.discount||sale.discount_amount||0)>0?['Discount']:[]),...(Number(sale.sale_extra_discount??sale.extra_discount??0)>0?['Extra discount']:[]),...(Number(sale.round_off)?['Round Off']:[]),...receiptTenderRows(sale).map(row=>String(row.method||'Paiement'))],totalsCharsPerLine=Math.max(16,Math.floor((width*(Number(totalsElement?.w||90)/100)-8)/Math.max(1.1,totalsFont*0.13))),totalsLineCount=totalsLabels.reduce((n,label)=>n+Math.max(1,Math.ceil((label.length+14)/totalsCharsPerLine)),0);
  const totalsHeight=Math.max(oldTotalsHeight,8+totalsLineCount*Math.max(5.5,totalsFont*0.42));
  // Keep the basket below every element above its saved position, even when
  // those elements have been resized or contain more than one line of text.
@@ -501,16 +501,27 @@ function renderReceiptStudioDocument(sale,layout){
  const totalsTop=Math.max(savedTotalsTop,itemsTop+itemsHeight+gapMm);
  const trailingStart=totalsTop+totalsHeight+gapMm;
  const elementPositions=new Map();
+ let trailingCursor=trailingStart;
+ const trailingElements=sourceElements
+  .filter(e=>!['items','totals'].includes(e.type)&&Number(e.y||0)*baseHeight/100>=savedItemsTop-0.01)
+  .sort((a,b)=>Number(a.y||0)-Number(b.y||0));
  for(const e of sourceElements){
-  let top=Number(e.y||0)*baseHeight/100,height=Number(e.h||0)*baseHeight/100;
-  if(e.type==='items'){top=itemsTop;height=itemsHeight;}
-  else if(e.type==='totals'){top=totalsTop;height=totalsHeight;}
-  else if(top>=savedItemsTop-0.01&&top<trailingStart&&top+height>itemsTop){top=trailingStart;}
+  const top=Number(e.y||0)*baseHeight/100,height=Number(e.h||0)*baseHeight/100;
+  if(e.type==='items') elementPositions.set(e,{top:itemsTop,height:itemsHeight});
+  else if(e.type==='totals') elementPositions.set(e,{top:totalsTop,height:totalsHeight});
+  else if(top<savedItemsTop-0.01) elementPositions.set(e,{top,height});
+ }
+ // Place each trailing block independently to prevent barcode/footer collisions.
+ for(const e of trailingElements){
+  const height=Number(e.h||0)*baseHeight/100;
+  const savedTop=Number(e.y||0)*baseHeight/100;
+  const top=Math.max(savedTop,trailingCursor);
   elementPositions.set(e,{top,height});
+  trailingCursor=top+height+gapMm;
  }
  const trailingBottom=sourceElements.reduce((bottom,e)=>{
   const pos=elementPositions.get(e);
-  return Math.max(bottom,pos.top+pos.height);
+  return Math.max(bottom,pos?pos.top+pos.height:0);
  },0);
  const finalHeight=isA4?297:Math.max(baseHeight,totalsTop+totalsHeight+gapMm+16,trailingBottom+4);
  const elements=sourceElements.map(e=>{
