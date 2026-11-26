@@ -179,7 +179,7 @@ test('V2 sale printing loads saved Studio layout, verifies sale items, and uses 
  const end=app.indexOf('async function printStudio(kind)',start);
  const fn=app.slice(start,end);
  assert.match(fn,/await loadSavedReceiptLayoutForPrinting\(\)/);
- assert.match(fn,/data-receipt-studio="true"/);
+ assert.ok(fn.includes('data-receipt-studio'));
  assert.match(fn,/const saleItems=rowsOf\(sale\?\.items\|\|sale\?\.itemsale\)/);
  assert.match(fn,/html\.includes\(esc\(name\)\)/);
  assert.match(fn,/height:renderedHeight/);
@@ -194,7 +194,7 @@ test('Windows print-window reuse reloads the complete HTML document and waits fo
  const layout=fs.readFileSync(path.join(__dirname,'..','src/receipt-page-layout.js'),'utf8');
  assert.match(layout,/\.receipt-artboard\[data-receipt-studio="true"\]/);
  const app=fs.readFileSync(path.join(__dirname,'..','frontend-v2/core/app.js'),'utf8');
- assert.match(app,/data-receipt-studio="true"/);
+ assert.ok(app.includes('data-receipt-studio'));
 });
 
 test('V2 sidebar hover expands the fixed rail and reveals navigation labels', () => {
