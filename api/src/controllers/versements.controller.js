@@ -249,8 +249,17 @@ exports.create = async (req,res) => {
     const now = new Date(), initialMethod = String(req.body?.initial_method || 'cash').toLowerCase();
     if (!['cash','tpe','baridimob'].includes(initialMethod)) return fail(res,400,'Choose Espèces, TPE or BaridiMob.');
     const settled = initial >= total - 0.009;
-    const doc = { versement_number:number, sale_key:saleKey(sale), sale_object_id:sale._id, branch_id:new ObjectId(branch), ...(sale.cashregister_id && ObjectId.isValid(String(sale.cashregister_id)) ? { register_id:new ObjectId(String(sale.cashregister_id)) } : {}), customer_name:customer, phone, sale_note:String(sale.sales_description || sale.sale_note || sale.sales_note || '').trim().slice(0,1000), sale_total:total, initial_amount:initial, initial_method:initialMethod, remaining:money(Math.max(0,total-initial)), status:settled?'settled':'pending', created_at:now, created_by:actor(req), initial_collected_at:now, initial_recorded_amount:initial, ...(settled?{settled_at:now}:{}), settlement:settled?{ amount:0, method:'none', settled_at:now, recorded_by:actor(req) }:null, history:[{type:'initial',amount:initial,method:initialMethod,at:now,by:actor(req)}] };
+    const doc = { versement_number:number, sale_key:saleKey(sale), sale_object_id:sale._id, branch_id:new ObjectId(branch), ...(sale.cashregister_id && ObjectId.isValid(String(sale.cashregister_id)) ? { register_id:new ObjectId(String(sale.cashregister_id)) } : {}), customer_name:customer, phone, sale_note:String(sale.sales_description || sale.sale_note || sale.sales_note || '').trim().slice(0,1000), sale_total:total, initial_amount:initial, initial_method:initialMethod, remaining:money(Math.max(0,total-initial)), status:settled?'settled':'pending', stock_deferred:sale.versement_checkout?.stock_deferred===true, created_at:now, created_by:actor(req), initial_collected_at:now, initial_recorded_amount:initial, ...(settled?{settled_at:now}:{}), settlement:settled?{ amount:0, method:'none', settled_at:now, recorded_by:actor(req) }:null, history:[{type:'initial',amount:initial,method:initialMethod,at:now,by:actor(req)}] };
     const inserted = await collection.insertOne(doc);
+    if (settled) {
+      await applyDeferredVersementStock(db, sale, doc, now);
+      await db.collection('sales').updateOne({ _id:sale._id, versement_checkout:{ $exists:true } }, { $set:{
+        versement_settled:true, versement_settled_at:now, settled_at:now, date:now,
+        payment_status:'Paid', payment_pending:0, partial_check:'false', partial_balance:0,
+        paid_amount:total, versement_settlement_amount:0,
+        versement_initial_amount:initial, versement_initial_method:initialMethod,
+      } });
+    }
     return res.status(201).json({ type:'success', message:'Versement recorded.', data:{...doc,_id:String(inserted.insertedId)} });
   } catch(e) {
     if (e && e.code===11000) return fail(res,409,'A versement already exists for this sale.');
@@ -337,7 +346,7 @@ exports.cancel = async (req,res) => {
     }
     const items=db.collection('items'), stockLogs=db.collection('stocklogs');
     const restoreKey=String(current.sale_key||saleKey(sale))+':versement-cancel';
-    if (current.stock_deferred !== true) {
+    if (current.stock_deferred !== true && sale.versement_checkout?.stock_deferred !== true) {
     for (const [itemId,qty] of quantities) {
       const itemObjectId=new ObjectId(itemId);
       const itemBefore=await items.findOne({_id:itemObjectId,track_inventory:{$in:[true,'true']}});
