@@ -134,7 +134,7 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   assert.doesNotMatch(app, /sales_description:payload\.sales_description,date:new Date\(\)\.toLocaleString/);
   assert.doesNotMatch(app, /font-size:inherit!important;font-weight:inherit!important/, 'basket and total child typography must not be flattened to the parent font');
   assert.match(app, /data-receipt-height=/, 'receipt height must grow with basket and totals content');
-  assert.match(app, /fitReceipt:false/, 'thermal receipt must print at its dynamic roll height without shrinking the legacy typography');
+  assert.doesNotMatch(app, /fitReceipt:|forceHtml:true/, 'thermal sale receipts must not fall back to the clipped Chromium HTML print path');
   assert.match(app, /salePaymentMethods\(x\)/, 'split tender methods must be visible under the sales status');
   assert.match(app, /Payé · Versement/, 'settled F6 sales must be marked as Versement in history');
   assert.match(app, /art\.style\.width=state\.labelLayout\.width\+'mm'/);
