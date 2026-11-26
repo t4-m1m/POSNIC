@@ -1292,3 +1292,13 @@ html,body,#app{width:100%;height:100%;min-height:0;margin:0;overflow:hidden}
 
 /* The blue frame belongs only to the editor selection handles, never to the printed totals block. */
 #receipt-artboard .receipt-legacy-totals{border:0!important;outline:0!important;box-shadow:none!important}
+
+/* FIX: sidebar utilities are anchored to the rail viewport, not the scrollable nav flow. */
+.shell>.rail{position:relative!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;height:100dvh!important;min-height:0!important}
+.shell>.rail>.brand{flex:0 0 44px!important}
+.shell>.rail>.nav{flex:1 1 auto!important;min-height:0!important;max-height:none!important;overflow-x:hidden!important;overflow-y:auto!important;padding-bottom:260px!important}
+.shell>.rail>.rail-bottom{position:absolute!important;inset:auto 8px 10px 8px!important;display:flex!important;flex:0 0 auto!important;flex-direction:column!important;gap:5px!important;width:auto!important;max-height:none!important;min-height:max-content!important;margin:0!important;padding:8px 0 0!important;z-index:99!important;background:var(--bg-surface)!important;overflow:visible!important}
+.shell>.rail>.rail-bottom>button,.shell>.rail>.rail-bottom>.settings-group{flex:0 0 40px!important;min-height:40px!important;width:100%!important}
+/* No blue selection border is part of the totals artwork. */
+.receipt-totals-block>div{border:0!important;padding:3px 0!important}
+.receipt-totals-block .receipt-grand-total{border:0!important;border-top:1px dotted #111!important;padding:4px 0!important}
