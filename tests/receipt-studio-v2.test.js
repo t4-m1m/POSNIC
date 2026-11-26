@@ -134,7 +134,11 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   assert.doesNotMatch(app, /sales_description:payload\.sales_description,date:new Date\(\)\.toLocaleString/);
   assert.doesNotMatch(app, /font-size:inherit!important;font-weight:inherit!important/, 'basket and total child typography must not be flattened to the parent font');
   assert.match(app, /data-receipt-height=/, 'receipt height must grow with basket and totals content');
-  const receiptPrintStart = app.indexOf('async function printSaleReceiptDocument');\n  const receiptPrintEnd = app.indexOf('async function printStudio', receiptPrintStart);\n  assert.ok(receiptPrintStart >= 0 && receiptPrintEnd > receiptPrintStart);\n  assert.doesNotMatch(app.slice(receiptPrintStart, receiptPrintEnd), /fitReceipt:|forceHtml:true|bridge\\.print\\(/, 'the real sale receipt must not use the Chromium HTML print path');\n  assert.match(app, /printSaleReceiptDocument\\(receiptSale,\\{copies:2,source:'F6 Versement'/, 'F6 must print through the same dynamic ticket payload');
+  const receiptPrintStart = app.indexOf('async function printSaleReceiptDocument');
+  const receiptPrintEnd = app.indexOf('async function printStudio', receiptPrintStart);
+  assert.ok(receiptPrintStart >= 0 && receiptPrintEnd > receiptPrintStart);
+  assert.doesNotMatch(app.slice(receiptPrintStart, receiptPrintEnd), /fitReceipt:|forceHtml:true|bridge\\.print\\(/, 'the real sale receipt must not use the Chromium HTML print path');
+  assert.match(app, /printSaleReceiptDocument\\(receiptSale,\\{copies:2,source:'F6 Versement'/, 'F6 must print through the same dynamic ticket payload');
   assert.match(app, /salePaymentMethods\(x\)/, 'split tender methods must be visible under the sales status');
   assert.match(app, /Payé · Versement/, 'settled F6 sales must be marked as Versement in history');
   assert.match(app, /art\.style\.width=state\.labelLayout\.width\+'mm'/);
