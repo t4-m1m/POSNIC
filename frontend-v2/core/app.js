@@ -553,7 +553,7 @@ function receiptPrinterPayload(sale){
   extras,
   currency:'DA',
   title:'',
-  design:{titleSize:'large',titleBold:true,totalSize:'large',totalBold:true,showBarcode:true,showUnitPrice:false,showSubtotal:true,showDiscount:true,showPayments:true,showCustomer:true,showCashier:true,showDate:true,showTicket:true,showAddress:true,showPhone:true}
+  design:{titleSize:'large',titleBold:true,storeNameSize:'large',boldStoreName:true,boldItemNames:true,boldItemAmounts:true,totalSize:'large',totalBold:true,showBarcode:true,showUnitPrice:false,showSubtotal:true,showDiscount:true,showPayments:true,showCustomer:true,showCashier:true,showDate:true,showTicket:true,showAddress:true,showPhone:true}
  };
 }
 async function printSaleReceiptDocument(sale){
