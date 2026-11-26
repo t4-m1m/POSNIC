@@ -1148,12 +1148,9 @@ class SalesController extends BaseController {
       const filter = { ...filteredSalesFilters };
       // F6 orders enter Sales History only after the full balance is settled.
       // Partial collections remain visible in the dedicated Versements ledger.
-      filter.$and = [
-        ...(Array.isArray(filter.$and) ? filter.$and : []),
-        { $or: [
-          { versement_checkout: { $exists: false } },
-          { versement_checkout: { $exists: true }, versement_settled: true },
-        ] },
+      filter.$nor = [
+        ...(Array.isArray(filter.$nor) ? filter.$nor : []),
+        { versement_checkout: { $exists: true }, versement_settled: { $ne: true } },
       ];
       if (validBranchIds.length) {
         // PHP sales list historically filters on branch_id; mirror that
