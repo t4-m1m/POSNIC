@@ -1238,3 +1238,9 @@ html,body,#app{width:100%;height:100%;min-height:0;margin:0;overflow:hidden}
 
 /* WhatsApp reconnect action uses its unmistakable brand accent. */
 .rail-bottom button[data-action="whatsapp-reconnect"] .ico{background:#F1F5F9!important;color:#64748B!important;border-color:#E2E8F0!important}
+
+/* WhatsApp connector drawer: clear QR scan target and readable pairing code. */
+.whatsapp-qr-wrap{display:flex;justify-content:center;align-items:center;min-height:40px;margin:14px auto;}
+.whatsapp-qr-wrap img{width:min(300px,100%);height:auto;padding:10px;border:1px solid var(--border-hairline);border-radius:12px;background:#fff;}
+.whatsapp-qr-wrap img[hidden]{display:none!important}
+.whatsapp-pairing-code{font-size:24px;font-weight:800;letter-spacing:.18em;text-align:center;}
