@@ -523,6 +523,7 @@ function buildSaleReceiptHtml(sale){return renderReceiptStudioDocument(sale,stat
 function receiptTenderRows(sale){
  const source=sale?.multi_payment||sale?.payment_details||sale?.payment_breakdown||sale?.payments||{};
  const rows=Array.isArray(source)?source.map(row=>({method:row?.method||row?.payment_mode||row?.type||row?.name,amount:Number(row?.amount??row?.paid??row?.total??0)})):Object.entries(source).map(([method,value])=>({method,amount:Number(typeof value==='object'?(value?.amount??value?.paid??value?.total??0):value)||0}));
+ if(!rows.length){const method=sale?.payment_mode||sale?.payment_method||sale?.payment_type;const paid=Number(sale?.paid_amount??sale?.payment_received??sale?.sales_total??sale?.total??0)||0;if(method&&paid>0)rows.push({method,amount:paid});}
  return rows.filter(row=>String(row.method||'').trim()&&Number.isFinite(row.amount)&&row.amount>0);
 }
 function receiptPrinterPayload(sale){
