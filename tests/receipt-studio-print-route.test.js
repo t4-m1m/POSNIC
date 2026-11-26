@@ -163,3 +163,17 @@ test('Receipt Studio preserves saved Y coordinates and never draws a blue totals
   assert.match(app, /receiptTenderRows\(sale\)\.map\(row=>\(\{name:row\.method,amount:row\.amount\}\)\)/);
   assert.match(app, /if\(!rows\.length\)\{const method=sale\?\.payment_mode/);
 });
+
+
+test('printer settings preview failure is isolated and sidebar footer is viewport anchored', () => {
+  const app = read('frontend-v2/core/app.js');
+  const css = read('frontend-v2/styles/app.css');
+  const settingsStart = app.indexOf('function printerSettings(d)');
+  const settingsEnd = app.indexOf('function receiptDesignerElement(e)', settingsStart);
+  const settings = app.slice(settingsStart, settingsEnd);
+  assert.match(settings, /try\{renderReceiptStudioDocument\(sale,state\.receiptLayout\)/);
+  assert.match(settings, /catch\(error\)\{console\.error\('\[Receipt Studio\]/);
+  assert.match(css, /\.shell>\.rail>\.rail-bottom\{position:absolute!important;inset:auto 8px 10px 8px!important/);
+  assert.match(css, /\.receipt-totals-block>div\{border:0!important/);
+  assert.match(css, /\.receipt-totals-block \.receipt-grand-total\{border:0!important/);
+});
