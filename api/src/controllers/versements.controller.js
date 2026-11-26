@@ -64,42 +64,63 @@ async function applyDeferredVersementStock(db, sale, versement, settledAt) {
   const saleKeyValue = String(versement.sale_key || saleKey(sale));
   const movementKey = saleKeyValue + ':versement-settlement';
   const items = db.collection('items'), stockLogs = db.collection('stocklogs');
+  const candidates = [];
   for (const [itemId, qty] of quantities) {
     const objectId = new ObjectId(itemId);
     const before = await items.findOne({ _id: objectId, track_inventory: { $in: [true, 'true'] } });
     if (!before) continue;
     const alreadyApplied = Array.isArray(before.versement_stock_settlement_keys) && before.versement_stock_settlement_keys.includes(movementKey);
-    if (!alreadyApplied) {
-      const updated = await items.updateOne(
-        { _id: objectId, track_inventory: { $in: [true, 'true'] }, available_quantity: { $gte: qty }, versement_stock_settlement_keys: { $ne: movementKey } },
-        { $inc: { available_quantity: -qty }, $addToSet: { versement_stock_settlement_keys: movementKey } }
-      );
-      if (!updated.modifiedCount) {
-        const latest = await items.findOne({ _id: objectId });
-        const applied = Array.isArray(latest?.versement_stock_settlement_keys) && latest.versement_stock_settlement_keys.includes(movementKey);
-        if (!applied) throw new Error('Stock insuffisant au règlement du versement pour ' + String(before.name || before.item_name || itemId) + '.');
+    if (!alreadyApplied && before.negative_stock !== true && Number(before.available_quantity || 0) < qty)
+      throw new Error('Stock insuffisant au règlement du versement pour ' + String(before.name || before.item_name || itemId) + '.');
+    candidates.push({ itemId, qty, objectId, before, alreadyApplied });
+  }
+  const appliedNow = [];
+  try {
+    for (const candidate of candidates) {
+      const { itemId, qty, objectId, before } = candidate;
+      if (!candidate.alreadyApplied) {
+        const filter = { _id: objectId, track_inventory: { $in: [true, 'true'] }, versement_stock_settlement_keys: { $ne: movementKey } };
+        if (before.negative_stock !== true) filter.available_quantity = { $gte: qty };
+        const updated = await items.updateOne(filter, { $inc: { available_quantity: -qty }, $addToSet: { versement_stock_settlement_keys: movementKey } });
+        if (!updated.modifiedCount) {
+          const latest = await items.findOne({ _id: objectId });
+          const alreadyDone = Array.isArray(latest?.versement_stock_settlement_keys) && latest.versement_stock_settlement_keys.includes(movementKey);
+          if (!alreadyDone) throw new Error('Le stock a changé pendant le règlement du versement. Réessayez.');
+        } else {
+          appliedNow.push({ objectId, qty, itemId });
+        }
       }
+      const after = await items.findOne({ _id: objectId });
+      const closing = Number(after?.available_quantity ?? before.available_quantity - qty);
+      const opening = closing + qty;
+      const logId = new ObjectId(crypto.createHash('sha256').update(movementKey + ':' + itemId).digest('hex').slice(0, 24));
+      const log = {
+        branch_id: sale.branch_id || versement.branch_id,
+        view_item_id: objectId,
+        item_barcode_id: String(before.item_barcode_id || before.barcode_id || ''),
+        item_name: String(before.name || before.item_name || 'Article'),
+        item_quantity: String(qty),
+        process: 'Versement réglé',
+        reference: String(versement.versement_number || saleKeyValue),
+        note: 'Sortie du stock au règlement complet du versement',
+        date: settledAt, created_date: settledAt, updated_date: settledAt,
+        action: 'Subtract', stocklog: true,
+        opening_balance: String(opening), closing_balance: String(closing),
+        count: String(-qty), changed_by: 'Versement',
+        ...(sale.license ? { license: sale.license } : {}),
+      };
+      await stockLogs.updateOne({ _id: logId }, { $setOnInsert: log }, { upsert: true });
     }
-    const after = await items.findOne({ _id: objectId });
-    const closing = Number(after?.available_quantity ?? before.available_quantity - qty);
-    const opening = closing + qty;
-    const logId = new ObjectId(crypto.createHash('sha256').update(movementKey + ':' + itemId).digest('hex').slice(0, 24));
-    const log = {
-      branch_id: sale.branch_id || versement.branch_id,
-      view_item_id: objectId,
-      item_barcode_id: String(before.item_barcode_id || before.barcode_id || ''),
-      item_name: String(before.name || before.item_name || 'Article'),
-      item_quantity: String(qty),
-      process: 'Versement réglé',
-      reference: String(versement.versement_number || saleKeyValue),
-      note: 'Sortie du stock au règlement complet du versement',
-      date: settledAt, created_date: settledAt, updated_date: settledAt,
-      action: 'Subtract', stocklog: true,
-      opening_balance: String(opening), closing_balance: String(closing),
-      count: String(-qty), changed_by: 'Versement',
-      ...(sale.license ? { license: sale.license } : {}),
-    };
-    await stockLogs.updateOne({ _id: logId }, { $setOnInsert: log }, { upsert: true });
+  } catch (error) {
+    for (const applied of appliedNow.reverse()) {
+      await items.updateOne({ _id: applied.objectId, versement_stock_settlement_keys: movementKey }, {
+        $inc: { available_quantity: applied.qty },
+        $pull: { versement_stock_settlement_keys: movementKey },
+      });
+      const logId = new ObjectId(crypto.createHash('sha256').update(movementKey + ':' + applied.itemId).digest('hex').slice(0, 24));
+      await stockLogs.deleteOne({ _id: logId });
+    }
+    throw error;
   }
 }
 
