@@ -148,3 +148,18 @@ test('Label Studio loads the persisted server template and logo when local layou
   assert.match(app, /logoDataUrl:saved\?\.logoDataUrl\|\|t\.logoDataUrl\|\|''/);
   assert.match(app, /logoDataUrl:raw\.logoDataUrl\|\|template\.logoDataUrl\|\|''/);
 });
+
+
+test('Receipt Studio preserves saved Y coordinates and never draws a blue totals outline', () => {
+  const app = read('frontend-v2/core/app.js');
+  const css = read('frontend-v2/styles/app.css');
+  const rendererStart = app.indexOf('function renderReceiptStudioDocument(sale,layout)');
+  const rendererEnd = app.indexOf('function refreshReceiptDesignerPreview()', rendererStart);
+  const renderer = app.slice(rendererStart, rendererEnd);
+  assert.ok(renderer.includes('const totalsTop=oldTotalsTop'));
+  assert.ok(renderer.includes('Keep user-placed elements below totals at their saved Y coordinate'));
+  assert.doesNotMatch(renderer, /topMm\s*\+=\s*shift/);
+  assert.match(css, /#receipt-artboard \.receipt-legacy-totals\{border:0!important;outline:0!important/);
+  assert.match(app, /receiptTenderRows\(sale\)\.map\(row=>\(\{name:row\.method,amount:row\.amount\}\)\)/);
+  assert.match(app, /if\(!rows\.length\)\{const method=sale\?\.payment_mode/);
+});
