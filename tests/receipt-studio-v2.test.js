@@ -124,10 +124,9 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   assert.match(app, /sendLabelPrintJob\(html,state\.labelLayout\.paper===\x27a4\x27\?210:width/, 'label studio must use the shared V1 label print route and dedicated printer');
   assert.match(app, /date,\s*storeName:/, 'the real ticket payload must use the resolved transaction date and shop header');
   assert.match(app, /stock_deferred:true/, 'F6 must persist the deferred-stock flag consumed by the settlement controller');
-  assert.match(app, /bridge\.printReceipt\(payload/, 'new and reprinted V2 sales must use the continuous thermal receipt route');
+  assert.match(app, /async function printSaleReceiptDocument[\s\S]*?bridge\.print\(html,printOptions\)/, 'new and reprinted V2 sales must use the saved Receipt Studio HTML through the fast Windows printer driver');
   assert.match(app, /sale-payment-chip/, 'split payment methods must be visible as chips in the sales status');
-  assert.match(app, /receipt-thermal-preview/, 'Receipt Studio must display the exact ESC/POS renderer preview');
-  assert.match(app, /refreshReceiptThermalPreview\(\)/);
+  assert.doesNotMatch(app, /receipt-thermal-preview|Aperçu réel de l’imprimante|ESC\\/POS/, 'Receipt Studio must not expose the unwanted ESC/POS preview');
   assert.match(app, /boldItemNames:true/);
   assert.match(app, /boldItemAmounts:true/);
   assert.match(app, /date:savedSale\.date\|\|savedSale\.created_date/);
@@ -138,7 +137,7 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   const receiptPrintEnd = app.indexOf('async function printStudio', receiptPrintStart);
   assert.ok(receiptPrintStart >= 0 && receiptPrintEnd > receiptPrintStart);
   const receiptPrintBody = app.slice(receiptPrintStart, receiptPrintEnd);
-  assert.ok(!receiptPrintBody.includes('forceHtml:true') && !receiptPrintBody.includes('fitReceipt:') && !receiptPrintBody.includes('bridge.print('), 'the real sale receipt must not use the Chromium HTML print path');
+  assert.ok(receiptPrintBody.includes('bridge.print(html,printOptions)') && receiptPrintBody.includes('forceHtml:true') && !receiptPrintBody.includes('printReceipt('), 'the real sale receipt must use the fast Windows HTML printer route, never raw ESC/POS');
   assert.ok(app.includes("printSaleReceiptDocument(receiptSale,{copies:2,source:'F6 Versement'"), 'F6 must print through the same dynamic ticket payload');
   assert.match(app, /salePaymentMethods\(x\)/, 'split tender methods must be visible under the sales status');
   assert.match(app, /Payé · Versement/, 'settled F6 sales must be marked as Versement in history');
