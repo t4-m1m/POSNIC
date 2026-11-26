@@ -227,7 +227,7 @@ test('variant builder creates a true cartesian product and keeps axis attributes
 
 test('V2 Receipt Studio applies block fonts to inner basket and every totals row in preview and print', () => {
   const app = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/core/app.js'), 'utf8');
-  const rendererStart = app.indexOf('function receiptDesignerElement(e)');
+  const rendererStart = app.indexOf('function renderReceiptStudioDocument(sale,layout)');
   const rendererEnd = app.indexOf('function zrSettings(', rendererStart);
   const renderer = app.slice(rendererStart, rendererEnd);
   assert.match(renderer, /receiptAmountDue\(sale\)/);
