@@ -298,7 +298,7 @@ class ItemsController extends BaseController {
         company_price: 1, purchase_price_eur: 1, purchase_cost_dzd: 1,
         available_quantity: 1, quantity: 1, track_inventory: 1,
         low_stock_alert: 1, reorder_point: 1, updated_date: 1,
-        image: 1, image_url: 1, images: 1, item_images: 1, variants: 1, variant_group_id: 1, variant_axis: 1, variant_value: 1
+        image: 1, image_url: 1, images: 1, item_images: 1, variants: 1, variant_group_id: 1, variant_axis: 1, variant_value: 1, variant_axis_1: 1, variant_value_1: 1, variant_axis_2: 1, variant_value_2: 1, variant_attributes: 1, variant_options: 1
       };
       const [items, total] = await Promise.all([
         collection.find(scoped, { projection }).sort({ name: 1, _id: 1 }).skip((page - 1) * limit).limit(limit).toArray(),
