@@ -1,6 +1,6 @@
 {
   "name": "posnic",
-  "version": "2.0.0-rebrand.12",
+  "version": "2.0.0-rebrand.13",
   "description": "SamarinaPOS point-of-sale software for retail, with offline-first billing and inventory workflows.",
   "main": "src/main.js",
   "desktopName": "com.posnic.app.desktop",
