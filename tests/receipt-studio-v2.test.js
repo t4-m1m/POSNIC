@@ -137,8 +137,9 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   const receiptPrintStart = app.indexOf('async function printSaleReceiptDocument');
   const receiptPrintEnd = app.indexOf('async function printStudio', receiptPrintStart);
   assert.ok(receiptPrintStart >= 0 && receiptPrintEnd > receiptPrintStart);
-  assert.doesNotMatch(app.slice(receiptPrintStart, receiptPrintEnd), /fitReceipt:|forceHtml:true|bridge\\.print\\(/, 'the real sale receipt must not use the Chromium HTML print path');
-  assert.match(app, /printSaleReceiptDocument\\(receiptSale,\\{copies:2,source:'F6 Versement'/, 'F6 must print through the same dynamic ticket payload');
+  const receiptPrintBody = app.slice(receiptPrintStart, receiptPrintEnd);
+  assert.ok(!receiptPrintBody.includes('forceHtml:true') && !receiptPrintBody.includes('fitReceipt:') && !receiptPrintBody.includes('bridge.print('), 'the real sale receipt must not use the Chromium HTML print path');
+  assert.ok(app.includes("printSaleReceiptDocument(receiptSale,{copies:2,source:'F6 Versement'"), 'F6 must print through the same dynamic ticket payload');
   assert.match(app, /salePaymentMethods\(x\)/, 'split tender methods must be visible under the sales status');
   assert.match(app, /Payé · Versement/, 'settled F6 sales must be marked as Versement in history');
   assert.match(app, /art\.style\.width=state\.labelLayout\.width\+'mm'/);
