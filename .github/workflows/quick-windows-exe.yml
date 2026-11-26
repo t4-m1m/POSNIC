@@ -140,24 +140,88 @@ jobs:
 
       - name: Mirror installer to GoFile (free third-party host)
         id: gofile
-        continue-on-error: true
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $installer = Get-Item "dist/SamarinaPOS-Windows-Installer.exe"
-          $response = Invoke-RestMethod -Uri "https://upload.gofile.is/uploadfile" -Method Post -Form @{ file = $installer }
-          if ($response.status -ne "ok") {
-            throw "GoFile upload failed: $($response.status)"
+          Write-Host "Uploading $($installer.Name) ($($installer.Length) bytes) to the official GoFile upload API."
+          # The .is web host serves HTML here; use GoFile's documented JSON upload API.
+          $response = Invoke-RestMethod -Uri "https://upload.gofile.io/uploadfile" -Method Post -Form @{ file = $installer } -TimeoutSec 3600
+          if ($response.status -ne "ok" -or -not $response.data) { throw "GoFile upload failed or returned an invalid response: $($response.status)" }
+          $url = [string]$response.data.downloadPage
+          if (-not $url -and $response.data.parentFolderCode) { $url = "https://gofile.io/d/$($response.data.parentFolderCode)" }
+          if (-not $url -and $response.data.code) { $url = "https://gofile.io/d/$($response.data.code)" }
+          $parsedUrl = $null
+          if (-not [uri]::TryCreate($url, [UriKind]::Absolute, [ref]$parsedUrl) -or $parsedUrl.Scheme -ne 'https' -or $parsedUrl.Host -notmatch '(^|\\.)gofile\\.(io|is)
+
+      - name: Upload Windows installer artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: SamarinaPOS-Windows-Installer
+          path: dist/SamarinaPOS-Windows-Installer.exe
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Publish installer to GitHub Pre-Release
+        if: github.ref == 'refs/heads/feat/posnic-v2-rebrand' || startsWith(github.ref, 'refs/tags/v2.0.0-rebrand')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GOFILE_URL: ${{ steps.gofile.outputs.download_url }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $owner = 't4-m1m'
+          $repo = 'POSNIC'
+          $tag = if ($env:GITHUB_REF.StartsWith('refs/tags/')) { $env:GITHUB_REF_NAME } else { 'v2.0.0-rebrand.6' }
+          $installer = Get-Item 'dist/SamarinaPOS-Windows-Installer.exe'
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
           }
-          $url = $response.data.downloadPage
-          if (-not $url -and $response.data.code) {
-            $url = "https://gofile.is/d/$($response.data.code)"
+          $api = "https://api.github.com/repos/$owner/$repo"
+          if ([string]::IsNullOrWhiteSpace($env:GOFILE_URL)) { throw 'GoFile upload did not produce a verified share URL; refusing to publish a misleading release.' }
+          $notes = "Automatically published SamarinaPOS Windows installer from the successful SamarinaPOS build.`n`n**Alternative download (GoFile):** $env:GOFILE_URL`n`nDownload **SamarinaPOS-Windows-Installer.exe** below. This release contains the installer only."
+          $payload = @{
+            tag_name = $tag
+            name = "SamarinaPOS $tag"
+            body = $notes
+            draft = $false
+            prerelease = $true
+            make_latest = 'false'
+          } | ConvertTo-Json -Depth 4
+          try {
+            $release = Invoke-RestMethod -Method Get -Uri "$api/releases/tags/$tag" -Headers $headers
+            $release = Invoke-RestMethod -Method Patch -Uri "$api/releases/$($release.id)" -Headers $headers -ContentType 'application/json' -Body $payload
+          } catch {
+            $status = $_.Exception.Response.StatusCode.value__
+            if ($status -ne 404) { throw }
+            $release = Invoke-RestMethod -Method Post -Uri "$api/releases" -Headers $headers -ContentType 'application/json' -Body $payload
           }
-          if (-not $url) {
-            throw "GoFile upload returned no share URL."
+          foreach ($asset in @($release.assets | Where-Object { $_.name -eq $installer.Name })) {
+            Invoke-RestMethod -Method Delete -Uri "$api/releases/assets/$($asset.id)" -Headers $headers | Out-Null
           }
+          $uploadUrl = "https://uploads.github.com/repos/$owner/$repo/releases/$($release.id)/assets?name=$([uri]::EscapeDataString($installer.Name))"
+          & curl.exe --fail --silent --show-error --location --request POST --header "Authorization: Bearer $env:GH_TOKEN" --header 'Accept: application/vnd.github+json' --header 'Content-Type: application/octet-stream' --data-binary "@$($installer.FullName)" $uploadUrl
+          if ($LASTEXITCODE -ne 0) { throw "GitHub release asset upload failed with exit code $LASTEXITCODE." }
+          $assets = Invoke-RestMethod -Method Get -Uri "$api/releases/$($release.id)/assets" -Headers $headers
+          if (-not (@($assets | Where-Object { $_.name -eq $installer.Name }).Count)) { throw 'Installer asset was not present after upload.' }
+          Write-Host "Published prerelease $tag with $($installer.Name)."
+
+# Rebuild current cashier workflow snapshot (installer only, no tests).
+
+# Rebuild Windows installer for cashier action, return-cancel and fixed F-key toolbar updates.
+
+# Rebuild installer with the visible return-cancel action placement.
+
+# Installer rebuild after preserving active basket snapshot before return.
+
+# Trigger installer rebuild with accounting tests disabled.
+) { throw "GoFile did not return a valid HTTPS share URL: '$url'" }
           "download_url=$url" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "### Alternative installer download (GoFile)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           "$url" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          Write-Host "GoFile upload confirmed: $url"
 
       - name: Upload Windows installer artifact
         uses: actions/upload-artifact@v7

@@ -1,59 +1,16 @@
-/* V2 global scroll recovery: only the primary Caisse/Vente view is viewport-locked.
-   Every other module grows with its content and uses normal document scrolling. */
-html,body,#app{
-  height:auto!important;
-  min-height:100%!important;
-  max-height:none!important;
-  overflow-x:hidden!important;
-  overflow-y:auto!important;
-}
-#app{min-height:100dvh!important}
-.shell:not(.caisse-lock){
-  width:100%!important;
-  height:auto!important;
-  min-height:100dvh!important;
-  max-height:none!important;
-  overflow:visible!important;
-  grid-template-rows:44px auto!important;
-  align-content:start!important;
-}
-.shell:not(.caisse-lock)>main{
-  grid-column:2!important;
-  grid-row:2!important;
-  height:auto!important;
-  min-height:calc(100dvh - 44px)!important;
-  max-height:none!important;
-  overflow:visible!important;
-  overflow-x:visible!important;
-  overflow-y:visible!important;
-}
-.shell:not(.caisse-lock)>.rail{
-  grid-row:1/3!important;
-  height:auto!important;
-  min-height:100%!important;
-  max-height:none!important;
-  align-self:stretch!important;
-}
-/* Preserve the cashier's viewport-locked workspace and internal scroll pane. */
-.shell.caisse-lock{
-  height:100dvh!important;
-  min-height:0!important;
-  max-height:100dvh!important;
-  overflow:hidden!important;
-}
-.shell.caisse-lock>main{
-  min-height:0!important;
-  height:auto!important;
-  max-height:none!important;
-  overflow-x:hidden!important;
-  overflow-y:auto!important;
-}
-
-
-/* V2 viewport shell: keep navigation fixed while each page scrolls independently. */
-.shell:not(.caisse-lock){height:100dvh!important;min-height:100dvh!important;max-height:100dvh!important;grid-template-rows:44px minmax(0,1fr)!important;overflow:hidden!important;}
-.shell:not(.caisse-lock)>.topbar{grid-column:2!important;grid-row:1!important;min-height:44px!important;}
-.shell:not(.caisse-lock)>.rail{position:fixed!important;inset:0 auto 0 0!important;grid-row:auto!important;grid-column:auto!important;width:68px!important;height:100dvh!important;min-height:0!important;max-height:100dvh!important;align-self:auto!important;box-sizing:border-box!important;}
-.shell:not(.caisse-lock):has(.rail:hover)>.rail,.shell:not(.caisse-lock).expanded>.rail{width:228px!important;}
-.shell:not(.caisse-lock)>main{grid-column:2!important;grid-row:2!important;height:calc(100dvh - 44px)!important;min-height:0!important;max-height:none!important;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain!important;}
-@media(max-width:680px){.shell:not(.caisse-lock)>.rail{width:56px!important;}.shell:not(.caisse-lock):has(.rail:hover)>.rail,.shell:not(.caisse-lock).expanded>.rail{width:56px!important;}}
+/* SamarinaPOS V2: viewport shell with a permanently fixed navigation rail.
+   The document itself never scrolls; each page scrolls inside its own main pane. */
+html,body,#app{width:100%;height:100%;min-height:100%;max-height:100%;overflow:hidden!important}
+#app{height:100dvh;min-height:0;max-height:100dvh}
+.shell:not(.caisse-lock){width:100%;height:100dvh!important;min-height:0!important;max-height:100dvh!important;overflow:hidden!important;grid-template-rows:44px minmax(0,1fr)!important;align-content:stretch!important}
+.shell:not(.caisse-lock)>.topbar{grid-column:2!important;grid-row:1!important;min-height:44px;height:44px;position:relative;z-index:4}
+.shell:not(.caisse-lock)>.rail{position:fixed!important;inset:0 auto 0 0!important;z-index:20;grid-row:auto!important;grid-column:auto!important;width:68px!important;height:100dvh!important;min-height:0!important;max-height:100dvh!important;align-self:auto!important;box-sizing:border-box!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
+.shell:not(.caisse-lock):has(.rail:hover)>.rail,.shell:not(.caisse-lock).expanded>.rail{width:228px!important}
+.shell:not(.caisse-lock)>.rail .nav{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.shell:not(.caisse-lock)>.rail .rail-bottom{flex:0 0 auto;margin-top:auto}
+.shell:not(.caisse-lock)>.rail .rail-bottom button[data-action="whatsapp-reconnect"] .ico{--icon-tint:#E8F9EF;--icon-color:#16A34A}
+.shell:not(.caisse-lock)>main{grid-column:2!important;grid-row:2!important;width:100%;height:calc(100dvh - 44px)!important;min-height:0!important;max-height:calc(100dvh - 44px)!important;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain!important;scrollbar-width:none}
+.shell:not(.caisse-lock)>main::-webkit-scrollbar{display:none}
+.shell:not(.caisse-lock) .app-version{display:inline-flex;align-items:center;padding:4px 9px;border:1px solid var(--border-hairline);border-radius:999px;background:var(--bg-subtle);color:var(--accent-brand);font-size:11px;font-weight:750;letter-spacing:.02em;white-space:nowrap}
+.shell.caisse-lock{height:100dvh!important;min-height:0!important;max-height:100dvh!important;overflow:hidden!important}
+@media(max-width:680px){.shell:not(.caisse-lock)>.rail{width:56px!important}.shell:not(.caisse-lock):has(.rail:hover)>.rail,.shell:not(.caisse-lock).expanded>.rail{width:56px!important}.shell:not(.caisse-lock)>main{padding:16px}}
