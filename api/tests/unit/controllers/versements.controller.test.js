@@ -50,6 +50,35 @@ function makeHarness({ settled }) {
   return { row, versements, req, res };
 }
 
+describe('Versement deferred inventory contract', () => {
+  test('persists stock_deferred so the initial F6 deposit cannot consume inventory', async () => {
+    const stored = [];
+    const collection = {
+      createIndex: jest.fn(async () => {}),
+      findOne: jest.fn(async () => null),
+      insertOne: jest.fn(async doc => { stored.push(doc); return { insertedId: new ObjectId('507f1f77bcf86cd799439014') }; }),
+    };
+    const db = { collection: jest.fn(() => collection) };
+    const sale = {
+      _id: SALE_ID,
+      sales_id: 'F6-0000456',
+      sales_total: 6000,
+      branch_id: new ObjectId(BRANCH),
+      versement_checkout: {
+        customer_name: 'Client test',
+        initial_amount: 1000,
+        initial_method: 'cash',
+        stock_deferred: true,
+      },
+      items: [],
+    };
+    const req = { db, tenantContext: { branchId: BRANCH }, user: { username: 'Cashier' } };
+    const result = await controller.ensureForSale(req, sale);
+    expect(result.stock_deferred).toBe(true);
+    expect(stored[0]).toMatchObject({ status: 'pending', initial_amount: 1000, remaining: 5000, stock_deferred: true });
+  });
+});
+
 describe('Versements interrupted settlement recovery', () => {
   test('finalizes the ledger and appends one settlement history event when the linked sale was settled', async () => {
     const h = makeHarness({ settled: true });
