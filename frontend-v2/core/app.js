@@ -129,9 +129,11 @@ function salePaymentMethods(sale){
   const initialMethod=sale.versement_initial_method||sale.versement_checkout.initial_method||'cash';
   const total=Number(sale.sale_original_total??sale.sales_total??sale.total??0);
   const final=Number(sale.versement_settlement_amount??0);
+  const isSettled=sale.versement_settled===true||sale.versement_settled==='true';
+  chips.push({name:'Versement',note:isSettled?'Réglé':'En attente',pending:!isSettled});
   if(initial>0)chips.push({name:label(initialMethod),amount:initial});
-  if((sale.versement_settled===true||sale.versement_settled==='true')&&final>0)chips.push({name:label(sale.payment_mode||'cash'),amount:final});
-  if(!(sale.versement_settled===true||sale.versement_settled==='true')){const due=Math.max(0,Number(sale.versement_remaining??sale.versement_checkout.reste??total-initial)||0);if(due>0.009)chips.push({name:'Reste à régler',amount:due,pending:true});}
+  if(isSettled&&final>0)chips.push({name:label(sale.payment_mode||'cash'),amount:final});
+  if(!isSettled){const due=Math.max(0,Number(sale.versement_remaining??sale.versement_checkout.reste??total-initial)||0);if(due>0.009)chips.push({name:'Reste à régler',amount:due,pending:true});}
  }else{
   for(const row of rows)chips.push({name:label(row.method),amount:row.amount});
   const total=Number(sale.sales_total??sale.total??0),paid=Number(sale.paid_amount??sale.payment_received??rows.reduce((sum,row)=>sum+row.amount,0))||0;
@@ -139,7 +141,7 @@ function salePaymentMethods(sale){
   if(due>0.009&&!chips.some(row=>row.name==='Crédit'))chips.push({name:'Crédit',amount:due,pending:true});
  }
  if(!chips.length)return '<span class="sale-payment-chip pending"><b>Mode non renseigné</b></span>';
- return '<div class="sale-payment-methods">'+chips.map(row=>'<span class="sale-payment-chip'+(row.pending?' pending':'')+'"><b>'+esc(row.name)+'</b><span>'+money(row.amount)+' DZD</span></span>').join('')+'</div>';
+ return '<div class="sale-payment-methods">'+chips.map(row=>'<span class="sale-payment-chip'+(row.pending?' pending':'')+(row.note?' versement':'')+'"><b>'+esc(row.name)+'</b><span>'+(row.note?esc(row.note):money(row.amount)+' DZD')+'</span></span>').join('')+'</div>';
 }
 function salesHistoryView(rows,mode='sales'){
  const list=rowsOf(rows),calendarSales=rowsOf(state.salesCalendarRows||rows),month=state.salesMonth||new Date().toISOString().slice(0,7),selected=state.salesDay||'',d=new Date(month+'-01T12:00:00'),year=d.getFullYear(),m=d.getMonth(),days=new Date(year,m+1,0).getDate(),offset=(new Date(year,m,1).getDay()+6)%7;
