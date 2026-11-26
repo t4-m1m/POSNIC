@@ -34,15 +34,21 @@ jobs:
           fetch-depth: 1
           submodules: recursive
 
-      - name: Verify existing protected SamarinaPOS V2 pre-release tag
+      - name: Verify or create protected SamarinaPOS V2 pre-release tag
         if: github.ref == 'refs/heads/feat/posnic-v2-rebrand'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $tag = 'v2.0.0-rebrand.7'
-          git fetch --no-tags origin "refs/tags/${tag}:refs/tags/${tag}"
-          if ($LASTEXITCODE -ne 0) { throw "Could not fetch the existing V2 prerelease tag $tag." }
-          Write-Host "Using existing protected tag $tag; building current branch commit $env:GITHUB_SHA without moving the tag."
+          git fetch --no-tags origin "refs/tags/${tag}:refs/tags/${tag}" 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Creating immutable release tag $tag at the current branch commit."
+            git tag $tag $env:GITHUB_SHA
+            git push origin "refs/tags/$tag"
+            if ($LASTEXITCODE -ne 0) { throw "Could not create the V2 prerelease tag $tag." }
+          } else {
+            Write-Host "Using existing protected tag $tag; building current branch commit $env:GITHUB_SHA without moving the tag."
+          }
 
       - name: Exclude workspace from Microsoft Defender scanning
         shell: pwsh
