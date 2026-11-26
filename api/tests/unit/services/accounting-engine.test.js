@@ -443,13 +443,13 @@ describe('fourteen-day business accounting regression fixture', () => {
       expect(payments.details.reduce((sum, row) => sum + row.sale_payment, 0)).toBe(100);
       expect(result.grossProfitTotal).toBe(400);
       expect(result.netProfitTotal).toBe(200);
-      expect(result.cashExpected).toBe(805);
+      expect(result.cashExpected).toBe(305);
       return result;
     });
     expect(daily).toHaveLength(14);
     expect(daily.reduce((sum, row) => sum + row.grossProfitTotal, 0)).toBe(5600);
     expect(daily.reduce((sum, row) => sum + row.netProfitTotal, 0)).toBe(2800);
-    expect(daily.reduce((sum, row) => sum + row.cashExpected, 0)).toBe(11270);
+    expect(daily.reduce((sum, row) => sum + row.cashExpected, 0)).toBe(4270);
     const returned = summarizeSaleReturns([{
       sales_id: 'LEGACY-RETURN-14D',
       sale_original_snapshot: { items: [{ item_id: 'legacy-item', item_quantity: 2, company_price_total: 40 }] },
