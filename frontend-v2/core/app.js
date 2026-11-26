@@ -447,7 +447,14 @@ function renderReceiptStudioDocument(sale,layout){
  const totalsHeight=Math.max(oldTotalsHeight,26+paymentCount*5.2);
  const totalsTop=Math.max(oldTotalsTop,itemsTop+itemsHeight+2);
  const shift=totalsTop-oldTotalsTop;
- const finalHeight=isA4?297:Math.max(baseHeight,totalsTop+totalsHeight+16);
+ const trailingBottom=sourceElements.reduce((bottom,e)=>{
+  let topMm=Number(e.y||0)*baseHeight/100,heightMm=Number(e.h||0)*baseHeight/100;
+  if(e.type==='items'){topMm=itemsTop;heightMm=itemsHeight;}
+  else if(e.type==='totals'){topMm=totalsTop;heightMm=totalsHeight;}
+  else if(topMm>=oldTotalsTop-0.01)topMm+=shift;
+  return Math.max(bottom,topMm+heightMm);
+ },0);
+ const finalHeight=isA4?297:Math.max(baseHeight,totalsTop+totalsHeight+16,trailingBottom+4);
  const elements=sourceElements.map(e=>{
   const copy={...e};
   let topMm=Number(e.y||0)*baseHeight/100,heightMm=Number(e.h||0)*baseHeight/100;
