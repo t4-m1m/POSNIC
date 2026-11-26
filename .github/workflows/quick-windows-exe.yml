@@ -143,17 +143,20 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $installer = Get-Item "dist/SamarinaPOS-Windows-Installer.exe"
-          Write-Host "Uploading $($installer.Name) ($($installer.Length) bytes) to the official GoFile upload API."
-          # The .is web host serves HTML here; use GoFile's documented JSON upload API.
-          $response = Invoke-RestMethod -Uri "https://upload.gofile.io/uploadfile" -Method Post -Form @{ file = $installer } -TimeoutSec 3600
-          if ($response.status -ne "ok" -or -not $response.data) { throw "GoFile upload failed or returned an invalid response: $($response.status)" }
+          $installer = Get-Item 'dist/SamarinaPOS-Windows-Installer.exe'
+          Write-Host "Uploading $($installer.Name) ($($installer.Length) bytes) to GoFile."
+          $response = Invoke-RestMethod -Uri 'https://upload.gofile.io/uploadfile' -Method Post -Form @{ file = $installer } -TimeoutSec 3600
+          if ($response.status -ne 'ok' -or -not $response.data) { throw "GoFile upload failed: $($response.status)" }
           $url = [string]$response.data.downloadPage
-          if (-not $url -and $response.data.parentFolderCode) { $url = "https://gofile.io/d/$($response.data.parentFolderCode)" }
-          if (-not $url -and $response.data.code) { $url = "https://gofile.io/d/$($response.data.code)" }
-          $parsedUrl = $null
-          if (-not [uri]::TryCreate($url, [UriKind]::Absolute, [ref]$parsedUrl) -or $parsedUrl.Scheme -ne 'https' -or $parsedUrl.Host -notin @('gofile.io','www.gofile.io','gofile.is','www.gofile.is')) { throw "GoFile did not return a valid HTTPS share URL: '$url'" }
-
+          if ([string]::IsNullOrWhiteSpace($url) -and $response.data.parentFolderCode) { $url = "https://gofile.io/d/$($response.data.parentFolderCode)" }
+          if ([string]::IsNullOrWhiteSpace($url) -and $response.data.code) { $url = "https://gofile.io/d/$($response.data.code)" }
+          if ([string]::IsNullOrWhiteSpace($url)) { throw 'GoFile upload returned no share URL.' }
+          $parsedUrl = [uri]$url
+          if ($parsedUrl.Scheme -ne 'https' -or $parsedUrl.Host -notin @('gofile.io','www.gofile.io','gofile.is','www.gofile.is')) { throw 'GoFile returned an invalid HTTPS share URL.' }
+          "download_url=$url" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          '### Alternative installer download (GoFile)' | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          $url | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          Write-Host "GoFile upload confirmed: $url"
       - name: Upload Windows installer artifact
         uses: actions/upload-artifact@v7
         with:
@@ -217,7 +220,6 @@ jobs:
 # Installer rebuild after preserving active basket snapshot before return.
 
 # Trigger installer rebuild with accounting tests disabled.
-) { throw "GoFile did not return a valid HTTPS share URL: '$url'" }
           "download_url=$url" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "### Alternative installer download (GoFile)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           "$url" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
