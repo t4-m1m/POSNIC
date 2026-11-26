@@ -236,7 +236,7 @@ test('V2 Receipt Studio applies block fonts to inner basket and every totals row
   assert.match(renderer, /align-items:'\+\(\['items','totals'\]/);
   assert.match(app, /font-size:'\+itemFont\+'px!important/);
   assert.match(app, /font-size:'\+totalsFont\+'px!important/);
-  assert.match(renderer, /Reste à payer/);
+  assert.doesNotMatch(renderer, /Reste à payer/);
   assert.doesNotMatch(renderer, /Balance due/);
   assert.match(app, /gapMm=3/);
   assert.match(app, /itemsTop\+itemsHeight\+gapMm/);
