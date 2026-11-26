@@ -55,3 +55,12 @@ html,body,#app{
 .whatsapp-settings-panel .whatsapp-qr-wrap{min-height:0}
 .rail-bottom button[data-action="whatsapp-reconnect"] .ico{background:#F1F5F9!important;color:#64748B!important;border-color:#E2E8F0!important}
 .rail-bottom button[data-action="whatsapp-reconnect"][aria-busy="true"]{opacity:.55;pointer-events:none}
+
+/* Pin the complete sidebar to the viewport on document-scrolling pages. The module list alone scrolls. */
+.shell:not(.caisse-lock)>.rail{position:fixed!important;inset:0 auto 0 0!important;display:flex!important;flex-direction:column!important;width:68px!important;height:100dvh!important;min-height:0!important;max-height:100dvh!important;align-self:auto!important;overflow:hidden!important;z-index:100!important}
+.shell:not(.caisse-lock).expanded>.rail{width:228px!important}
+.shell:not(.caisse-lock)>.rail>.brand{flex:0 0 44px!important}
+.shell:not(.caisse-lock)>.rail>.nav{position:relative!important;display:flex!important;flex:1 1 auto!important;flex-direction:column!important;min-height:0!important;max-height:none!important;overflow-x:hidden!important;overflow-y:auto!important;padding-bottom:260px!important}
+.shell:not(.caisse-lock)>.rail>.rail-bottom{position:absolute!important;inset:auto 8px 10px 8px!important;display:flex!important;flex:0 0 auto!important;flex-direction:column!important;gap:5px!important;width:auto!important;max-height:none!important;min-height:max-content!important;margin:0!important;padding:8px 0 0!important;border-top:1px solid var(--border-hairline)!important;background:var(--bg-surface)!important;z-index:110!important;overflow:visible!important}
+.shell:not(.caisse-lock)>.rail>.rail-bottom>button,.shell:not(.caisse-lock)>.rail>.rail-bottom>.settings-group{flex:0 0 40px!important;min-height:40px!important;width:100%!important}
+@media(max-width:680px){.shell:not(.caisse-lock)>.rail{width:56px!important}.shell:not(.caisse-lock).expanded>.rail{width:56px!important}}
