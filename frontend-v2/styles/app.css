@@ -1311,3 +1311,11 @@ html,body,#app{width:100%;height:100%;min-height:0;margin:0;overflow:hidden}
 .shell>.rail>.rail-bottom>button,.shell>.rail>.rail-bottom>.settings-group{flex:0 0 40px!important;min-height:40px!important;width:100%!important}
 .receipt-totals-block>div{border:0!important;padding:3px 0!important}
 .receipt-totals-block .receipt-grand-total{border:0!important;border-top:1px dotted #111!important;padding:4px 0!important}
+
+/* Top-bar cash actions sit beside the signed-in user and build version. */
+.topbar-quick-actions{display:flex!important;align-items:center!important;gap:6px!important;flex:0 0 auto!important;white-space:nowrap!important}
+.topbar-quick-actions .btn{height:32px!important;min-height:32px!important;padding:0 10px!important;font-size:12px!important;white-space:nowrap!important}
+.topbar-quick-actions .quick-cash-advance{background:#eff6ff!important;color:#1d4ed8!important;border:1px solid #bfdbfe!important}
+.topbar-quick-actions .quick-expense{background:#fff7ed!important;color:#c2410c!important;border:1px solid #fed7aa!important}
+@media(max-width:1100px){.top-actions{gap:6px!important}.topbar-quick-actions .btn{padding:0 7px!important}.topbar .field{max-width:160px!important}}
+@media(max-width:760px){.topbar-quick-actions .btn{font-size:11px!important;padding:0 5px!important}.app-version{display:none!important}}
