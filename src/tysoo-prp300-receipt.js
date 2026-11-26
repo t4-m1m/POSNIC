@@ -161,7 +161,7 @@ function render(sale = {}, options = {}) {
       bytes(GS, 0x6b, 73, barcode.length);
       chunks.push(Buffer.from(barcode, 'ascii'));
       bytes(0x0a, ESC, 0x61, 1);
-      if (design.showBarcodeText !== false) centre(barcode);
+      if (design.showBarcodeText !== false) centre(billNo);
       bytes(ESC, 0x61, 0);
     }
   }
