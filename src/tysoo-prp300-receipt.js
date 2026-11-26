@@ -120,17 +120,19 @@ function render(sale = {}, options = {}) {
   }
   for (const item of basketItems) {
     const name = ascii(item.name || 'Article');
-    bytes(ESC, 0x45, design.boldItemNames === false ? 0 : 1);
+    const itemScale = design.itemSize === 'extra' ? 0x11 : design.itemSize === 'large' ? 0x10 : 0;
+    bytes(ESC, 0x45, design.boldItemNames === false ? 0 : 1, GS, 0x21, itemScale);
     wrapped(name);
-    bytes(ESC, 0x45, 0);
+    bytes(GS, 0x21, 0, ESC, 0x45, 0);
     if (design.showVariant && item.variant) wrapped('  ' + item.variant);
     const qty = qtyText(item.qty);
     const rate = Number(item.rate || 0);
     const amount = Number(item.amount == null ? Number(item.qty || 0) * rate : item.amount);
     const left = design.showUnitPrice === false ? 'x ' + qty : qty + ' x ' + rate.toFixed(2);
-    bytes(ESC, 0x45, design.boldItemAmounts === false ? 0 : 1);
+    const amountScale = design.amountSize === 'extra' ? 0x11 : design.amountSize === 'large' ? 0x10 : 0;
+    bytes(ESC, 0x45, design.boldItemAmounts === false ? 0 : 1, GS, 0x21, amountScale);
     pair(left, money(amount));
-    bytes(ESC, 0x45, 0);
+    bytes(GS, 0x21, 0, ESC, 0x45, 0);
   }
   rule(design.separator || '-');
   if (design.showTotalQty && sale.totalQty != null) pair('Total articles', String(sale.totalQty));
