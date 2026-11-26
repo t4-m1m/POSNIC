@@ -393,15 +393,13 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
         storeEmail: config.storeEmail || sale.storeEmail || '',
         title: options.kind === 'versement'
           ? (sale.title || 'VERSEMENT')
-          : (config.receiptTitle || sale.title || 'SALE RECEIPT'),
+          : (config.receiptTitle || sale.title || ' '),
         footer: config.footer || sale.footer || '',
-        design: options.kind === 'versement'
-          ? { ...(config.design || {}), ...(sale.design || {}) }
-          : (config.design || sale.design || {}),
-        cashier: config.showCashier ? (sale.cashier || '') : '',
-        customer: options.kind === 'versement'
+        design: { ...(sale.design || {}), ...(config.design || {}) },
+        cashier: config.showCashier !== false ? (sale.cashier || '') : '',
+        customer: options.kind === 'versement' || config.showCustomer !== false
           ? (sale.customer || [])
-          : (config.showCustomer ? (sale.customer || []) : []),
+          : [],
         branch: config.showBranch ? (sale.branch || '') : '' };
       const { normalizeTargets, columnsFor } = require('./printer-targets');
       // PRP-300 is an 80mm printer. Keep that as the default while still
