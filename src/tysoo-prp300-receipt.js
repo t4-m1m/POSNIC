@@ -87,10 +87,10 @@ function render(sale = {}, options = {}) {
   const qtyText = (n) => Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 3 });
   bytes(ESC, 0x40, ESC, 0x61, 1);
   if (design.logoText || sale.storeName) {
-    bytes(ESC, 0x45, design.boldStoreName === false ? 0 : 1);
+    bytes(ESC, 0x45, design.boldStoreName === false ? 0 : 1, GS, 0x21, design.storeNameSize === 'normal' ? 0 : 0x10);
     const storeLines = String(design.logoText || sale.storeName).split(/\\r?\\n/);
     storeLines.forEach(centre);
-    bytes(ESC, 0x45, 0);
+    bytes(GS, 0x21, 0, ESC, 0x45, 0);
   }
   if (sale.storeAddress && design.showAddress !== false) String(sale.storeAddress).split(/\\r?\\n/).forEach(centre);
   if (sale.storePhone && design.showPhone !== false) centre('Tel: ' + sale.storePhone);
@@ -120,13 +120,17 @@ function render(sale = {}, options = {}) {
   }
   for (const item of basketItems) {
     const name = ascii(item.name || 'Article');
+    bytes(ESC, 0x45, design.boldItemNames === false ? 0 : 1);
     wrapped(name);
+    bytes(ESC, 0x45, 0);
     if (design.showVariant && item.variant) wrapped('  ' + item.variant);
     const qty = qtyText(item.qty);
     const rate = Number(item.rate || 0);
     const amount = Number(item.amount == null ? Number(item.qty || 0) * rate : item.amount);
     const left = design.showUnitPrice === false ? 'x ' + qty : qty + ' x ' + rate.toFixed(2);
+    bytes(ESC, 0x45, design.boldItemAmounts === false ? 0 : 1);
     pair(left, money(amount));
+    bytes(ESC, 0x45, 0);
   }
   rule(design.separator || '-');
   if (design.showTotalQty && sale.totalQty != null) pair('Total articles', String(sale.totalQty));
