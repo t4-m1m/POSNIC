@@ -28,6 +28,14 @@ test('receipt date uses a timestamp when the first sale date field contains only
   assert.match(value, /11:42/);
 });
 
+test('receipt date skips midnight date placeholders when an actual creation timestamp exists', () => {
+  const value = receiptSaleDate({
+    date: '2026-11-25T00:00:00.000Z',
+    createdAt: '2026-11-25T11:42:00.000Z',
+  });
+  assert.match(value, /11:42/);
+});
+
 test('receipt date parses Mongo Extended JSON millisecond timestamps', () => {
   const value = receiptSaleDate({
     date: { $date: { $numberLong: String(Date.UTC(2026, 10, 20, 10, 15)) } },
