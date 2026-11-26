@@ -127,7 +127,7 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   assert.match(app, /bridge\.printReceipt\(payload/, 'new and reprinted V2 sales must use the continuous thermal receipt route');
   assert.match(app, /sale-payment-chip/, 'split payment methods must be visible as chips in the sales status');
   assert.match(app, /receipt-thermal-preview/, 'Receipt Studio must display the exact ESC/POS renderer preview');
-  assert.match(app, /refreshReceiptThermalPreview\\(\\)/);
+  assert.match(app, /refreshReceiptThermalPreview\(\)/);
   assert.match(app, /boldItemNames:true/);
   assert.match(app, /boldItemAmounts:true/);
   assert.match(app, /date:savedSale\.date\|\|savedSale\.created_date/);
