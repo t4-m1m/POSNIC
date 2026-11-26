@@ -480,32 +480,44 @@ function aggregateVersementPaymentEvents(versements = [], start, end) {
   };
   for (const row of versements) {
     if (['cancelled', 'cancelling'].includes(String(row.status || '').toLowerCase())) continue;
+    const settled = String(row.status || '').toLowerCase() === 'settled' ||
+      !!row.settlement?.settled_at || !!row.settled_at;
+    // A Versement is one sale, recognized only on the day its balance is fully
+    // settled. Earlier deposits must not appear in daily sales or cash closing.
+    if (!settled) continue;
+    const settlementDate = row.settlement?.settled_at || row.settled_at;
+    if (!settlementDate || !Number.isFinite(timeOf(settlementDate))) {
+      complete = false;
+      continue;
+    }
+    if (!inRange(settlementDate)) continue;
+
     const total = parseAmount(row.sale_total);
     const initialRaw = row.initial_recorded_amount ?? row.initial_amount ?? 0;
     const initial = Number.isFinite(total) && total >= 0
       ? Math.min(total, Math.max(0, parseAmount(initialRaw) || 0))
       : NaN;
-    const initialDate = row.initial_collected_at || row.created_at;
-    if (Number.isFinite(initial) && initial > 0) {
-      if (inRange(initialDate)) add(row.initial_method, initial);
-      else if (!Number.isFinite(timeOf(initialDate))) complete = false;
-    } else if (!Number.isFinite(total) || !Number.isFinite(parseAmount(initialRaw))) {
+    if (!Number.isFinite(initial) || !Number.isFinite(total)) {
       complete = false;
+      continue;
+    }
+    if (initial > 0) {
+      const initialDate = row.initial_collected_at || row.created_at;
+      if (!initialDate || !Number.isFinite(timeOf(initialDate))) complete = false;
+      add(row.initial_method, initial);
     }
 
-    const settled = String(row.status || '').toLowerCase() === 'settled' || !!row.settlement?.settled_at || !!row.settled_at;
-    if (!settled) continue;
-    const settlementDate = row.settlement?.settled_at || row.settled_at;
     const settlementAmountRaw = row.settlement?.amount;
     const finalAmount = settlementAmountRaw !== undefined && settlementAmountRaw !== null && settlementAmountRaw !== ''
       ? parseAmount(settlementAmountRaw)
-      : Number.isFinite(total) && Number.isFinite(initial) ? Math.max(0, total - initial) : NaN;
-    if (Number.isFinite(finalAmount) && finalAmount > 0) {
-      if (inRange(settlementDate)) add(row.settlement?.method || row.settlement_started_method, finalAmount);
-      else if (!Number.isFinite(timeOf(settlementDate))) complete = false;
-    } else if (!Number.isFinite(finalAmount)) {
+      : Math.max(0, total - initial);
+    if (!Number.isFinite(finalAmount) || finalAmount < 0) {
       complete = false;
+      continue;
     }
+    if (finalAmount > 0) add(row.settlement?.method || row.settlement_started_method, finalAmount);
+    const recognized = round2(initial + finalAmount);
+    if (Math.abs(recognized - total) > 0.01) complete = false;
   }
   const details = Array.from(map.values()).filter(row => row.amount > 0);
   return {
