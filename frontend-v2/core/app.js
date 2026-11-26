@@ -110,25 +110,35 @@ function salePaymentAmount(sale, pattern){
 function historyModeTabs(mode){return '<div class="period-pills history-mode-tabs"><button class="btn period-pill '+(mode==='sales'?'active':'')+'" data-history-mode="sales">Ventes détaillées</button><button class="btn period-pill '+(mode==='instant'?'active':'')+'" data-history-mode="instant">Ventes rapides</button><button class="btn period-pill '+(mode==='summary'?'active':'')+'" data-history-mode="summary">Résumé des ventes</button></div>';}
 function salesSummaryView(response){const d=response?.data||response||{},order=rowsOf(d.order_type_summary),dine=order.filter(x=>!String(x.dine_type||'').toLowerCase().includes('take')).reduce((a,x)=>({count:a.count+Number(x.sale_count||0),total:a.total+Number(x.total_sales||0)}),{count:0,total:0}),take=order.filter(x=>String(x.dine_type||'').toLowerCase().includes('take')).reduce((a,x)=>({count:a.count+Number(x.sale_count||0),total:a.total+Number(x.total_sales||0)}),{count:0,total:0}),cards=[['Ventes TTC',d.sales_include_tax],['Ventes HT',d.sales_exclude_tax],['Ventes nettes',d.net_sales],['Taxes nettes',d.net_sales_tax],['Remises',d.discounts],['Coût des marchandises',d.cogs],['Bénéfice brut',d.gross_profit],['Retours',d.refunds],['Commandes',Number(d.total_orders??d.sales_count??0)],['Dine-in',dine.total],['Take away',take.total]];return head('Résumé des ventes','Synthèse legacy · taxes, remises, bénéfice, retours et types de commande','<button class="btn" data-action="refresh">Actualiser</button>')+historyModeTabs('summary')+'<div class="stats dashboard-kpis">'+cards.map(([label,value],i)=>statCard(label,Number(value)||0,i)).join('')+'</div><div class="dashboard-grid"><section class="panel"><h3>Types de commande</h3>'+table([{type:'Dine-in',count:dine.count,total:dine.total},{type:'Take away',count:take.count,total:take.total}],[{label:'Type',keys:['type']},{label:'Commandes',keys:['count']},{label:'Total',render:x=>money(x.total)+' DZD'}])+'</section><section class="panel"><h3>Résultat financier</h3>'+[['Ventes nettes',d.net_sales],['Coût des marchandises',d.cogs],['Bénéfice brut',d.gross_profit],['Taxes nettes',d.net_sales_tax],['Remises',d.discounts],['Retours',d.refunds]].map(([label,v])=>'<div class="dashboard-finance-row"><span>'+label+'</span><strong>'+money(v||0)+' DZD</strong></div>').join('')+'</section></div>';}
 function salePaymentMethods(sale){
- const source=sale?.multi_payment||sale?.payment_details||sale?.payment_breakdown||sale?.payments||{};
- const rows=Array.isArray(source)?source.map(row=>({method:row?.method||row?.payment_mode||row?.type||row?.name,amount:Number(row?.amount??row?.paid??row?.total??0)})):Object.entries(source).map(([method,value])=>({method,amount:Number(typeof value==='object'?(value?.amount??value?.paid??value?.total??0):value)||0}));
- const label=method=>{const key=String(method||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');return ({cash:'Espèces',especes:'Espèces',tpe:'TPE',card:'TPE',baridimob:'BaridiMob',credit:'Crédit',versement:'Versement'})[key]||String(method||'Paiement');};
+ const parse=value=>{if(typeof value!=='string')return value;try{return JSON.parse(value);}catch(_){return value;}};
+ const source=parse(sale?.multi_payment??sale?.payment_details??sale?.payment_breakdown??sale?.payments??{});
+ const rows=[],add=(method,amount)=>{
+  method=String(method||'').trim();amount=Number(amount);
+  if(method&&Number.isFinite(amount)&&amount>0)rows.push({method,amount});
+ };
+ const visit=value=>{
+  value=parse(value);
+  if(Array.isArray(value)){for(const row of value){if(!row||typeof row!=='object')continue;if(Array.isArray(row.tenders)&&row.tenders.length)visit(row.tenders);else add(row.method||row.payment_mode||row.type||row.name||row.label,row.amount??row.paid??row.total);}}
+  else if(value&&typeof value==='object'){for(const [method,entry] of Object.entries(value)){if(entry&&typeof entry==='object')add(entry.method||entry.payment_mode||method,entry.amount??entry.paid??entry.total);else add(method,entry);}}
+ };
+ visit(source);
+ const label=method=>{const key=String(method||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');return ({cash:'Espèces',especes:'Espèces',espece:'Espèces',tpe:'TPE',card:'TPE',baridimob:'BaridiMob',credit:'Crédit',versement:'Versement'})[key]||String(method||'Paiement');};
  const chips=[];
  if(sale?.versement_checkout){
   const initial=Number(sale.versement_initial_amount??sale.versement_checkout.initial_amount??0);
   const initialMethod=sale.versement_initial_method||sale.versement_checkout.initial_method||'cash';
-  const total=Number(sale.sales_total??sale.total??0);
+  const total=Number(sale.sale_original_total??sale.sales_total??sale.total??0);
   const final=Number(sale.versement_settlement_amount??0);
   if(initial>0)chips.push({name:label(initialMethod),amount:initial});
-  if(sale.versement_settled===true&&final>0)chips.push({name:label(sale.payment_mode||'cash'),amount:final});
-  if(sale.versement_settled!==true){const due=Math.max(0,Number(sale.versement_remaining??sale.versement_checkout.reste??total-initial)||0);if(due>0.009)chips.push({name:'Reste à régler',amount:due,pending:true});}
+  if((sale.versement_settled===true||sale.versement_settled==='true')&&final>0)chips.push({name:label(sale.payment_mode||'cash'),amount:final});
+  if(!(sale.versement_settled===true||sale.versement_settled==='true')){const due=Math.max(0,Number(sale.versement_remaining??sale.versement_checkout.reste??total-initial)||0);if(due>0.009)chips.push({name:'Reste à régler',amount:due,pending:true});}
  }else{
-  for(const row of rows){if(String(row.method||'').trim()&&Number.isFinite(row.amount)&&row.amount>0)chips.push({name:label(row.method),amount:row.amount});}
-  const total=Number(sale.sales_total??sale.total??0),paid=Number(sale.paid_amount??sale.payment_received??chips.reduce((sum,row)=>sum+row.amount,0))||0;
+  for(const row of rows)chips.push({name:label(row.method),amount:row.amount});
+  const total=Number(sale.sales_total??sale.total??0),paid=Number(sale.paid_amount??sale.payment_received??rows.reduce((sum,row)=>sum+row.amount,0))||0;
   const due=Math.max(0,Number(sale.payment_pending??sale.unpaid_amount??(total-paid))||0);
   if(due>0.009&&!chips.some(row=>row.name==='Crédit'))chips.push({name:'Crédit',amount:due,pending:true});
  }
- if(!chips.length)return '';
+ if(!chips.length)return '<span class="sale-payment-chip pending"><b>Mode non renseigné</b></span>';
  return '<div class="sale-payment-methods">'+chips.map(row=>'<span class="sale-payment-chip'+(row.pending?' pending':'')+'"><b>'+esc(row.name)+'</b><span>'+money(row.amount)+' DZD</span></span>').join('')+'</div>';
 }
 function salesHistoryView(rows,mode='sales'){
@@ -554,7 +564,7 @@ function receiptPrinterPayload(sale){
   extras,
   currency:'DA',
   title:'',
-  design:{titleSize:'large',titleBold:true,storeNameSize:'large',boldStoreName:true,boldItemNames:true,boldItemAmounts:true,totalSize:'large',totalBold:true,showBarcode:true,showBarcodeText:true,showVariant:true,note:sale.sales_description||sale.sale_note||sale.note||'',showUnitPrice:false,showSubtotal:true,showDiscount:true,showPayments:true,showCustomer:true,showCashier:true,showDate:true,showTicket:true,showAddress:true,showPhone:true}
+  design:{titleSize:'large',titleBold:true,storeNameSize:'large',boldStoreName:true,itemSize:'large',amountSize:'large',boldItemNames:true,boldItemAmounts:true,totalSize:'large',totalBold:true,showBarcode:true,showBarcodeText:true,showVariant:true,note:sale.sales_description||sale.sale_note||sale.note||'',showUnitPrice:false,showSubtotal:true,showDiscount:true,showPayments:true,showCustomer:true,showCashier:true,showDate:true,showTicket:true,showAddress:true,showPhone:true}
  };
 }
 async function refreshReceiptThermalPreview(){
