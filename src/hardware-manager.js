@@ -686,9 +686,9 @@ class HardwareManager {
         if (this._htmlPrintDocumentReady) {
           // Reuse the warmed Chromium renderer between sales; avoid repeated navigation.
           await printWindow.webContents.executeJavaScript(
-            `document.body.innerHTML = ${JSON.stringify(String(htmlContent || ''))}; document.title = 'Posnic Receipt';`
+            `document.open(); document.write(${JSON.stringify(String(htmlContent || ''))}); document.close();`
           );
-          await prepare(false);
+          await prepare(true);
           diagnostics?.record('print.document', { trace, stage: 'reused', status: 'ready' });
         } else {
           await printWindow.loadURL(route.url);
