@@ -56,7 +56,7 @@ async function applyDeferredVersementStock(db, sale, versement, settledAt) {
   const quantities = new Map();
   for (const line of rawLines) {
     const rawId = line.item_id || line.item || line.product_id || line.view_item_id;
-    const itemId = rawId && typeof rawId === 'object' ? String(rawId._id || rawId.id || rawId) : String(rawId || '');
+    const itemId = rawId && typeof rawId === 'object' ? String(typeof rawId.toHexString === 'function' ? rawId.toHexString() : (rawId._id || rawId.id || rawId)) : String(rawId || '');
     const qty = Number(line.item_quantity ?? line.quantity ?? line.qty ?? 0);
     if (!ObjectId.isValid(itemId) || !Number.isFinite(qty) || qty <= 0 || String(line.item_status || '').toLowerCase() === 'instant') continue;
     quantities.set(itemId, (quantities.get(itemId) || 0) + qty);
