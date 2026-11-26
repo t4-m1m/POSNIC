@@ -1146,9 +1146,15 @@ class SalesController extends BaseController {
       // Apply branch scoping similar to PHP behaviour
       const { validBranchIds } = parseBranchIdsFromRequest(req);
       const filter = { ...filteredSalesFilters };
-      // Keep pending F6 Versements visible in the complete sales history.
-      // The reportable-sales helper separately excludes pending Versements from
-      // financial summaries; once settled, the linked sale is a normal sale.
+      // F6 orders enter Sales History only after the full balance is settled.
+      // Partial collections remain visible in the dedicated Versements ledger.
+      filter.$and = [
+        ...(Array.isArray(filter.$and) ? filter.$and : []),
+        { $or: [
+          { versement_checkout: { $exists: false } },
+          { versement_checkout: { $exists: true }, versement_settled: true },
+        ] },
+      ];
       if (validBranchIds.length) {
         // PHP sales list historically filters on branch_id; mirror that
         // here so we correctly match both legacy PHP documents (which

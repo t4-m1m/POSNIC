@@ -1067,6 +1067,8 @@ const formatSaleListEntry = (saleDoc) => {
       ? { initial_amount: amount(doc.versement_checkout.initial_amount ?? doc.versement_checkout.initialAmount ?? 0) }
       : null,
     versement_settled: doc.versement_settled === true,
+    is_versement: !!doc.versement_checkout,
+    sale_type_label: doc.versement_checkout && doc.versement_settled === true ? 'VERSEMENT' : '',
     multi_payment: doc.multi_payment ?? doc.payment_details ?? [],
     status: doc.status || doc.sale_process || '',
     sale_original_total: amount(doc.sale_original_total ?? doc.sales_total ?? doc.total ?? 0),
