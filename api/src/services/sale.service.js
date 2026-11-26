@@ -1600,6 +1600,7 @@ const processSale = async (
       if (existing) return savedAnswer(existing._id, existing.sales_id, true);
     }
 
+    const deferVersementStock = Boolean(data.versement_checkout && id === '');
     // Inventory Verification BEFORE Insert (PHP lines 653-690)
     if (id === '' && !extensionStock && !deferVersementStock) {
       const insufficientItems = [];
@@ -1625,7 +1626,6 @@ const processSale = async (
 
     // Reserve tracked stock atomically before creating the sale. A normal
     // read-then-update allows two counters to sell the same final quantity.
-    const deferVersementStock = Boolean(data.versement_checkout && id === '');
     const stockReservations = new Map();
     if (id === '' && !extensionStock && !deferVersementStock) {
       const stockRequests = new Map();
