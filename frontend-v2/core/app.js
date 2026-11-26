@@ -4,7 +4,7 @@ import{modules,current,isAdminRole,allowedTabsFor,canAccessRoute}from'./router.j
 import{installKeyboard}from'./keyboard.js';
 import{renderHR,handleHRAction,handleHRSubmit,cleanupHRState}from'./hr.js';
 import{toast}from'./toast.js';
-import{receiptSaleDate,receiptSaleNumber,moveReceiptElement,receiptAmountDue,buildVariantCombinations}from'./receipt-designer.mjs';
+import{receiptSaleDate,receiptSaleNumber,moveReceiptElement,receiptAmountDue,buildVariantCombinations}from'./receipt-designer.mjs?v=2.0.0-rebrand.26';
 // Keep receipt settings independent of the designer module binding. This
 // normalizer is intentionally local so the settings screen cannot fail at
 // runtime when an older cached module graph is present.
