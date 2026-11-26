@@ -1415,6 +1415,7 @@ const processSale = async (
               phone: String(data.versement_checkout.phone || '').trim().slice(0, 40),
               initial_amount: round2(Number(data.versement_checkout.initial_amount) || 0, 2),
               initial_method: String(data.versement_checkout.initial_method || 'cash').toLowerCase(),
+              stock_deferred: true,
             }
           : existingSale?.versement_checkout,
       // Explicit cashier attribution is separate from created_by/user_name,
