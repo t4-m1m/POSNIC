@@ -314,25 +314,28 @@ describe('F6 Versement payment dates', () => {
   const start = '2026-11-23T00:00:00.000Z';
   const end = '2026-11-24T00:00:00.000Z';
 
-  test('counts an initial deposit on its actual collection day, even while the Versement is pending', () => {
+  test('does not count a pending Versement deposit in sales or cash closing before full settlement', () => {
     const result = aggregateVersementPaymentEvents([{
       status: 'pending', sale_total: 100, initial_amount: 30, initial_recorded_amount: 30,
       initial_method: 'cash', initial_collected_at: '2026-11-23T10:00:00Z',
       created_at: '2026-11-23T10:00:00Z', remaining: 70,
     }], start, end);
-    expect(result).toMatchObject({ total: 30, cashTotal: 30, complete: true });
-    expect(result.details).toEqual([{ payment_mode: 'CASH', amount: 30, count: 1 }]);
+    expect(result).toMatchObject({ total: 0, cashTotal: 0, complete: true });
+    expect(result.details).toEqual([]);
   });
 
-  test('does not count a previous-day deposit again when the remaining balance is settled today', () => {
+  test('recognizes the full sale and both tender portions on the final settlement day', () => {
     const result = aggregateVersementPaymentEvents([{
       status: 'settled', sale_total: 100, initial_amount: 30, initial_recorded_amount: 30,
       initial_method: 'cash', initial_collected_at: '2026-11-22T10:00:00Z',
       settlement: { amount: 70, method: 'tpe', settled_at: '2026-11-23T11:00:00Z' },
       settled_at: '2026-11-23T11:00:00Z',
     }], start, end);
-    expect(result).toMatchObject({ total: 70, cashTotal: 0, complete: true });
-    expect(result.details).toEqual([{ payment_mode: 'TPE', amount: 70, count: 1 }]);
+    expect(result).toMatchObject({ total: 100, cashTotal: 30, complete: true });
+    expect(result.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ payment_mode: 'CASH', amount: 30 }),
+      expect.objectContaining({ payment_mode: 'TPE', amount: 70 }),
+    ]));
   });
 
   test('counts both deposit and final payment when both were received on the same day', () => {
