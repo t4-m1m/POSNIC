@@ -2015,8 +2015,9 @@ class SalesController extends BaseController {
       // final tender methods, while capping the recognized amount at the invoice
       // total so an overpayment can never inflate sales revenue.
       const versementEvents = await db.collection('sale_versements').find({
-        // Initial deposits and final settlements are independent cash events.
-        // Include pending records so a deposit appears on the day it was received.
+        // Fetch rows by either event date, but aggregateVersementPaymentEvents
+        // recognizes them only when the full balance is settled and posts both
+        // the initial tender and final tender to that settlement day.
         branch_id: { $in: branchValues },
         status: { $nin: ['cancelled', 'cancelling'] },
         $or: [
