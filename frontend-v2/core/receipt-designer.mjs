@@ -92,6 +92,74 @@ export function normalizeReceiptElements(elements) {
     .sort((a, b) => Number(a.y || 0) - Number(b.y || 0));
 }
 
+export function receiptAmountDue(sale = {}) {
+  const total = Math.max(0, Number(sale.sale_original_total ?? sale.sales_total ?? sale.total ?? sale.total_amount ?? 0) || 0);
+  if (!total) return 0;
+  if (sale.versement_checkout) {
+    if (sale.versement_settled === true || String(sale.versement_settled).toLowerCase() === 'true') return 0;
+    const explicitRemaining = sale.versement_remaining ?? sale.versement_checkout?.reste;
+    if (explicitRemaining !== undefined && explicitRemaining !== null && explicitRemaining !== '') {
+      return Math.min(total, Math.max(0, Number(explicitRemaining) || 0));
+    }
+    const initial = Math.max(0, Number(sale.versement_initial_amount ?? sale.versement_checkout?.initial_amount ?? 0) || 0);
+    return Math.max(0, total - initial);
+  }
+
+  const pendingRaw = sale.payment_pending ?? sale.unpaid_amount;
+  const paidRaw = sale.paid_amount ?? sale.payment_received ?? sale.partial_balance;
+  const partial = sale.unpaid === true
+    || String(sale.unpaid).toLowerCase() === 'true'
+    || /partial|unpaid|credit|pending|impay/i.test(String(sale.payment_status || sale.sale_status || ''));
+  let due;
+  if (pendingRaw !== undefined && pendingRaw !== null && pendingRaw !== '') {
+    due = Math.max(0, Number(pendingRaw) || 0);
+  } else if (paidRaw !== undefined && paidRaw !== null && paidRaw !== '') {
+    due = Math.max(0, total - Math.max(0, Number(paidRaw) || 0));
+  } else {
+    const source = sale.multi_payment ?? sale.payment_details ?? sale.payment_breakdown ?? sale.payments ?? {};
+    const rows = Array.isArray(source)
+      ? source
+      : Object.entries(source && typeof source === 'object' ? source : {}).map(([method, value]) => ({ method, amount: value }));
+    const tenderTotal = rows.reduce((sum, row) => sum + Math.max(0, Number(
+      typeof row === 'object' ? (row?.amount ?? row?.paid ?? row?.total ?? 0) : row
+    ) || 0), 0);
+    due = rows.length ? Math.max(0, total - tenderTotal) : (partial ? total : 0);
+  }
+  if (partial && paidRaw !== undefined && paidRaw !== null && paidRaw !== '') {
+    due = Math.max(due, total - Math.max(0, Number(paidRaw) || 0));
+  }
+  return Math.min(total, Math.max(0, due));
+}
+
+export function buildVariantCombinations({ axis1, values1, axis2 = '', values2 = '' } = {}) {
+  const firstAxis = String(axis1 || '').trim();
+  const secondAxis = String(axis2 || '').trim();
+  const split = value => {
+    const values = Array.isArray(value) ? value : String(value || '').split(/[\\n,;]+/);
+    const unique = new Map();
+    for (const raw of values) {
+      const label = String(raw ?? '').trim().normalize('NFKC');
+      if (label && !unique.has(label.toLocaleLowerCase())) unique.set(label.toLocaleLowerCase(), label);
+    }
+    return [...unique.values()];
+  };
+  const firstValues = split(values1);
+  const secondValues = split(values2);
+  if (!firstAxis || !firstValues.length) throw new Error('Indiquez le nom de l’axe 1 et au moins une valeur.');
+  if (secondAxis && !secondValues.length) throw new Error('Indiquez les valeurs de l’axe 2 ou videz son nom.');
+  if (!secondAxis && secondValues.length) throw new Error('Renseignez le nom de l’axe 2 pour utiliser ses valeurs.');
+  if (secondAxis && firstAxis.toLocaleLowerCase() === secondAxis.toLocaleLowerCase()) throw new Error('Les deux axes doivent avoir des noms différents.');
+  const combinations = firstValues.flatMap(value1 => secondValues.length
+    ? secondValues.map(value2 => ({ value1, value2, label: value1 + ' / ' + value2 }))
+    : [{ value1, value2: '', label: value1 }]);
+  if (combinations.length > 50) throw new Error('50 combinaisons maximum.');
+  return combinations.map(combo => ({
+    ...combo,
+    attributes: { [firstAxis]: combo.value1, ...(secondAxis ? { [secondAxis]: combo.value2 } : {}) },
+    options: [{ axis: firstAxis, value: combo.value1 }, ...(secondAxis ? [{ axis: secondAxis, value: combo.value2 }] : [])],
+  }));
+}
+
 export function moveReceiptElement(element, start, delta, bounds = {}) {
   const minX = Number.isFinite(bounds.minX) ? bounds.minX : -250;
   const maxX = Number.isFinite(bounds.maxX) ? bounds.maxX : 300;
