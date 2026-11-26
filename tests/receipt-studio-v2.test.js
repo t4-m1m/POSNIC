@@ -222,3 +222,30 @@ test('variant builder creates a true cartesian product and keeps axis attributes
   assert.throws(() => buildVariantCombinations({ axis1: 'Taille', values1: 'S', axis2: 'Couleur' }), /valeurs de l’axe 2/);
   assert.throws(() => buildVariantCombinations({ axis1: 'Taille', values1: Array.from({ length: 8 }, (_, i) => String(i)), axis2: 'Couleur', values2: Array.from({ length: 7 }, (_, i) => String(i)) }), /50 combinaisons/);
 });
+
+
+test('V2 Receipt Studio applies block fonts to inner basket and every totals row in preview and print', () => {
+  const app = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/core/app.js'), 'utf8');
+  const rendererStart = app.indexOf('function receiptDesignerElement(e)');
+  const rendererEnd = app.indexOf('function zrSettings(', rendererStart);
+  const renderer = app.slice(rendererStart, rendererEnd);
+  assert.match(renderer, /receiptAmountDue\(sale\)/);
+  assert.match(renderer, /totalPartStyle=.*font-size:/);
+  assert.match(renderer, /align-items:'\+\(\['items','totals'\]/);
+  assert.match(renderer, /font-size:'\+itemFont\+'px!important/);
+  assert.match(renderer, /font-size:'\+totalsFont\+'px!important/);
+  assert.match(renderer, /Reste à payer/);
+  assert.doesNotMatch(renderer, /Balance due/);
+  assert.match(renderer, /gapMm=3/);
+  assert.match(renderer, /itemsTop\+itemsHeight\+gapMm/);
+});
+
+test('V2 New Article displays and persists generated cartesian variant combinations', () => {
+  const app = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/core/app.js'), 'utf8');
+  assert.match(app, /variant-combination-summary/);
+  assert.match(app, /buildVariantCombinations/);
+  assert.match(app, /variant_attributes:attributes/);
+  assert.match(app, /variant_options:/);
+  assert.match(app, /generateVariantRows\(e\.target\.form,\{silent:true\}\)/);
+  assert.match(app, /Les codes-barres des variantes doivent être uniques/);
+});
