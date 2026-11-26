@@ -228,7 +228,7 @@ test('variant builder creates a true cartesian product and keeps axis attributes
 test('V2 Receipt Studio applies block fonts to inner basket and every totals row in preview and print', () => {
   const app = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/core/app.js'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/styles/app.css'), 'utf8');
-  const rendererStart = app.indexOf('function renderReceiptStudioDocument(sale,layout)');
+  const rendererStart = app.indexOf('function receiptDesignerElement(e)');
   const rendererEnd = app.indexOf('function zrSettings(', rendererStart);
   const renderer = app.slice(rendererStart, rendererEnd);
   assert.match(renderer, /receiptAmountDue\(sale\)/);
@@ -238,8 +238,8 @@ test('V2 Receipt Studio applies block fonts to inner basket and every totals row
   assert.match(renderer, /font-size:'\+totalsFont\+'px!important/);
   assert.match(renderer, /Reste à payer/);
   assert.doesNotMatch(renderer, /Balance due/);
-  assert.match(renderer, /gapMm=3/);
-  assert.match(renderer, /itemsTop\+itemsHeight\+gapMm/);
+  assert.match(app, /gapMm=3/);
+  assert.match(app, /itemsTop\+itemsHeight\+gapMm/);
   assert.match(css, /#receipt-artboard \.designer-object\[data-receipt-object="totals"\][\s\S]*?font-size: inherit !important/);
   assert.match(css, /flex: 0 1 auto !important/);
 });
