@@ -161,9 +161,9 @@ test('V2 visible UI fixes are loaded by cache-busted assets and viewport-pinned 
  const renderer=app.slice(start,end);
  assert.ok(renderer.includes("let css='@page"),'designer preview CSS must be mutable');
  assert.ok(!renderer.includes("const css='@page"),'const reassignment must not crash Printer Settings');
- assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.24'));
- assert.ok(html.includes('styles/scroll-recovery.css?v=2.0.0-rebrand.24'));
- assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.24'));
+ assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.25'));
+ assert.ok(html.includes('styles/scroll-recovery.css?v=2.0.0-rebrand.25'));
+ assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.25'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail{position:fixed!important'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail>.rail-bottom{position:absolute!important'));
  assert.ok(app.includes('topbar-quick-actions'),'Acompte and Dépenses stay in the top bar');
@@ -174,7 +174,7 @@ test('V2 visible UI fixes are loaded by cache-busted assets and viewport-pinned 
 
 
 test('V2 sale printing loads saved Studio layout, verifies sale items, and uses computed paper height', () => {
- const app=read('frontend-v2/core/app.js');
+ const app=fs.readFileSync(path.join(__dirname,'..','frontend-v2/core/app.js'),'utf8');
  const start=app.indexOf('async function printSaleReceiptDocument(sale,options={})');
  const end=app.indexOf('async function printStudio(kind)',start);
  const fn=app.slice(start,end);
@@ -187,18 +187,18 @@ test('V2 sale printing loads saved Studio layout, verifies sale items, and uses 
 });
 
 test('Windows print-window reuse reloads the complete HTML document and waits for its assets', () => {
- const hardware=read('src/hardware-manager.js');
+ const hardware=fs.readFileSync(path.join(__dirname,'..','src/hardware-manager.js'),'utf8');
  assert.match(hardware,/document\.open\(\); document\.write\([\s\S]*?document\.close\(\)/);
  assert.match(hardware,/await prepare\(true\)/);
  assert.doesNotMatch(hardware,/document\.body\.innerHTML = \\?\$\{/);
- const layout=read('src/receipt-page-layout.js');
+ const layout=fs.readFileSync(path.join(__dirname,'..','src/receipt-page-layout.js'),'utf8');
  assert.match(layout,/\.receipt-artboard\[data-receipt-studio="true"\]/);
- const app=read('frontend-v2/core/app.js');
+ const app=fs.readFileSync(path.join(__dirname,'..','frontend-v2/core/app.js'),'utf8');
  assert.match(app,/data-receipt-studio="true"/);
 });
 
 test('V2 sidebar hover expands the fixed rail and reveals navigation labels', () => {
- const scroll=read('frontend-v2/styles/scroll-recovery.css');
+ const scroll=fs.readFileSync(path.join(__dirname,'..','frontend-v2/styles/scroll-recovery.css'),'utf8');
  assert.match(scroll,/\.shell:not\(\.caisse-lock\):has\(>\.rail:hover\)>\.rail,.shell:not\(\.caisse-lock\)\.expanded>\.rail\{width:228px!important/);
  assert.match(scroll,/\.shell:not\(\.caisse-lock\):has\(>\.rail:hover\)>\.rail \.nav-label/);
 });
