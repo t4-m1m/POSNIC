@@ -26,6 +26,9 @@ async function recoverSettlingVersement(db, collection, current) {
     const amount = money(sale.versement_settlement_amount ?? current.settlement_started_amount ?? current.remaining ?? 0);
     if (!['cash', 'tpe', 'baridimob'].includes(method) || amount < 0) return false;
     const settledAt = sale.versement_settled_at || sale.settled_at || current.settlement_started_at || new Date();
+    // A crash can occur after the sale is marked settled but before the stock
+    // journal is applied. Re-run the idempotent stock movement during recovery.
+    await applyDeferredVersementStock(db, sale, current, settledAt);
     const by = String(current.settlement_started_by || current.created_by || 'System');
     const hasHistory = Array.isArray(current.history) && current.history.some(event => event.type === 'settlement');
     const registerId = sale.versement_settlement_register_id || current.settlement_started_register_id || null;
@@ -141,7 +144,10 @@ exports.ensureForSale = async (req, sale) => {
   await collection.createIndex({ sale_key: 1 }, { unique: true });
   await collection.createIndex({ versement_number: 1 }, { unique: true });
   const existing = await collection.findOne({ sale_key: key });
-  if (existing) return { ...existing, _id: String(existing._id) };
+  if (existing) {
+    if (existing.status === 'settled') await applyDeferredVersementStock(db, sale, existing, existing.settled_at || new Date());
+    return { ...existing, _id: String(existing._id) };
+  }
   const now = new Date(), settled = initial >= total - 0.009;
   const doc = {
     versement_number: 'V-' + now.toISOString().slice(0,10).replace(/-/g,'') + '-' + require('crypto').randomBytes(3).toString('hex').toUpperCase(),
@@ -158,13 +164,13 @@ exports.ensureForSale = async (req, sale) => {
   try {
     const inserted = await collection.insertOne(doc);
     if (settled) {
-      await applyDeferredVersementStock(db, sale, doc, now);
       await db.collection('sales').updateOne({ _id: sale._id, versement_checkout: { $exists: true } }, { $set: {
         versement_settled: true, versement_settled_at: now, settled_at: now, date: now,
         payment_status: 'Paid', payment_pending: 0, partial_check: 'false', partial_balance: 0,
         paid_amount: total, versement_settlement_amount: 0,
         versement_initial_amount: initial, versement_initial_method: method,
       } });
+      await applyDeferredVersementStock(db, sale, doc, now);
     }
     return { ...doc, _id: String(inserted.insertedId) };
   } catch (error) {
@@ -308,7 +314,6 @@ exports.settle = async (req,res) => {
     const claimed = await collection.updateOne({_id:id,status:'pending',remaining:current.remaining},{$set:{status:'settling',settlement_started_at:settledAt,settlement_started_by:actor(req),settlement_started_method:method,settlement_started_amount:amount,...(register?{settlement_started_register_id:register}:{})}});
     if (!claimed.modifiedCount) return fail(res,409,'This versement was already updated. Refresh the register.');
     try {
-      await applyDeferredVersementStock(db, sale, current, settledAt);
       const saleUpdate = {
         versement_settled:true, versement_settled_at:settledAt, settled_at:settledAt, date:settledAt,
         payment_mode:method, payment_status:'Paid', payment_pending:0, partial_check:'false',
@@ -320,6 +325,9 @@ exports.settle = async (req,res) => {
       if (register) saleUpdate.versement_settlement_register_id=register;
       const saleResult = await db.collection('sales').updateOne({_id:sale._id,versement_checkout:{$exists:true}},{$set:saleUpdate});
       if (!saleResult.matchedCount) throw new Error('Linked sale could not be marked as settled.');
+      // Marking the sale first makes recovery unambiguous: if stock posting
+      // fails, the next Versements refresh retries this idempotent movement.
+      await applyDeferredVersementStock(db, sale, current, settledAt);
       const result = await collection.updateOne({_id:id,status:'settling'},{$set:{
         status:'settled',remaining:0,settled_at:settledAt,...(register?{settlement_register_id:register}:{}),
         settlement:{amount,method,settled_at:settledAt,recorded_by:actor(req),...(register?{register_id:register}:{})}
