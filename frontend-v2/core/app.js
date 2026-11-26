@@ -568,11 +568,16 @@ async function refreshReceiptThermalPreview(){
  if(host)host.remove();
 }
 async function printSaleReceiptDocument(sale,options={}){
- const html=renderReceiptStudioDocument(sale,state.receiptLayout);
+ const payload=receiptPrinterPayload(sale);
  const bridge=window.electronAPI?.printer;
- const printOptions={printerName:options.printerName||document.querySelector('#printer-form [name="printer"]')?.value||'',pageSize:state.receiptLayout?.format==='a4'?'A4':String(state.receiptLayout?.width||80)+'mm',copies:Math.max(1,Math.min(20,Number(options.copies)||1)),silent:true,forceHtml:true,printBackground:true,margins:{marginType:'none'}};
- if(bridge?.print){const result=await bridge.print(html,printOptions);if(!result?.success)throw new Error(result?.error||'Échec de l’impression du ticket.');return result;}
- return printHtmlDocument(html,printOptions,'Ticket imprimé avec le modèle visuel éditable.');
+ const printOptions={printerName:options.printerName||document.querySelector('#printer-form [name="printer"]')?.value||'',copies:Math.max(1,Math.min(20,Number(options.copies)||1)),source:options.source||'Vente',docName:options.docName||'SamarinaPOS Ticket'};
+ if(bridge?.printReceipt){
+  const result=await bridge.printReceipt(payload,printOptions);
+  if(!result?.success)throw new Error(result?.error||'Échec de l’impression thermique du ticket.');
+  return result;
+ }
+ const html=renderReceiptStudioDocument(sale,state.receiptLayout);
+ return printHtmlDocument(html,{printerName:printOptions.printerName,pageSize:state.receiptLayout?.format==='a4'?'A4':String(state.receiptLayout?.width||80)+'mm',copies:printOptions.copies,silent:true,forceHtml:true,printBackground:true,margins:{marginType:'none'}},'Ticket imprimé.');
 }
 async function printStudio(kind){
  if(kind==='receipt'){
