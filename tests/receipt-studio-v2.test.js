@@ -34,6 +34,11 @@ test('receipt date skips midnight date placeholders when an actual creation time
     createdAt: '2026-11-25T11:42:00.000Z',
   });
   assert.match(value, /11:42/);
+  const dateObjectValue = receiptSaleDate({
+    date: new Date(Date.UTC(2026, 10, 25)),
+    created_at: '2026-11-25T11:42:00.000Z',
+  });
+  assert.match(dateObjectValue, /11:42/);
 });
 
 test('receipt date parses Mongo Extended JSON millisecond timestamps', () => {
