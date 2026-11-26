@@ -149,3 +149,25 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   assert.match(css, /#receipt-artboard\{overflow:visible!important\}/);
   assert.match(css, /#receipt-artboard \.receipt-items-block/);
 });
+
+
+test('V2 visible UI fixes are loaded by cache-busted assets and viewport-pinned sidebar', () => {
+ const app=fs.readFileSync(path.join(__dirname,'..','frontend-v2/core/app.js'),'utf8');
+ const html=fs.readFileSync(path.join(__dirname,'..','frontend-v2/index.html'),'utf8');
+ const css=fs.readFileSync(path.join(__dirname,'..','frontend-v2/styles/app.css'),'utf8');
+ const scroll=fs.readFileSync(path.join(__dirname,'..','frontend-v2/styles/scroll-recovery.css'),'utf8');
+ const start=app.indexOf('function renderReceiptStudioDocument(sale,layout)');
+ const end=app.indexOf('function refreshReceiptDesignerPreview()',start);
+ const renderer=app.slice(start,end);
+ assert.ok(renderer.includes("let css='@page"),'designer preview CSS must be mutable');
+ assert.ok(!renderer.includes("const css='@page"),'const reassignment must not crash Printer Settings');
+ assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.23'));
+ assert.ok(html.includes('styles/scroll-recovery.css?v=2.0.0-rebrand.23'));
+ assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.23'));
+ assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail{position:fixed!important'));
+ assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail>.rail-bottom{position:absolute!important'));
+ assert.ok(app.includes('topbar-quick-actions'),'Acompte and Dépenses stay in the top bar');
+ assert.ok(css.includes('.receipt-totals-block>div{border:0!important'));
+ assert.ok(!renderer.includes('border:1px solid #2563eb'));
+ assert.ok(!renderer.includes('border:2px solid #2563eb'));
+});
