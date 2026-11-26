@@ -227,3 +227,5 @@ jobs:
 # Installer rebuild after preserving active basket snapshot before return.
 
 # Trigger installer rebuild with accounting tests disabled.
+
+# 2026-11-26: explicitly retrigger SamarinaPOS V3.0 Windows installer build.
