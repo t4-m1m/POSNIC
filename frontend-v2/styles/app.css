@@ -1319,3 +1319,36 @@ html,body,#app{width:100%;height:100%;min-height:0;margin:0;overflow:hidden}
 .topbar-quick-actions .quick-expense{background:#fff7ed!important;color:#c2410c!important;border:1px solid #fed7aa!important}
 @media(max-width:1100px){.top-actions{gap:6px!important}.topbar-quick-actions .btn{padding:0 7px!important}.topbar .field{max-width:160px!important}}
 @media(max-width:760px){.topbar-quick-actions .btn{font-size:11px!important;padding:0 5px!important}.app-version{display:none!important}}
+
+
+/* V2 Receipt Studio: preview typography must follow each selected designer block. */
+#receipt-artboard .designer-object[data-receipt-object="items"] .receipt-legacy-items,
+#receipt-artboard .designer-object[data-receipt-object="items"] .receipt-legacy-items table,
+#receipt-artboard .designer-object[data-receipt-object="items"] .receipt-legacy-items table th,
+#receipt-artboard .designer-object[data-receipt-object="items"] .receipt-legacy-items table td {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  text-align: left;
+}
+#receipt-artboard .designer-object[data-receipt-object="totals"] .receipt-legacy-totals,
+#receipt-artboard .designer-object[data-receipt-object="totals"] .receipt-legacy-totals > div,
+#receipt-artboard .designer-object[data-receipt-object="totals"] .receipt-legacy-totals > div span,
+#receipt-artboard .designer-object[data-receipt-object="totals"] .receipt-legacy-totals > div b,
+#receipt-artboard .designer-object[data-receipt-object="totals"] .receipt-legacy-totals .rd-grand-total,
+#receipt-artboard .designer-object[data-receipt-object="totals"] .receipt-legacy-totals .rd-grand-total span,
+#receipt-artboard .designer-object[data-receipt-object="totals"] .receipt-legacy-totals .rd-grand-total b {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  text-align: left !important;
+}
+#receipt-artboard .designer-object[data-receipt-object="totals"] .receipt-legacy-totals > div {
+  justify-content: flex-start !important;
+  gap: 7px !important;
+}
+#receipt-artboard .designer-object[data-receipt-object="items"],
+#receipt-artboard .designer-object[data-receipt-object="totals"] {
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+}
