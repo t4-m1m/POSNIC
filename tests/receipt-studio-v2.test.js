@@ -3,6 +3,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { render: renderThermalReceipt } = require('../src/tysoo-prp300-receipt');
+const { parse: parseThermalReceipt, asLines: thermalReceiptLines } = require('../src/escpos-preview');
 const {
   receiptSaleNumber,
   receiptSaleDate,
@@ -80,6 +82,34 @@ test('dragging an image can move its top edge beyond the paper edge', () => {
   assert.equal(logo.y, -18);
 });
 
+test('thermal sale receipts wrap long baskets, retain every line and emphasize the total', () => {
+  const longName = 'MANTEAU SAMARINA COLLECTION HIVER MODELE 2026 TAILLE XL COULEUR NOIR';
+  const bytes = renderThermalReceipt({
+    billNo: '0000456',
+    date: '26/11/2026 14:35',
+    storeName: 'SAMARINA',
+    cashier: 'AMINE',
+    customer: ['Client: HADDAD NAJIMA'],
+    items: Array.from({ length: 28 }, (_, index) => ({
+      name: index === 0 ? longName : 'ARTICLE TEST ' + (index + 1),
+      qty: 1,
+      rate: 1000,
+      amount: 1000,
+    })),
+    subTotal: 28000,
+    total: 28000,
+    payments: [{ label: 'Cash', amount: 26000 }, { label: 'Credit', amount: 2000 }],
+    design: { showBarcode: true, totalSize: 'large', totalBold: true, boldItemNames: true, boldItemAmounts: true },
+  }, { paperWidth: '80', cut: true });
+  const lines = thermalReceiptLines(parseThermalReceipt(bytes, 48)).join('\n');
+  assert.match(lines, /MANTEAU SAMARINA/);
+  assert.match(lines, /ARTICLE TEST 28/);
+  assert.match(lines, /TOTAL/);
+  assert.match(lines, /Cash/);
+  assert.match(lines, /Credit/);
+  assert.ok(parseThermalReceipt(bytes, 48).rows.length > 70, 'long baskets must extend the roll instead of being clipped');
+});
+
 test('V2 receipt and label screens wire the corrected values into preview and print', () => {
   const app = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/core/app.js'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/styles/app.css'), 'utf8');
@@ -92,7 +122,7 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   assert.match(app, /pageSize:'custom',customPageSize:\{width:Number\(width\),height:Number\(height\)\}/, 'label jobs must use the V1 custom-paper print contract');
   assert.ok(app.includes('find(name=>/tsc.*tdp.?225|tdp.?225.*tsc/i.test(name))'), 'label printing must restore the V1 TSC TDP-225 auto-selection');
   assert.match(app, /sendLabelPrintJob\(html,state\.labelLayout\.paper===\x27a4\x27\?210:width/, 'label studio must use the shared V1 label print route and dedicated printer');
-  assert.match(app, /date,\s*storeName:/, 'the real ticket payload must use the resolved transaction date and shop header');\n  assert.match(app, /stock_deferred:true/, 'F6 must persist the deferred-stock flag consumed by the settlement controller');\n  assert.match(app, /bridge\.printReceipt\(payload/, 'new and reprinted V2 sales must use the continuous thermal receipt route');\n  assert.match(app, /sale-payment-chip/, 'split payment methods must be visible as chips in the sales status');\n  assert.match(app, /boldItemNames:true/);\n  assert.match(app, /boldItemAmounts:true/);
+  assert.match(app, /date,\s*storeName:/, 'the real ticket payload must use the resolved transaction date and shop header');\n  assert.match(app, /stock_deferred:true/, 'F6 must persist the deferred-stock flag consumed by the settlement controller');\n  assert.match(app, /bridge\.printReceipt\(payload/, 'new and reprinted V2 sales must use the continuous thermal receipt route');\n  assert.match(app, /sale-payment-chip/, 'split payment methods must be visible as chips in the sales status');\n  assert.match(app, /receipt-thermal-preview/, 'Receipt Studio must display the exact ESC/POS renderer preview');\n  assert.match(app, /refreshReceiptThermalPreview\\(\\)/);\n  assert.match(app, /boldItemNames:true/);\n  assert.match(app, /boldItemAmounts:true/);
   assert.match(app, /date:savedSale\.date\|\|savedSale\.created_date/);
   assert.doesNotMatch(app, /sales_description:payload\.sales_description,date:new Date\(\)\.toLocaleString/);
   assert.doesNotMatch(app, /font-size:inherit!important;font-weight:inherit!important/, 'basket and total child typography must not be flattened to the parent font');
