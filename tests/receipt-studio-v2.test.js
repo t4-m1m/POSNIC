@@ -163,9 +163,9 @@ test('V2 visible UI fixes are loaded by cache-busted assets and viewport-pinned 
  const renderer=app.slice(start,end);
  assert.ok(renderer.includes("let css='@page"),'designer preview CSS must be mutable');
  assert.ok(!renderer.includes("const css='@page"),'const reassignment must not crash Printer Settings');
- assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.26'));
+ assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.27'));
  assert.ok(html.includes('styles/scroll-recovery.css?v=2.0.0-rebrand.25'));
- assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.26'));
+ assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.27'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail{position:fixed!important'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail>.rail-bottom{position:absolute!important'));
  assert.ok(app.includes('topbar-quick-actions'),'Acompte and Dépenses stay in the top bar');
@@ -227,6 +227,7 @@ test('variant builder creates a true cartesian product and keeps axis attributes
 
 test('V2 Receipt Studio applies block fonts to inner basket and every totals row in preview and print', () => {
   const app = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/core/app.js'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/styles/app.css'), 'utf8');
   const rendererStart = app.indexOf('function renderReceiptStudioDocument(sale,layout)');
   const rendererEnd = app.indexOf('function zrSettings(', rendererStart);
   const renderer = app.slice(rendererStart, rendererEnd);
@@ -239,6 +240,8 @@ test('V2 Receipt Studio applies block fonts to inner basket and every totals row
   assert.doesNotMatch(renderer, /Balance due/);
   assert.match(renderer, /gapMm=3/);
   assert.match(renderer, /itemsTop\+itemsHeight\+gapMm/);
+  assert.match(css, /#receipt-artboard \.designer-object\[data-receipt-object="totals"\][\\s\\S]*?font-size: inherit !important/);
+  assert.match(css, /flex: 0 1 auto !important/);
 });
 
 test('V2 New Article displays and persists generated cartesian variant combinations', () => {
