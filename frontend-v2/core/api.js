@@ -4,7 +4,7 @@ const SAFE_METHODS=new Set(['GET','HEAD','OPTIONS']);
 export async function api(path,{method='GET',body,timeout=DEFAULT_TIMEOUT,headers={}}={}) {
  const requestMethod=String(method||'GET').toUpperCase();
  const requestHeaders={Accept:'application/json',...(body!==undefined?{'Content-Type':'application/json'}:{}),...(!SAFE_METHODS.has(requestMethod)&&csrfToken?{'X-XSRF-TOKEN':csrfToken}:{}),...headers};
- const controller=new AbortController();const routePath=String(path||'').replace(/^\/?api\//,'');const requestTimeout=/^whatsapp\/(?:sendMessage|send-receipt)$/.test(routePath)?Math.max(timeout,30000):/^whatsapp\/connect-pairing-code$/.test(routePath)?Math.max(timeout,35000):timeout;const timer=setTimeout(()=>controller.abort(),requestTimeout);
+ const controller=new AbortController();const routePath=String(path||'').replace(/^\/?api\//,'');const requestTimeout=/^whatsapp\/(?:getStatus|getQRCode|initialize)$/.test(routePath)?Math.max(timeout,20000):/^whatsapp\/(?:sendMessage|send-receipt)$/.test(routePath)?Math.max(timeout,30000):/^whatsapp\/connect-pairing-code$/.test(routePath)?Math.max(timeout,35000):timeout;const timer=setTimeout(()=>controller.abort(),requestTimeout);
  try {
   const response=await fetch(path.startsWith('/api/')?path:'/api/'+path,{method:requestMethod,credentials:'same-origin',cache:'no-store',headers:requestHeaders,body:body===undefined?undefined:JSON.stringify(body),signal:controller.signal});
   const nextCsrf=response.headers.get('X-CSRF-TOKEN');if(nextCsrf)csrfToken=nextCsrf;
