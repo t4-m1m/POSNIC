@@ -163,9 +163,9 @@ test('V2 visible UI fixes are loaded by cache-busted assets and viewport-pinned 
  const renderer=app.slice(start,end);
  assert.ok(renderer.includes("let css='@page"),'designer preview CSS must be mutable');
  assert.ok(!renderer.includes("const css='@page"),'const reassignment must not crash Printer Settings');
- assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.25'));
+ assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.26'));
  assert.ok(html.includes('styles/scroll-recovery.css?v=2.0.0-rebrand.25'));
- assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.25'));
+ assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.26'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail{position:fixed!important'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail>.rail-bottom{position:absolute!important'));
  assert.ok(app.includes('topbar-quick-actions'),'Acompte and Dépenses stay in the top bar');
@@ -219,6 +219,7 @@ test('variant builder creates a true cartesian product and keeps axis attributes
   assert.deepEqual(rows.map(row => row.label), ['S / Noir', 'S / Blanc', 'M / Noir', 'M / Blanc', 'L / Noir', 'L / Blanc']);
   assert.deepEqual(rows[0].attributes, { Taille: 'S', Couleur: 'Noir' });
   assert.equal(buildVariantCombinations({ axis1: 'Pointure', values1: '38,39' }).length, 2);
+  assert.deepEqual(buildVariantCombinations({ axis1: 'Taille', values1: 'S\\nM' }).map(row => row.value1), ['S', 'M']);
   assert.throws(() => buildVariantCombinations({ axis1: 'Taille', values1: 'S', axis2: 'Couleur' }), /valeurs de l’axe 2/);
   assert.throws(() => buildVariantCombinations({ axis1: 'Taille', values1: Array.from({ length: 8 }, (_, i) => String(i)), axis2: 'Couleur', values2: Array.from({ length: 7 }, (_, i) => String(i)) }), /50 combinaisons/);
 });
