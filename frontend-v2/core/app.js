@@ -522,10 +522,11 @@ function receiptPrinterPayload(sale){
  const total=Number(sale?.sales_total??sale?.total??sale?.items_total??0)||0;
  const subtotalValue=Number(sale?.items_subtotal??sale?.sales_sub_total??sale?.subtotal??total)||0;
  const versement=!!sale?.versement_checkout;
+ const tenderLabel=method=>{const key=String(method||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');return ({cash:'Cash',especes:'Cash',tpe:'TPE',card:'TPE',baridimob:'BaridiMob',credit:'Crédit'})[key]||String(method||'Paiement');};
  const payments=versement?[
-  ...(Number(sale.versement_initial_amount??sale.versement_checkout.initial_amount??0)>0?[{label:'Versement initial · '+String(sale.versement_initial_method||sale.versement_checkout.initial_method||'Espèces'),amount:Number(sale.versement_initial_amount??sale.versement_checkout.initial_amount)}]:[]),
-  ...(sale.versement_settled===true&&Number(sale.versement_settlement_amount??0)>0?[{label:'Règlement final · '+String(sale.payment_mode||'Espèces'),amount:Number(sale.versement_settlement_amount)}]:[])
- ]:receiptTenderRows(sale).map(row=>({label:row.method,amount:row.amount}));
+  ...(Number(sale.versement_initial_amount??sale.versement_checkout.initial_amount??0)>0?[{label:'Versement initial · '+tenderLabel(sale.versement_initial_method||sale.versement_checkout.initial_method||'cash'),amount:Number(sale.versement_initial_amount??sale.versement_checkout.initial_amount)}]:[]),
+  ...(sale.versement_settled===true&&Number(sale.versement_settlement_amount??0)>0?[{label:'Règlement final · '+tenderLabel(sale.payment_mode||'cash'),amount:Number(sale.versement_settlement_amount)}]:[])
+ ]:receiptTenderRows(sale).map(row=>({label:tenderLabel(row.method),amount:row.amount}));
  const paid=payments.reduce((sum,row)=>sum+Number(row.amount||0),0);
  const outstanding=versement&&!sale.versement_settled?Math.max(0,total-Number(sale.versement_initial_amount??sale.versement_checkout.initial_amount??0)):Math.max(0,Number(sale.payment_pending??sale.unpaid_amount??0)||0);
  const extras=[];
@@ -534,9 +535,9 @@ function receiptPrinterPayload(sale){
  return {
   billNo:receiptSaleNumber(sale),
   date,
-  storeName:state.receiptStoreProfile?.store_name||state.storeProfile?.store_name||'SamarinaPOS',
-  storeAddress:state.receiptStoreProfile?.store_address||state.storeProfile?.store_address||'',
-  storePhone:state.receiptStoreProfile?.store_phone||state.storeProfile?.store_phone||'',
+  storeName:state.receiptStoreProfile?.store_name||state.storeProfile?.store_name||state.user?.branch_name||state.user?.branch?.name||'SamarinaPOS',
+  storeAddress:state.receiptStoreProfile?.store_address||state.storeProfile?.store_address||state.user?.branch?.address||'',
+  storePhone:state.receiptStoreProfile?.store_phone||state.storeProfile?.store_phone||state.user?.branch?.phone||'',
   cashier:sale.cashier_name||sale.user_name||sale.vendor_name||'',
   customer:sale.customer_name?[String(sale.customer_name)]:[],
   total,subTotal:subtotalValue,
