@@ -164,8 +164,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     printPdf:   (bytes, kind, paperSize) => ipcRenderer.invoke('printer:print-pdf', bytes, kind, paperSize),
     getDocumentSettings: () => ipcRenderer.invoke('printer:get-document-settings'),
     saveDocumentSettings: (settings) => ipcRenderer.invoke('printer:save-document-settings', settings),
-    // Receipts go as ESC/POS on the desktop: no page, no scaling, no driver
-    // rendering. The browser keeps using print() above.
+    // Kept for legacy compatibility only. SamarinaPOS V2 Receipt Studio uses
+    // the fast Windows-driver HTML route through printer.print().
     printReceipt: (sale, options) => ipcRenderer.invoke('printer:print-receipt', sale, options),
     previewReceipt: (sale, options) => ipcRenderer.invoke('printer:preview-receipt', sale, options),
     getReceiptSettings: () => ipcRenderer.invoke('printer:receipt-settings-get'),
