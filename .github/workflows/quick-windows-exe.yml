@@ -4,7 +4,7 @@ name: Quick Windows Installer EXE (accounting tests)
 # Build the current feature-branch snapshot as the Windows installer only; run focused accounting-engine unit tests.
 # Build the installer on each push to the active feature branch; manual dispatch remains available.
 # 2026-11-16: user-requested rebuild of the current feature-branch snapshot (packaging trigger only; no application code changes).
-# 2026-11-22: build the atomic SamarinaPOS V2 catalogue, permissions and checkout fixes.
+# 2026-11-26: V2 legacy-style thermal receipt, deferred F6 stock/accounting and visible split-tender history.
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $tag = 'v2.0.0-rebrand.6'
+          $tag = 'v2.0.0-rebrand.7'
           git fetch --no-tags origin "refs/tags/${tag}:refs/tags/${tag}"
           if ($LASTEXITCODE -ne 0) { throw "Could not fetch the existing V2 prerelease tag $tag." }
           Write-Host "Using existing protected tag $tag; building current branch commit $env:GITHUB_SHA without moving the tag."
@@ -175,7 +175,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $owner = 't4-m1m'
           $repo = 'POSNIC'
-          $tag = if ($env:GITHUB_REF.StartsWith('refs/tags/')) { $env:GITHUB_REF_NAME } else { 'v2.0.0-rebrand.6' }
+          $tag = if ($env:GITHUB_REF.StartsWith('refs/tags/')) { $env:GITHUB_REF_NAME } else { 'v2.0.0-rebrand.7' }
           $installer = Get-Item 'dist/SamarinaPOS-Windows-Installer.exe'
           $headers = @{
             Authorization = "Bearer $env:GH_TOKEN"
