@@ -177,3 +177,20 @@ test('printer settings preview failure is isolated and sidebar footer is viewpor
   assert.match(css, /\.receipt-totals-block>div\{border:0!important/);
   assert.match(css, /\.receipt-totals-block \.receipt-grand-total\{border:0!important/);
 });
+
+
+test('Receipt Studio preview uses mutable CSS and cache-busted frontend assets', () => {
+ const app=read('frontend-v2/core/app.js');
+ const html=read('frontend-v2/index.html');
+ const css=read('frontend-v2/styles/app.css');
+ const start=app.indexOf('function renderReceiptStudioDocument(sale,layout)');
+ const end=app.indexOf('function refreshReceiptDesignerPreview()',start);
+ const renderer=app.slice(start,end);
+ assert.match(renderer,/let css='@page/);
+ assert.doesNotMatch(renderer,/const css='@page[\\s\\S]*?css\\s*\+=/);
+ assert.match(html,/styles\\/app\\.css\\?v=2\\.0\\.0-rebrand\\.22/);
+ assert.match(html,/core\\/app\\.js\\?v=2\\.0\\.0-rebrand\\.22/);
+ assert.match(css,/\\.shell>\\.rail>\\.rail-bottom\\{position:absolute!important/);
+ assert.match(css,/\\.shell>\\.rail>\\.nav\\{position:relative!important/);
+ assert.match(css,/\\.receipt-totals-block>div\\{border:0!important/);
+});
