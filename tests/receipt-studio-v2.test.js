@@ -171,3 +171,34 @@ test('V2 visible UI fixes are loaded by cache-busted assets and viewport-pinned 
  assert.ok(!renderer.includes('border:1px solid #2563eb'));
  assert.ok(!renderer.includes('border:2px solid #2563eb'));
 });
+
+
+test('V2 sale printing loads saved Studio layout, verifies sale items, and uses computed paper height', () => {
+ const app=read('frontend-v2/core/app.js');
+ const start=app.indexOf('async function printSaleReceiptDocument(sale,options={})');
+ const end=app.indexOf('async function printStudio(kind)',start);
+ const fn=app.slice(start,end);
+ assert.match(fn,/await loadSavedReceiptLayoutForPrinting\(\)/);
+ assert.match(fn,/data-receipt-studio="true"/);
+ assert.match(fn,/const saleItems=rowsOf\(sale\?\.items\|\|sale\?\.itemsale\)/);
+ assert.match(fn,/html\.includes\(esc\(name\)\)/);
+ assert.match(fn,/height:renderedHeight/);
+ assert.match(app,/await loadSavedReceiptLayoutForPrinting\(\);\s*const sample=state\.receiptSample/);
+});
+
+test('Windows print-window reuse reloads the complete HTML document and waits for its assets', () => {
+ const hardware=read('src/hardware-manager.js');
+ assert.match(hardware,/document\.open\(\); document\.write\([\s\S]*?document\.close\(\)/);
+ assert.match(hardware,/await prepare\(true\)/);
+ assert.doesNotMatch(hardware,/document\.body\.innerHTML = \\?\$\{/);
+ const layout=read('src/receipt-page-layout.js');
+ assert.match(layout,/\.receipt-artboard\[data-receipt-studio="true"\]/);
+ const app=read('frontend-v2/core/app.js');
+ assert.match(app,/data-receipt-studio="true"/);
+});
+
+test('V2 sidebar hover expands the fixed rail and reveals navigation labels', () => {
+ const scroll=read('frontend-v2/styles/scroll-recovery.css');
+ assert.match(scroll,/\.shell:not\(\.caisse-lock\):has\(>\.rail:hover\)>\.rail,.shell:not\(\.caisse-lock\)\.expanded>\.rail\{width:228px!important/);
+ assert.match(scroll,/\.shell:not\(\.caisse-lock\):has\(>\.rail:hover\)>\.rail \.nav-label/);
+});
