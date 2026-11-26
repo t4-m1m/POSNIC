@@ -64,3 +64,9 @@ html,body,#app{
 .shell:not(.caisse-lock)>.rail>.rail-bottom{position:absolute!important;inset:auto 8px 10px 8px!important;display:flex!important;flex:0 0 auto!important;flex-direction:column!important;gap:5px!important;width:auto!important;max-height:none!important;min-height:max-content!important;margin:0!important;padding:8px 0 0!important;border-top:1px solid var(--border-hairline)!important;background:var(--bg-surface)!important;z-index:110!important;overflow:visible!important}
 .shell:not(.caisse-lock)>.rail>.rail-bottom>button,.shell:not(.caisse-lock)>.rail>.rail-bottom>.settings-group{flex:0 0 40px!important;min-height:40px!important;width:100%!important}
 @media(max-width:680px){.shell:not(.caisse-lock)>.rail{width:56px!important}.shell:not(.caisse-lock).expanded>.rail{width:56px!important}}
+
+/* Restore the V2 hover-expand interaction after the viewport pinning override. */
+.shell:not(.caisse-lock):has(>.rail:hover)>.rail,.shell:not(.caisse-lock).expanded>.rail{width:228px!important;max-width:min(228px,calc(100vw - 12px))!important}
+.shell:not(.caisse-lock):has(>.rail:hover)>.rail .nav-label,.shell:not(.caisse-lock).expanded>.rail .nav-label,.shell:not(.caisse-lock):has(>.rail:hover)>.rail .brand-name,.shell:not(.caisse-lock).expanded>.rail .brand-name{opacity:1!important;max-width:172px!important;pointer-events:auto!important}
+.shell:not(.caisse-lock):has(>.rail:hover)>.rail .rail-bottom>.small,.shell:not(.caisse-lock).expanded>.rail .rail-bottom>.small{display:block!important}
+@media(max-width:680px){.shell:not(.caisse-lock):has(>.rail:hover)>.rail,.shell:not(.caisse-lock).expanded>.rail{width:min(228px,calc(100vw - 12px))!important;max-width:calc(100vw - 12px)!important}}
