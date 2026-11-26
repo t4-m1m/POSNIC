@@ -280,7 +280,7 @@ function receiptDesignerElement(e){const sale=state.receiptSample||{},items=rows
 
  const lines=receiptTenderRows(sale).map(row=>({name:row.method,amount:row.amount}));
  const chargeHtml='';
- const totalFontStyle='font-family:'+esc(e.fontFamily||'Tahoma')+';font-size:'+(e.fontSize||13)+'px;font-weight:'+(e.fontWeight||700)+';text-align:left',totalRowStyle='display:flex;justify-content:flex-start;align-items:flex-start;gap:7px;text-align:left',totalPartStyle='font-family:'+esc(e.fontFamily||'Tahoma')+'!important;font-size:'+(e.fontSize||13)+'px!important;font-weight:'+(e.fontWeight||700)+'!important;text-align:left!important;white-space:normal;overflow-wrap:anywhere';
+ const totalFontStyle='font-family:'+esc(e.fontFamily||'Tahoma')+';font-size:'+(e.fontSize||13)+'px;font-weight:'+(e.fontWeight||700)+';text-align:left',totalRowStyle='display:flex;justify-content:flex-start;align-items:flex-start;gap:7px;text-align:left',totalPartStyle='font-family:'+esc(e.fontFamily||'Tahoma')+'!important;font-size:'+(e.fontSize||13)+'px!important;font-weight:'+(e.fontWeight||700)+'!important;text-align:left!important;flex:0 1 auto;white-space:normal;overflow-wrap:anywhere';
  let paymentHtml='';
  if(sale.versement_checkout){
   const initial=Number(sale.versement_initial_amount??sale.versement_checkout.initial_amount??0);
