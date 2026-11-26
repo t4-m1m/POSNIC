@@ -370,9 +370,9 @@ function setupHardwareIPC(hardwareManager, kotManager, billManager) {
       storeEmail: config.storeEmail || sale.storeEmail || '',
       title: config.receiptTitle || sale.title || 'SALE RECEIPT',
       footer: config.footer || sale.footer || '',
-      design: config.design || sale.design || {},
-      cashier: config.showCashier ? (sale.cashier || '') : '',
-      customer: config.showCustomer ? (sale.customer || []) : [],
+      design: { ...(sale.design || {}), ...(config.design || {}) },
+      cashier: config.showCashier !== false ? (sale.cashier || '') : '',
+      customer: config.showCustomer !== false ? (sale.customer || []) : [],
       branch: config.showBranch ? (sale.branch || '') : '' };
     return parse(render(mergedSale || {}, { paperWidth, cut: false }), WIDTHS[paperWidth]);
   });
