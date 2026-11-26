@@ -1,23 +1,55 @@
-/* V2 stable navigation shell: one viewport, one page scroll surface, fixed sidebar rail. */
-html,body,#app{width:100%;height:100%;min-width:0;min-height:0;margin:0;overflow:hidden}
-.shell{width:100%;height:100dvh!important;min-height:0!important;max-height:100dvh!important;grid-template-rows:44px minmax(0,1fr)!important;overflow:hidden!important}
-.shell>.rail{grid-column:1!important;grid-row:1/3!important;display:flex!important;flex-direction:column!important;min-width:0!important;min-height:0!important;height:100%!important;max-height:100%!important;overflow:hidden!important}
-.shell>.topbar{grid-column:2!important;grid-row:1!important;min-width:0!important;min-height:44px!important}
-.shell>main{grid-column:2!important;grid-row:2!important;width:auto!important;min-width:0!important;min-height:0!important;height:auto!important;max-height:none!important;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain!important}
-.shell.caisse-lock>main{overflow:hidden!important}
-.shell>.rail>.brand{flex:0 0 44px!important}
-.shell>.rail>.nav{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;min-height:0!important;max-height:none!important;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain!important}
-.shell>.rail>.rail-bottom{position:relative!important;display:flex!important;flex:0 0 auto!important;flex-direction:column!important;align-items:stretch!important;gap:5px!important;width:100%!important;min-height:0!important;max-height:none!important;margin:0!important;padding:7px 0 0!important;border-top:1px solid var(--border-hairline)!important;background:var(--bg-surface)!important;overflow:visible!important}
-.shell>.rail>.rail-bottom>button,.shell>.rail>.rail-bottom>.settings-group{width:100%!important;min-width:0!important;flex:0 0 40px!important;min-height:40px!important;margin:0!important}
-.shell>.rail>.rail-bottom>.settings-group{position:relative!important;overflow:visible!important}
-.shell>.rail>.rail-bottom>.settings-group>.nav-subnav{position:absolute!important;left:calc(100% + 8px)!important;bottom:0!important;top:auto!important;z-index:50!important;width:220px!important;max-width:calc(100vw - 84px)!important;max-height:min(55dvh,360px)!important;overflow:auto!important;padding:7px!important;border:1px solid var(--border-hairline)!important;border-radius:10px!important;background:var(--bg-surface)!important;box-shadow:0 8px 28px #0003!important}
-.shell>.rail>.rail-bottom>.settings-group>.nav-subnav[hidden]{display:none!important}
-.shell>.rail>.rail-bottom>.settings-group>.nav-subnav:not([hidden]){display:grid!important;gap:3px!important}
-.shell>.rail>.rail-bottom>.settings-group>.nav-subnav button{width:100%!important;min-height:36px!important;height:auto!important;padding:7px 9px!important;text-align:left!important}
-/* Hover expansion overlays the page instead of resizing the content grid. */
-.shell:has(.rail:hover){grid-template-columns:68px minmax(0,1fr)!important}
-.shell:has(.rail:hover)>.rail{position:fixed!important;inset:0 auto 0 0!important;width:228px!important;height:100dvh!important;z-index:40!important;box-shadow:8px 0 24px rgba(15,23,42,.10)!important}
-@media(max-width:680px){.shell>.rail{width:56px!important}.shell:has(.rail:hover)>.rail{width:56px!important}}
+/* V2 global scroll recovery: only the primary Caisse/Vente view is viewport-locked.
+   Every other module grows with its content and uses normal document scrolling. */
+html,body,#app{
+  height:auto!important;
+  min-height:100%!important;
+  max-height:none!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+}
+#app{min-height:100dvh!important}
+.shell:not(.caisse-lock){
+  width:100%!important;
+  height:auto!important;
+  min-height:100dvh!important;
+  max-height:none!important;
+  overflow:visible!important;
+  grid-template-rows:44px auto!important;
+  align-content:start!important;
+}
+.shell:not(.caisse-lock)>main{
+  grid-column:2!important;
+  grid-row:2!important;
+  height:auto!important;
+  min-height:calc(100dvh - 44px)!important;
+  max-height:none!important;
+  overflow:visible!important;
+  overflow-x:visible!important;
+  overflow-y:visible!important;
+}
+.shell:not(.caisse-lock)>.rail{
+  grid-row:1/3!important;
+  height:auto!important;
+  min-height:100%!important;
+  max-height:none!important;
+  align-self:stretch!important;
+}
+/* Preserve the cashier's viewport-locked workspace and internal scroll pane. */
+.shell.caisse-lock{
+  height:100dvh!important;
+  min-height:0!important;
+  max-height:100dvh!important;
+  overflow:hidden!important;
+}
+.shell.caisse-lock>main{
+  min-height:0!important;
+  height:auto!important;
+  max-height:none!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+}
+
+/* Keep the WhatsApp connector presentation without changing the V2 page layout. */
 .whatsapp-settings-panel .whatsapp-settings-qr{display:block;width:min(300px,100%);height:auto;margin:0 auto;padding:10px;border:1px solid var(--border-hairline);border-radius:12px;background:#fff}
 .whatsapp-settings-panel .whatsapp-settings-qr[hidden]{display:none!important}
 .whatsapp-settings-panel .whatsapp-qr-wrap{min-height:0}
