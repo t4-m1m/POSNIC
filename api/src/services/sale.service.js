@@ -1600,7 +1600,7 @@ const processSale = async (
     }
 
     // Inventory Verification BEFORE Insert (PHP lines 653-690)
-    if (id === '' && !extensionStock) {
+    if (id === '' && !extensionStock && !deferVersementStock) {
       const insufficientItems = [];
       for (const item of items) {
         const doc = await itemRepository.findItemById(item.item_id);
@@ -1624,8 +1624,9 @@ const processSale = async (
 
     // Reserve tracked stock atomically before creating the sale. A normal
     // read-then-update allows two counters to sell the same final quantity.
+    const deferVersementStock = Boolean(data.versement_checkout && id === '');
     const stockReservations = new Map();
-    if (id === '' && !extensionStock) {
+    if (id === '' && !extensionStock && !deferVersementStock) {
       const stockRequests = new Map();
       for (const item of items) {
         const doc = await itemRepository.findItemById(item.item_id);
@@ -1924,7 +1925,8 @@ const processSale = async (
         // Always update item stock for tracked items, even if branch
         // stock_management is disabled. The branch setting only controls
         // whether detailed stock logs are written.
-        if (isTracked) {
+        if (isTracked && !deferVersementStock) {
+          // Pending F6 Versement does not move stock until its final settlement.
           // Non-negative tracked stock was already reserved atomically above.
           // Negative-stock items retain the legacy unrestricted decrement.
           if (!reservation) await itemRepository.updateStock(doc._id, -qty);
