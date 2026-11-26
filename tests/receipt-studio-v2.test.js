@@ -92,7 +92,7 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   assert.match(app, /pageSize:'custom',customPageSize:\{width:Number\(width\),height:Number\(height\)\}/, 'label jobs must use the V1 custom-paper print contract');
   assert.ok(app.includes('find(name=>/tsc.*tdp.?225|tdp.?225.*tsc/i.test(name))'), 'label printing must restore the V1 TSC TDP-225 auto-selection');
   assert.match(app, /sendLabelPrintJob\(html,state\.labelLayout\.paper===\x27a4\x27\?210:width/, 'label studio must use the shared V1 label print route and dedicated printer');
-  assert.match(app, /receipt_date:receiptSaleDate\(sale\)/);
+  assert.match(app, /date,\s*storeName:/, 'the real ticket payload must use the resolved transaction date and shop header');\n  assert.match(app, /stock_deferred:true/, 'F6 must persist the deferred-stock flag consumed by the settlement controller');\n  assert.match(app, /bridge\.printReceipt\(payload/, 'new and reprinted V2 sales must use the continuous thermal receipt route');\n  assert.match(app, /sale-payment-chip/, 'split payment methods must be visible as chips in the sales status');\n  assert.match(app, /boldItemNames:true/);\n  assert.match(app, /boldItemAmounts:true/);
   assert.match(app, /date:savedSale\.date\|\|savedSale\.created_date/);
   assert.doesNotMatch(app, /sales_description:payload\.sales_description,date:new Date\(\)\.toLocaleString/);
   assert.doesNotMatch(app, /font-size:inherit!important;font-weight:inherit!important/, 'basket and total child typography must not be flattened to the parent font');
