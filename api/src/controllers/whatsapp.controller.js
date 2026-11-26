@@ -42,6 +42,14 @@ class WhatsAppController extends BaseController {
    * init/QR/status calls are answered from the state the connector mirrors
    * through /connector/whatsapp/state - same shapes, different engine.
    */
+  async _resolveDeviceId(req, branchId, requested) {
+    const supplied = String(requested || '').trim();
+    if (supplied) return supplied;
+    const Branch = require('../models/branch.model');
+    const branch = await Branch.findOne(branchIdentity(req, branchId)).select('whatsapp_device_id').lean();
+    return String(branch?.whatsapp_device_id || 'default_device').trim();
+  }
+
   async _connectorTransport(req, branchId) {
     try {
       const db = req.db;
@@ -62,15 +70,8 @@ class WhatsAppController extends BaseController {
    */
   async initializeConnection(req, res) {
     try {
-      const { device_id } = req.body;
       const branchId = activeBranchId(req);
-
-      if (!device_id) {
-        return res.json({
-          type: 'error',
-          message: 'Device ID is required',
-        });
-      }
+      let device_id = String(req.body?.device_id || '').trim();
 
       if (!branchId) {
         return res.json({
@@ -79,6 +80,7 @@ class WhatsAppController extends BaseController {
         });
       }
 
+      device_id = await this._resolveDeviceId(req, branchId, device_id);
       const result = await whatsappService.initializeClient(device_id, branchId);
 
       // Save device_id to branch settings
@@ -198,18 +200,19 @@ class WhatsAppController extends BaseController {
    */
   async getQRCode(req, res) {
     try {
-      const { device_id } = req.query;
+      let device_id = String(req.query?.device_id || '').trim();
 
       // Get branch_id with multiple fallbacks
       const branchId = activeBranchId(req);
 
-      if (!device_id || !branchId) {
+      if (!branchId) {
         return res.json({
           type: 'error',
           message: 'Device ID and Branch ID are required',
         });
       }
 
+      device_id = await this._resolveDeviceId(req, branchId, device_id);
       const rawQrCode = whatsappService.getQRCode(device_id, branchId);
       const qrCode = rawQrCode
         ? rawQrCode.startsWith && rawQrCode.startsWith('data:')
@@ -271,10 +274,7 @@ class WhatsAppController extends BaseController {
           .select('whatsapp_device_id').lean();
         deviceId = String(branch && branch.whatsapp_device_id || '').trim();
       }
-      if (!deviceId) {
-        return res.json({ type: 'error', message: 'Aucun identifiant WhatsApp enregistré pour ce magasin.' });
-      }
-
+      deviceId = await this._resolveDeviceId(req, resolvedBranchId, deviceId);
       const hasSavedSession = typeof whatsappService.hasSavedSession === 'function' &&
         whatsappService.hasSavedSession(deviceId, resolvedBranchId);
       // Rehydrate a previously linked device after restart or an interrupted
@@ -314,18 +314,19 @@ class WhatsAppController extends BaseController {
    */
   async logout(req, res) {
     try {
-      const { device_id } = req.body;
+      let device_id = String(req.body?.device_id || '').trim();
 
       // Get branch_id with multiple fallbacks
       const branchId = activeBranchId(req);
 
-      if (!device_id || !branchId) {
+      if (!branchId) {
         return res.json({
           type: 'error',
           message: 'Device ID and Branch ID are required',
         });
       }
 
+      device_id = await this._resolveDeviceId(req, branchId, device_id);
       const result = await whatsappService.logout(device_id, branchId);
 
       return res.json({

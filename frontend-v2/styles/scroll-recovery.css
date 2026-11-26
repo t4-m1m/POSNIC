@@ -48,3 +48,12 @@ html,body,#app{
   overflow-x:hidden!important;
   overflow-y:auto!important;
 }
+
+
+/* V2 viewport shell: keep navigation fixed while each page scrolls independently. */
+.shell:not(.caisse-lock){height:100dvh!important;min-height:100dvh!important;max-height:100dvh!important;grid-template-rows:44px minmax(0,1fr)!important;overflow:hidden!important;}
+.shell:not(.caisse-lock)>.topbar{grid-column:2!important;grid-row:1!important;min-height:44px!important;}
+.shell:not(.caisse-lock)>.rail{position:fixed!important;inset:0 auto 0 0!important;grid-row:auto!important;grid-column:auto!important;width:68px!important;height:100dvh!important;min-height:0!important;max-height:100dvh!important;align-self:auto!important;box-sizing:border-box!important;}
+.shell:not(.caisse-lock):has(.rail:hover)>.rail,.shell:not(.caisse-lock).expanded>.rail{width:228px!important;}
+.shell:not(.caisse-lock)>main{grid-column:2!important;grid-row:2!important;height:calc(100dvh - 44px)!important;min-height:0!important;max-height:none!important;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain!important;}
+@media(max-width:680px){.shell:not(.caisse-lock)>.rail{width:56px!important;}.shell:not(.caisse-lock):has(.rail:hover)>.rail,.shell:not(.caisse-lock).expanded>.rail{width:56px!important;}}

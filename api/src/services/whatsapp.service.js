@@ -40,6 +40,7 @@ class WhatsAppService extends EventEmitter {
     this.connectionErrors = new Map();
     this.connecting = new Map();
     this.reconnectTimers = new Map();
+    this.reconnectAttempts = new Map();
     this.queues = new Map();
     this.lastSentAt = new Map();
     const legacyUserDataPath = process.env.APPDATA
@@ -88,6 +89,30 @@ class WhatsAppService extends EventEmitter {
       wrapped.cause = error;
       throw wrapped;
     }
+  }
+
+  _scheduleReconnect(deviceId, branchId, preferredDelay) {
+    const key = this._key(deviceId, branchId);
+    if (['closing', 'logged_out'].includes(this.getConnectionStatus(deviceId, branchId))) return;
+    const existing = this.reconnectTimers.get(key);
+    if (existing) clearTimeout(existing);
+    const attempt = Math.min(8, (this.reconnectAttempts.get(key) || 0) + 1);
+    this.reconnectAttempts.set(key, attempt);
+    const delay = Number.isFinite(preferredDelay) ? preferredDelay : Math.min(60000, 3000 * (2 ** (attempt - 1)));
+    this.connectionStatus.set(key, 'reconnecting');
+    const timer = setTimeout(async () => {
+      this.reconnectTimers.delete(key);
+      if (['closing', 'logged_out'].includes(this.getConnectionStatus(deviceId, branchId))) return;
+      try {
+        const result = await this.initializeClient(deviceId, branchId);
+        if (!result?.status && this.hasSavedSession(deviceId, branchId)) this._scheduleReconnect(deviceId, branchId);
+      } catch (error) {
+        console.warn('[WhatsApp] Reconnect attempt failed:', error.message);
+        if (this.hasSavedSession(deviceId, branchId)) this._scheduleReconnect(deviceId, branchId);
+      }
+    }, delay);
+    if (timer.unref) timer.unref();
+    this.reconnectTimers.set(key, timer);
   }
 
   async initializeClient(deviceId, branchId) {
@@ -208,6 +233,10 @@ class WhatsAppService extends EventEmitter {
           const number = userId.split(':')[0].split('@')[0];
           this.phoneNumbers.set(key, number || '');
           this.connectionStatus.set(key, 'connected');
+          this.reconnectAttempts.delete(key);
+          const pendingReconnect = this.reconnectTimers.get(key);
+          if (pendingReconnect) clearTimeout(pendingReconnect);
+          this.reconnectTimers.delete(key);
           this.qrCodes.delete(key);
           this.connectionErrors.delete(key);
           this.emit('ready', { deviceId, branchId, clientKey: key, phoneNumber: number });
@@ -218,10 +247,11 @@ class WhatsAppService extends EventEmitter {
           const statusCode = disconnectError && disconnectError.output && disconnectError.output.statusCode;
           const loggedOut = statusCode === baileys.DisconnectReason.loggedOut;
           const intentional = this.getConnectionStatus(deviceId, branchId) === 'closing';
+          if (this.clients.has(key) && this.clients.get(key) !== socket) return;
           const reason = disconnectError && disconnectError.message ? disconnectError.message : 'WhatsApp connection closed';
           this.connectionErrors.set(key, { code: statusCode || null, message: reason });
           this.qrCodes.delete(key);
-          this.clients.delete(key);
+          if (this.clients.get(key) === socket) this.clients.delete(key);
 
           if (pairingCodeReady && !pairingRequested) {
             rejectPairingCode(new Error(reason + (statusCode ? ' (code ' + statusCode + ')' : '')));
@@ -229,24 +259,15 @@ class WhatsAppService extends EventEmitter {
 
           const hasCredentials = fs.existsSync(path.join(this._authDir(deviceId, branchId), 'creds.json'));
           if (!intentional && !loggedOut && hasCredentials) {
-            this.connectionStatus.set(key, 'reconnecting');
-            const existingTimer = this.reconnectTimers.get(key);
-            if (existingTimer) clearTimeout(existingTimer);
-            const timer = setTimeout(async () => {
-              this.reconnectTimers.delete(key);
-              await credsSavePromise;
-              this.initializeClient(deviceId, branchId).catch((error) =>
-                console.warn('[WhatsApp] Reconnect failed:', error.message)
-              );
-            }, statusCode === (baileys.DisconnectReason.restartRequired || 515) ? 1000 : 4000);
-            if (timer.unref) timer.unref();
-            this.reconnectTimers.set(key, timer);
+            const restartRequired = statusCode === (baileys.DisconnectReason.restartRequired || 515);
+            Promise.resolve(credsSavePromise).finally(() => this._scheduleReconnect(deviceId, branchId, restartRequired ? 1000 : undefined));
           } else {
             if (loggedOut) {
               try { fs.rmSync(this._authDir(deviceId, branchId), { recursive: true, force: true }); }
               catch (error) { console.warn('[WhatsApp] Could not remove logged-out auth directory:', error.message); }
             }
             this.connectionStatus.set(key, loggedOut ? 'logged_out' : 'disconnected');
+            if (loggedOut) this.reconnectAttempts.delete(key);
           }
           this.emit('disconnected', { deviceId, branchId, clientKey: key, reason: statusCode });
         }
@@ -267,8 +288,8 @@ class WhatsAppService extends EventEmitter {
         try { socket.end(new Error('POSNIC pairing initialization failed')); } catch (_) {}
         if (this.clients.get(key) === socket) this.clients.delete(key);
       }
-      // Do not erase authentication files on connection or pairing errors.
-      // A user can explicitly disconnect, or WhatsApp can report loggedOut.
+      // Keep authentication material and retry transient startup failures for linked accounts.
+      if (this.hasSavedSession(deviceId, branchId)) this._scheduleReconnect(deviceId, branchId);
       return { status: false, connected: false, message: error.message };
     }
   }
@@ -318,6 +339,7 @@ class WhatsAppService extends EventEmitter {
     const key = this._key(deviceId, branchId);
     await this._destroySocket(key, true);
     this.phoneNumbers.delete(key);
+    this.reconnectAttempts.delete(key);
     this.connectionStatus.set(key, 'disconnected');
     try {
       fs.rmSync(this._authDir(deviceId, branchId), { recursive: true, force: true });
@@ -333,9 +355,17 @@ class WhatsAppService extends EventEmitter {
       return { status: false, message: require('../config/demo-mode').DEMO_BLOCKED_MESSAGE };
     }
     const key = this._key(deviceId, branchId);
-    const socket = this.clients.get(key);
+    let socket = this.clients.get(key);
     if (!socket || this.getConnectionStatus(deviceId, branchId) !== 'connected') {
-      return { status: false, message: 'WhatsApp is not connected. Open Settings → WhatsApp Connection and link the store account.' };
+      const status = this.getConnectionStatus(deviceId, branchId);
+      if (this.hasSavedSession(deviceId, branchId) && ['not_initialized', 'disconnected', 'error'].includes(status)) {
+        const restored = await this.initializeClient(deviceId, branchId);
+        if (!restored.status) return { status: false, message: restored.message || 'WhatsApp reconnection failed.' };
+      }
+      const deadline = Date.now() + 20000;
+      while (Date.now() < deadline && this.getConnectionStatus(deviceId, branchId) !== 'connected') await wait(250);
+      socket = this.clients.get(key);
+      if (!socket || this.getConnectionStatus(deviceId, branchId) !== 'connected') return { status: false, message: 'WhatsApp is reconnecting. Wait for the connection to become ready, then retry sending.' };
     }
     let phone;
     try { phone = normalizePhoneNumber(phoneNumber); }

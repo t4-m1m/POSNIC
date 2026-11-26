@@ -52,17 +52,21 @@ const wa = {
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
       },
     });
+    let disconnectHandler = null;
+    const notifyDisconnected = (reason) => { if (disconnectHandler) disconnectHandler(reason); };
+    client.on('disconnected', notifyDisconnected);
+    client.on('auth_failure', notifyDisconnected);
     const wrapped = {
       onQr: (cb) => client.on('qr', cb),
       onReady: (cb) => client.on('ready', cb),
-      onDisconnected: (cb) => client.on('disconnected', cb),
+      onDisconnected: (cb) => { disconnectHandler = cb; },
       sendMessage: async (phone, text) => {
         const chatId = String(phone).includes('@c.us') ? String(phone) : String(phone) + '@c.us';
         await client.sendMessage(chatId, text);
       },
       destroy: () => client.destroy(),
     };
-    client.initialize().catch((e) => console.error('[wa] initialize failed:', e.message));
+    client.initialize().catch((e) => { console.error('[wa] initialize failed:', e.message); notifyDisconnected(e.message); });
     return wrapped;
   },
 };

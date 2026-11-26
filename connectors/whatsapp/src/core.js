@@ -37,6 +37,8 @@ class ConnectorCore {
     this.log = log;
     this.sleep = sleep || ((ms) => new Promise((r) => setTimeout(r, ms)));
     this.clients = new Map(); // branchId -> {client, status}
+    this.reconnectTimers = new Map();
+    this.reconnectAttempts = new Map();
     this.running = false;
   }
 
@@ -45,7 +47,7 @@ class ConnectorCore {
      the same shapes it always did. */
   async ensureClient(branchId, deviceId) {
     if (this.clients.has(branchId)) return this.clients.get(branchId);
-    const entry = { client: null, status: 'initializing' };
+    const entry = { client: null, status: 'initializing', deviceId: deviceId || '' };
     this.clients.set(branchId, entry);
     try {
       const client = this.wa.create(branchId, deviceId);
@@ -56,13 +58,19 @@ class ConnectorCore {
       });
       client.onReady(async () => {
         entry.status = 'connected';
+        this.reconnectAttempts.delete(branchId);
+        const pending = this.reconnectTimers.get(branchId);
+        if (pending) clearTimeout(pending);
+        this.reconnectTimers.delete(branchId);
         await this._postState(branchId, deviceId, 'connected', null);
       });
       client.onDisconnected(async (reason) => {
+        if (this.clients.get(branchId) !== entry) return;
         entry.status = 'disconnected';
         this.clients.delete(branchId);
         await this._postState(branchId, deviceId, 'disconnected', null);
         this.log(`[wa] branch ${branchId} disconnected: ${reason}`);
+        if (this.running && !/logout|logged.?out/i.test(String(reason || ''))) this._scheduleReconnect(branchId, entry.deviceId);
       });
       await this._postState(branchId, deviceId, 'initializing', null);
       return entry;
@@ -72,6 +80,23 @@ class ConnectorCore {
       this.log(`[wa] client for ${branchId} failed: ${err.message}`);
       return null;
     }
+  }
+
+  _scheduleReconnect(branchId, deviceId) {
+    if (!this.running || !branchId) return;
+    const pending = this.reconnectTimers.get(branchId);
+    if (pending) clearTimeout(pending);
+    const attempt = Math.min(8, (this.reconnectAttempts.get(branchId) || 0) + 1);
+    this.reconnectAttempts.set(branchId, attempt);
+    const delay = Math.min(60000, 3000 * (2 ** (attempt - 1)));
+    const timer = setTimeout(async () => {
+      this.reconnectTimers.delete(branchId);
+      if (!this.running || this.clients.has(branchId)) return;
+      await this.ensureClient(branchId, deviceId);
+    }, delay);
+    if (timer.unref) timer.unref();
+    this.reconnectTimers.set(branchId, timer);
+    this.log(`[wa] reconnect scheduled for branch ${branchId} in ${delay}ms`);
   }
 
   async _postState(branchId, deviceId, status, qr) {
@@ -151,6 +176,9 @@ class ConnectorCore {
 
   async stop() {
     this.running = false;
+    for (const timer of this.reconnectTimers.values()) clearTimeout(timer);
+    this.reconnectTimers.clear();
+    this.reconnectAttempts.clear();
     for (const [branchId, entry] of this.clients) {
       try {
         if (entry.client && entry.client.destroy) await entry.client.destroy();
