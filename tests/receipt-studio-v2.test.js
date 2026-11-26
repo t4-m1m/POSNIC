@@ -99,7 +99,7 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   assert.match(app, /data-receipt-height=/, 'receipt height must grow with basket and totals content');
   assert.match(app, /fitReceipt:false/, 'thermal receipt must print at its dynamic roll height without shrinking the legacy typography');
   assert.match(app, /salePaymentMethods\(x\)/, 'split tender methods must be visible under the sales status');
-  assert.match(app, /Versement · Réglé/, 'settled F6 sales must be marked as Versement in history');
+  assert.match(app, /Payé · Versement/, 'settled F6 sales must be marked as Versement in history');
   assert.match(app, /art\.style\.width=state\.labelLayout\.width\+'mm'/);
   assert.match(app, /art\.style\.height=state\.labelLayout\.height\+'mm'/);
   assert.ok(app.includes('legacyPortraitDefault?45'));
