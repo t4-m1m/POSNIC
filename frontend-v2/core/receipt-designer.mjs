@@ -135,7 +135,7 @@ export function buildVariantCombinations({ axis1, values1, axis2 = '', values2 =
   const firstAxis = String(axis1 || '').trim();
   const secondAxis = String(axis2 || '').trim();
   const split = value => {
-    const values = Array.isArray(value) ? value : String(value || '').split(/[\\n,;]+/);
+    const values = Array.isArray(value) ? value : String(value || '').split(/[\n,;]+/);
     const unique = new Map();
     for (const raw of values) {
       const label = String(raw ?? '').trim().normalize('NFKC');
