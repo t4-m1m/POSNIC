@@ -126,7 +126,7 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   assert.match(app, /stock_deferred:true/, 'F6 must persist the deferred-stock flag consumed by the settlement controller');
   assert.match(app, /async function printSaleReceiptDocument[\s\S]*?bridge\.print\(html,printOptions\)/, 'new and reprinted V2 sales must use the saved Receipt Studio HTML through the fast Windows printer driver');
   assert.match(app, /sale-payment-chip/, 'split payment methods must be visible as chips in the sales status');
-  assert.doesNotMatch(app, /receipt-thermal-preview|Aperçu réel de l’imprimante|ESC\\/POS/, 'Receipt Studio must not expose the unwanted ESC/POS preview');
+  assert.doesNotMatch(app, /receipt-thermal-preview|Aperçu réel de l’imprimante|ESC\/POS/, 'Receipt Studio must not expose the unwanted ESC/POS preview');
   assert.match(app, /boldItemNames:true/);
   assert.match(app, /boldItemAmounts:true/);
   assert.match(app, /date:savedSale\.date\|\|savedSale\.created_date/);
