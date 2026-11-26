@@ -219,7 +219,7 @@ test('variant builder creates a true cartesian product and keeps axis attributes
   assert.deepEqual(rows.map(row => row.label), ['S / Noir', 'S / Blanc', 'M / Noir', 'M / Blanc', 'L / Noir', 'L / Blanc']);
   assert.deepEqual(rows[0].attributes, { Taille: 'S', Couleur: 'Noir' });
   assert.equal(buildVariantCombinations({ axis1: 'Pointure', values1: '38,39' }).length, 2);
-  assert.deepEqual(buildVariantCombinations({ axis1: 'Taille', values1: 'S\\nM' }).map(row => row.value1), ['S', 'M']);
+  assert.deepEqual(buildVariantCombinations({ axis1: 'Taille', values1: 'S\nM' }).map(row => row.value1), ['S', 'M']);
   assert.throws(() => buildVariantCombinations({ axis1: 'Taille', values1: 'S', axis2: 'Couleur' }), /valeurs de l’axe 2/);
   assert.throws(() => buildVariantCombinations({ axis1: 'Taille', values1: Array.from({ length: 8 }, (_, i) => String(i)), axis2: 'Couleur', values2: Array.from({ length: 7 }, (_, i) => String(i)) }), /50 combinaisons/);
 });
@@ -240,7 +240,7 @@ test('V2 Receipt Studio applies block fonts to inner basket and every totals row
   assert.doesNotMatch(renderer, /Balance due/);
   assert.match(renderer, /gapMm=3/);
   assert.match(renderer, /itemsTop\+itemsHeight\+gapMm/);
-  assert.match(css, /#receipt-artboard \.designer-object\[data-receipt-object="totals"\][\\s\\S]*?font-size: inherit !important/);
+  assert.match(css, /#receipt-artboard \.designer-object\[data-receipt-object="totals"\][\s\S]*?font-size: inherit !important/);
   assert.match(css, /flex: 0 1 auto !important/);
 });
 
