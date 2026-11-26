@@ -1780,6 +1780,20 @@ ipcMain.handle('cloud:check-data', async () => {
  */
 const CONNECTOR_NAME_RE = /^[a-z][a-z0-9-]{1,40}$/;
 
+ipcMain.handle('connectors:restart', async (_event, payload) => {
+  try {
+    const { name } = payload || {};
+    if (!CONNECTOR_NAME_RE.test(String(name || ''))) return { ok: false, error: 'Not a valid connector name' };
+    if (!connectorSupervisor) return { ok: false, error: 'Connector runtime unavailable' };
+    const current = connectorSupervisor.status().find(item => item.name === name);
+    if (!current || !current.enabled) return { ok: false, error: 'WhatsApp connector is not enabled: ' + name };
+    connectorSupervisor.restart(name);
+    return { ok: true, connectors: connectorSupervisor.status() };
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+});
+
 ipcMain.handle('connectors:status', async () => {
   try {
     return { ok: true, connectors: connectorSupervisor ? connectorSupervisor.status() : [] };

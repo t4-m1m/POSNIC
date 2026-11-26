@@ -242,6 +242,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   connectors: {
     status:  () => ipcRenderer.invoke('connectors:status'),
+    restart: (name) => ipcRenderer.invoke('connectors:restart', { name }),
     enable:  (name, token, settings) => ipcRenderer.invoke('connectors:enable', { name, token, settings }),
     disable: (name) => ipcRenderer.invoke('connectors:disable', { name })
   },
