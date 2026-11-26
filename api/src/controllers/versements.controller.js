@@ -49,6 +49,60 @@ async function recoverSettlingVersement(db, collection, current) {
   return true;
 }
 
+
+async function applyDeferredVersementStock(db, sale, versement, settledAt) {
+  if (versement?.stock_deferred !== true && sale?.versement_checkout?.stock_deferred !== true) return;
+  const rawLines = Array.isArray(sale.items) ? sale.items : Array.isArray(sale.itemsale) ? sale.itemsale : [];
+  const quantities = new Map();
+  for (const line of rawLines) {
+    const rawId = line.item_id || line.item || line.product_id || line.view_item_id;
+    const itemId = rawId && typeof rawId === 'object' ? String(rawId._id || rawId.id || rawId) : String(rawId || '');
+    const qty = Number(line.item_quantity ?? line.quantity ?? line.qty ?? 0);
+    if (!ObjectId.isValid(itemId) || !Number.isFinite(qty) || qty <= 0 || String(line.item_status || '').toLowerCase() === 'instant') continue;
+    quantities.set(itemId, (quantities.get(itemId) || 0) + qty);
+  }
+  const saleKeyValue = String(versement.sale_key || saleKey(sale));
+  const movementKey = saleKeyValue + ':versement-settlement';
+  const items = db.collection('items'), stockLogs = db.collection('stocklogs');
+  for (const [itemId, qty] of quantities) {
+    const objectId = new ObjectId(itemId);
+    const before = await items.findOne({ _id: objectId, track_inventory: { $in: [true, 'true'] } });
+    if (!before) continue;
+    const alreadyApplied = Array.isArray(before.versement_stock_settlement_keys) && before.versement_stock_settlement_keys.includes(movementKey);
+    if (!alreadyApplied) {
+      const updated = await items.updateOne(
+        { _id: objectId, track_inventory: { $in: [true, 'true'] }, available_quantity: { $gte: qty }, versement_stock_settlement_keys: { $ne: movementKey } },
+        { $inc: { available_quantity: -qty }, $addToSet: { versement_stock_settlement_keys: movementKey } }
+      );
+      if (!updated.modifiedCount) {
+        const latest = await items.findOne({ _id: objectId });
+        const applied = Array.isArray(latest?.versement_stock_settlement_keys) && latest.versement_stock_settlement_keys.includes(movementKey);
+        if (!applied) throw new Error('Stock insuffisant au règlement du versement pour ' + String(before.name || before.item_name || itemId) + '.');
+      }
+    }
+    const after = await items.findOne({ _id: objectId });
+    const closing = Number(after?.available_quantity ?? before.available_quantity - qty);
+    const opening = closing + qty;
+    const logId = new ObjectId(crypto.createHash('sha256').update(movementKey + ':' + itemId).digest('hex').slice(0, 24));
+    const log = {
+      branch_id: sale.branch_id || versement.branch_id,
+      view_item_id: objectId,
+      item_barcode_id: String(before.item_barcode_id || before.barcode_id || ''),
+      item_name: String(before.name || before.item_name || 'Article'),
+      item_quantity: String(qty),
+      process: 'Versement réglé',
+      reference: String(versement.versement_number || saleKeyValue),
+      note: 'Sortie du stock au règlement complet du versement',
+      date: settledAt, created_date: settledAt, updated_date: settledAt,
+      action: 'Subtract', stocklog: true,
+      opening_balance: String(opening), closing_balance: String(closing),
+      count: String(-qty), changed_by: 'Versement',
+      ...(sale.license ? { license: sale.license } : {}),
+    };
+    await stockLogs.updateOne({ _id: logId }, { $setOnInsert: log }, { upsert: true });
+  }
+}
+
 exports.ensureForSale = async (req, sale) => {
   const db = await shopDb(req);
   if (!db || !sale || !sale.versement_checkout) return null;
@@ -74,6 +128,7 @@ exports.ensureForSale = async (req, sale) => {
     ...(sale.cashregister_id && ObjectId.isValid(String(sale.cashregister_id)) ? { register_id: new ObjectId(String(sale.cashregister_id)) } : {}),
     ...(ObjectId.isValid(customerId) ? { customer_id: new ObjectId(customerId) } : {}), customer_name: customer, phone, vendor_name: String(meta.vendor_name || sale.cashier_name || '').trim().slice(0, 80), sale_note: String(sale.sales_description || sale.sale_note || sale.sales_note || '').trim().slice(0, 1000), sale_total: total, initial_amount: initial, initial_method: method,
     remaining: money(Math.max(0, total - initial)), status: settled ? 'settled' : 'pending',
+    stock_deferred: meta.stock_deferred === true,
     created_at: now, created_by: actor(req), initial_collected_at: now, initial_recorded_amount: initial,
     ...(settled ? { settled_at: now } : {}),
     settlement: settled ? { amount: 0, method: 'none', settled_at: now, recorded_by: actor(req) } : null,
@@ -81,6 +136,15 @@ exports.ensureForSale = async (req, sale) => {
   };
   try {
     const inserted = await collection.insertOne(doc);
+    if (settled) {
+      await applyDeferredVersementStock(db, sale, doc, now);
+      await db.collection('sales').updateOne({ _id: sale._id, versement_checkout: { $exists: true } }, { $set: {
+        versement_settled: true, versement_settled_at: now, settled_at: now, date: now,
+        payment_status: 'Paid', payment_pending: 0, partial_check: 'false', partial_balance: 0,
+        paid_amount: total, versement_settlement_amount: 0,
+        versement_initial_amount: initial, versement_initial_method: method,
+      } });
+    }
     return { ...doc, _id: String(inserted.insertedId) };
   } catch (error) {
     if (error && error.code === 11000) {
@@ -214,6 +278,7 @@ exports.settle = async (req,res) => {
     const claimed = await collection.updateOne({_id:id,status:'pending',remaining:current.remaining},{$set:{status:'settling',settlement_started_at:settledAt,settlement_started_by:actor(req),settlement_started_method:method,settlement_started_amount:amount,...(register?{settlement_started_register_id:register}:{})}});
     if (!claimed.modifiedCount) return fail(res,409,'This versement was already updated. Refresh the register.');
     try {
+      await applyDeferredVersementStock(db, sale, current, settledAt);
       const saleUpdate = {
         versement_settled:true, versement_settled_at:settledAt, settled_at:settledAt, date:settledAt,
         payment_mode:method, payment_status:'Paid', payment_pending:0, partial_check:'false',
@@ -272,6 +337,7 @@ exports.cancel = async (req,res) => {
     }
     const items=db.collection('items'), stockLogs=db.collection('stocklogs');
     const restoreKey=String(current.sale_key||saleKey(sale))+':versement-cancel';
+    if (current.stock_deferred !== true) {
     for (const [itemId,qty] of quantities) {
       const itemObjectId=new ObjectId(itemId);
       const itemBefore=await items.findOne({_id:itemObjectId,track_inventory:{$in:[true,'true']}});
@@ -305,6 +371,7 @@ exports.cancel = async (req,res) => {
         ...(sale.license?{license:sale.license}:{}),
       };
       await stockLogs.updateOne({_id:logId},{$setOnInsert:log},{upsert:true});
+    }
     }
     await db.collection('sales').deleteOne({_id:sale._id,versement_checkout:{$exists:true}});
     await collection.deleteOne({_id:id,status:'cancelling'});
