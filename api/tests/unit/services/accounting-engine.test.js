@@ -51,7 +51,7 @@ describe('accounting engine daily close', () => {
     expect(result.netProfitTotal).toBeNull();
   });
 
-  test('includes opening float and manual drawer outflows while excluding COD payouts', () => {
+  test('calculates daily expected cash from daily cash receipts less daily cash outflows', () => {
     const result = calculateDailyClose({
       salesTotal: 1000,
       costOfGoodsTotal: 400,
@@ -75,7 +75,7 @@ describe('accounting engine daily close', () => {
         otherCashOutflows: 10,
       },
     });
-    expect(result.cashExpected).toBe(795);
+    expect(result.cashExpected).toBe(305);
   });
 
   test('uses cash register opening float plus pre-day cash movements and only manual same-day movements', () => {
@@ -470,4 +470,23 @@ describe('fourteen-day business accounting regression fixture', () => {
     });
     expect(outstanding).toMatchObject({ amount: 225, complete: true, unresolved: 0 });
   });
+});
+
+
+test('recognizes the full F6 amount only on its settlement day and splits it by its original and final tenders', () => {
+  const versement = [{
+    status: 'settled', sale_total: 6000, initial_recorded_amount: 1000, initial_amount: 1000,
+    initial_method: 'cash', initial_collected_at: '2026-11-05T10:00:00Z', created_at: '2026-11-05T10:00:00Z',
+    settlement: { amount: 5000, method: 'TPE', settled_at: '2026-11-07T12:00:00Z' },
+  }];
+  const advanceDay = aggregateVersementPaymentEvents(versement, '2026-11-05T00:00:00Z', '2026-11-06T00:00:00Z');
+  expect(advanceDay.total).toBe(0);
+  expect(advanceDay.cashTotal).toBe(0);
+  const settlementDay = aggregateVersementPaymentEvents(versement, '2026-11-07T00:00:00Z', '2026-11-08T00:00:00Z');
+  expect(settlementDay.total).toBe(6000);
+  expect(settlementDay.cashTotal).toBe(1000);
+  expect(settlementDay.details).toEqual(expect.arrayContaining([
+    expect.objectContaining({ payment_mode: 'CASH', amount: 1000 }),
+    expect.objectContaining({ payment_mode: 'TPE', amount: 5000 }),
+  ]));
 });
