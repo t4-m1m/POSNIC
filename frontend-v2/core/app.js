@@ -562,11 +562,6 @@ function receiptPrinterPayload(sale){
   design:{titleSize:'large',titleBold:true,storeNameSize:'large',boldStoreName:true,itemSize:'large',amountSize:'large',boldItemNames:true,boldItemAmounts:true,totalSize:'large',totalBold:true,showBarcode:true,showBarcodeText:true,showVariant:true,note:sale.sales_description||sale.sale_note||sale.note||'',showUnitPrice:false,showSubtotal:true,showDiscount:true,showPayments:true,showCustomer:true,showCashier:true,showDate:true,showTicket:true,showAddress:true,showPhone:true}
  };
 }
-async function refreshReceiptThermalPreview(){
- // V3.0: one editable legacy-style canvas is the only receipt preview.
- const host=document.querySelector('#receipt-thermal-preview');
- if(host)host.remove();
-}
 async function printSaleReceiptDocument(sale,options={}){
  const bridge=window.electronAPI?.printer;
  if(!bridge?.print)throw new Error('Le pilote Windows de l’imprimante ticket est indisponible sur ce poste.');
