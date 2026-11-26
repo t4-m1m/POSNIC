@@ -248,8 +248,6 @@ function calculateDailyClose(input = {}) {
 
   const cash = input.cash || {};
   const cashKeys = [
-    'openingBalance',
-    'otherCashOutflows',
     'cashSales',
     'cashVersements',
     'cashCreditCollections',
@@ -266,7 +264,6 @@ function calculateDailyClose(input = {}) {
   // provisional amount and explain missing register/payment evidence.
   const expectedCash = cashInputsAvailable
     ? round2(
-        parseAmount(cash.openingBalance) +
         parseAmount(cash.cashSales) +
         parseAmount(cash.cashVersements) +
         parseAmount(cash.cashCreditCollections) -
@@ -274,8 +271,7 @@ function calculateDailyClose(input = {}) {
         parseAmount(cash.cashExpenses) -
         parseAmount(cash.cashSalaries) -
         parseAmount(cash.cashAdvances) -
-        parseAmount(cash.cashBonuses) -
-        parseAmount(cash.otherCashOutflows)
+        parseAmount(cash.cashBonuses)
       )
     : null;
 
