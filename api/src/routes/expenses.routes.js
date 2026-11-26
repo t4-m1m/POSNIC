@@ -54,9 +54,11 @@ router.post('/quick', async (req, res) => {
     if (!reason || reason.length > 255)
       return res.status(400).json({ status: false, message: 'Saisissez la raison de la dépense (255 caractères maximum).' });
     const user = expensesController.user || {}, branch = expensesController.branch;
+    const expenseDate = body.date ? new Date(body.date) : new Date();
+    if (!Number.isFinite(expenseDate.getTime())) return res.status(400).json({ status: false, message: 'Saisissez une date de dépense valide.' });
     const result = await expensesController.service.createExpense({
       amount: Math.round((value + Number.EPSILON) * 100) / 100,
-      type: 'Dépense rapide', category: 'Dépense rapide', description: reason, date: new Date(),
+      type: 'Dépense rapide', category: 'Dépense rapide', description: reason, date: expenseDate,
       branch_id: branch && ObjectId.isValid(String(branch)) ? new ObjectId(String(branch)) : branch,
       branch_name: expensesController.branchName || '',
       created_by: user.username || user.name || user.email || 'system',
