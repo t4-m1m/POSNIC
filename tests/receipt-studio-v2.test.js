@@ -161,9 +161,9 @@ test('V2 visible UI fixes are loaded by cache-busted assets and viewport-pinned 
  const renderer=app.slice(start,end);
  assert.ok(renderer.includes("let css='@page"),'designer preview CSS must be mutable');
  assert.ok(!renderer.includes("const css='@page"),'const reassignment must not crash Printer Settings');
- assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.23'));
- assert.ok(html.includes('styles/scroll-recovery.css?v=2.0.0-rebrand.23'));
- assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.23'));
+ assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.24'));
+ assert.ok(html.includes('styles/scroll-recovery.css?v=2.0.0-rebrand.24'));
+ assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.24'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail{position:fixed!important'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail>.rail-bottom{position:absolute!important'));
  assert.ok(app.includes('topbar-quick-actions'),'Acompte and Dépenses stay in the top bar');
