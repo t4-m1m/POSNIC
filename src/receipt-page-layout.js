@@ -59,7 +59,7 @@
           await Promise.all(Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).filter(function (link) {
             return !link.disabled;
           }).map(function (link) { return loaded(link, function () { return !!link.sheet; }); }));
-          var content = expectedReceipt ? doc.querySelector('.rd-document[data-receipt-design]') : doc.body;
+          var content = expectedReceipt ? doc.querySelector('.rd-document[data-receipt-design], .receipt-artboard[data-receipt-studio="true"]') : doc.body;
           if (!content) throw new Error('The receipt document did not load.');
           content.getBoundingClientRect();
           await Promise.all([
