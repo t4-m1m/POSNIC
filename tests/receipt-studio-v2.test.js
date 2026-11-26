@@ -10,6 +10,8 @@ const {
   receiptSaleDate,
   normalizeReceiptElements,
   moveReceiptElement,
+  receiptAmountDue,
+  buildVariantCombinations,
 } = require('../frontend-v2/core/receipt-designer.mjs');
 
 test('receipt always prefers the human sale number over Mongo identifiers', () => {
@@ -201,4 +203,22 @@ test('V2 sidebar hover expands the fixed rail and reveals navigation labels', ()
  const scroll=fs.readFileSync(path.join(__dirname,'..','frontend-v2/styles/scroll-recovery.css'),'utf8');
  assert.match(scroll,/\.shell:not\(\.caisse-lock\):has\(>\.rail:hover\)>\.rail,.shell:not\(\.caisse-lock\)\.expanded>\.rail\{width:228px!important/);
  assert.match(scroll,/\.shell:not\(\.caisse-lock\):has\(>\.rail:hover\)>\.rail \.nav-label/);
+});
+
+
+test('receipt due amount uses stored credit and F6 remaining balance fields', () => {
+  assert.equal(receiptAmountDue({ sales_total: 6000, payment_pending: 5000, paid_amount: 1000 }), 5000);
+  assert.equal(receiptAmountDue({ sales_total: 6000, paid_amount: 4500, payment_status: 'partial' }), 1500);
+  assert.equal(receiptAmountDue({ sales_total: 6000, versement_checkout: { initial_amount: 1000 }, versement_initial_amount: 1000, versement_remaining: 5000 }), 5000);
+  assert.equal(receiptAmountDue({ sales_total: 6000, versement_checkout: { initial_amount: 1000 }, versement_settled: true, versement_remaining: 5000 }), 0);
+  assert.equal(receiptAmountDue({ sales_total: 6000, paid_amount: 6000 }), 0);
+});
+
+test('variant builder creates a true cartesian product and keeps axis attributes', () => {
+  const rows = buildVariantCombinations({ axis1: 'Taille', values1: 'S, M, L, M', axis2: 'Couleur', values2: 'Noir; Blanc' });
+  assert.deepEqual(rows.map(row => row.label), ['S / Noir', 'S / Blanc', 'M / Noir', 'M / Blanc', 'L / Noir', 'L / Blanc']);
+  assert.deepEqual(rows[0].attributes, { Taille: 'S', Couleur: 'Noir' });
+  assert.equal(buildVariantCombinations({ axis1: 'Pointure', values1: '38,39' }).length, 2);
+  assert.throws(() => buildVariantCombinations({ axis1: 'Taille', values1: 'S', axis2: 'Couleur' }), /valeurs de l’axe 2/);
+  assert.throws(() => buildVariantCombinations({ axis1: 'Taille', values1: Array.from({ length: 8 }, (_, i) => String(i)), axis2: 'Couleur', values2: Array.from({ length: 7 }, (_, i) => String(i)) }), /50 combinaisons/);
 });
