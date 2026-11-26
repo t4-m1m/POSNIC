@@ -24,8 +24,12 @@ export function receiptSaleDate(sale = {}) {
     if (raw == null || raw === '') continue;
     if (typeof raw === 'object') raw = raw.$date?.$numberLong ?? raw.$date ?? raw.$numberLong ?? raw;
     if (raw instanceof Date) {
-      if (Number.isFinite(raw.getTime())) return raw.toLocaleString('fr-FR');
-      continue;
+      if (!Number.isFinite(raw.getTime())) continue;
+      if (raw.getUTCHours() === 0 && raw.getUTCMinutes() === 0 && raw.getUTCSeconds() === 0) {
+        if (!dateOnly) dateOnly = raw.toLocaleDateString('fr-FR');
+        continue;
+      }
+      return raw.toLocaleString('fr-FR');
     }
     const text = String(raw).trim();
     if (!text) continue;
@@ -34,11 +38,21 @@ export function receiptSaleDate(sale = {}) {
       if (!dateOnly) dateOnly = text;
       continue;
     }
+    if (/^\d{4}-\d{2}-\d{2}[T ]00:00:00(?:\.000)?(?:Z|[+-]00:00)?$/i.test(text)) {
+      if (!dateOnly) dateOnly = text.slice(0, 10);
+      continue;
+    }
     const numericTimestamp = typeof raw === 'number' ? raw : (/^\d{10,}$/.test(text) ? Number(text) : null);
     const date = numericTimestamp !== null
       ? new Date(Math.abs(numericTimestamp) < 1e12 ? numericTimestamp * 1000 : numericTimestamp)
       : new Date(text);
-    if (Number.isFinite(date.getTime())) return date.toLocaleString('fr-FR');
+    if (Number.isFinite(date.getTime())) {
+      if (date.getUTCHours() === 0 && date.getUTCMinutes() === 0 && date.getUTCSeconds() === 0) {
+        if (!dateOnly) dateOnly = date.toLocaleDateString('fr-FR');
+        continue;
+      }
+      return date.toLocaleString('fr-FR');
+    }
   }
   return dateOnly || 'Date non renseignée';
 }
