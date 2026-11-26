@@ -34,18 +34,18 @@ jobs:
           fetch-depth: 1
           submodules: recursive
 
-      - name: Verify or create protected SamarinaPOS V2 pre-release tag
+      - name: Verify or create protected SamarinaPOS V3.0 release tag
         if: github.ref == 'refs/heads/feat/posnic-v2-rebrand'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $tag = 'v2.0.0-rebrand.16'
+          $tag = 'v3.0.0'
           git fetch --no-tags origin "refs/tags/${tag}:refs/tags/${tag}" 2>$null
           if ($LASTEXITCODE -ne 0) {
             Write-Host "Creating immutable release tag $tag at the current branch commit."
             git tag $tag $env:GITHUB_SHA
             git push origin "refs/tags/$tag"
-            if ($LASTEXITCODE -ne 0) { throw "Could not create the V2 prerelease tag $tag." }
+            if ($LASTEXITCODE -ne 0) { throw "Could not create the V3.0 release tag $tag." }
           } else {
             Write-Host "Using existing protected tag $tag; building current branch commit $env:GITHUB_SHA without moving the tag."
           }
@@ -171,8 +171,8 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Publish installer to GitHub Pre-Release
-        if: github.ref == 'refs/heads/feat/posnic-v2-rebrand' || startsWith(github.ref, 'refs/tags/v2.0.0-rebrand')
+      - name: Publish SamarinaPOS V3.0 installer release
+        if: github.ref == 'refs/heads/feat/posnic-v2-rebrand' || startsWith(github.ref, 'refs/tags/v3.0.0')
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -181,7 +181,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $owner = 't4-m1m'
           $repo = 'POSNIC'
-          $tag = if ($env:GITHUB_REF.StartsWith('refs/tags/')) { $env:GITHUB_REF_NAME } else { 'v2.0.0-rebrand.16' }
+          $tag = if ($env:GITHUB_REF.StartsWith('refs/tags/')) { $env:GITHUB_REF_NAME } else { 'v3.0.0' }
           $installer = Get-Item 'dist/SamarinaPOS-Windows-Installer.exe'
           $headers = @{
             Authorization = "Bearer $env:GH_TOKEN"
