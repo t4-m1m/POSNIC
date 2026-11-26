@@ -119,10 +119,10 @@ function salePaymentMethods(sale){
   const parts=[];
   if(initial>0)parts.push((sale.versement_initial_method||sale.versement_checkout.initial_method||'Versement initial')+' '+money(initial));
   if(final>0)parts.push((sale.payment_mode||'Règlement final')+' '+money(final));
-  return parts.length?'<small class="sale-payment-methods">'+parts.map(esc).join(' · ')+' DZD</small>':'';
+  return parts.length?'<small class="sale-payment-methods" style="display:block;margin-top:4px;font-size:11px;line-height:1.35;color:var(--muted)">'+parts.map(esc).join(' · ')+' DZD</small>':'';
  }
- if(normalized.length>1)return '<small class="sale-payment-methods">'+normalized.map(row=>esc(row.method)+' '+money(row.amount)+' DZD').join(' · ')+'</small>';
- if(normalized.length===1)return '<small class="sale-payment-methods">'+esc(normalized[0].method)+' '+money(normalized[0].amount)+' DZD</small>';
+ if(normalized.length>1)return '<small class="sale-payment-methods" style="display:block;margin-top:4px;font-size:11px;line-height:1.35;color:var(--muted)">'+normalized.map(row=>esc(row.method)+' '+money(row.amount)+' DZD').join(' · ')+'</small>';
+ if(normalized.length===1)return '<small class="sale-payment-methods" style="display:block;margin-top:4px;font-size:11px;line-height:1.35;color:var(--muted)">'+esc(normalized[0].method)+' '+money(normalized[0].amount)+' DZD</small>';
  return '';
 }
 function salesHistoryView(rows,mode='sales'){
