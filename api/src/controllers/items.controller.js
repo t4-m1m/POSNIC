@@ -510,6 +510,7 @@ class ItemsController extends BaseController {
       await this.ensureContext(req);
       const result = await this.service.repository.getFamily(req.query.group_id, {
         licenseId: this.model?.licenseId || null,
+        branchId: this.model?.branchId || null,
       });
       if (result && result.status) return this.success(res, result.data, result.message);
       return this.error(res, result?.message || 'Could not load the family', 400);
@@ -529,8 +530,9 @@ class ItemsController extends BaseController {
       const db = await require('../models/base.model').getDb();
       const families = db.collection('item_families');
       const items = db.collection('items');
-      const license = this.model?.licenseId;
-      const scope = { _id: new (require('mongodb').ObjectId)(String(groupId)), ...(license ? { license: new (require('mongodb').ObjectId)(String(license)) } : {}) };
+      const ObjectId = require('mongodb').ObjectId;
+      const license = this.model?.licenseId, branch = this.model?.branchId;
+      const scope = { _id: new ObjectId(String(groupId)), ...(license ? { license: new ObjectId(String(license)) } : {}), ...(branch ? { branch_id: new ObjectId(String(branch)) } : {}) };
       const parent = await families.findOne(scope);
       if (!parent) return this.error(res, 'Variant parent model not found', 404);
       const rows = Array.isArray(req.body?.variants) ? req.body.variants : [];
@@ -538,13 +540,18 @@ class ItemsController extends BaseController {
       const ids = rows.map(row => String(row.item_id || ''));
       if (ids.some(id => !require('mongodb').ObjectId.isValid(id)) || new Set(ids).size !== ids.length) return this.error(res, 'Each matrix cell must reference one unique existing SKU', 400);
       const barcodes = rows.map(row => String(row.barcode_id || '').trim()).filter(Boolean);
-      if (new Set(barcodes).size !== barcodes.length) return this.error(res, 'Each combination must have a unique barcode', 400);
+      if (barcodes.some(code => !/^[0-9]{7}$/.test(code)) || new Set(barcodes).size !== barcodes.length) return this.error(res, 'Each combination must have a unique 7-digit barcode', 400);
+      const itemScope = { variant_group_id: parent.variant_group_id, ...(license ? { license: new ObjectId(String(license)) } : {}), ...(branch ? { branch_id: new ObjectId(String(branch)) } : {}) };
+      const itemIds = ids.map(id => new ObjectId(id));
+      const currentRows = await items.find({ ...itemScope, _id: { $in: itemIds } }).toArray();
+      if (currentRows.length !== ids.length) return this.error(res, 'A matrix cell references a SKU outside this model', 409);
+      const collision = await items.findOne({ ...itemScope, _id: { $nin: itemIds }, $or: [{ barcode_id: { $in: barcodes } }, { barcodes: { $in: barcodes } }] });
+      if (collision) return this.error(res, 'A barcode is already assigned to another SKU in this branch', 409);
       const now = new Date(), updated = [];
       for (const row of rows) {
-        const itemId = new (require('mongodb').ObjectId)(String(row.item_id));
-        const itemScope = { _id: itemId, variant_group_id: parent.variant_group_id, ...(license ? { license: new (require('mongodb').ObjectId)(String(license)) } : {}) };
-        const current = await items.findOne(itemScope);
-        if (!current) return this.error(res, 'A matrix cell references a SKU outside this model', 409);
+        const itemId = new ObjectId(String(row.item_id));
+        const current = currentRows.find(value => String(value._id) === String(itemId));
+        const scopedItem = { _id: itemId, ...itemScope };
         const set = {
           variant_value: String(row.label || '').trim(),
           variant_axis: (parent.axes || []).join(' / '),
@@ -557,7 +564,7 @@ class ItemsController extends BaseController {
           selling_price_3: Math.max(0, Number(row.selling_price_3) || 0),
           updated_date: now,
         };
-        await items.updateOne(itemScope, { $set: set });
+        await items.updateOne(scopedItem, { $set: set });
         updated.push({ ...row, item_id: itemId });
       }
       const total = updated.reduce((sum, row) => sum + Math.max(0, Number(row.quantity) || 0), 0);

@@ -1735,16 +1735,14 @@ class ItemRepository extends BaseModel {
     }
     const groupObjectId = new ObjectId(String(groupId));
     const filter = { variant_group_id: groupObjectId };
-    if (context.licenseId && ObjectId.isValid(String(context.licenseId))) {
-      filter.license = new ObjectId(String(context.licenseId));
-    }
+    if (context.licenseId && ObjectId.isValid(String(context.licenseId))) filter.license = new ObjectId(String(context.licenseId));
+    if (context.branchId && ObjectId.isValid(String(context.branchId))) filter.branch_id = new ObjectId(String(context.branchId));
     const collection = await this.getCollection(this.collectionName);
     const familyCollection = await this.getCollection('item_families');
     const parent = await familyCollection.findOne({
       _id: groupObjectId,
-      ...(context.licenseId && ObjectId.isValid(String(context.licenseId))
-        ? { license: new ObjectId(String(context.licenseId)) }
-        : {}),
+      ...(context.licenseId && ObjectId.isValid(String(context.licenseId)) ? { license: new ObjectId(String(context.licenseId)) } : {}),
+      ...(context.branchId && ObjectId.isValid(String(context.branchId)) ? { branch_id: new ObjectId(String(context.branchId)) } : {}),
     });
     const rows = await collection
       .find(filter, {
