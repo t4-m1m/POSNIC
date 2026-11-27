@@ -50,6 +50,10 @@ const itemSchema = new mongoose.Schema(
     track_inventory: { type: Boolean, default: false },
     negative_stock: { type: Boolean, default: false },
     image: { type: String, trim: true },
+    hasVariations: { type: Boolean, default: false },
+    colors: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    sizes: { type: [String], default: [] },
+    variants: { type: [mongoose.Schema.Types.Mixed], default: [] },
 
     /*
      * Whether this appears on the shop's public menu.
@@ -322,6 +326,10 @@ class ItemModel {
     purchase_unit: { type: 'String', select: true },
     conversion_factor: { type: 'Number', select: true },
     // Variant family link (V1) - the edit page's family strip reads these.
+    hasVariations: { type: 'Boolean', select: true },
+    colors: { type: 'Array', select: true },
+    sizes: { type: 'Array', select: true },
+    variants: { type: 'Array', select: true },
     variant_group_id: { type: 'ObjectId', select: true },
     variant_axis: { type: 'String', select: true },
     variant_value: { type: 'String', select: true },

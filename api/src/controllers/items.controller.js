@@ -537,6 +537,23 @@ class ItemsController extends BaseController {
       if (!parent) return this.error(res, 'Variant parent model not found', 404);
       const rows = Array.isArray(req.body?.variants) ? req.body.variants : [];
       if (!rows.length || rows.length > 500) return this.error(res, 'The matrix must contain 1 to 500 active combinations', 400);
+      // Server-generate any missing combination barcode and check branch uniqueness.
+      const crypto = require('crypto');
+      for (const row of rows) {
+        if (String(row.barcode_id || '').trim()) continue;
+        let generated = '';
+        for (let attempt = 0; attempt < 250; attempt += 1) {
+          const candidate = String(crypto.randomInt(10000000)).padStart(7, '0');
+          const collision = await items.findOne({
+            ...(license ? { license: new ObjectId(String(license)) } : {}),
+            ...(branch ? { branch_id: new ObjectId(String(branch)) } : {}),
+            $or: [{ barcode_id: candidate }, { barcodes: candidate }],
+          }, { projection: { _id: 1 } });
+          if (!collision) { generated = candidate; break; }
+        }
+        if (!generated) return this.error(res, 'Could not allocate a unique barcode for a matrix cell', 409);
+        row.barcode_id = generated;
+      }
       const ids = rows.map(row => String(row.item_id || ''));
       if (ids.some(id => !require('mongodb').ObjectId.isValid(id)) || new Set(ids).size !== ids.length) return this.error(res, 'Each matrix cell must reference one unique existing SKU', 400);
       const barcodes = rows.map(row => String(row.barcode_id || '').trim()).filter(Boolean);
@@ -558,17 +575,27 @@ class ItemsController extends BaseController {
           variant_parent_name: parent.name,
           variant_attributes: row.attributes && typeof row.attributes === 'object' ? row.attributes : {},
           barcode_id: String(row.barcode_id || '').trim(),
-          available_quantity: Math.max(0, Number(row.quantity) || 0),
-          selling_price: Math.max(0, Number(row.selling_price) || 0),
+          available_quantity: Math.max(0, Number(row.qty ?? row.quantity) || 0),
+          quantity: Math.max(0, Number(row.qty ?? row.quantity) || 0),
+          ...(row.buyingPrice !== undefined || row.company_price !== undefined ? { company_price: Math.max(0, Number(row.buyingPrice ?? row.company_price) || 0), cost_price: Math.max(0, Number(row.buyingPrice ?? row.company_price) || 0) } : {}),
+          selling_price: Math.max(0, Number(row.sellingPrice ?? row.selling_price) || 0),
           selling_price_2: Math.max(0, Number(row.selling_price_2) || 0),
           selling_price_3: Math.max(0, Number(row.selling_price_3) || 0),
           updated_date: now,
         };
         await items.updateOne(scopedItem, { $set: set });
-        updated.push({ ...row, item_id: itemId });
+        updated.push({
+          ...row, item_id: itemId, variantId: String(itemId),
+          color: String(row.color || row.attributes?.Couleur || row.attributes?.Color || ''),
+          colorHex: String(row.colorHex || '#D6C7B2'),
+          size: String(row.size || row.attributes?.Taille || row.attributes?.Size || ''),
+          qty: Math.max(0, Number(row.qty ?? row.quantity) || 0),
+          buyingPrice: Math.max(0, Number(row.buyingPrice ?? row.company_price ?? current?.company_price) || 0),
+          sellingPrice: Math.max(0, Number(row.sellingPrice ?? row.selling_price) || 0),
+        });
       }
-      const total = updated.reduce((sum, row) => sum + Math.max(0, Number(row.quantity) || 0), 0);
-      await families.updateOne(scope, { $set: { variants: updated, quantity: total, colors: Array.isArray(req.body.colors) ? req.body.colors : parent.colors || [], sizes: Array.isArray(req.body.sizes) ? req.body.sizes : parent.sizes || [], updated_at: now } });
+      const total = updated.reduce((sum, row) => sum + Math.max(0, Number(row.qty ?? row.quantity) || 0), 0);
+      await families.updateOne(scope, { $set: { hasVariations: true, variants: updated, quantity: total, colors: Array.isArray(req.body.colors) ? req.body.colors : parent.colors || [], sizes: Array.isArray(req.body.sizes) ? req.body.sizes : parent.sizes || [], updated_at: now } });
       return this.success(res, { variant_group_id: String(groupId), quantity: total, updated: updated.length }, 'Variant matrix saved');
     } catch (error) {
       console.error('Error in updateFamily:', error);
