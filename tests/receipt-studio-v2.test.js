@@ -165,9 +165,9 @@ test('V2 visible UI fixes are loaded by cache-busted assets and viewport-pinned 
  const renderer=app.slice(start,end);
  assert.ok(renderer.includes("const css='@page"),'vertical thermal renderer must own the print stylesheet');
  assert.ok(renderer.includes('width:\'+printable+\'mm'),'80mm and 58mm rolls must reserve their actual printable widths');
- assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.32'));
+ assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.34'));
  assert.ok(html.includes('styles/scroll-recovery.css?v=2.0.0-rebrand.25'));
- assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.32'));
+ assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.34'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail{position:fixed!important'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail>.rail-bottom{position:absolute!important'));
  assert.ok(app.includes('topbar-quick-actions'),'Acompte and Dépenses stay in the top bar');
@@ -252,9 +252,9 @@ test('2026 Receipt Studio renders French vertical blocks with independent typogr
   assert.match(app, /barcodeHeight:28/);
   assert.match(app, /barcodeModuleWidth/);
   assert.match(app, /estimateReceiptStackHeight\(sale,layout\)/);
-  assert.match(app, /@page\{size:'\+width\+'mm '\+height\+'mm;margin:0\}/);
-  assert.match(app, /data-receipt-stack-prop=\\"barcodeWidth\\"/);
-  assert.match(app, /data-receipt-stack-prop=\\"barcodeHeight\\"/);
+  assert.ok(app.includes("@page{size:'+width+'mm auto;margin:0}"));
+  assert.ok(app.includes('data-receipt-stack-prop="barcodeWidth"'));
+  assert.ok(app.includes('data-receipt-stack-prop="barcodeHeight"'));
   assert.match(app, /logoMaxHeight/);
   assert.match(app, /threshold/);
   assert.match(css, /\.receipt-stack-paper/);

@@ -94,6 +94,7 @@ router.use('/customercategory', customerCategoryRoutes); // Legacy PHP path supp
 router.use('/common-pdf', commonPdfRoutes);
 router.use('/customers', customersRoutes);
 router.use('/dashboard', dashboardRoutes); // Removed /api prefix for consistency
+router.use('/reports', dashboardRoutes); // /api/reports/executive-dashboard
 router.use('/easy-table', easyTableRoutes);
 router.use('/expenses', expensesRoutes);
 router.use('/install', installRoutes);

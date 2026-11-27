@@ -10,6 +10,7 @@ const {
 const bindController = (handler) => handler.bind(dashboardController);
 
 router.use(protect);
+router.get('/executive-dashboard', bindController(dashboardController.getExecutiveDashboard));
 
 router.get('/welcome', bindController(dashboardController.getDashboardCurrentWish));
 router.get('/getDashboardCurrentWish', bindController(dashboardController.getDashboardCurrentWish));

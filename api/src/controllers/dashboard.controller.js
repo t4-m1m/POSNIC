@@ -14,6 +14,7 @@ class DashboardController extends BaseController {
     this.getDashboardSalesPurchase = this.getDashboardSalesPurchase.bind(this);
     this.getProfitSummary = this.getProfitSummary.bind(this);
     this.getOverview = this.getOverview.bind(this);
+    this.getExecutiveDashboard = this.getExecutiveDashboard.bind(this);
     this.getDashboardBestSellingProducts = this.getDashboardBestSellingProducts.bind(this);
     this.getDashboardExpiredProducts = this.getDashboardExpiredProducts.bind(this);
     this.debugSessionFilter = this.debugSessionFilter.bind(this);
@@ -446,6 +447,55 @@ class DashboardController extends BaseController {
         message: 'An error occurred while fetching dashboard totals',
         data: null,
       });
+    }
+  }
+
+
+  async getExecutiveDashboard(req, res) {
+    try {
+      if (!req.user) return res.status(401).json({ type: 'error', message: 'Authentication required', data: null });
+      await this.ensureContext(req);
+      const { dateKey, buildExecutiveDashboard } = require('../services/executive-dashboard.service');
+      const timezone = req.user?.settings?.time_zone || 'Africa/Algiers';
+      const period = String(req.query.period || 'today');
+      const today = dateKey(new Date(), timezone);
+      const shift = (key, days) => { const d = new Date(key + 'T12:00:00'); d.setDate(d.getDate() + days); return dateKey(d, timezone); };
+      const valid = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) ? String(value) : '';
+      let start = today, end = today;
+      if (period === 'yesterday') start = end = shift(today, -1);
+      else if (period === '7days') start = shift(today, -6);
+      else if (period === '30days') start = shift(today, -29);
+      else if (period === 'month') start = today.slice(0, 7) + '-01';
+      else if (period === 'year') start = today.slice(0, 4) + '-01-01';
+      else if (period === 'all') start = '2000-01-01';
+      else if (period === 'custom') {
+        start = valid(req.query.startDate); end = valid(req.query.endDate);
+        if (!start || !end || start > end) return res.status(400).json({ type: 'error', message: 'Plage de dates invalide.', data: null });
+      }
+      const model = req.dashboardModel, scope = model.getContextMatch({});
+      const load = async (name, match = scope, limit = 50000) => {
+        try { return await (await model.getCollection(name)).find(match).sort({ date: -1, _id: -1 }).limit(limit).toArray(); }
+        catch (error) { if (['credit_payments', 'sale_versements'].includes(name)) return []; throw error; }
+      };
+      const financials = this.canSeeFinancials(req.user);
+      const [sales, items, expenses, hrTransactions, creditPayments, versements] = await Promise.all([
+        load('sales', scope, 100000),
+        load('items', model.getContextMatch({ item_status: { $ne: 'instant' } }), 50000),
+        financials ? load('expenses', scope, 50000) : Promise.resolve([]),
+        financials ? load('hr_transactions', scope, 20000) : Promise.resolve([]),
+        load('credit_payments', scope, 50000),
+        load('sale_versements', scope, 50000),
+      ]);
+      const data = buildExecutiveDashboard({
+        sales, items, expenses, hrTransactions, creditPayments, versements,
+        startDate: start, endDate: end, period, timeZone: timezone,
+        channel: ['all', 'store', 'delivery'].includes(String(req.query.channel)) ? String(req.query.channel) : 'all',
+        financials,
+      });
+      return res.status(200).json({ type: 'success', message: 'Executive dashboard', data });
+    } catch (error) {
+      console.error('Error in getExecutiveDashboard:', error);
+      return res.status(500).json({ type: 'error', message: 'Impossible de charger le tableau de bord analytique.', data: null });
     }
   }
 
