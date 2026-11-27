@@ -239,7 +239,7 @@ test('V2 Receipt Studio applies block fonts to inner basket and every totals row
   assert.doesNotMatch(renderer, /Reste à payer/);
   assert.doesNotMatch(renderer, /Balance due/);
   assert.match(app, /gapMm=3/);
-  assert.match(app, /itemsTop\+itemsHeight\+gapMm/);
+  assert.match(app, /overlapsHorizontally/);\n  assert.match(app, /requiredItemsMm/);\n  assert.match(app, /requiredTotalsMm/);
   assert.match(css, /#receipt-artboard \.designer-object\[data-receipt-object="totals"\][\s\S]*?font-size: inherit !important/);
   assert.match(css, /flex: 0 1 auto !important/);
 });
