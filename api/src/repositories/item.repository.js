@@ -1755,6 +1755,7 @@ class ItemRepository extends BaseModel {
       })
       .sort({ variant_value: 1 })
       .toArray();
+    const parentModel = parent ? { ...parent, quantity: rows.reduce((sum, row) => sum + Math.max(0, Number(row.available_quantity) || 0), 0) } : null;
     return {
       status: true,
       data: rows.map((r) => ({
@@ -1773,7 +1774,7 @@ class ItemRepository extends BaseModel {
         variant_attributes: r.variant_attributes || {},
         variant_value_1: r.variant_value_1 || '',
         variant_value_2: r.variant_value_2 || '',
-        parent_model: parent || null,
+        parent_model: parentModel,
       })),
       message: 'success',
     };

@@ -583,7 +583,7 @@ class ItemService {
         _id: groupId,
         name: parentName,
         variant_group_id: groupId,
-        axes: [data.variant_axis_1 || 'Couleur', data.variant_axis_2 || 'Taille'].filter(Boolean),
+        axes: (data.variant_axis_1 || data.variant_axis_2) ? [data.variant_axis_1, data.variant_axis_2].filter(Boolean) : axis.split(/\\s*\\/\\s*|\\s*×\\s*/).filter(Boolean),
         colors: Array.isArray(data.colors) ? data.colors : [],
         sizes: Array.isArray(data.sizes) ? data.sizes : [],
         variants: parentVariants,
