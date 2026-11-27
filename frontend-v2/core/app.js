@@ -5,70 +5,20 @@ import{installKeyboard}from'./keyboard.js';
 import{renderHR,handleHRAction,handleHRSubmit,cleanupHRState}from'./hr.js';
 import{toast}from'./toast.js';
 import{receiptSaleDate,receiptSaleNumber,moveReceiptElement,receiptAmountDue,buildVariantCombinations}from'./receipt-designer.mjs?v=2.0.0-rebrand.38';
-// 2026 product-thumbnail and thermal-logo refinements. Kept in the V2 entry module so the packaged app always loads the matching styles.
-(function installSamarinaVisualFixes(){
+// Restore yesterday's compact, non-hovering cashier card presentation.
+(function installLegacyCashierCardStyle(){
  if(document.getElementById('samarina-v2-visual-fixes'))return;
- const style=document.createElement('style');style.id='samarina-v2-visual-fixes';style.textContent=`
- .smart-product-badge{position:relative;isolation:isolate;gap:4px;padding:8px 6px;border-radius:12px;border-width:1px;box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 2px 7px rgba(22,35,55,.06);background:radial-gradient(circle at 50% 0%,rgba(255,255,255,.92),var(--smart-bg,#eff5fb) 72%)}
- .smart-product-symbol{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.72);box-shadow:0 1px 3px rgba(25,38,55,.08)}
- .smart-product-badge svg{width:24px;height:24px;stroke-width:1.65}
- .smart-product-kind{display:block!important;padding:0!important;background:transparent!important;color:var(--smart-ink)!important;font-size:8px!important;font-weight:850!important;letter-spacing:.09em;line-height:1.1!important}
- .smart-product-badge b{font-size:12px;line-height:1.15;letter-spacing:-.02em}
- .smart-product-ref{display:block;max-width:100%;overflow:hidden;padding:3px 6px;border:1px solid rgba(80,100,125,.13);border-radius:5px;background:rgba(255,255,255,.72);color:var(--smart-ink);font:800 9px/1.1 ui-monospace,monospace;text-overflow:ellipsis;white-space:nowrap}
- .smart-product-badge.is-compact{gap:2px;padding:3px;border-radius:9px;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
- .smart-product-badge.is-compact .smart-product-symbol{width:17px;height:17px;border-radius:5px;box-shadow:none}
- .smart-product-badge.is-compact svg{width:12px;height:12px}
- .smart-product-badge.is-compact .smart-product-kind{font-size:5px!important;letter-spacing:.02em}
- .smart-product-badge.is-compact b{font-size:7px;line-height:1}
- .smart-product-badge.is-compact .smart-product-ref{max-width:100%;padding:1px 2px;border:0;border-radius:3px;font-size:5.5px;line-height:1}
- .catalogue-photo-frame{width:56px;height:56px;overflow:hidden;border-radius:10px;background:var(--smart-bg,#eff5fb)}
- .catalogue-photo-frame>img{width:56px!important;height:56px!important;max-width:56px!important;max-height:56px!important;object-fit:cover;border-radius:10px}
- .smart-product-badge.is-compact{width:56px;height:56px}
- .quick-item>.smart-product-badge,.quick-item>span:not(.sku):not([hidden]),.quick-item>span:not(.sku):not([hidden])>.smart-product-badge{width:100%;height:104px}
- .receipt-stack-logo{display:block;max-width:100%;height:auto!important;object-fit:contain;object-position:center;margin-top:0!important;margin-bottom:0!important}
- .receipt-stack-block:has(.receipt-stack-logo){padding-top:0!important;padding-bottom:0!important;margin-bottom:0!important;line-height:1!important}
- .receipt-stack-block:has(.receipt-stack-logo)+.receipt-stack-block{padding-top:1px!important;margin-top:0!important}
- .receipt-stack-store{line-height:1.12!important}
- /* SamarinaPOS cashier card redesign: clear boutique product tile hierarchy. */
- .quick-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(156px,1fr))!important;gap:14px!important;align-items:stretch!important}
- .quick-item{position:relative!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:0!important;min-height:0!important;height:100%!important;padding:9px!important;overflow:hidden!important;text-align:left!important;background:#fff!important;border:1px solid #e2e8f0!important;border-radius:15px!important;box-shadow:0 1px 2px rgba(15,23,42,.04)!important;transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease!important}
- .quick-item:hover,.quick-item:focus-visible{transform:translateY(-2px)!important;border-color:#94a3b8!important;box-shadow:0 8px 22px rgba(15,23,42,.10)!important;outline:none!important}
- .quick-item>.product-photo,.quick-item>.product-fallback{order:0!important;display:flex!important;width:100%!important;height:auto!important;aspect-ratio:1/1!important;min-height:0!important;max-height:none!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;border-radius:10px!important;background:#f5f7fa!important;margin:0 0 10px!important}
- .quick-item>.product-photo{object-fit:cover!important;object-position:center!important;padding:0!important}
- .quick-item>.product-fallback{padding:0!important}
- .quick-item .smart-product-badge{width:100%!important;height:100%!important;border:0!important;border-radius:10px!important;background:linear-gradient(145deg,#f8fafc,#e8eef5)!important;box-shadow:none!important}
- .quick-item>.sku{order:1!important;display:block!important;margin:0 0 4px!important;color:#94a3b8!important;font-size:9px!important;font-weight:750!important;letter-spacing:.08em!important;text-transform:uppercase!important}
- .quick-item>strong{order:2!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;min-height:36px!important;max-height:36px!important;margin:0 0 8px!important;overflow:hidden!important;white-space:normal!important;text-overflow:clip!important;color:#182638!important;font-size:12px!important;font-weight:750!important;line-height:1.45!important;letter-spacing:-.01em!important}
- .quick-item>b{order:3!important;display:block!important;margin-top:auto!important;color:#111f33!important;font-size:16px!important;font-weight:900!important;line-height:1.2!important;letter-spacing:-.035em!important}
- .quick-item>.badge{order:4!important;align-self:flex-start!important;width:max-content!important;max-width:100%!important;height:auto!important;max-height:22px!important;margin-top:7px!important;padding:3px 8px!important;border:1px solid #dbe7df!important;border-radius:999px!important;background:#f0f7f2!important;color:#34734a!important;font-size:9px!important;font-weight:800!important;line-height:1.2!important;white-space:nowrap!important;box-shadow:none!important}
- .quick-item>.product-fallback[hidden],.quick-item>.product-photo[hidden]{display:none!important}
- @media(max-width:680px){.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}.quick-item{padding:7px!important}}
- /* Receipt logo controls update the rendered node immediately and the shared preview model. */
- .receipt-stack-block:has(.receipt-stack-logo){margin:0!important;padding:0 0 1px!important;line-height:0!important}
- .receipt-stack-block:has(.receipt-stack-logo)+.receipt-stack-block{margin:0!important;padding-top:0!important}
- .receipt-stack-block:has(.receipt-stack-logo) .receipt-stack-logo{display:block!important;max-width:100%!important;height:auto!important;object-fit:contain!important;margin:0 auto!important}
- .receipt-stack-block:has(.receipt-stack-logo)+.receipt-stack-block .receipt-stack-store{line-height:1.08!important}
-
- .quick-item{display:grid!important;grid-template-rows:auto auto 112px auto auto!important;align-content:start!important;gap:7px!important;min-height:204px!important;padding:11px!important;overflow:hidden!important;text-align:left!important;background:#fff!important;border:1px solid #d7e0eb!important;border-radius:13px!important;box-shadow:0 3px 10px rgba(26,43,66,.09)!important;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease!important}
- .quick-item:hover{transform:translateY(-3px)!important;border-color:#7794b5!important;box-shadow:0 9px 22px rgba(26,43,66,.16)!important}
- .quick-item strong{display:block!important;min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;color:#1d2b3e!important;font-size:13px!important;font-weight:850!important;line-height:1.35!important;letter-spacing:-.02em!important}
- .quick-item>.sku{display:block!important;color:#8492a4!important;font-size:10px!important;font-weight:700!important;letter-spacing:.06em!important}
- .quick-item>.product-photo,.quick-item>.product-fallback{display:flex!important;width:100%!important;height:112px!important;min-height:112px!important;max-height:112px!important;box-sizing:border-box!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;border-radius:9px!important;background:#f2f5f9!important}
- .quick-item>.product-photo{object-fit:contain!important;padding:5px!important}
- .quick-item>.product-fallback[hidden]{display:none!important}
- .quick-item>.product-photo[hidden]{display:none!important}
- .quick-item>.product-fallback{padding:0!important}
- .quick-item .smart-product-badge{display:flex!important;width:100%!important;height:100%!important;box-sizing:border-box!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:7px!important;border:1px solid #dce4ee!important;border-radius:9px!important;background:linear-gradient(145deg,#f8fafc 0%,#e7edf5 100%)!important;box-shadow:inset 0 3px 0 #496987!important}
- .quick-item .smart-product-brand{color:#718096!important;font-size:9px!important;font-weight:900!important;letter-spacing:.14em!important}
- .quick-item .smart-product-ref{max-width:90%!important;color:#263d58!important;font-size:20px!important;font-weight:950!important;letter-spacing:-.05em!important}
- .quick-item .smart-product-swatches{display:flex!important;gap:5px!important}
- .quick-item .smart-product-swatch{width:11px!important;height:11px!important;border:1px solid #64748b55!important;border-radius:50%!important}
- .quick-item>b{display:block!important;padding-top:2px!important;color:#243b57!important;font-size:15px!important;font-weight:950!important;letter-spacing:-.025em!important}
- .quick-item>.badge{justify-self:start!important;border:1px solid #dce6ef!important;border-radius:6px!important;background:#eff4f8!important;color:#52677f!important;font-size:10px!important;font-weight:800!important;padding:4px 8px!important}
- .catalogue-photo-frame{border:1px solid #dfe6ef!important;border-radius:10px!important;background:#f3f6fa!important;padding:3px!important}
-
-
- `;
+ const style=document.createElement('style');style.id='samarina-v2-visual-fixes';
+ style.textContent=
+ '.quick-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;align-items:start!important}'+
+ '.quick-item{display:block!important;position:static!important;min-width:0!important;min-height:0!important;height:auto!important;padding:12px!important;overflow:visible!important;text-align:left!important;background:var(--bg-surface)!important;border:1px solid var(--border-hairline)!important;border-radius:8px!important;box-shadow:none!important;transform:none!important;transition:none!important}'+
+ '.quick-item:hover,.quick-item:focus-visible{transform:none!important;border-color:var(--border-hairline)!important;box-shadow:none!important;outline:none!important}'+
+ '.quick-item>strong{display:block!important;min-height:0!important;max-height:none!important;margin:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:inherit!important;line-height:inherit!important}'+
+ '.quick-item>.sku{display:block!important;margin:0!important;font-size:inherit!important;letter-spacing:normal!important;text-transform:none!important}'+
+ '.quick-item>.product-photo,.quick-item>.product-fallback{display:block!important;width:100%!important;height:84px!important;min-height:84px!important;max-height:84px!important;aspect-ratio:auto!important;object-fit:contain!important;margin:0!important;padding:0!important;border-radius:0!important;background:var(--bg-surface)!important}'+
+ '.quick-item>.product-fallback[hidden],.quick-item>.product-photo[hidden]{display:none!important}'+
+ '.quick-item>b{display:block!important;margin-top:4px!important}.quick-item>.badge{display:inline-block!important;margin-top:4px!important}'+
+ '.receipt-stack-logo{display:block;max-width:100%;height:auto!important;object-fit:contain;object-position:center;visibility:visible!important;opacity:1!important}';
  document.head.appendChild(style);
 })();
 
