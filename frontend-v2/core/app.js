@@ -474,7 +474,6 @@ function renderReceiptStudioDocument(sale,layout){
  state.receiptStoreProfile=state.receiptStoreProfile||state.storeProfile||state.user?.branch||state.user||{};
  const width=designerMm(activeLayout.width,80,30,210),isA4=activeLayout.format==='a4'||width===210,baseHeight=isA4?297:designerMm(activeLayout.height,160,80,1500);
  const sourceElements=activeLayout.elements.map(e=>({...e}));
- const itemsElement=sourceElements.find(e=>e.type==='items'),totalsElement=sourceElements.find(e=>e.type==='totals');
  const saleItems=rowsOf(sale?.items||sale?.itemsale);
  const savedTop=e=>Number(e.y||0)*baseHeight/100;
  const savedHeight=e=>Number(e.h||0)*baseHeight/100;
