@@ -1610,3 +1610,20 @@ html,body,#app{width:100%;height:100%;min-height:0;margin:0;overflow:hidden}
 #app .products-workspace #product-results .quick-item.pos-card-compact>strong{grid-column:2!important;grid-row:2!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;white-space:normal!important}
 #app .products-workspace #product-results .quick-item.pos-card-compact>b{grid-column:2!important;grid-row:3!important}
 #app .products-workspace #product-results .quick-item.pos-card-compact>.badge{grid-column:2!important;grid-row:4!important}
+
+/* Final cashier override: 3 horizontal compact cards per row. */
+#app .products-workspace #product-results.quick-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;grid-auto-rows:112px!important}
+#app .products-workspace #product-results .quick-item.pos-card-compact{display:flex!important;flex-direction:row!important;align-items:center!important;gap:11px!important;height:112px!important;min-height:112px!important;max-height:112px!important;padding:10px!important;background:#fff!important;border:1px solid #E2E8F0!important;box-shadow:0 2px 7px rgba(15,23,42,.055)!important;overflow:hidden!important}
+#app .products-workspace #product-results .pos-card-visual{flex:0 0 92px!important;width:92px!important;height:92px!important;background:#FAF7F4!important;overflow:hidden!important;border-radius:8px!important}
+#app .products-workspace #product-results .pos-card-visual>.product-photo{width:92px!important;height:92px!important;object-fit:cover!important}
+#app .products-workspace #product-results .product-monogram{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:space-between!important;width:92px!important;height:92px!important;padding:5px 4px!important;background:#FAF7F4!important;border:0!important;box-shadow:none!important}
+#app .products-workspace #product-results .product-monogram svg{width:56px!important;height:36px!important}
+#app .products-workspace #product-results .product-monogram small{font-size:8px!important;letter-spacing:.1em!important;color:#806B5B!important}
+#app .products-workspace #product-results .product-monogram b{font-size:9px!important;color:#4B382D!important}
+#app .products-workspace #product-results .pos-card-info{display:flex!important;flex:1!important;min-width:0!important;height:92px!important;flex-direction:column!important;justify-content:space-between!important;gap:2px!important;overflow:hidden!important}
+#app .products-workspace #product-results .pos-card-info>.sku{display:flex!important;justify-content:space-between!important;font:9px/1.2 ui-monospace,monospace!important;color:#64748B!important}
+#app .products-workspace #product-results .pos-card-info>strong{display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;max-height:30px!important;overflow:hidden!important;white-space:normal!important;text-overflow:clip!important;line-height:1.25!important;font-size:12px!important;font-weight:700!important;word-break:break-all!important}
+#app .products-workspace #product-results .pos-card-bottom{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:5px!important;white-space:nowrap!important}
+#app .products-workspace #product-results .pos-card-bottom>b{font-size:12px!important;font-weight:800!important;color:#0B1220!important;font-variant-numeric:tabular-nums!important}
+#app .products-workspace #product-results .pos-card-bottom>.badge{background:#ECFDF5!important;color:#065F46!important;font-size:8px!important;padding:2px 5px!important}
+.receipt-stack-block:has(.receipt-stack-logo){padding:0 0 2px!important;margin:0!important;line-height:0!important}.receipt-stack-block:has(.receipt-stack-logo)+.receipt-stack-block{padding-top:2px!important;margin-top:0!important}.receipt-stack-logo{margin:0!important;vertical-align:top!important}

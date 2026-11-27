@@ -27,7 +27,7 @@
     // head width; never synthesize a short custom page that can split a long bill.
     var pageSize = 'auto';
     style.textContent = '@page{size:' + pageSize + ';margin:0;}' +
-      '@media print{html,body{width:' + width + 'mm!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;margin:0!important;padding:0!important;}.rd-document,.receipt-stack-paper{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;margin:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}}';
+      '@media print{html,body{width:' + width + 'mm!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;margin:0!important;padding:0!important;}.rd-document,.receipt-stack-paper{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;margin:0!important;break-inside:avoid!important;page-break-inside:avoid!important;}}' + '@media print{.receipt-stack-block:has(.receipt-stack-logo){padding-top:0!important;padding-bottom:2px!important;margin:0!important;line-height:0!important}.receipt-stack-block:has(.receipt-stack-logo)+.receipt-stack-block{padding-top:2px!important;margin-top:0!important}.receipt-stack-logo{margin:0!important;vertical-align:top!important}}';
     // Rendered receipts carry their base style in the body. Keep the fitted
     // dimensions last so that the base @page size:auto cannot override them.
     (doc.body || doc.head).appendChild(style);
