@@ -246,8 +246,8 @@ test('2026 Receipt Studio renders French vertical blocks with independent typogr
   assert.match(app, /hideZeroCredit/);
   assert.match(app, /showSavings/);
   assert.match(app, /giftMode/);
-  assert.match(app, /logoWidth:105/);
-  assert.match(app, /logoMaxHeight:42/);
+  assert.match(app, /logoWidth:340/);
+  assert.match(app, /logoMaxHeight:180/);
   assert.match(app, /barcodeWidth:180/);
   assert.match(app, /barcodeHeight:28/);
   assert.match(app, /barcodeModuleWidth/);
