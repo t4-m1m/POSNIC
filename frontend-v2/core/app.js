@@ -29,6 +29,34 @@ import{receiptSaleDate,receiptSaleNumber,moveReceiptElement,receiptAmountDue,bui
  .receipt-stack-block:has(.receipt-stack-logo){padding-top:0!important;padding-bottom:0!important;margin-bottom:0!important;line-height:1!important}
  .receipt-stack-block:has(.receipt-stack-logo)+.receipt-stack-block{padding-top:1px!important;margin-top:0!important}
  .receipt-stack-store{line-height:1.12!important}
+ /* Samarina Boutique POS — decisive product-card hierarchy (runtime-injected, after legacy visual rules). */
+ .quick-grid{grid-template-columns:repeat(auto-fill,minmax(154px,1fr))!important;gap:10px!important;align-items:stretch!important}
+ .quick-item{position:relative!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:7px!important;min-height:0!important;height:auto!important;padding:9px!important;border:1px solid var(--border-hairline,#e2e8f0)!important;border-radius:13px!important;background:var(--bg-surface,#fff)!important;box-shadow:0 1px 2px #1720330a!important;overflow:hidden!important;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease!important}
+ .quick-item:hover{transform:translateY(-2px)!important;border-color:var(--accent-brand,#64748b)!important;box-shadow:0 8px 22px #17203314!important}
+ .quick-item:before,.quick-item:after{content:none!important;display:none!important}
+ .quick-item strong{order:0!important;display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal!important;overflow:hidden!important;min-height:30px;max-height:34px;font-size:12px!important;font-weight:750!important;line-height:1.3!important;color:var(--text-primary,#172033)!important}
+ .quick-item .sku{order:1!important;font-size:10px!important;line-height:1.2!important;color:var(--text-secondary,#64748b)!important}
+ .quick-item>.product-photo,.quick-item>.product-fallback{order:2!important;display:block!important;width:100%!important;height:112px!important;min-height:112px!important;max-height:112px!important;align-self:stretch!important;border-radius:9px!important;overflow:hidden!important}
+ .quick-item>.product-photo{object-fit:cover!important;object-position:center!important;background:#f1f5f9!important}
+ .quick-item>.product-fallback{background:transparent!important}
+ .quick-item>.product-fallback[hidden]{display:none!important}
+ .quick-item .smart-product-badge{position:relative!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;gap:5px!important;width:100%!important;height:112px!important;min-height:112px!important;max-height:112px!important;padding:12px 13px!important;border:1px solid #dce4ef!important;border-radius:9px!important;background:linear-gradient(135deg,#f8fafc 0%,#e8eef6 100%)!important;color:#172033!important;box-shadow:inset 3px 0 0 #334e72!important;text-align:left!important}
+ .quick-item .smart-product-symbol,.quick-item .smart-product-kind,.quick-item .smart-product-badge svg{display:none!important}
+ .quick-item .smart-product-brand{display:block!important;padding:0!important;background:transparent!important;color:#526176!important;font-size:10px!important;font-weight:850!important;letter-spacing:.12em!important;line-height:1.15!important}
+ .quick-item .smart-product-ref{display:block!important;max-width:100%!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:#172033!important;font:850 26px/1 ui-monospace,monospace!important;letter-spacing:-.06em!important}
+ .quick-item .smart-product-swatches{display:flex!important;gap:5px!important;align-items:center!important;margin-top:auto!important}
+ .quick-item .smart-product-swatch{display:block!important;width:11px!important;height:11px!important;border:1px solid #64748b66!important;border-radius:50%!important;background:var(--swatch,#94a3b8)!important}
+ .quick-item>b{order:3!important;font-size:14px!important;font-weight:800!important;line-height:1.2!important;color:var(--text-primary,#172033)!important}
+ .quick-item>.badge{order:4!important;align-self:flex-start!important;margin:0!important;padding:4px 8px!important;font-size:10px!important;font-weight:700!important}
+ .catalogue-photo-frame{display:inline-flex!important;width:56px!important;height:56px!important;min-width:56px!important;overflow:hidden!important;border-radius:10px!important;background:#eef2f7!important}
+ .catalogue-photo-frame>img{display:block!important;width:56px!important;height:56px!important;max-width:56px!important;max-height:56px!important;object-fit:cover!important;border-radius:10px!important}
+ .smart-product-badge.is-compact{display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;gap:3px!important;width:56px!important;height:56px!important;min-height:56px!important;padding:6px!important;border:1px solid #dce4ef!important;border-radius:10px!important;background:linear-gradient(135deg,#f8fafc,#e8eef6)!important;box-shadow:inset 2px 0 0 #334e72!important}
+ .smart-product-badge.is-compact .smart-product-brand{font-size:7px!important;letter-spacing:.03em!important}
+ .smart-product-badge.is-compact .smart-product-ref{font-size:15px!important;line-height:1!important}
+ .smart-product-badge.is-compact .smart-product-swatches{display:flex!important;gap:2px!important;margin-top:auto!important}
+ .smart-product-badge.is-compact .smart-product-swatch{width:6px!important;height:6px!important}
+ @media(max-width:680px){.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}.quick-item>.product-photo,.quick-item>.product-fallback,.quick-item .smart-product-badge{height:100px!important;min-height:100px!important;max-height:100px!important}}
+
  `;
  document.head.appendChild(style);
 })();
