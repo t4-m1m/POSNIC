@@ -1538,3 +1538,32 @@ html,body,#app{width:100%;height:100%;min-height:0;margin:0;overflow:hidden}
 .receipt-stack-logo{display:block;max-width:100%;max-height:280px;height:auto!important;object-fit:contain;object-position:center;image-rendering:auto;filter:none!important;margin:0!important}
 .receipt-stack-block:has(.receipt-stack-logo){padding-top:0!important;padding-bottom:2px!important;margin:0!important;line-height:1!important}
 .receipt-stack-block:has(.receipt-stack-logo)+.receipt-stack-block{padding-top:1px!important;margin-top:0!important}
+
+/* SamarinaPOS V2 cashier compact product tiles: final cascade override. */
+.quick-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;align-items:start!important}
+.quick-item{display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:6px!important;min-height:0!important;height:auto!important;padding:8px!important;overflow:hidden!important;border-radius:11px!important}
+.quick-item>.product-photo,.quick-item>.product-fallback{order:0!important;display:flex!important;width:100%!important;height:68px!important;min-height:68px!important;max-height:68px!important;aspect-ratio:auto!important;margin:0!important;padding:0!important;overflow:hidden!important;border-radius:8px!important;object-fit:cover!important;background:#f8fafc!important}
+.quick-item>.product-photo{object-fit:cover!important;object-position:center!important}
+.quick-item>.product-fallback{align-items:stretch!important;justify-content:stretch!important}
+.quick-item>.sku{order:1!important;display:block!important;margin:0!important;font-size:9px!important;line-height:1.1!important;color:#78879a!important}
+.quick-item>strong{order:2!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;min-height:0!important;max-height:31.25px!important;height:auto!important;overflow:hidden!important;margin:0!important;white-space:normal!important;text-overflow:clip!important;line-height:1.25!important;font-size:12.5px!important;font-weight:700!important;word-break:break-word!important;color:#182638!important}
+.quick-item>b{order:3!important;display:block!important;margin:0!important;font-size:14px!important;line-height:1.15!important;font-weight:850!important;color:#132238!important}
+.quick-item>.badge{order:4!important;align-self:flex-start!important;margin:0!important;padding:2px 7px!important;min-height:0!important;font-size:9px!important;line-height:1.2!important}
+.quick-item .smart-product-badge{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;gap:9px!important;width:100%!important;height:68px!important;min-height:68px!important;padding:7px 9px!important;border:0!important;border-radius:8px!important;box-shadow:none!important;background:var(--smart-gradient)!important;color:var(--smart-ink)!important}
+.quick-item .smart-product-badge.shoes{--smart-gradient:linear-gradient(115deg,#FDF2F4,#FCE7EB);--smart-ink:#9F344D}
+.quick-item .smart-product-badge.bags{--smart-gradient:linear-gradient(115deg,#FEF8EE,#FDECC8);--smart-ink:#925B16}
+.quick-item .smart-product-badge.outerwear{--smart-gradient:linear-gradient(115deg,#EEF2FF,#E0E7FF);--smart-ink:#394A8A}
+.quick-item .smart-product-badge.apparel{--smart-gradient:linear-gradient(115deg,#ECFDF5,#D1FAE5);--smart-ink:#176B50}
+.quick-item .smart-product-symbol{display:grid!important;place-items:center!important;flex:0 0 38px!important;width:38px!important;height:38px!important;border-radius:11px!important;background:rgba(255,255,255,.75)!important;box-shadow:0 1px 4px rgba(31,41,55,.08)!important}
+.quick-item .smart-product-symbol svg{width:27px!important;height:27px!important;stroke-width:1.7!important}
+.quick-item .smart-product-copy{display:flex!important;flex:1!important;min-width:0!important;flex-direction:column!important;align-items:flex-start!important;gap:2px!important}
+.quick-item .smart-product-kind{display:block!important;font-size:7px!important;line-height:1!important;letter-spacing:.08em!important;font-weight:850!important;color:var(--smart-ink)!important}
+.quick-item .smart-product-brand{display:block!important;max-width:100%!important;font-size:11px!important;line-height:1.05!important;font-weight:900!important;color:var(--smart-ink)!important}
+.quick-item .smart-product-ref{display:block!important;max-width:100%!important;padding:1px 4px!important;border:1px solid color-mix(in srgb,var(--smart-ink) 18%,transparent)!important;border-radius:4px!important;background:rgba(255,255,255,.65)!important;font:800 9px/1.1 ui-monospace,monospace!important;color:var(--smart-ink)!important}
+.quick-item .smart-product-swatches{display:flex!important;gap:3px!important;align-items:center!important;min-height:5px!important}
+.quick-item .smart-product-swatch{display:inline-block!important;width:6px!important;height:6px!important;border:1px solid rgba(20,30,40,.18)!important;border-radius:50%!important;background:var(--swatch)!important}
+@media(max-width:900px){.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:680px){.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}.quick-item{padding:7px!important}}
+/* Receipt Studio logo: stable live resize without replacing the preview while dragging. */
+#receipt-artboard .receipt-stack-logo{display:block!important;height:auto!important;max-width:100%!important;object-fit:contain!important;object-position:center!important;transition:none!important}
+#receipt-artboard .receipt-stack-block:has(.receipt-stack-logo){min-height:0!important;overflow:visible!important}
