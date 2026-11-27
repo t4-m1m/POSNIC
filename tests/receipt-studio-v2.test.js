@@ -165,9 +165,9 @@ test('V2 visible UI fixes are loaded by cache-busted assets and viewport-pinned 
  const renderer=app.slice(start,end);
  assert.ok(renderer.includes("const css='@page"),'vertical thermal renderer must own the print stylesheet');
  assert.ok(renderer.includes('width:\'+printable+\'mm'),'80mm and 58mm rolls must reserve their actual printable widths');
- assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.35'));
+ assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.36'));
  assert.ok(html.includes('styles/scroll-recovery.css?v=2.0.0-rebrand.25'));
- assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.35'));
+ assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.36'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail{position:fixed!important'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail>.rail-bottom{position:absolute!important'));
  assert.ok(app.includes('topbar-quick-actions'),'Acompte and Dépenses stay in the top bar');
@@ -302,17 +302,21 @@ test('Receipt Studio visible labels and payment methods are French', () => {
 });
 
 
-test('V2 create and edit item forms expose the local-first automatic product photo finder', () => {
+test('V2 item forms retain manual uploads and Catalogue exposes offline bulk photo matching and smart badges', () => {
  const app=fs.readFileSync(path.join(__dirname,'..','frontend-v2/core/app.js'),'utf8');
  const css=fs.readFileSync(path.join(__dirname,'..','frontend-v2/styles/app.css'),'utf8');
  const routes=fs.readFileSync(path.join(__dirname,'..','api/src/routes/items.routes.js'),'utf8');
  const controller=fs.readFileSync(path.join(__dirname,'..','api/src/controllers/items.controller.js'),'utf8');
  const storage=fs.readFileSync(path.join(__dirname,'..','api/src/services/item.service.js'),'utf8');
- assert.ok(app.includes('id="new-item-photo"')&&app.includes('id="edit-item-photo"'));
- assert.ok(app.includes('data-auto-photo-search')&&app.includes('data-auto-photo-refine'));
+ assert.ok(app.includes('id="new-item-photo"')&&app.includes('id="edit-item-photo"'),'manual local image upload remains available');
+ assert.ok(app.includes('id="bulk-photo-folder"')&&app.includes('data-action="bulk-photo-picker"')&&app.includes('items/bulk-assign-photos'),'Catalogue exposes the folder matcher and bulk save endpoint');
+ assert.ok(app.includes('smartItemBadge')&&app.includes('data-bulk-photo-item'),'smart thumbnail fallbacks and manual unmatched-file assignment are wired');
  assert.ok(app.includes('form.dataset.autoImage'));
- assert.ok(css.includes('.auto-photo-grid'));
- assert.ok(routes.includes("router.post('/search-images'")&&routes.includes("router.post('/fetch-remote-image'"));
- assert.ok(controller.includes('async searchImages')&&controller.includes('async fetchRemoteImage'));
+ assert.ok(css.includes('.smart-product-badge')&&css.includes('.bulk-photo-review'));
+ assert.ok(!app.includes('data-auto-photo-search')&&!app.includes('data-auto-photo-refine'),'remote image search controls are removed');
+ assert.ok(routes.includes("router.post('/bulk-assign-photos'"));
+ assert.ok(!routes.includes("router.post('/search-images'")&&!routes.includes("router.post('/fetch-remote-image'"));
+ assert.ok(controller.includes('async bulkAssignPhotos')&&!controller.includes('async searchImages')&&!controller.includes('async fetchRemoteImage'));
+ assert.ok(!controller.includes('item-image-finder'));
  assert.ok(storage.includes("path.join(uploadBaseDir, 'item_images')"));
 });

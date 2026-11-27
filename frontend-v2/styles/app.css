@@ -1434,167 +1434,84 @@ html,body,#app{width:100%;height:100%;min-height:0;margin:0;overflow:hidden}
 .exec-chart-legend{display:flex;gap:14px;flex-wrap:wrap;margin:8px 0;color:var(--muted);font-size:11px}.exec-chart-legend span{display:inline-flex;align-items:center;gap:5px}.exec-chart-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--primary)}.exec-chart-legend i.profit{background:#159b65}.exec-chart-legend i.charges{background:#e47769}
 
 
-/* SamarinaPOS 2026 executive dashboard refresh.
-   Scoped to the executive cockpit: cashier, catalogue, receipt and label
-   surfaces retain their existing geometry and component styles. */
-.exec-panel{
-  border:1px solid #e5eaf2;
-  border-radius:18px;
-  background:linear-gradient(180deg,#fff 0%,#fbfcff 100%);
-  box-shadow:0 8px 28px rgba(24,39,75,.045);
-  padding:20px;
-}
-.exec-kpis{
-  gap:14px;
-  margin:18px 0 22px;
-}
-.exec-kpi{
-  position:relative;
-  overflow:hidden;
-  min-width:0;
-  padding:19px 20px 16px;
-  border:1px solid #e4eaf3;
-  border-radius:17px;
-  background:#fff;
-  box-shadow:0 5px 18px rgba(25,42,70,.045);
-  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
-}
-.exec-kpi:hover{
-  transform:translateY(-2px);
-  border-color:#cbd7e8;
-  box-shadow:0 12px 26px rgba(25,42,70,.085);
-}
-.exec-kpi:before{
-  content:"";
-  position:absolute;
-  inset:0 auto 0 0;
-  width:3px;
-  background:linear-gradient(180deg,#4778dc,#77a7f2);
-  opacity:.85;
-}
-.exec-kpi small{
-  display:block;
-  color:#718096;
-  font-size:11px;
-  font-weight:750;
-  letter-spacing:.075em;
-  line-height:1.4;
-  text-transform:uppercase;
-}
-.exec-kpi strong{
-  display:block;
-  margin:11px 0 5px;
-  color:#15243b;
-  font-size:clamp(21px,2vw,29px);
-  font-weight:780;
-  letter-spacing:-.045em;
-  line-height:1.12;
-  font-variant-numeric:tabular-nums;
-}
-.exec-kpi>span{
-  color:#8290a3;
-  font-size:12px;
-  line-height:1.45;
-}
-.exec-kpi>div{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  min-height:27px;
-  margin-top:12px;
-  color:#5279bd;
-}
-.exec-spark{width:76px;height:25px;opacity:.8}
-.exec-growth{
-  display:inline-flex;
-  align-items:center;
-  border-radius:999px;
-  padding:4px 8px;
-  background:#eef5ff;
-  color:#3869b5;
-  font-size:11px;
-  font-weight:750;
-  font-variant-numeric:tabular-nums;
-}
-.exec-controls{
-  display:flex;
-  flex-direction:column;
-  gap:13px;
-  margin:16px 0 20px;
-  padding:15px 16px;
-  border:1px solid #e6ebf3;
-  border-radius:16px;
-  background:#f8faff;
-}
-.exec-periods{display:flex;flex-wrap:wrap;gap:7px}
-.exec-period{
-  border:1px solid #e1e7f0;
-  border-radius:9px;
-  padding:7px 11px;
-  background:#fff;
-  color:#66758a;
-  font-size:12px;
-  font-weight:650;
-  transition:all .15s ease;
-}
-.exec-period:hover{border-color:#a9bee0;color:#315e9f}
-.exec-period.active{
-  border-color:#315f9f;
-  background:#244f89;
-  color:#fff;
-  box-shadow:0 3px 9px rgba(36,79,137,.18);
-}
-.exec-filters{display:flex;align-items:center;flex-wrap:wrap;gap:9px}
-.exec-filters label{
-  display:flex;
-  align-items:center;
-  gap:7px;
-  color:#69788d;
-  font-size:12px;
-  font-weight:650;
-}
-.exec-chart-grid,.exec-table-grid{gap:15px}
-.exec-panel .section-head,.exec-panel>.section-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  margin-bottom:15px;
-}
-.exec-panel h3{
-  color:#24344d;
-  font-size:14px;
-  font-weight:760;
-  letter-spacing:-.015em;
-}
-.exec-panel .table-wrap{
-  overflow:auto;
-  border:1px solid #edf0f5;
-  border-radius:11px;
-}
-.exec-panel table{font-size:12px}
-.exec-panel thead th{
-  background:#f6f8fc;
-  color:#78869a;
-  font-size:10px;
-  font-weight:750;
-  letter-spacing:.06em;
-  text-transform:uppercase;
-}
-.exec-panel tbody tr:hover{background:#f7faff}
-.exec-fallback{
-  margin:12px 0;
-  border:1px solid #f2dfb5;
-  border-radius:12px;
-  padding:11px 14px;
-  background:#fff9eb;
-  color:#8b6727;
-  font-size:12px;
-}
-@media(max-width:760px){
-  .exec-panel{padding:14px;border-radius:14px}
-  .exec-kpi{padding:15px}
-  .exec-filters{align-items:stretch}
-  .exec-filters>*{max-width:100%}
-}
+/* SamarinaPOS 2026 decision-first executive dashboard: calm hierarchy, useful density, precise figures. */
+.exec-panel{min-width:0;overflow:auto;padding:18px;border:1px solid #e4e9f1;border-radius:13px;background:#fff;box-shadow:0 1px 2px rgba(18,35,58,.035)}
+.exec-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0 18px}
+.exec-kpi{position:relative;min-width:0;padding:15px 16px;border:1px solid #e5eaf1;border-radius:12px;background:#fff;box-shadow:none;transition:border-color .15s ease,background .15s ease}
+.exec-kpi:hover{transform:none;border-color:#bdcce0;background:#fbfcfe;box-shadow:none}
+.exec-kpi:before{display:none}
+.exec-kpi small{display:block;color:#68778b;font-size:10px;font-weight:750;letter-spacing:.055em;text-transform:uppercase}
+.exec-kpi strong{display:block;margin:10px 0 5px;color:#14243b;font-size:clamp(20px,1.8vw,27px);font-weight:760;letter-spacing:-.035em;line-height:1.12;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.exec-kpi>span{color:#758399;font-size:11px;line-height:1.45}
+.exec-kpi>div{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:22px;margin-top:10px;color:#526b8d}
+.exec-kpi:first-child{border-color:#b9cce5;background:#f5f8fd}
+.exec-kpi:first-child strong{color:#173f70}
+.exec-spark{width:70px;height:22px;opacity:.75}
+.exec-growth{display:inline-flex;align-items:center;padding:3px 7px;border:1px solid #dbe7f6;border-radius:6px;background:#edf4fd;color:#315f96;font-size:10px;font-weight:750;font-variant-numeric:tabular-nums}
+.exec-controls{display:flex;flex-direction:column;gap:11px;margin:14px 0 18px;padding:12px 13px;border:1px solid #e4e9f1;border-radius:11px;background:#f8fafc}
+.exec-periods{display:flex;flex-wrap:wrap;gap:5px}
+.exec-period{padding:6px 10px;border:1px solid transparent;border-radius:7px;background:transparent;color:#637187;font-size:11px;font-weight:650;transition:background .12s ease,color .12s ease}
+.exec-period:hover{border-color:#dbe4f0;background:#fff;color:#244d7b}
+.exec-period.active{border-color:#274f7f;background:#274f7f;color:#fff;box-shadow:none}
+.exec-filters{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.exec-filters label{display:flex;align-items:center;gap:6px;color:#64748b;font-size:11px;font-weight:650}
+.exec-chart-grid,.exec-table-grid{gap:12px}
+.exec-panel .section-head,.exec-panel>.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.exec-panel h3{color:#20334d;font-size:13px;font-weight:750;letter-spacing:-.01em}
+.exec-panel .table-wrap{overflow:auto;border:1px solid #e9edf3;border-radius:9px}
+.exec-panel table{font-size:11px}
+.exec-panel thead th{background:#f6f8fb;color:#718096;font-size:9px;font-weight:750;letter-spacing:.055em;text-transform:uppercase}
+.exec-panel tbody tr:hover{background:#f7f9fc}
+.exec-line-chart{height:190px}
+.exec-axis{color:#8491a3;font-size:9px}
+.exec-donut-layout{gap:16px;padding:12px}
+.exec-donut{width:160px;height:160px}
+.exec-donut>div{width:108px;height:108px}
+.exec-donut b{color:#1d3049;font-size:12px;font-variant-numeric:tabular-nums}
+.exec-donut small{font-size:9px}
+.exec-legend{gap:8px;color:#526177;font-size:10px}
+.exec-legend b{margin-left:auto;color:#20334d;font-variant-numeric:tabular-nums}
+.exec-dot{width:8px;height:8px;flex:none}
+.exec-rank-row{gap:8px;font-size:10px}
+.exec-rank-track{height:7px;background:#edf1f6}
+.exec-rank-track i{background:#416f9f}
+.exec-stock-metrics>div{border:1px solid #e8edf3;border-radius:8px;background:#f8fafc}
+.exec-insights{margin:12px 0;padding:14px;border:1px solid #e4e9f1;border-radius:12px;background:#fff}
+.exec-insight-grid{gap:8px}
+.exec-insight-grid article{padding:10px;border:1px solid #e8edf3;border-radius:9px;background:#fbfcfe}
+.exec-insight-grid p{color:#65758b;font-size:10px;line-height:1.5}
+.exec-fallback{margin:10px 0;padding:10px 12px;border:1px solid #ead8ad;border-radius:9px;background:#fffaf0;color:#806128;font-size:11px}
+.exec-chart-legend{gap:12px;margin:7px 0;color:#69788c;font-size:10px}
+@media(max-width:1050px){.exec-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.exec-chart-grid,.exec-table-grid{grid-template-columns:1fr}}
+@media(max-width:620px){.exec-kpis,.exec-insight-grid{grid-template-columns:1fr}.exec-periods{flex-wrap:nowrap;overflow-x:auto}.exec-period{white-space:nowrap}.exec-filters{align-items:stretch}.exec-filters>*{max-width:100%}}
+@media print{.exec-controls,.shell>.rail,.topbar{display:none!important}.exec-chart-grid,.exec-table-grid{break-inside:avoid}}
+/* Smart product badges live inside existing product-photo dimensions. */
+.smart-product-badge{box-sizing:border-box;width:100%;height:100%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;overflow:hidden;padding:5px 4px;border:1px solid var(--smart-border,#cbd8e8);border-radius:9px;background:var(--smart-bg,#eff5fb);color:var(--smart-ink,#315a83);text-align:center}
+.smart-product-badge svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.smart-product-badge b{display:block;max-width:100%;overflow:hidden;color:inherit;font-size:10px;font-weight:800;line-height:1.15;text-overflow:ellipsis;white-space:nowrap}
+.smart-product-badge small{display:block;max-width:100%;overflow:hidden;padding:2px 5px;border-radius:5px;background:rgba(255,255,255,.72);color:inherit;font-family:ui-monospace,monospace;font-size:9px;font-weight:800;line-height:1.1;text-overflow:ellipsis;white-space:nowrap}
+.smart-product-badge.smart-shoe{--smart-bg:#fff0f2;--smart-border:#f1c5ce;--smart-ink:#a44d62}
+.smart-product-badge.smart-bag{--smart-bg:#fff7e8;--smart-border:#ecd7a8;--smart-ink:#98702d}
+.smart-product-badge.smart-coat{--smart-bg:#eef2fb;--smart-border:#c9d3e9;--smart-ink:#536b99}
+.smart-product-badge.smart-dress{--smart-bg:#f5effb;--smart-border:#dfcbea;--smart-ink:#805b9b}
+.smart-product-badge.smart-apparel{--smart-bg:#eaf7f2;--smart-border:#bfdfd2;--smart-ink:#367d68}
+.smart-product-badge.smart-tag{--smart-bg:#eef5fb;--smart-border:#c8d9e9;--smart-ink:#456f96}
+.smart-product-badge.is-compact{width:34px;height:34px;gap:1px;padding:2px;border-radius:7px}
+.smart-product-badge.is-compact svg{width:11px;height:11px}
+.smart-product-badge.is-compact b{font-size:5.5px;line-height:1}
+.smart-product-badge.is-compact small{padding:1px 2px;font-size:5px;line-height:1}
+.catalogue-photo-frame{position:relative;display:inline-flex;width:34px;height:34px;vertical-align:middle}
+.catalogue-photo-frame>.smart-product-badge{position:absolute;inset:0}
+.bulk-photo-review{display:grid;gap:12px;min-width:0}
+.bulk-photo-review>p{margin:0;font-size:12px}
+.bulk-photo-table{display:grid;gap:7px;max-height:58vh;overflow:auto;padding:2px}
+.bulk-photo-row{display:grid;grid-template-columns:54px minmax(110px,1fr) minmax(170px,1.4fr) auto;align-items:center;gap:9px;padding:8px;border:1px solid var(--border);border-radius:9px;background:var(--surface)}
+.bulk-photo-row>img{width:54px;height:54px;object-fit:cover;border-radius:7px;background:var(--bg)}
+.bulk-photo-file{display:grid;gap:3px;min-width:0}
+.bulk-photo-file b,.bulk-photo-file small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bulk-photo-file b{font-size:11px}
+.bulk-photo-file small{color:var(--muted);font-size:10px}
+.bulk-photo-row>label{display:flex;align-items:center;gap:4px;font-size:10px;white-space:nowrap}
+@media(max-width:720px){.bulk-photo-row{grid-template-columns:44px minmax(0,1fr) auto}.bulk-photo-row>img{width:44px;height:44px}.bulk-photo-row select{grid-column:2/4;width:100%}}
+
+.quick-item>.smart-product-badge{width:84px;height:84px;flex:none}.quick-item>span:not(.sku):not([hidden]){display:block;width:84px;height:84px;flex:none}.quick-item>span:not(.sku):not([hidden])>.smart-product-badge{width:84px;height:84px}.quick-item>span[hidden]{display:none!important}

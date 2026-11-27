@@ -292,6 +292,7 @@ router.get('/supplierItemsReportTable', bindController(itemsController.supplierI
 router.get('/itemReportTable', bindController(itemsController.itemReportTable));
 
 // PHP: uploadItemMultiImage() - Upload images
+router.post('/bulk-assign-photos', bindController(itemsController.bulkAssignPhotos));
 router.post('/uploadItemMultiImage', bindController(itemsController.uploadItemMultiImage));
 
 // PHP: getReceivingItemsAjaxList() - Receiving autocomplete
