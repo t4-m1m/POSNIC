@@ -1588,3 +1588,16 @@ html,body,#app{width:100%;height:100%;min-height:0;margin:0;overflow:hidden}
 .quick-item .smart-product-swatch{width:6px!important;height:6px!important;border-radius:50%!important;background:var(--swatch)!important}
 #receipt-artboard .receipt-stack-logo{display:block!important;height:auto!important;max-width:100%!important;object-fit:contain!important;visibility:visible!important;opacity:1!important}
 @media(max-width:900px){.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+
+
+/* Restore original rebranded V2 catalogue card proportions and receipt logo scale. */
+.quick-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))!important;gap:10px!important}
+.quick-item{gap:7px!important;padding:9px!important;min-height:0!important;height:auto!important}
+.quick-item>.product-photo,.quick-item>.product-fallback{width:100%!important;height:84px!important;min-height:84px!important;max-height:84px!important;object-fit:contain!important;background:var(--surface-2,#f4f6f9)!important}
+.quick-item>.smart-product-badge,.quick-item>span:not(.sku):not([hidden]),.quick-item>span:not(.sku):not([hidden])>.smart-product-badge{width:100%!important;height:84px!important;min-height:84px!important}
+.quick-item .smart-product-badge{height:84px!important;min-height:84px!important;flex-direction:column!important;justify-content:center!important;align-items:center!important;padding:7px 5px!important;gap:3px!important}
+.quick-item .smart-product-badge svg{width:22px!important;height:22px!important}
+.quick-item .smart-product-badge b{font-size:10px!important}
+.quick-item .smart-product-badge small{font-size:9px!important}
+.quick-item>strong{-webkit-line-clamp:unset!important;max-height:none!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;font-size:13px!important;line-height:1.3!important}
+#receipt-artboard .receipt-stack-logo,.receipt-stack-logo{max-height:none!important;height:auto!important;max-width:100%!important;object-fit:contain!important;visibility:visible!important;opacity:1!important}
