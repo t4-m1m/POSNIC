@@ -1414,3 +1414,10 @@ html,body,#app{width:100%;height:100%;min-height:0;margin:0;overflow:hidden}
 .receipt-stack-total span{text-align:left}.receipt-stack-total b{text-align:right}.receipt-stack-divider{width:100%;border:0;border-top:1px solid #111;margin:0}.receipt-stack-qr{text-align:center;font-size:10px;overflow-wrap:anywhere}.receipt-stack-qr strong{display:block;font-size:12px;margin-bottom:4px}
 
 .receipt-stack-total span{text-align:left}.receipt-stack-total b{text-align:right}.receipt-stack-divider{width:100%;border:0;border-top:1px solid #111;margin:0}.receipt-stack-qr{text-align:center;font-size:10px;overflow-wrap:anywhere}.receipt-stack-qr strong{display:block;font-size:12px;margin-bottom:4px}
+
+/* Receipt fixes: compact boutique mark, independently sized Code128 and continuous roll preview. */
+.receipt-stack-logo{max-height:42px!important;max-width:100%!important;object-fit:contain!important}
+.receipt-stack-brand{font-size:18px!important;line-height:1.05!important}
+.receipt-stack-barcode{max-width:100%;overflow:hidden}
+.receipt-stack-barcode svg{display:block;width:100%;max-width:100%;height:auto;margin:0 auto}
+@media print{html,body{height:auto!important;min-height:0!important;overflow:visible!important}.receipt-stack-paper{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;break-after:auto!important;page-break-after:auto!important}.receipt-stack-block{break-inside:avoid;page-break-inside:avoid}}
