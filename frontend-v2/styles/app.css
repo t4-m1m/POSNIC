@@ -1421,3 +1421,10 @@ html,body,#app{width:100%;height:100%;min-height:0;margin:0;overflow:hidden}
 .receipt-stack-barcode{max-width:100%;overflow:hidden}
 .receipt-stack-barcode svg{display:block;width:100%;max-width:100%;height:auto;margin:0 auto}
 @media print{html,body{height:auto!important;min-height:0!important;overflow:visible!important}.receipt-stack-paper{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;break-after:auto!important;page-break-after:auto!important}.receipt-stack-block{break-inside:avoid;page-break-inside:avoid}}
+
+/* Continuous roll print surface and compact/resizable receipt artwork. */
+.receipt-stack-logo{max-height:42px!important;max-width:100%!important;object-fit:contain!important}
+.receipt-stack-brand{font-size:18px!important;line-height:1.05!important}
+.receipt-stack-barcode{max-width:100%;overflow:hidden}
+.receipt-stack-barcode svg{display:block;width:100%;max-width:100%;height:auto;margin:0 auto}
+@media print{html,body{height:auto!important;min-height:0!important;overflow:visible!important}.receipt-stack-paper{height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;break-after:auto!important;page-break-after:auto!important}.receipt-stack-block{break-inside:avoid;page-break-inside:avoid}}

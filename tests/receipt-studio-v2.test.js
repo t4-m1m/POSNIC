@@ -187,7 +187,8 @@ test('V2 sale printing loads saved Studio layout, verifies sale items, and uses 
  assert.ok(fn.includes('data-receipt-studio'));
  assert.match(fn,/const saleItems=rowsOf\(sale\?\.items\|\|sale\?\.itemsale\)/);
  assert.match(fn,/html\.includes\(esc\(name\)\)/);
- assert.match(fn,/height:renderedHeight/);
+ assert.match(fn,/fitReceipt:layout\.format!==\x27a4\x27/);
+ assert.doesNotMatch(fn,/customPageSize:/);
  assert.match(fn,/fitReceipt:layout\.format!==\x27a4\x27/,'thermal receipts must use the print engine content-fit measurement');
  assert.match(app,/await loadSavedReceiptLayoutForPrinting\(\);\s*const sample=state\.receiptSample/);
 });
@@ -201,6 +202,10 @@ test('Windows print-window reuse reloads the complete HTML document and waits fo
  assert.match(layout,/\.receipt-artboard\[data-receipt-studio="true"\]/);
  const app=fs.readFileSync(path.join(__dirname,'..','frontend-v2/core/app.js'),'utf8');
  assert.ok(app.includes('data-receipt-studio'));
+ const pageLayout=fs.readFileSync(path.join(__dirname,'..','src/receipt-page-layout.js'),'utf8');
+ assert.ok(pageLayout.includes('.receipt-stack-paper[data-receipt-studio="true"]'));
+ assert.ok(pageLayout.includes('.rd-document,.receipt-stack-paper{height:auto!important'));
+ assert.ok(hardware.includes('data-receipt-studio\\s*='));
 });
 
 test('V2 sidebar hover expands the fixed rail and reveals navigation labels', () => {
