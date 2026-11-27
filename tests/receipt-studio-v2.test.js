@@ -116,8 +116,10 @@ test('V2 receipt and label screens wire the corrected values into preview and pr
   const app = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/core/app.js'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/styles/app.css'), 'utf8');
   assert.match(app, /receiptSaleNumber\(sale\)/);
-  assert.match(app, /function normalizeReceiptElements\(elements\)/, 'printer settings must use a local normalizer and never depend on a stale module binding');
-  assert.ok((app.match(/normalizeReceiptElements\(/g) || []).length >= 3, 'printer settings and both receipt studio paths must use the local normalizer');
+  assert.match(app, /function normalizeReceiptStackLayout\(layout=\{\}\)/, 'printer settings and print renderer must share the vertical block normalizer');
+  assert.ok((app.match(/normalizeReceiptStackLayout\(/g) || []).length >= 3, 'preview, save and print paths must share the vertical block normalizer');
+  assert.match(app, /function renderReceiptStackBlocks\(sale,layout\)/);
+  assert.match(app, /receipt-stack-meta/);
   assert.match(app, /async function resolveLabelPrinterName\(/);
   assert.match(app, /async function hydrateLabelPrintItem\(/, 'label routes must fetch the full priced item before rendering');
   assert.match(app, /async function sendLabelPrintJob\(/, 'V2 labels must use the shared V1 HTML printer bridge');
@@ -161,15 +163,16 @@ test('V2 visible UI fixes are loaded by cache-busted assets and viewport-pinned 
  const start=app.indexOf('function renderReceiptStudioDocument(sale,layout)');
  const end=app.indexOf('function refreshReceiptDesignerPreview()',start);
  const renderer=app.slice(start,end);
- assert.ok(renderer.includes("let css='@page"),'designer preview CSS must be mutable');
- assert.ok(!renderer.includes("const css='@page"),'const reassignment must not crash Printer Settings');
- assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.30'));
+ assert.ok(renderer.includes("const css='@page"),'vertical thermal renderer must own the print stylesheet');
+ assert.ok(renderer.includes('width:\'+printable+\'mm'),'80mm and 58mm rolls must reserve their actual printable widths');
+ assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.31'));
  assert.ok(html.includes('styles/scroll-recovery.css?v=2.0.0-rebrand.25'));
- assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.30'));
+ assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.31'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail{position:fixed!important'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail>.rail-bottom{position:absolute!important'));
  assert.ok(app.includes('topbar-quick-actions'),'Acompte and Dépenses stay in the top bar');
- assert.ok(css.includes('.receipt-totals-block>div{border:0!important'));
+ assert.ok(css.includes('.receipt-stack-total{display:flex;justify-content:space-between'));
+ assert.ok(css.includes('.receipt-stack-items{width:100%;max-width:100%'));
  assert.ok(!renderer.includes('border:1px solid #2563eb'));
  assert.ok(!renderer.includes('border:2px solid #2563eb'));
 });
@@ -225,25 +228,24 @@ test('variant builder creates a true cartesian product and keeps axis attributes
 });
 
 
-test('V2 Receipt Studio applies block fonts to inner basket and every totals row in preview and print', () => {
+test('2026 Receipt Studio renders French vertical blocks with independent typography and dynamic payment rules', () => {
   const app = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/core/app.js'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/styles/app.css'), 'utf8');
-  const rendererStart = app.indexOf('function receiptDesignerElement(e)');
-  const rendererEnd = app.indexOf('function zrSettings(', rendererStart);
-  const renderer = app.slice(rendererStart, rendererEnd);
-  assert.match(renderer, /receiptAmountDue\(sale\)/);
-  assert.match(renderer, /totalPartStyle=.*font-size:/);
-  assert.match(renderer, /align-items:'\+\(\['items','totals'\]/);
-  assert.match(app, /font-size:'\+itemFont\+'px!important/);
-  assert.match(app, /font-size:'\+totalsFont\+'px!important/);
-  assert.doesNotMatch(renderer, /Reste à payer/);
-  assert.doesNotMatch(renderer, /Balance due/);
-  assert.match(app, /gapMm=3/);
-  assert.match(app, /overlapsHorizontally/);
-  assert.match(app, /requiredItemsMm/);
-  assert.match(app, /requiredTotalsMm/);
-  assert.match(css, /#receipt-artboard \.designer-object\[data-receipt-object="totals"\][\s\S]*?font-size: inherit !important/);
-  assert.match(css, /flex: 0 1 auto !important/);
+  assert.match(app, /function defaultReceiptStackBlocks\(\)/);
+  assert.match(app, /function renderReceiptStackBlocks\(sale,layout\)/);
+  assert.match(app, /receipt-stack-items/);
+  assert.match(app, /receipt-stack-total/);
+  assert.match(app, /receiptAmountDue\(sale\)/);
+  assert.match(app, /hideZeroDiscount/);
+  assert.match(app, /hideZeroCredit/);
+  assert.match(app, /showSavings/);
+  assert.match(app, /giftMode/);
+  assert.match(app, /logoWidth/);
+  assert.match(app, /threshold/);
+  assert.match(css, /\.receipt-stack-paper/);
+  assert.match(css, /\.receipt-stack-items/);
+  assert.match(css, /\.receipt-stack-total b\{text-align:right\}/);
+  assert.doesNotMatch(app, /Balance due/);
 });
 
 test('V2 New Article displays and persists generated cartesian variant combinations', () => {
@@ -256,17 +258,18 @@ test('V2 New Article displays and persists generated cartesian variant combinati
   assert.match(app, /Les codes-barres des variantes doivent être uniques/);
 });
 
-test('Receipt Studio preserves saved horizontal positions and pushes overlapping blocks down by measured content height', () => {
+test('Receipt Studio uses vertical flow and continuous 58mm / 80mm print paper', () => {
   const app = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/core/app.js'), 'utf8');
   const rendererStart = app.indexOf('function renderReceiptStudioDocument(sale,layout)');
-  const rendererEnd = app.indexOf('function refreshReceiptDesignerPreview()', rendererStart);
+  const rendererEnd = app.indexOf('async function loadSavedReceiptLayoutForPrinting()', rendererStart);
   const renderer = app.slice(rendererStart, rendererEnd);
-  assert.ok(renderer.includes('const measured=new Map'));
-  assert.ok(renderer.includes('overlapsHorizontally'));
-  assert.ok(renderer.includes('top=previousBottom+gapMm'));
-  assert.ok(renderer.includes('requiredItemsMm'));
-  assert.ok(renderer.includes('requiredTotalsMm'));
-  assert.ok(renderer.includes('lang='));
+  assert.ok(renderer.includes("@page{size:'+width+'mm auto;margin:0}"));
+  assert.ok(renderer.includes('display:flex;flex-direction:column'));
+  assert.ok(renderer.includes('data-receipt-studio='));
+  assert.ok(app.includes('function renderReceiptStackBlocks(sale,layout)'));
+  assert.ok(app.includes('data-receipt-stack-move'));
+  assert.ok(app.includes('data-receipt-stack-toggle'));
+  assert.ok(!renderer.includes('position:absolute'));
 });
 
 test('Receipt Studio visible labels and payment methods are French', () => {
