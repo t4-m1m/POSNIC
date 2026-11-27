@@ -18,6 +18,8 @@ function makeService() {
   const svc = Object.create(ItemService.prototype);
   svc.calls = [];
   svc.deleted = [];
+  svc.parentDocuments = [];
+  svc.failParentInsert = false;
   let counter = 0;
   svc.addItem = async ({ data }) => {
     svc.calls.push(data);
@@ -27,9 +29,9 @@ function makeService() {
   };
   svc.repository = {
     collectionName: 'items',
-    getCollection: async () => ({
-      findOne: async () => null,
-    }),
+    getCollection: async (name) => name === 'item_families' ? ({
+      insertOne: async (doc) => { if (svc.failParentInsert) throw new Error('parent write failed'); svc.parentDocuments.push(doc); return { insertedId: doc._id }; },
+    }) : ({ findOne: async () => null }),
     hardDeleteItems: async (ids) => {
       svc.deleted.push(...ids);
       return { deleted: ids.length };
@@ -51,11 +53,12 @@ const family = (rows, extra = {}) => ({
 });
 
 describe('validation happens before creation', () => {
-  test('fewer than two variants is not a family', async () => {
+  test('a single active combination is a valid matrix for a newly stocked model', async () => {
     const svc = makeService();
     const r = await svc.createItemFamily(family([{ name: 'Shirt / S', variant_value: 'S' }]));
-    expect(r.status).toBe(false);
-    expect(svc.calls).toHaveLength(0);
+    expect(r.status).toBe(true);
+    expect(svc.calls).toHaveLength(1);
+    expect(svc.parentDocuments).toHaveLength(1);
   });
 
   test('a row without a name or value stops everything before anything exists', async () => {
@@ -126,6 +129,21 @@ describe('creation', () => {
     expect(svc.calls[0].variant_parent_name).toBe('Shirt');
     expect(svc.calls.map((c) => c.variant_value)).toEqual(['S', 'M', 'L']);
     expect(String(r.data.variant_group_id)).toBe([...groupIds][0]);
+    expect(svc.parentDocuments).toHaveLength(1);
+    expect(svc.parentDocuments[0].variants).toHaveLength(3);
+    expect(svc.parentDocuments[0].quantity).toBe(0);
+  });
+
+  test('a parent-model write failure rolls back every created SKU', async () => {
+    const svc = makeService();
+    svc.failParentInsert = true;
+    const r = await svc.createItemFamily(family([
+      { name: 'Shirt / S', variant_value: 'S' },
+      { name: 'Shirt / M', variant_value: 'M' },
+    ]));
+    expect(r.status).toBe(false);
+    expect(r.message).toContain('parent matrix');
+    expect(svc.deleted).toEqual(['id-1', 'id-2']);
   });
 
   test('a mid-way failure rolls back exactly the created children and names the culprit', async () => {
