@@ -226,6 +226,8 @@ class ItemService {
         'PNG',
         'jpeg',
         'JPEG',
+        'webp',
+        'WEBP',
         'bmp',
         'BMP',
       ];

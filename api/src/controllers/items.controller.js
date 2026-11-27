@@ -1,5 +1,6 @@
 // src/controllers/items_controller.js
 const BaseController = require('./base.controller');
+const itemImageFinder = require('../services/item-image-finder');
 const { currentSecret } = require('../db/tenant-context');
 const ItemService = require('../services/item.service');
 const { safeJsonParse, formatDate } = require('../utils/helpers');
@@ -2512,6 +2513,61 @@ class ItemsController extends BaseController {
     }
   }
 
+  async searchImages(req, res) {
+    try {
+      await this.ensureContext(req);
+      if (!this.checkPermission('item', 'write', req.user)) return this.error(res, 'Accès refusé', 403);
+      const payload = req.body || {};
+      const db = await require('../models/base.model').getDb();
+      const rawBrand = String(payload.brand || '').trim();
+      let brandDoc = null;
+      const ObjectId = require('mongodb').ObjectId;
+      if (payload.brandId && ObjectId.isValid(String(payload.brandId))) brandDoc = await db.collection('brands').findOne({ _id: new ObjectId(String(payload.brandId)) });
+      if (!brandDoc && rawBrand) brandDoc = await db.collection('brands').findOne({ $or: [{ name: rawBrand }, { brand_name: rawBrand }, { abbreviation: rawBrand }, { brand_abbreviation: rawBrand }, { code: rawBrand }, { brand_code: rawBrand }] });
+      const fullBrand = String(brandDoc?.name || brandDoc?.brand_name || brandDoc?.full_name || rawBrand).trim();
+      const rawName = String(payload.name || '').trim();
+      const match = rawName.match(/^(.*?)\s+[A-Z0-9]{2,10}-\d{2}-\d{2}\/(.+)$/i);
+      const articleType = String(payload.articleType || match?.[1] || rawName.replace(/\s+[A-Z0-9]{2,10}-\d{2}-\d{2}\/.+$/i, '')).trim();
+      const reference = String(payload.reference || match?.[2] || '').trim();
+      if (!fullBrand || !articleType || !reference) return this.error(res, 'Marque, type d’article et référence obligatoires.', 400);
+      const primary = String(payload.customQuery || [fullBrand, articleType, reference].join(' ')).trim();
+      const fallback = [fullBrand, reference].join(' ');
+      const limit = Math.max(1, Math.min(6, Number(payload.limit) || 6));
+      let results = await itemImageFinder.searchImages(primary, limit);
+      let queryUsed = primary;
+      if (results.length < 4 && fallback.toLocaleLowerCase('fr') !== primary.toLocaleLowerCase('fr')) {
+        const extra = await itemImageFinder.searchImages(fallback, limit);
+        const seen = new Set(results.map((item) => item.url));
+        results = results.concat(extra.filter((item) => !seen.has(item.url))).slice(0, limit);
+        if (results.length) queryUsed = primary + ' · ' + fallback;
+      }
+      return this.success(res, { queryUsed, results }, 'Recherche de photos terminée');
+    } catch (error) {
+      console.error('Product image search failed:', error);
+      return this.error(res, error.message || 'Recherche de photos impossible', 503);
+    }
+  }
+
+  async fetchRemoteImage(req, res) {
+    try {
+      await this.ensureContext(req);
+      if (!this.checkPermission('item', 'write', req.user)) return this.error(res, 'Accès refusé', 403);
+      const imageUrl = String(req.body?.imageUrl || '').trim();
+      if (!imageUrl) return this.error(res, 'Adresse de la photo manquante.', 400);
+      const downloaded = await itemImageFinder.downloadImage(imageUrl);
+      const result = await this.service.uploadItemImages([{ name: 'photo-produit.' + downloaded.extension, size: downloaded.buffer.length, cover: 'yes', data: downloaded.buffer.toString('base64') }], { protocol: req.protocol, host: req.get('host') });
+      if (!result?.status || !result.data?.[0]?.name) return this.error(res, result?.message || 'Enregistrement local de la photo impossible.', result?.code || 500);
+      const localUrl = result.data[0].name;
+      if (req.body?.itemId) {
+        const saved = await this.service.updateItem({ id: String(req.body.itemId), data: { image: localUrl, image_url: localUrl, images: [{ name: localUrl, url: localUrl, cover: 'yes' }] }, branchId: this.model?.branchId || null, licenseId: this.model?.licenseId || null, user: req.user || {} });
+        if (!saved?.status) return this.error(res, saved?.message || 'Photo téléchargée mais article non mis à jour.', 400);
+      }
+      return this.success(res, { localUrl, filename: localUrl.split('/').pop() }, 'Photo enregistrée hors ligne');
+    } catch (error) {
+      console.error('Remote product image download failed:', error);
+      return this.error(res, error.message || 'Téléchargement de la photo impossible.', 400);
+    }
+  }
   async uploadItemMultiImage(req, res) {
     try {
       const payload = req.body || {};

@@ -291,6 +291,10 @@ router.get('/supplierItemsReportTable', bindController(itemsController.supplierI
 // PHP: itemReportTable() - Items report
 router.get('/itemReportTable', bindController(itemsController.itemReportTable));
 
+// Recherche et enregistrement local des photos produit.
+router.post('/search-images', bindController(itemsController.searchImages));
+router.post('/fetch-remote-image', bindController(itemsController.fetchRemoteImage));
+
 // PHP: uploadItemMultiImage() - Upload images
 router.post('/uploadItemMultiImage', bindController(itemsController.uploadItemMultiImage));
 
