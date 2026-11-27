@@ -259,11 +259,12 @@ test('Receipt Studio preserves saved horizontal positions and pushes overlapping
   const rendererStart = app.indexOf('function renderReceiptStudioDocument(sale,layout)');
   const rendererEnd = app.indexOf('function refreshReceiptDesignerPreview()', rendererStart);
   const renderer = app.slice(rendererStart, rendererEnd);
-  assert.match(renderer, /const measured=new Map/);
-  assert.match(renderer, /overlapsHorizontally/);
-  assert.match(renderer, /top=previousBottom\+gapMm/);
-  assert.match(renderer, /finalHeight=isA4\?297:Math.max\(baseHeight,trailingBottom\+4\)/);
-  assert.match(renderer, /lang=\\"fr\\"/);
+  assert.ok(renderer.includes('const measured=new Map'));
+  assert.ok(renderer.includes('overlapsHorizontally'));
+  assert.ok(renderer.includes('top=previousBottom+gapMm'));
+  assert.ok(renderer.includes('requiredItemsMm'));
+  assert.ok(renderer.includes('requiredTotalsMm'));
+  assert.ok(renderer.includes('lang=\\\"fr\\\"'));
 });
 
 test('Receipt Studio visible labels and payment methods are French', () => {
@@ -271,10 +272,11 @@ test('Receipt Studio visible labels and payment methods are French', () => {
   const rendererStart = app.indexOf('function receiptDesignerElement(e)');
   const rendererEnd = app.indexOf('function zrSettings(', rendererStart);
   const renderer = app.slice(rendererStart, rendererEnd);
-  assert.match(renderer, /<th>Article<\\/th>/);
-  assert.match(renderer, /<th class=\\"rd-number\\">Qté<\\/th>/);
-  assert.match(renderer, /Sous-total/);
-  assert.match(renderer, /Remise supplémentaire/);
-  assert.match(app, /cash:'Espèces'/);
+  assert.ok(renderer.includes('<th>Article</th>'));
+  assert.ok(renderer.includes('<th class="rd-number">Qté</th>'));
+  assert.ok(renderer.includes('<th class="rd-number">Montant</th>'));
+  assert.ok(renderer.includes('Sous-total'));
+  assert.ok(renderer.includes('Remise supplémentaire'));
+  assert.ok(app.includes("cash:'Espèces'"));
   assert.doesNotMatch(renderer, /Ticket number|Item name|Subtotal|Extra discount|Balance due/);
 });
