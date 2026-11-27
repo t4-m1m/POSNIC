@@ -519,6 +519,56 @@ class ItemsController extends BaseController {
     }
   }
 
+  /** Update a complete color/size matrix while retaining child SKU identities. */
+  async updateFamily(req, res) {
+    try {
+      if (req.user?.access?.item?.write === false) return this.error(res, ERROR_MESSAGES.UNAUTHORIZED, 403);
+      await this.ensureContext(req);
+      const groupId = req.params.group_id;
+      if (!groupId || !require('mongodb').ObjectId.isValid(String(groupId))) return this.error(res, 'Invalid variant family id', 400);
+      const db = await require('../models/base.model').getDb();
+      const families = db.collection('item_families');
+      const items = db.collection('items');
+      const license = this.model?.licenseId;
+      const scope = { _id: new (require('mongodb').ObjectId)(String(groupId)), ...(license ? { license: new (require('mongodb').ObjectId)(String(license)) } : {}) };
+      const parent = await families.findOne(scope);
+      if (!parent) return this.error(res, 'Variant parent model not found', 404);
+      const rows = Array.isArray(req.body?.variants) ? req.body.variants : [];
+      if (!rows.length || rows.length > 500) return this.error(res, 'The matrix must contain 1 to 500 active combinations', 400);
+      const ids = rows.map(row => String(row.item_id || ''));
+      if (ids.some(id => !require('mongodb').ObjectId.isValid(id)) || new Set(ids).size !== ids.length) return this.error(res, 'Each matrix cell must reference one unique existing SKU', 400);
+      const barcodes = rows.map(row => String(row.barcode_id || '').trim()).filter(Boolean);
+      if (new Set(barcodes).size !== barcodes.length) return this.error(res, 'Each combination must have a unique barcode', 400);
+      const now = new Date(), updated = [];
+      for (const row of rows) {
+        const itemId = new (require('mongodb').ObjectId)(String(row.item_id));
+        const itemScope = { _id: itemId, variant_group_id: parent.variant_group_id, ...(license ? { license: new (require('mongodb').ObjectId)(String(license)) } : {}) };
+        const current = await items.findOne(itemScope);
+        if (!current) return this.error(res, 'A matrix cell references a SKU outside this model', 409);
+        const set = {
+          variant_value: String(row.label || '').trim(),
+          variant_axis: (parent.axes || []).join(' / '),
+          variant_parent_name: parent.name,
+          variant_attributes: row.attributes && typeof row.attributes === 'object' ? row.attributes : {},
+          barcode_id: String(row.barcode_id || '').trim(),
+          available_quantity: Math.max(0, Number(row.quantity) || 0),
+          selling_price: Math.max(0, Number(row.selling_price) || 0),
+          selling_price_2: Math.max(0, Number(row.selling_price_2) || 0),
+          selling_price_3: Math.max(0, Number(row.selling_price_3) || 0),
+          updated_date: now,
+        };
+        await items.updateOne(itemScope, { $set: set });
+        updated.push({ ...row, item_id: itemId });
+      }
+      const total = updated.reduce((sum, row) => sum + Math.max(0, Number(row.quantity) || 0), 0);
+      await families.updateOne(scope, { $set: { variants: updated, quantity: total, colors: Array.isArray(req.body.colors) ? req.body.colors : parent.colors || [], sizes: Array.isArray(req.body.sizes) ? req.body.sizes : parent.sizes || [], updated_at: now } });
+      return this.success(res, { variant_group_id: String(groupId), quantity: total, updated: updated.length }, 'Variant matrix saved');
+    } catch (error) {
+      console.error('Error in updateFamily:', error);
+      return this.error(res, error.message, 500);
+    }
+  }
+
   /**
    * PHP: add() - Create new item (POST /items)
    */

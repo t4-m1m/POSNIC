@@ -462,8 +462,8 @@ class ItemService {
     if (rows.length < 1) {
       return { status: false, data: null, message: 'Choose at least one variant.' };
     }
-    if (rows.length > 50) {
-      return { status: false, data: null, message: 'At most 50 variants per family.' };
+    if (rows.length > 500) {
+      return { status: false, data: null, message: 'At most 500 color/size combinations per model.' };
     }
     if (!parentName) {
       return { status: false, data: null, message: 'The family needs a product name.' };
@@ -561,6 +561,42 @@ class ItemService {
         };
       }
       created.push(newId);
+    }
+    // Persist one canonical parent document with the complete matrix. Child item
+    // documents remain the individually-stocked/barcoded SKUs used by existing
+    // sales, receiving, return and stock-journal flows.
+    const familyCollection = await this.repository.getCollection('item_families');
+    const now = new Date();
+    const parentVariants = rows.map((row, index) => ({
+      item_id: created[index],
+      label: String(row.variant_value || '').trim(),
+      attributes: row.variant_attributes || {},
+      barcode_id: String(row.barcode_id || ''),
+      quantity: Math.max(0, Number(row.available_quantity ?? row.quantity) || 0),
+      selling_price: Math.max(0, Number(row.selling_price) || 0),
+      selling_price_2: Math.max(0, Number(row.selling_price_2) || 0),
+      selling_price_3: Math.max(0, Number(row.selling_price_3) || 0),
+      active: row.active !== false,
+    }));
+    try {
+      await familyCollection.insertOne({
+        _id: groupId,
+        name: parentName,
+        variant_group_id: groupId,
+        axes: [data.variant_axis_1 || 'Couleur', data.variant_axis_2 || 'Taille'].filter(Boolean),
+        colors: Array.isArray(data.colors) ? data.colors : [],
+        sizes: Array.isArray(data.sizes) ? data.sizes : [],
+        variants: parentVariants,
+        quantity: parentVariants.reduce((sum, row) => sum + row.quantity, 0),
+        branch_id: branchId && ObjectId.isValid(String(branchId)) ? new ObjectId(String(branchId)) : branchId,
+        license: licenseId && ObjectId.isValid(String(licenseId)) ? new ObjectId(String(licenseId)) : licenseId,
+        created_at: now,
+        updated_at: now,
+        created_by: String(user?._id || user?.username || user?.email || ''),
+      });
+    } catch (error) {
+      await this.repository.hardDeleteItems(created, { licenseId }).catch((e) => console.error('Family rollback failed:', e.message));
+      return { status: false, data: null, message: 'Could not persist the parent matrix; all child variants were rolled back. ' + error.message };
     }
     return {
       status: true,

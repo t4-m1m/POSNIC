@@ -250,6 +250,7 @@ router.get('/demo/status', bindController(itemsController.demoStatus));
 // and the members of one family for the edit page's strip.
 router.post('/createFamily', bindController(itemsController.createFamily));
 router.get('/family', bindController(itemsController.getFamily));
+router.put('/family/:group_id', bindController(itemsController.updateFamily));
 router.get('/priceGrid', bindController(itemsController.priceGrid));
 router.post('/priceSheet', bindController(itemsController.priceSheet));
 router.post('/priceSheetImport', (req, res, next) => {

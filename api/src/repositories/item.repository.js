@@ -1738,6 +1738,8 @@ class ItemRepository extends BaseModel {
       filter.license = new ObjectId(String(context.licenseId));
     }
     const collection = await this.getCollection(this.collectionName);
+    const familyCollection = await this.getCollection('item_families');
+    const parent = await familyCollection.findOne({ _id: new ObjectId(String(groupId)), ...(context.licenseId && ObjectId.isValid(String(context.licenseId)) ? { license: new ObjectId(String(context.licenseId)) } : {}) });
     const rows = await collection
       .find(filter, {
         projection: {
@@ -1755,7 +1757,7 @@ class ItemRepository extends BaseModel {
       .toArray();
     return {
       status: true,
-      data: rows.map((r) => ({
+      data: { parent: parent || null, variants: rows.map((r) => ({
         id: String(r._id),
         name: r.name || '',
         variant_value: r.variant_value || '',
@@ -1765,7 +1767,7 @@ class ItemRepository extends BaseModel {
         available_quantity: r.available_quantity || 0,
         track_inventory: r.track_inventory === true,
         barcode_id: r.barcode_id || '',
-      })),
+      })) },
       message: 'success',
     };
   }

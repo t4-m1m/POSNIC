@@ -326,6 +326,8 @@ class ItemModel {
     variant_axis: { type: 'String', select: true },
     variant_value: { type: 'String', select: true },
     variant_parent_name: { type: 'String', select: true },
+    // Canonical parent-model matrix snapshot; child item rows remain the stock/sales SKU authority.
+    variant_matrix: { type: 'Mixed', select: true },
     /* IC0: the form wrote these long before the map knew them - any read
        projecting through this map silently dropped them. */
     items_mfg_date: { type: 'String', select: true },
