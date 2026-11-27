@@ -1751,6 +1751,12 @@ class ItemRepository extends BaseModel {
           available_quantity: 1,
           track_inventory: 1,
           barcode_id: 1,
+          variant_attributes: 1,
+          variant_value_1: 1,
+          variant_value_2: 1,
+          selling_price_2: 1,
+          selling_price_3: 1,
+          company_price: 1,
         },
       })
       .sort({ variant_value: 1 })
