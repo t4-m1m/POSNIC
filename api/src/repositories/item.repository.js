@@ -1728,52 +1728,55 @@ class ItemRepository extends BaseModel {
     return { deleted: r.deletedCount || 0 };
   }
 
-  /** Every member of one variant family, for the edit page's strip (V1). */
+  /** Every member of one variant family, enriched with its canonical parent matrix. */
   async getFamily(groupId, context = {}) {
     if (!groupId || !ObjectId.isValid(String(groupId))) {
       return { status: false, data: null, message: 'Not a valid family id' };
     }
-    const filter = { variant_group_id: new ObjectId(String(groupId)) };
+    const groupObjectId = new ObjectId(String(groupId));
+    const filter = { variant_group_id: groupObjectId };
     if (context.licenseId && ObjectId.isValid(String(context.licenseId))) {
       filter.license = new ObjectId(String(context.licenseId));
     }
     const collection = await this.getCollection(this.collectionName);
     const familyCollection = await this.getCollection('item_families');
-    const parent = await familyCollection.findOne({ _id: new ObjectId(String(groupId)), ...(context.licenseId && ObjectId.isValid(String(context.licenseId)) ? { license: new ObjectId(String(context.licenseId)) } : {}) });
+    const parent = await familyCollection.findOne({
+      _id: groupObjectId,
+      ...(context.licenseId && ObjectId.isValid(String(context.licenseId))
+        ? { license: new ObjectId(String(context.licenseId)) }
+        : {}),
+    });
     const rows = await collection
       .find(filter, {
         projection: {
-          name: 1,
-          variant_value: 1,
-          variant_axis: 1,
-          variant_parent_name: 1,
-          selling_price: 1,
-          available_quantity: 1,
-          track_inventory: 1,
-          barcode_id: 1,
-          variant_attributes: 1,
-          variant_value_1: 1,
-          variant_value_2: 1,
-          selling_price_2: 1,
-          selling_price_3: 1,
-          company_price: 1,
+          name: 1, variant_value: 1, variant_axis: 1, variant_parent_name: 1,
+          selling_price: 1, selling_price_2: 1, selling_price_3: 1,
+          company_price: 1, available_quantity: 1, track_inventory: 1,
+          barcode_id: 1, variant_attributes: 1, variant_value_1: 1, variant_value_2: 1,
         },
       })
       .sort({ variant_value: 1 })
       .toArray();
     return {
       status: true,
-      data: { parent: parent || null, variants: rows.map((r) => ({
+      data: rows.map((r) => ({
         id: String(r._id),
         name: r.name || '',
         variant_value: r.variant_value || '',
         variant_axis: r.variant_axis || '',
         variant_parent_name: r.variant_parent_name || '',
         selling_price: r.selling_price || 0,
+        selling_price_2: r.selling_price_2 || 0,
+        selling_price_3: r.selling_price_3 || 0,
+        company_price: r.company_price || 0,
         available_quantity: r.available_quantity || 0,
         track_inventory: r.track_inventory === true,
         barcode_id: r.barcode_id || '',
-      })) },
+        variant_attributes: r.variant_attributes || {},
+        variant_value_1: r.variant_value_1 || '',
+        variant_value_2: r.variant_value_2 || '',
+        parent_model: parent || null,
+      })),
       message: 'success',
     };
   }
