@@ -545,7 +545,7 @@ class ItemsController extends BaseController {
       const itemIds = ids.map(id => new ObjectId(id));
       const currentRows = await items.find({ ...itemScope, _id: { $in: itemIds } }).toArray();
       if (currentRows.length !== ids.length) return this.error(res, 'A matrix cell references a SKU outside this model', 409);
-      const collision = await items.findOne({ ...itemScope, _id: { $nin: itemIds }, $or: [{ barcode_id: { $in: barcodes } }, { barcodes: { $in: barcodes } }] });
+      const collision = await items.findOne({ ...(license ? { license: new ObjectId(String(license)) } : {}), ...(branch ? { branch_id: new ObjectId(String(branch)) } : {}), _id: { $nin: itemIds }, $or: [{ barcode_id: { $in: barcodes } }, { barcodes: { $in: barcodes } }] });
       if (collision) return this.error(res, 'A barcode is already assigned to another SKU in this branch', 409);
       const now = new Date(), updated = [];
       for (const row of rows) {
