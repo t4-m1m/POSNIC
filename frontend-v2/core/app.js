@@ -37,6 +37,8 @@ import{receiptSaleDate,receiptSaleNumber,moveReceiptElement,receiptAmountDue,bui
  .quick-item>.sku{display:block!important;color:#8492a4!important;font-size:10px!important;font-weight:700!important;letter-spacing:.06em!important}
  .quick-item>.product-photo,.quick-item>.product-fallback{display:flex!important;width:100%!important;height:112px!important;min-height:112px!important;max-height:112px!important;box-sizing:border-box!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;border-radius:9px!important;background:#f2f5f9!important}
  .quick-item>.product-photo{object-fit:contain!important;padding:5px!important}
+ .quick-item>.product-fallback[hidden]{display:none!important}
+ .quick-item>.product-photo[hidden]{display:none!important}
  .quick-item>.product-fallback{padding:0!important}
  .quick-item .smart-product-badge{display:flex!important;width:100%!important;height:100%!important;box-sizing:border-box!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:7px!important;border:1px solid #dce4ee!important;border-radius:9px!important;background:linear-gradient(145deg,#f8fafc 0%,#e7edf5 100%)!important;box-shadow:inset 0 3px 0 #496987!important}
  .quick-item .smart-product-brand{color:#718096!important;font-size:9px!important;font-weight:900!important;letter-spacing:.14em!important}
@@ -442,7 +444,7 @@ function printerSettings(d){
  const saved=stored&&Number(stored.version)>=4?stored:null;
  state.receiptLayout=normalizeReceiptStackLayout({...remote,...saved,width:saved?.width??remote?.width??r.paperWidth??80,logoDataUrl:saved?.logoDataUrl||remote?.logoDataUrl||''});
  const sale=state.receiptSample||{},saleItems=rowsOf(sale.items);
- const blocks=state.receiptLayout.blocks,selected=blocks.find(b=>b.id===state.receiptSelectedBlock)||blocks[0];
+ const blocks=state.receiptLayout.blocks,selected=blocks.find(b=>b.id===state.receiptSelectedBlock)||(blocks.find(b=>b.type==='logo'))||blocks[0];
  state.receiptSelectedBlock=selected?.id||'';
  const blockRows=blocks.map((b,i)=>'<div class="receipt-stack-row '+(b.id===state.receiptSelectedBlock?'is-selected':'')+'"><label><input type="checkbox" data-receipt-stack-toggle="'+esc(b.id)+'" '+(b.visible!==false?'checked':'')+'></label><button type="button" class="receipt-stack-name" data-receipt-stack-select="'+esc(b.id)+'">'+esc(b.label||b.type)+'</button><button type="button" class="btn icon" data-receipt-stack-move="up" data-id="'+esc(b.id)+'" '+(i===0?'disabled':'')+'>↑</button><button type="button" class="btn icon" data-receipt-stack-move="down" data-id="'+esc(b.id)+'" '+(i===blocks.length-1?'disabled':'')+'>↓</button></div>').join('');
  const tools=['text','divider','qr','field'].map(t=>'<option value="'+t+'">'+({text:'Texte personnalisé',divider:'Séparateur',qr:'QR Instagram / WhatsApp',field:'Variable dynamique'}[t])+'</option>').join('');
