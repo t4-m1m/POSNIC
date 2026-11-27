@@ -165,9 +165,9 @@ test('V2 visible UI fixes are loaded by cache-busted assets and viewport-pinned 
  const renderer=app.slice(start,end);
  assert.ok(renderer.includes("const css='@page"),'vertical thermal renderer must own the print stylesheet');
  assert.ok(renderer.includes('width:\'+printable+\'mm'),'80mm and 58mm rolls must reserve their actual printable widths');
- assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.31'));
+ assert.ok(html.includes('styles/app.css?v=2.0.0-rebrand.32'));
  assert.ok(html.includes('styles/scroll-recovery.css?v=2.0.0-rebrand.25'));
- assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.31'));
+ assert.ok(html.includes('core/app.js?v=2.0.0-rebrand.32'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail{position:fixed!important'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail>.rail-bottom{position:absolute!important'));
  assert.ok(app.includes('topbar-quick-actions'),'Acompte and Dépenses stay in the top bar');
@@ -188,6 +188,7 @@ test('V2 sale printing loads saved Studio layout, verifies sale items, and uses 
  assert.match(fn,/const saleItems=rowsOf\(sale\?\.items\|\|sale\?\.itemsale\)/);
  assert.match(fn,/html\.includes\(esc\(name\)\)/);
  assert.match(fn,/height:renderedHeight/);
+ assert.match(fn,/fitReceipt:layout\.format!==\x27a4\x27/,'thermal receipts must use the print engine content-fit measurement');
  assert.match(app,/await loadSavedReceiptLayoutForPrinting\(\);\s*const sample=state\.receiptSample/);
 });
 
@@ -240,7 +241,16 @@ test('2026 Receipt Studio renders French vertical blocks with independent typogr
   assert.match(app, /hideZeroCredit/);
   assert.match(app, /showSavings/);
   assert.match(app, /giftMode/);
-  assert.match(app, /logoWidth/);
+  assert.match(app, /logoWidth:105/);
+  assert.match(app, /logoMaxHeight:42/);
+  assert.match(app, /barcodeWidth:180/);
+  assert.match(app, /barcodeHeight:28/);
+  assert.match(app, /barcodeModuleWidth/);
+  assert.match(app, /estimateReceiptStackHeight\(sale,layout\)/);
+  assert.match(app, /@page\{size:'\+width\+'mm '\+height\+'mm;margin:0\}/);
+  assert.match(app, /data-receipt-stack-prop=\\"barcodeWidth\\"/);
+  assert.match(app, /data-receipt-stack-prop=\\"barcodeHeight\\"/);
+  assert.match(app, /logoMaxHeight/);
   assert.match(app, /threshold/);
   assert.match(css, /\.receipt-stack-paper/);
   assert.match(css, /\.receipt-stack-items/);
