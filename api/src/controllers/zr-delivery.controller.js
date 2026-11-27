@@ -84,7 +84,7 @@ exports.link = async (req, res) => {
       delivery_fee: Math.max(0, Number(req.body.deliveryFee) || 0),
       cod_total: Math.max(0, Number(req.body.codTotal) || 0),
       address: String(req.body.address || '').slice(0,500),
-      items: Array.isArray(sale.items) ? sale.items.map(x => ({ item_id:String(x.item_id || ''), name:String(x.item_name || x.name || ''), quantity:Number(x.item_quantity)||0, price:Number(x.item_price)||0, track_inventory:x.track_inventory === true || x.track_inventory === 'true' })) : [],
+      items: Array.isArray(sale.items) ? sale.items.map(x => ({ item_id:String(x.item_id || ''), name:String(x.item_name || x.name || ''), variant_name:String(x.variant_value || x.variant_name || x.variant_label || ''), variant_attributes:x.variant_attributes && typeof x.variant_attributes === 'object' ? x.variant_attributes : {}, barcode_id:String(x.barcode_id || x.item_barcode_id || ''), quantity:Number(x.item_quantity)||0, price:Number(x.item_price)||0, track_inventory:x.track_inventory === true || x.track_inventory === 'true' })) : [],
       created_at: now, updated_at: now, returned_at: null, paid_at: null
     };
     await deliveries.updateOne({ sale_id:id, ...sc }, { $setOnInsert: doc }, { upsert:true });
