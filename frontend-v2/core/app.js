@@ -521,7 +521,7 @@ function renderReceiptStudioDocument(sale,layout){
   const font=Math.max(8,Number(e.fontSize)||12);
   const contentWidth=Math.max(8,width*(Number(e.w||10)/100)-2);
   const charsPerLine=Math.max(4,Math.floor(contentWidth/Math.max(0.9,font*0.15)));
-  const lines=value.split(/\\r?\\n/).reduce((n,line)=>n+Math.max(1,Math.ceil(line.length/charsPerLine)),0);
+  const lines=value.split(/\r?\n/).reduce((n,line)=>n+Math.max(1,Math.ceil(line.length/charsPerLine)),0);
   return Math.max(saved,lines*Math.max(3.8,font*0.35)+1.5);
  };
  const measured=new Map(sourceElements.map(e=>[e,elementHeight(e)]));
