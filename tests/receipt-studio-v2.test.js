@@ -253,3 +253,28 @@ test('V2 New Article displays and persists generated cartesian variant combinati
   assert.match(app, /generateVariantRows\(e\.target\.form,\{silent:true\}\)/);
   assert.match(app, /Les codes-barres des variantes doivent être uniques/);
 });
+
+test('Receipt Studio preserves saved horizontal positions and pushes overlapping blocks down by measured content height', () => {
+  const app = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/core/app.js'), 'utf8');
+  const rendererStart = app.indexOf('function renderReceiptStudioDocument(sale,layout)');
+  const rendererEnd = app.indexOf('function refreshReceiptDesignerPreview()', rendererStart);
+  const renderer = app.slice(rendererStart, rendererEnd);
+  assert.match(renderer, /const measured=new Map/);
+  assert.match(renderer, /overlapsHorizontally/);
+  assert.match(renderer, /top=previousBottom\+gapMm/);
+  assert.match(renderer, /finalHeight=isA4\?297:Math.max\(baseHeight,trailingBottom\+4\)/);
+  assert.match(renderer, /lang=\\"fr\\"/);
+});
+
+test('Receipt Studio visible labels and payment methods are French', () => {
+  const app = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2/core/app.js'), 'utf8');
+  const rendererStart = app.indexOf('function receiptDesignerElement(e)');
+  const rendererEnd = app.indexOf('function zrSettings(', rendererStart);
+  const renderer = app.slice(rendererStart, rendererEnd);
+  assert.match(renderer, /<th>Article<\\/th>/);
+  assert.match(renderer, /<th class=\\"rd-number\\">Qté<\\/th>/);
+  assert.match(renderer, /Sous-total/);
+  assert.match(renderer, /Remise supplémentaire/);
+  assert.match(app, /cash:'Espèces'/);
+  assert.doesNotMatch(renderer, /Ticket number|Item name|Subtotal|Extra discount|Balance due/);
+});
