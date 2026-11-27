@@ -572,7 +572,7 @@ function refreshReceiptDesignerPreview(){
 function buildSaleReceiptHtml(sale){return renderReceiptStudioDocument(sale,state.receiptLayout);}
 function receiptFrenchTenderLabel(method){
  const raw=String(method||'').trim();
- const key=raw.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+ const key=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
  return ({cash:'Espèces',especes:'Espèces',espece:'Espèces',tpe:'TPE',card:'TPE',baridimob:'BaridiMob',credit:'Crédit',versement:'Versement',livraison:'Livraison',cod:'Livraison',delivery:'Livraison'})[key]||raw||'Paiement';
 }
 function receiptTenderRows(sale){
