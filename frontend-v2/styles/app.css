@@ -1567,3 +1567,24 @@ html,body,#app{width:100%;height:100%;min-height:0;margin:0;overflow:hidden}
 /* Receipt Studio logo: stable live resize without replacing the preview while dragging. */
 #receipt-artboard .receipt-stack-logo{display:block!important;height:auto!important;max-width:100%!important;object-fit:contain!important;object-position:center!important;transition:none!important}
 #receipt-artboard .receipt-stack-block:has(.receipt-stack-logo){min-height:0!important;overflow:visible!important}
+
+/* 2.0.0-rebrand.38: visible cashier card layout and category smart art */
+.quick-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;align-content:start!important;align-items:start!important;gap:8px!important}
+.quick-item{display:flex!important;flex-direction:column!important;justify-content:flex-start!important;align-items:stretch!important;gap:6px!important;padding:8px!important;min-height:0!important;height:auto!important}
+.quick-item>.product-photo,.quick-item>.product-fallback{width:100%!important;height:68px!important;min-height:68px!important;max-height:68px!important;flex:none!important;border-radius:8px!important;overflow:hidden!important;object-fit:cover!important}
+.quick-item>strong{display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important;white-space:normal!important;text-overflow:clip!important;line-height:1.25!important;font-size:12.5px!important;font-weight:700!important;word-break:break-word!important;max-height:31.25px!important;min-height:0!important}
+.quick-item .smart-product-badge{height:68px!important;min-height:68px!important;width:100%!important;display:flex!important;flex-direction:row!important;align-items:center!important;gap:9px!important;padding:7px 9px!important;border:0!important;border-radius:8px!important;background:var(--smart-gradient)!important;color:var(--smart-ink)!important}
+.quick-item .smart-product-badge.shoes{--smart-gradient:linear-gradient(115deg,#FDF2F4,#FCE7EB);--smart-ink:#9F344D}
+.quick-item .smart-product-badge.bags{--smart-gradient:linear-gradient(115deg,#FEF8EE,#FDECC8);--smart-ink:#925B16}
+.quick-item .smart-product-badge.outerwear{--smart-gradient:linear-gradient(115deg,#EEF2FF,#E0E7FF);--smart-ink:#394A8A}
+.quick-item .smart-product-badge.apparel{--smart-gradient:linear-gradient(115deg,#ECFDF5,#D1FAE5);--smart-ink:#176B50}
+.quick-item .smart-product-symbol{display:grid!important;place-items:center!important;flex:0 0 38px!important;width:38px!important;height:38px!important;border-radius:11px!important;background:#ffffffbf!important}
+.quick-item .smart-product-symbol svg{width:27px!important;height:27px!important}
+.quick-item .smart-product-copy{display:flex!important;flex:1!important;min-width:0!important;flex-direction:column!important;align-items:flex-start!important;gap:2px!important}
+.quick-item .smart-product-kind{font-size:7px!important;line-height:1!important;font-weight:850!important;letter-spacing:.08em!important}
+.quick-item .smart-product-brand{font-size:11px!important;line-height:1.05!important;font-weight:900!important;color:var(--smart-ink)!important}
+.quick-item .smart-product-ref{font:800 9px/1.1 ui-monospace,monospace!important;padding:1px 4px!important;border-radius:4px!important;background:#ffffffa6!important}
+.quick-item .smart-product-swatches{display:flex!important;gap:3px!important}
+.quick-item .smart-product-swatch{width:6px!important;height:6px!important;border-radius:50%!important;background:var(--swatch)!important}
+#receipt-artboard .receipt-stack-logo{display:block!important;height:auto!important;max-width:100%!important;object-fit:contain!important;visibility:visible!important;opacity:1!important}
+@media(max-width:900px){.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
