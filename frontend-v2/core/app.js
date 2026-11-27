@@ -284,10 +284,10 @@ function receiptDesignerElement(e){const sale=state.receiptSample||{},items=rows
  let paymentHtml='';
  if(sale.versement_checkout){
   const initial=Number(sale.versement_initial_amount??sale.versement_checkout.initial_amount??0);
-  const initialMethod=sale.versement_initial_method||sale.versement_checkout.initial_method||'Versement initial';
+  const initialMethod=receiptFrenchTenderLabel(sale.versement_initial_method||sale.versement_checkout.initial_method||'Versement initial');
   const finalAmount=sale.versement_settled===true?Number(sale.versement_settlement_amount??Math.max(0,sum-initial)):0;
   if(initial>0)paymentHtml+='<div style="'+totalRowStyle+'"><span style="'+totalPartStyle+'">'+esc(initialMethod)+'</span><b style="'+totalPartStyle+'">'+money(initial)+' DZD</b></div>';
-  if(finalAmount>0)paymentHtml+='<div style="'+totalRowStyle+'"><span style="'+totalPartStyle+'">'+esc(sale.payment_mode||'Règlement final')+'</span><b style="'+totalPartStyle+'">'+money(finalAmount)+' DZD</b></div>';
+  if(finalAmount>0)paymentHtml+='<div style="'+totalRowStyle+'"><span style="'+totalPartStyle+'">'+esc(receiptFrenchTenderLabel(sale.payment_mode||'Règlement final'))+'</span><b style="'+totalPartStyle+'">'+money(finalAmount)+' DZD</b></div>';
  }else{
   const visibleLines=lines.filter(x=>x.amount>0);
   paymentHtml=visibleLines.map(x=>'<div style="'+totalRowStyle+'"><span style="'+totalPartStyle+'">'+esc(x.name)+'</span><b style="'+totalPartStyle+'">'+money(x.amount)+' DZD</b></div>').join('');
@@ -483,7 +483,7 @@ function renderReceiptStudioDocument(sale,layout){
  const itemFont=Math.max(10,Number(itemsElement?.fontSize)||12),itemFontFamily=itemsElement?.fontFamily||'Tahoma',itemFontWeight=Number(itemsElement?.fontWeight)||700;
  const totalsFont=Math.max(10,Number(totalsElement?.fontSize)||13),totalsFontFamily=totalsElement?.fontFamily||'Tahoma',totalsFontWeight=Number(totalsElement?.fontWeight)||700;
  const itemColumnMm=Math.max(18,width*(Number(itemsElement?.w||90)/100)*0.66-4);
- const itemCharsPerLine=Math.max(12,Math.floor(itemColumnMm/Math.max(1.1,itemFont*0.15)));
+ const itemCharsPerLine=Math.max(12,Math.floor(itemColumnMm/Math.max(1.1,itemFont*0.18)));
  const itemLineMm=Math.max(5.4,itemFont*0.36);
  const itemVisualLines=saleItems.reduce((count,item)=>{
   const name=String(item.item_name||item.name||item.product_name||'Article'),detail=String(item.item_description||item.description||'');
