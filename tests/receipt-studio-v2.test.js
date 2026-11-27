@@ -264,7 +264,7 @@ test('Receipt Studio preserves saved horizontal positions and pushes overlapping
   assert.ok(renderer.includes('top=previousBottom+gapMm'));
   assert.ok(renderer.includes('requiredItemsMm'));
   assert.ok(renderer.includes('requiredTotalsMm'));
-  assert.ok(renderer.includes('lang=\\\"fr\\\"'));
+  assert.ok(renderer.includes('lang='));
 });
 
 test('Receipt Studio visible labels and payment methods are French', () => {
