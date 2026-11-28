@@ -1837,3 +1837,32 @@ main{padding:20px}.panel,.stat,.drawer,.sam-dash-panel,.cat-kpi,.cat-dashboard-g
 .receipt-stack-image{margin:0!important;padding:0!important}
 .receipt-stack-image .receipt-stack-logo{display:block!important;margin:0!important;padding:0!important;vertical-align:middle!important;height:auto!important}
 .receipt-stack-store{margin-top:0!important;padding-top:0!important}
+
+/* Critical cashier layout corrections: recent tickets are full-width rows, never product-grid cards. */
+#product-results.recent-sales-mode{display:block!important;width:100%!important;max-width:none!important;min-width:0!important;grid-template-columns:none!important;grid-auto-flow:row!important;overflow:visible!important}
+#product-results.recent-sales-mode>.recent-sales-list{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px!important;width:100%!important;max-width:none!important;min-width:0!important;align-items:stretch!important}
+#product-results.recent-sales-mode .recent-sale{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:14px!important;width:100%!important;min-width:0!important;max-width:none!important;min-height:88px!important;height:auto!important;max-height:none!important;overflow:visible!important;padding:14px 16px!important;border:1px solid #E2E8F0!important;border-radius:14px!important;background:#fff!important;box-sizing:border-box!important}
+#product-results.recent-sales-mode .recent-ticket,#product-results.recent-sales-mode .recent-sale-summary{min-width:0!important;width:auto!important;max-width:none!important;overflow:visible!important}
+#product-results.recent-sales-mode .recent-ticket-heading{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:8px 14px!important;min-width:0!important}
+#product-results.recent-sales-mode .recent-sale-items{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))!important;gap:4px 12px!important;width:100%!important;max-width:none!important}
+#product-results.recent-sales-mode .recent-sale-summary{display:flex!important;flex-direction:column!important;align-items:flex-end!important;justify-content:center!important;gap:8px!important;white-space:nowrap!important}
+#product-results.recent-sales-mode .recent-sale-actions{display:flex!important;flex-wrap:wrap!important;justify-content:flex-end!important;gap:6px!important}
+@media(max-width:760px){#product-results.recent-sales-mode .recent-sale{grid-template-columns:minmax(0,1fr)!important}#product-results.recent-sales-mode .recent-sale-summary{align-items:flex-start!important}#product-results.recent-sales-mode .recent-sale-actions{justify-content:flex-start!important}}
+/* Receipt Studio: natural-height logo block; no artificial 180px spacer before the address. */
+.receipt-stack-image{height:auto!important;min-height:0!important;max-height:none!important;display:flex!important;flex-direction:column!important;justify-content:flex-start!important;overflow:visible!important;gap:0!important}
+.receipt-stack-image .receipt-stack-logo{height:auto!important;max-height:inherit!important;object-fit:contain!important}
+.receipt-stack-block:has(.receipt-stack-logo){min-height:0!important;padding-top:0!important;padding-bottom:0!important;margin:0!important;line-height:0!important}
+.receipt-stack-block:has(.receipt-stack-logo)+.receipt-stack-store{padding-top:0!important;margin-top:0!important}
+/* More legible cashier variant picker: color labels and a consistent touch grid. */
+.drawer.modal-dialog:has(.compact-matrix-selector){width:min(680px,calc(100vw - 24px))!important;max-width:680px!important}
+.compact-matrix-selector{max-width:680px!important}
+.compact-matrix-selector .variant-matrix-body{gap:0!important;padding:8px 16px 14px!important;max-height:min(70vh,640px)!important}
+.compact-matrix-selector .variant-matrix-row{display:grid!important;grid-template-columns:140px minmax(0,1fr)!important;gap:12px!important;align-items:center!important;padding:12px 4px!important;border-bottom:1px solid #E8EDF4!important;background:#fff!important}
+.compact-matrix-selector .variant-matrix-color{gap:8px!important}
+.compact-matrix-selector .variant-matrix-color strong{font-size:13px!important;font-weight:800!important}
+.compact-matrix-selector .variant-size-pills{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(66px,1fr))!important;gap:7px!important}
+.compact-matrix-selector .variant-size-pill{width:100%!important;min-width:0!important;min-height:54px!important;height:auto!important;padding:7px 5px!important;border-radius:10px!important;border:1px solid #D8E1ED!important;box-shadow:0 1px 2px rgba(15,23,42,.04)!important}
+.compact-matrix-selector .variant-size-pill strong{font-size:14px!important;font-weight:850!important}
+.compact-matrix-selector .variant-size-pill span{font-size:10px!important}
+.compact-matrix-selector .variant-size-pill:disabled{opacity:.38!important;background:#F1F5F9!important}
+@media(max-width:560px){.compact-matrix-selector .variant-matrix-row{grid-template-columns:1fr!important;gap:9px!important}.compact-matrix-selector .variant-size-pills{grid-template-columns:repeat(auto-fill,minmax(62px,1fr))!important}}
