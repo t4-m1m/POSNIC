@@ -1682,3 +1682,11 @@ html,body,#app{width:100%;height:100%;min-height:0;margin:0;overflow:hidden}
 #receipt-artboard .receipt-stack-block.receipt-stack-image .receipt-stack-logo{display:block!important;width:auto;max-width:100%!important;height:auto!important;max-height:280px!important;object-fit:contain!important;margin-left:auto!important;margin-right:auto!important;flex:none!important}
 #receipt-artboard .receipt-stack-stage{overflow:auto!important;align-items:flex-start!important;justify-content:center!important;min-height:0!important;max-height:78vh!important}
 #receipt-artboard.receipt-stack-paper{height:auto!important;min-height:320px;max-height:none!important;overflow:visible!important;flex:0 0 auto!important}
+
+/* Article-aware fallback thumbnails: each product is identified by its own name. */
+.smart-product-badge{box-sizing:border-box;min-width:0;max-width:100%;overflow:hidden}
+.smart-product-badge>b{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase}
+.smart-product-badge>small{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Receipt Studio image/logo: fixed-height slot prevents resizing from displacing following blocks. */
+#receipt-artboard .receipt-stack-image{box-sizing:border-box!important;display:flex!important;flex-direction:column!important;justify-content:center!important;height:180px!important;min-height:180px!important;max-height:180px!important;overflow:hidden!important}
+#receipt-artboard .receipt-stack-image .receipt-stack-logo{display:block!important;height:100%!important;max-height:180px!important;max-width:100%!important;object-fit:contain!important;margin:0!important;flex:none!important}
