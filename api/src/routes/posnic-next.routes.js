@@ -118,4 +118,45 @@ router.put('/settings/label-template', async (req, res) => {
   }
 });
 
+router.get('/settings/receipt-template', async (req, res) => {
+  try {
+    const filter = scope(req);
+    await ensureIndex(req);
+    const row = await collection(req).findOne(filter, { projection: { receiptTemplate: 1 } });
+    return res.json({ type: 'success', data: row?.receiptTemplate || { version: 12, width: 80, format: 'thermal', blocks: [] } });
+  } catch (error) {
+    return res.status(error.status || 500).json({ type: 'error', message: error.message || 'Could not read receipt settings.' });
+  }
+});
+
+router.put('/settings/receipt-template', async (req, res) => {
+  try {
+    if (req.user?.access?.setting?.write === false) return res.status(403).json({ type: 'error', message: 'Unauthorized.' });
+    const filter = scope(req);
+    const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+    const serialized = JSON.stringify(body);
+    if (serialized.length > 9 * 1024 * 1024) return res.status(413).json({ type: 'error', message: 'Receipt template is too large (maximum 9 MB).' });
+    if (!Array.isArray(body.blocks) || body.blocks.length > 100) return res.status(400).json({ type: 'error', message: 'A receipt template must contain at most 100 blocks.' });
+    const width = Number(body.width);
+    if (![58, 80].includes(width)) return res.status(400).json({ type: 'error', message: 'Receipt paper width must be 58 or 80 mm.' });
+    const blocks = body.blocks.map((block, index) => {
+      if (!block || typeof block !== 'object' || Array.isArray(block)) throw new Error('Invalid receipt block at position ' + (index + 1) + '.');
+      const normalized = { ...block, id: String(block.id || 'receipt-block-' + (index + 1)).slice(0, 100), type: String(block.type || 'text').slice(0, 40) };
+      for (const key of ['fontSize', 'topSpace', 'bottomSpace', 'spacingTop', 'spacingBottom', 'logoWidth', 'logoMaxHeight']) {
+        if (normalized[key] === undefined) continue;
+        const value = Number(normalized[key]);
+        if (!Number.isFinite(value) || Math.abs(value) > 10000) throw new Error('Invalid ' + key + ' in receipt block ' + (index + 1) + '.');
+        normalized[key] = value;
+      }
+      return normalized;
+    });
+    const receiptTemplate = { ...body, version: 12, width, blocks, updatedAt: new Date() };
+    await ensureIndex(req);
+    await collection(req).updateOne(filter, { $set: { receiptTemplate, updated_at: new Date() }, $setOnInsert: { created_at: new Date() } }, { upsert: true });
+    return res.json({ type: 'success', data: receiptTemplate, message: 'Receipt template saved.' });
+  } catch (error) {
+    return res.status(error.status || 500).json({ type: 'error', message: error.message || 'Could not save receipt template.' });
+  }
+});
+
 module.exports = router;

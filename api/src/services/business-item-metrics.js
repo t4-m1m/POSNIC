@@ -27,7 +27,7 @@ function readOrigin(sale) {
     fail('invalid_original_items');
   // Reuse the writer's bounded decimal/name/unit validation, then bind the
   // snapshot to the current invoice. Never reconstruct from remaining items.
-  const invoice = { ...sale };
+  const invoice = { ...sale, sales_total: stored.salesTotal, total: stored.salesTotal };
   delete invoice.business_item_origin;
   const value = originalItemFacts(
     {

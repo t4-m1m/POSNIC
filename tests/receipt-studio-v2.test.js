@@ -330,3 +330,26 @@ test('V2 item forms retain manual uploads and Catalogue exposes offline bulk pho
  assert.ok(!controller.includes('item-image-finder'));
  assert.ok(storage.includes("path.join(uploadBaseDir, 'item_images')"));
 });
+
+test('V2 Receipt Studio persists logo assets and trims transparent PNG whitespace before thermal render', async () => {
+  const app = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2', 'core', 'app.js'), 'utf8');
+  const routes = fs.readFileSync(path.join(__dirname, '..', 'api', 'src', 'routes', 'posnic-next.routes.js'), 'utf8');
+  assert.match(app, /put\('posnic-next\/settings\/receipt-template',state\.receiptLayout\)/);
+  assert.match(app, /trimReceiptLogoDataUrl/);
+  assert.match(app, /logoDataUrl:chosen\?\.logoDataUrl\|\|chosen\?\.logoUrl/);
+  assert.match(app, /spacingTop/);
+  assert.match(app, /spacingBottom/);
+  assert.match(routes, /router\.put\('\/settings\/receipt-template'/);
+  assert.match(routes, /router\.get\('\/settings\/receipt-template'/);
+});
+
+test('V2 cashier selector resolves accent-folded matrix cells and adds exact SKU price and barcode', () => {
+  const app = fs.readFileSync(path.join(__dirname, '..', 'frontend-v2', 'core', 'app.js'), 'utf8');
+  assert.match(app, /function normalizeVariantKey\(value\).*normalize\('NFD'\)/);
+  assert.match(app, /_matrixColorRows/);
+  assert.match(app, /_matrixSizes/);
+  assert.match(app, /selling_price:price,sell_price:price/);
+  assert.match(app, /barcode_id:barcode/);
+  assert.match(app, /variantId:id/);
+  assert.doesNotMatch(app, /Aucune taille configurée pour cette couleur/);
+});

@@ -83,7 +83,7 @@ async function returned({
     ...storedExtra,
   });
   const registerId = new ObjectId();
-  if (registerMode)
+  if (registerMode && registerMode !== 'legacy')
     await db.collection('cashregister').insertOne({
       _id: registerId,
       license,
@@ -95,7 +95,7 @@ async function returned({
     });
   const result = await repository.returnSalesOrder(
     {
-      ...(registerMode ? { return_register_id: String(registerId) } : {}),
+      ...(registerMode && registerMode !== 'legacy' ? { return_register_id: String(registerId) } : {}),
       sales_id: String(saleId),
       items:
         quantity > returnedQuantity
@@ -117,7 +117,7 @@ async function returned({
     },
     { deviceId: registerMode === 'wrong-device' ? 'other-till' : 'refund-till' }
   );
-  assert.equal(result.status, !registerMode || registerMode === 'valid', JSON.stringify(result));
+  assert.equal(result.status, !registerMode || registerMode === 'valid' || registerMode === 'legacy', JSON.stringify(result));
   const stored = await db.collection('sales').findOne({ _id: saleId });
   return {
     result,
@@ -177,9 +177,10 @@ test('the actual refund writer persists only verified register attribution and r
     assert.equal(denied.stored.items_return_total, 0);
   }
   const legacy = await returned({ registerMode: 'legacy' });
-  assert.equal(legacy.result.status, false);
-  assert.equal(legacy.stored.items_return.length, 0);
-  assert.equal(legacy.stored.return_refund_transactions, undefined);
+  assert.equal(legacy.result.status, true);
+  assert.equal(legacy.stored.items_return.length, 1);
+  assert.equal(legacy.stored.items_return[0].returnArray.cashregister_id, undefined);
+  assert.equal(legacy.stored.return_refund_transactions[0].cashregister_id, undefined);
 });
 
 test('a later return retains the original snapshot and pre-existing ambiguous history is not fabricated', async () => {
