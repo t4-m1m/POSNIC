@@ -174,11 +174,11 @@ test('V2 visible UI fixes are loaded by cache-busted assets and viewport-pinned 
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail{position:fixed!important'));
  assert.ok(scroll.includes('.shell:not(.caisse-lock)>.rail>.rail-bottom{position:absolute!important'));
  assert.ok(app.includes('topbar-quick-actions'),'Acompte and Dépenses stay in the top bar');
- assert.match(app,/async function dashboardView\\(response\\)/);
+ assert.ok(app.includes('async function dashboardView(response)'));
  assert.ok(app.includes('sam-dash-kpis')&&app.includes('sam-quick-orders')&&app.includes('sam-growth-gauge'));
  assert.ok(app.includes('cat-brand-gauge"><svg'));
  assert.ok(app.includes('product-image-fallback')&&app.includes('onerror="this.hidden=true;this.nextElementSibling.hidden=false"'));
- assert.match(app,/const identity=photoMatchKey\\(\\[item\\?\\.name,item\\?\\.items_name,item\\?\\.item_name,item\\?\\.product_name,item\\?\\.model_reference/);
+ assert.ok(app.includes('const identity=photoMatchKey([item?.name,item?.items_name,item?.item_name,item?.product_name,item?.model_reference'));
  assert.ok(css.includes('.sam-dashboard')&&css.includes('.sam-dash-kpis')&&css.includes('.sam-dash-grid'));
 
  assert.ok(css.includes('.receipt-stack-total{display:flex;justify-content:space-between'));
