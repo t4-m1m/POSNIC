@@ -1789,3 +1789,35 @@ html,body,#app{width:100%;height:100%;min-height:0;margin:0;overflow:hidden}
 .sam-dash-data-row:first-of-type{border-top:0}.sam-dash-data-row>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sam-dash-data-row small{display:block;color:#8993A0;font-size:9px;margin-top:3px}.sam-dash-data-row b{flex:none;color:#202938;font-size:11px}.sam-dash-data-row b.warning{color:#B7791F}.sam-dash-data-row b.danger{color:#B42318}
 @media(max-width:1180px){.topbar{grid-template-columns:minmax(0,1fr) auto!important}.topbar-shortcuts{display:none!important}}
 @media(max-width:700px){.shell,.shell.expanded{grid-template-columns:56px minmax(0,1fr)!important;grid-template-rows:64px minmax(0,1fr)!important}.rail{padding:8px 5px!important}.topbar{height:64px!important;min-height:64px!important;padding:6px 10px!important;grid-template-columns:minmax(0,1fr) auto!important}.topbar-title{font-size:15px!important}.topbar-welcome small{display:none!important}.topbar-shortcuts{display:none!important}.top-actions .field,.topbar-quick-actions{display:none!important}}
+
+/* Samarina 2026 executive soft-pastel retail system */
+:root{--bg-canvas:#F8FAFC;--bg-surface:#FFFFFF;--bg-subtle:#F8FAFC;--border-hairline:#F1F5F9;--accent-brand:#2563EB;--shadow-card:0 4px 20px rgba(15,23,42,.03);--radius-card:20px}
+main{padding:20px}.panel,.stat,.drawer,.sam-dash-panel,.cat-kpi,.cat-dashboard-grid>.panel{border-radius:20px;border:1px solid #F1F5F9;box-shadow:0 4px 20px rgba(15,23,42,.03);background:#fff}
+.sam-dash-kpi.blue,.cat-kpi.primary{background:linear-gradient(135deg,#2B7FFF 0%,#1D63DC 100%);color:#fff}.sam-dash-kpi.blue strong,.sam-dash-kpi.blue small,.sam-dash-kpi.blue span{color:#fff}
+.sam-dash-kpi.lavender{background:#FAF5FF}.sam-dash-kpi.blush{background:#F2FBF7}.sam-dash-kpi.cream{background:#FFFBEB}
+.sam-dash-grid{gap:16px}.sam-dash-extra,.sam-smart-panel{border-radius:18px!important;padding:18px!important}
+.sam-dash-grid .sam-dash-extra{min-width:0}.sam-smart-panel .btn{margin-top:12px}
+.sam-payment-segments{display:flex;height:12px;overflow:hidden;border-radius:99px;background:#E2E8F0;margin:12px 0 16px}
+.sam-payment-segments span{display:block;height:100%}.sam-payment-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px}
+.sam-size-bars{height:150px;display:flex;align-items:stretch;gap:9px;padding:10px 2px 0;overflow-x:auto}
+.sam-size-bar{min-width:26px;flex:1;display:grid;grid-template-rows:1fr auto auto;gap:5px;text-align:center;font-size:11px}
+.sam-size-bar>div{display:flex;align-items:flex-end;justify-content:center;background:#F1F5F9;border-radius:8px 8px 3px 3px;overflow:hidden}
+.sam-size-bar>div span{display:block;width:100%;background:#93C5FD;border-radius:8px 8px 0 0}.sam-size-bar:nth-child(3)>div span{background:#2563EB}
+.sam-size-bar small{color:#64748B}.sam-zr-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.sam-zr-stats>div{background:#F8FAFC;border:1px solid #F1F5F9;border-radius:14px;padding:12px;display:grid;gap:5px}
+.sam-zr-stats b{font-size:24px;color:#0F172A}.sam-zr-stats small{font-size:11px;color:#64748B}
+.catalogue-dashboard .cat-kpis{gap:16px}.cat-kpi{border-radius:18px!important;padding:20px!important}.cat-kpi.mint{background:#F2FBF7}.cat-kpi.lilac{background:#FAF5FF}.cat-kpi.cream{background:#FFFBEB}
+.cat-dashboard-grid{gap:16px}.cat-dashboard-grid>.panel{padding:18px}
+.quick-grid:not(.group-grid),.pos-products-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important}
+.quick-item.pos-card-compact{height:112px!important;min-height:112px!important;max-height:112px!important;display:flex!important;flex-direction:row!important;align-items:center!important;gap:10px!important;padding:9px!important;border:1px solid #E2E8F0!important;border-radius:14px!important;overflow:hidden!important;text-align:left!important;background:#fff!important}
+.quick-item.pos-card-compact .pos-card-visual{position:relative!important;display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 92px!important;width:92px!important;height:92px!important;min-width:92px!important;overflow:hidden!important;border-radius:10px!important;background:#FAF7F4!important}
+.quick-item.pos-card-compact .pos-card-visual>img,.quick-item.pos-card-compact .product-photo,.quick-item.pos-card-compact .product-image-fallback{width:92px!important;height:92px!important;max-width:92px!important;max-height:92px!important;object-fit:cover!important;border-radius:10px!important}
+.quick-item.pos-card-compact .pos-card-info{display:flex!important;flex:1 1 auto!important;min-width:0!important;min-height:0!important;height:100%!important;flex-direction:column!important;align-items:stretch!important;justify-content:space-between!important;gap:3px!important;text-align:left!important}
+.quick-item.pos-card-compact .pos-card-info>strong{display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;white-space:normal!important;overflow:hidden!important;text-overflow:clip!important;line-height:1.25!important;font-size:12px!important;font-weight:750!important;min-height:30px!important}
+.quick-item.pos-card-compact .pos-card-info .sku{display:flex!important;justify-content:space-between!important;gap:4px!important;white-space:nowrap!important;overflow:hidden!important;font-size:10px!important;border:0!important;padding:0!important}
+.quick-item.pos-card-compact .pos-card-bottom{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:4px!important;min-width:0!important}
+.quick-item.pos-card-compact .pos-card-bottom>b{font-size:12px!important;white-space:nowrap!important;color:#0F172A!important}
+.quick-item.pos-card-compact .pos-card-bottom .badge{font-size:10px!important;padding:3px 6px!important;white-space:nowrap!important}
+.quick-item.pos-card-compact:hover{border-color:#2563EB!important;box-shadow:0 3px 12px rgba(37,99,235,.09)!important}
+@media(max-width:1050px){.quick-grid:not(.group-grid),.pos-products-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:640px){.quick-grid:not(.group-grid),.pos-products-grid{grid-template-columns:1fr!important}.quick-item.pos-card-compact{height:112px!important}}
