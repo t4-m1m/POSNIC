@@ -165,7 +165,7 @@ test('V2 visible UI fixes are loaded by cache-busted assets and viewport-pinned 
  const renderer=app.slice(start,end);
  assert.ok(renderer.includes("const css='@page"),'vertical thermal renderer must own the print stylesheet');
  assert.ok(renderer.includes('width:\'+printable+\'mm'),'80mm and 58mm rolls must reserve their actual printable widths');
- const assetBuild=html.match(/<meta name="samarinapos-build" content="SamarinaPOS v2\\.0\\.0-rebrand\\.(\\d+)-/);
+ const assetBuild=html.match(/<meta name="samarinapos-build" content="SamarinaPOS v2[.]0[.]0-rebrand[.]([0-9]+)-/);
  assert.ok(assetBuild,'frontend must declare its build version');
  const assetVersion='2.0.0-rebrand.'+assetBuild[1];
  assert.ok(html.includes('styles/app.css?v='+assetVersion),'main stylesheet must use the declared cache-busting version');
