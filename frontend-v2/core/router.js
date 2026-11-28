@@ -26,7 +26,7 @@ export const isAdminRole = user => {
       for (const nested of [value.name,value.label,value.role,value.usertype,value.key,value.type,value.title,value.slug]) if (nested != null) roles.push(nested);
     } else if (value != null) roles.push(value);
   }
-  const normalized = roles.map(value => String(value).trim().toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]/g,''));
+  const normalized = roles.map(value => String(value).trim().toLowerCase().replace(/[^a-z0-9]/g,''));
   const permissionValues = candidates.flatMap(candidate => [...(Array.isArray(candidate.permissions)?candidate.permissions:[]),...(Array.isArray(candidate.permission)?candidate.permission:[])]).map(value => String(value && typeof value === 'object' ? (value.key||value.name||value.permission||value.module||'') : value).trim().toLowerCase().replace(/[^a-z0-9*]/g,''));
   const adminRoles = new Set(['admin','adminuser','administrator','superadmin','superadministrator','owner','platformadmin','root','superuser']);
   const truthy = value => value === true || value === 1 || ['true','1','yes'].includes(String(value ?? '').trim().toLowerCase());
