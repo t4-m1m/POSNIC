@@ -1,7 +1,7 @@
 // SamarinaPOS V2 navigation contract. Settings is pinned in the rail footer.
 export const modules = [
   { id: 'caisse', icon: 'terminal', label: 'Caisse', tabs: ['Vente', 'Historique des ventes'] },
-  { id: 'catalogue', icon: 'boxes', label: 'Catalogue & Stock', tabs: ['Catalogue Produits', 'Journal d’Inventaire', 'Alertes Stock Faible', 'Designer d’Étiquettes'] },
+  { id: 'catalogue', icon: 'boxes', label: 'Catalogue & Stock', tabs: ['Catalogue Produits', 'Journal d’Inventaire', 'Alertes Stock Faible', 'Designer d’Étiquettes', 'Tableau de bord Catalogue'] },
   { id: 'achats', icon: 'truck', label: 'Achats', tabs: ['Nouvelle Réception / Facture', 'Historique des Achats'] },
   { id: 'clients', icon: 'users', label: 'Clients & Crédits', tabs: ['Répertoire Clients', 'Suivi Crédits & Dettes', 'Règlements TPE / BaridiMob', 'Versements'] },
   { id: 'zr-express', icon: 'route', label: 'ZR Express', tabs: ['Colis & Expéditions', 'Créer un Colis'] },
