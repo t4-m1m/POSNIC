@@ -37,7 +37,7 @@ async function returned({
   roundOff = false,
   original = amount * quantity,
   storedExtra = {},
-  registerMode,
+  registerMode = 'valid',
 } = {}) {
   const license = new ObjectId(),
     branchId = new ObjectId(),
@@ -176,14 +176,17 @@ test('the actual refund writer persists only verified register attribution and r
     assert.equal(denied.stored.return_refund_lock, undefined);
     assert.equal(denied.stored.items_return_total, 0);
   }
-  const legacy = await returned();
-  assert.equal(legacy.stored.items_return[0].returnArray.cashregister_id, undefined);
+  const legacy = await returned({ registerMode: 'legacy' });
+  assert.equal(legacy.result.status, false);
+  assert.equal(legacy.stored.items_return.length, 0);
+  assert.equal(legacy.stored.return_refund_transactions, undefined);
 });
 
 test('a later return retains the original snapshot and pre-existing ambiguous history is not fabricated', async () => {
   const f = await returned({ quantity: 3 });
   const origin = f.stored.business_item_origin;
   const result = await repository.returnSalesOrder({
+    return_register_id: f.registerId,
     sales_id: String(f.stored._id),
     items: [],
     items_return: f.stored.items,
@@ -191,7 +194,7 @@ test('a later return retains the original snapshot and pre-existing ambiguous hi
     extra_discount_type: 'percent',
     round_off_check: false,
     print: false,
-  });
+  }, { deviceId: 'refund-till' });
   assert.equal(result.status, true, JSON.stringify(result));
   const stored = await db.collection('sales').findOne({ _id: f.stored._id });
   assert.deepEqual(stored.business_item_origin, origin);

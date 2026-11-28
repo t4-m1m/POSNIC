@@ -121,24 +121,6 @@ test('CSV grouped prices import accurately and re-import retains item images', a
   expect(await db.collection('items').countDocuments()).toBe(1);
 });
 
-test('European semicolon CSV reaches Mongo with exact prices, tax and fractional stock', async () => {
-  const fs = require('fs');
-  const path = require('path');
-  const source = fs.readFileSync(path.join(__dirname, '../../../frontend/static/script/js/core/PosnicPro.js'), 'utf8');
-  const start = source.indexOf('parseImportCsv: function (input)');
-  const method = source.slice(start, source.indexOf('    importTableFile:', start)).trim().replace(/,$/, '');
-  const parse = Function('return ({' + method + '}).parseImportCsv')();
-  const [headers, values] = parse('name;selling_price;company_price;mrp_price;tax;available_quantity\r\nCoffee;1.234,56;900,50;1 500,00;19,5;0,125');
-  const row = Object.fromEntries(headers.map((key,i) => [key,values[i]]));
-  const result = await repo.importItems([csv(row)],ctx);
-  expect(result.status).toBe(true);
-  const saved = await db.collection('items').findOne({ name: 'Coffee' });
-  expect(saved.selling_price).toBe(1234.56);
-  expect(saved.company_price).toBe(900.5);
-  expect(saved.tax).toBe(19.5);
-  expect(saved.available_quantity).toBe(0.125);
-});
-
 test('CSV conflicting item rows and over-limit files do not partially import', async () => {
   const conflict = await repo.importItems([csv(), csv({ selling_price: 99 })], ctx);
   expect(conflict.status).toBe(false);

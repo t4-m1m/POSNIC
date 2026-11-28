@@ -91,17 +91,17 @@ function buildExecutiveDashboard(input = {}) {
     selected = allSales.filter(x => x.key >= start && x.key <= end);
     fallback = true;
   }
+  const channels = input.channel || 'all';
+  const inChannel = sale => channels === 'all' || (channels === 'delivery' ? deliverySale(sale) : !deliverySale(sale));
+  selected = selected.filter(x => inChannel(x.sale));
   const previousDays = Math.max(1, Math.round((parseDate(end).getTime() - parseDate(start).getTime()) / 86400000) + 1);
   const prevEndDate = new Date(parseDate(start).getTime() - 86400000);
   const prevStartDate = new Date(prevEndDate.getTime() - (previousDays - 1) * 86400000);
   const prevStart = dateKey(prevStartDate, timezone), prevEnd = dateKey(prevEndDate, timezone);
-  const previous = allSales.filter(x => x.key >= prevStart && x.key <= prevEnd);
+  const previous = allSales.filter(x => x.key >= prevStart && x.key <= prevEnd && inChannel(x.sale));
   const items = input.items || [];
   const itemMap = new Map(items.map(item => [String(item._id), item]));
   const financials = input.financials !== false;
-  const channels = input.channel || 'all';
-  const inChannel = sale => channels === 'all' || (channels === 'delivery' ? deliverySale(sale) : !deliverySale(sale));
-  selected = selected.filter(x => inChannel(x.sale));
   const aggregate = rows => {
     const result = { gross:0, discount:0, returns:0, net:0, cogs:0, cogsKnown:true, cash:0, tpe:0, baridimob:0, credit:0, delivery:0, tickets:0, units:0, sales:[] };
     for (const entry of rows) {

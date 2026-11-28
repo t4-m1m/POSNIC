@@ -85,7 +85,7 @@ jobs:
 
       - name: Run accounting, register, stock journal and quantity audit tests
         working-directory: api
-        run: npx jest -c jest.ci.config.js tests/unit/services/accounting-engine.test.js tests/unit/controllers/sales.controller.test.js tests/unit/services/register.service.test.js tests/unit/controllers/versements.controller.test.js tests/unit/repositories/stock-log.repository.test.js tests/unit/repositories/register.repository.test.js tests/unit/services/item-family.test.js --runInBand --forceExit && node --test tests/unit/services/executive-dashboard.service.test.js && npx jest -c jest.ci.config.js tests/unit/repositories/item.repository.test.js --runInBand --forceExit --testNamePattern=updateItemQuantity && node --test ../tests/receipt-studio-v2.test.js
+        run: npx jest -c jest.ci.config.js tests/unit/services/accounting-engine.test.js tests/unit/controllers/sales.controller.test.js tests/unit/services/register.service.test.js tests/unit/controllers/versements.controller.test.js tests/unit/repositories/stock-log.repository.test.js tests/unit/repositories/register.repository.test.js tests/unit/repositories/purchase-order.repository.test.js tests/unit/services/item-family.test.js --runInBand --forceExit && node --test tests/unit/services/executive-dashboard.service.test.js && npx jest -c jest.ci.config.js tests/unit/repositories/item.repository.test.js --runInBand --forceExit --testNamePattern=updateItemQuantity && node --test ../tests/receipt-studio-v2.test.js
 
       - name: Syntax-check frontend and every API source file
         shell: pwsh
@@ -127,7 +127,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $env:MONGOMS_SYSTEM_BINARY = (Resolve-Path "../mongodb/bin/mongod.exe").Path
-          node --test tests/business-register-close.integration.cjs tests/extension-stock-journal.integration.cjs
+          node --test tests/business-register-close.integration.cjs tests/extension-stock-journal.integration.cjs tests/business-stock.integration.cjs tests/business-return.integration.cjs tests/fixtures/item-barcode-validation.cjs
 
       - name: Prepare bundled app resources
         run: npm run prepare:bundle

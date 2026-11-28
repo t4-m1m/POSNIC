@@ -384,7 +384,14 @@ module.exports = async function startServer(options = {}) {
           index: 'index.html',
           fallthrough: true,
           etag: true,
-          maxAge: '1h'
+          maxAge: 0,
+          setHeaders(res, filePath) {
+            if (/\.(?:html|js|mjs|css)$/i.test(filePath)) {
+              res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+              res.setHeader('Pragma', 'no-cache');
+              res.setHeader('Expires', '0');
+            }
+          }
         }));
         console.log('[FrontendV2] SamarinaPOS available at /v2/');
       } else {

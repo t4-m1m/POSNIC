@@ -11,3 +11,26 @@ test('non-financial roles receive operational analytics without profit or purcha
  const d=buildExecutiveDashboard({now:new Date('2026-11-27T12:00:00Z'),period:'today',timeZone:'UTC',financials:false,sales:[{sale_process:'Add',payment_status:'Paid',date:'2026-11-27',sales_total:2000,total_companyprice:900,items:[{name:'Veste',quantity:1,company_price:900}]}],items:[]});
  assert.equal(d.financials,false);assert.equal(d.metrics.netProfit,null);assert.equal(d.metrics.cogs,null);assert.equal(d.metrics.stockValue,null);assert.equal(d.topItems[0].profit,null);assert.equal(d.brands[0].profit,null);
 });
+
+test('previous-period comparison uses the same selected sales channel',()=>{
+ const d=buildExecutiveDashboard({now:new Date('2026-11-27T12:00:00Z'),period:'custom',startDate:'2026-11-27',endDate:'2026-11-27',channel:'delivery',timeZone:'UTC',sales:[
+  {sale_process:'Add',payment_status:'Paid',date:'2026-11-26',sales_total:9000,multi_payment:{cash:9000}},
+  {sale_process:'Add',payment_status:'Paid',date:'2026-11-26',sales_total:2000,fulfilment:'delivery',multi_payment:{cash:2000}},
+  {sale_process:'Add',payment_status:'Paid',date:'2026-11-27',sales_total:4000,fulfilment:'delivery',multi_payment:{cash:4000}},
+ ],items:[],financials:true});
+ assert.equal(d.comparison.netSales,2000);
+ assert.equal(d.metrics.netSales,4000);
+ assert.equal(d.metrics.growth,100);
+});
+
+test('variant color keys fold accents, whitespace and case consistently',()=>{
+ const source=require('fs').readFileSync(require('path').join(__dirname,'../../../../frontend-v2/core/app.js'),'utf8');
+ const start=source.indexOf('function normalizeVariantKey(');
+ assert.ok(start>=0,'cashier app must expose its normalization implementation');
+ const end=source.indexOf(String.fromCharCode(10),start);
+ const line=source.slice(start,end);
+ const normalize=new Function(line+'; return normalizeVariantKey;')();
+ assert.equal(normalize('Vert Émeraude'),'vert emeraude');
+ assert.equal(normalize('  BLEU Ciel  '),'bleu ciel');
+ assert.equal(normalize('Crème à la rose'),'creme a la rose');
+});
