@@ -130,12 +130,12 @@ function smartItemImage(item){
  // Rebecca/model-025 assets are matched against semantic product identity only.
  // SKU and barcode values are deliberately excluded from this decision.
  const identity=photoMatchKey([item?.name,item?.items_name,item?.item_name,item?.product_name,item?.model_reference,item?.modelReference,item?.reference,item?.variant_parent_name,item?.parent_model?.name].filter(Boolean).join(' '));
- const hasRebecca=/\\brebecca\\b/.test(identity),has025=/(^| )025($| )/.test(identity);
+ const hasRebecca=identity.includes('rebecca'),has025=/(^| )025($| )/.test(identity);
  for(const value of candidates){
   const src=typeof value==='string'?value:(value&&typeof value==='object'?String(value.url||value.name||''):'');
   if(!src.trim())continue;
   const asset=photoMatchKey(src.split(/[?#]/)[0].split('/').pop()||'');
-  const assetRebecca=/\\brebecca\\b/.test(asset),asset025=/(^| )025($| )/.test(asset);
+  const assetRebecca=asset.includes('rebecca'),asset025=/(^| )025($| )/.test(asset);
   if((assetRebecca&&!hasRebecca)||(asset025&&!has025))continue;
   return src.trim();
  }
